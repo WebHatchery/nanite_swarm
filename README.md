@@ -29,10 +29,11 @@ Grow the nanite core from a small foothold into a planetary-scale swarm without 
 ## Current Scope
 
 Playable automation and grid-management loop with harvesting, power, drones, research, terrain consequences, and collapse pressure.
-# Practical Future Improvements
 
-- Add deterministic snapshots for terrain harvesting, power failures, drone routing, research unlocks, and collapse pressure.
-- Stress-test drone routing and conduit networks under congested maps and interplanetary transitions.
-- Move building, research, terrain, and dust tuning into validated fixtures for safer automation balance changes.
-- Separate grid simulation from UI views so planetary and interplanetary screens can share consistent derived state.
+What exists today is a strong vertical slice of the first session on one planet. The interplanetary supply chain, the win condition, and the GDD's logistics puzzle are not yet built.
+
+## Documentation
+
+- `gdd.md` — the design document: the logistics puzzle, the terrain dilemma, the solar campaign, and the evolving core.
+- `TODO.md` — the open work, from the 2026-07-14 code audit against the GDD.
 
