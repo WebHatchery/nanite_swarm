@@ -1,22 +1,52 @@
 {
   "title": "Nanite Swarm",
-  "status": { "text": "Playable", "class": "playable" },
+  "status": {
+    "text": "Playable",
+    "class": "playable"
+  },
   "canvas_rendering": "pixelated",
   "about": [
-    "Nanite Swarm is a self-replicating AI simulation where you build an automated network to consume planetary resources and expand across worlds."
+    "Replicate, consume, expand. Command a swarm of self-replicating nanites as they devour planetary resources and spread your automated network across the stars."
   ],
   "controls": [
-    { "key": "1-5", "desc": "Select buildings" },
-    { "key": "H", "desc": "Harvest terrain" },
-    { "key": "R", "desc": "Research view" },
-    { "key": "M", "desc": "Interplanetary map" },
-    { "key": "ESC", "desc": "Main menu" },
-    { "key": "F1", "desc": "Help overlay" }
+    {
+      "key": "1-5",
+      "desc": "Select buildings"
+    },
+    {
+      "key": "H",
+      "desc": "Harvest terrain"
+    },
+    {
+      "key": "R",
+      "desc": "Research view"
+    },
+    {
+      "key": "M",
+      "desc": "Interplanetary map"
+    },
+    {
+      "key": "ESC",
+      "desc": "Main menu"
+    },
+    {
+      "key": "F1",
+      "desc": "Help overlay"
+    }
   ],
   "details": [
-    { "label": "Genre", "value": "Automation / Strategy" },
-    { "label": "Engine", "value": "Macroquad" },
-    { "label": "Platform", "value": "Browser, Windows" }
+    {
+      "label": "Genre",
+      "value": "Automation / Strategy"
+    },
+    {
+      "label": "Engine",
+      "value": "Macroquad"
+    },
+    {
+      "label": "Platform",
+      "value": "Browser, Windows"
+    }
   ],
   "download": {
     "href": "nanite_swarm_windows.zip",
