@@ -482,7 +482,12 @@ impl Game {
                     for _ in 0..3 {
                         let id = planet.drones.spawn_drone(drill);
                         if let Some(drone) = planet.drones.get_drone_mut(id) {
-                            drone.dispatch(core, route.clone(), 5.0);
+                            drone.dispatch(
+                                core,
+                                route.clone(),
+                                5.0,
+                                engine::ResourceType::Minerals,
+                            );
                         }
                     }
                 }

@@ -163,7 +163,7 @@ pub struct PlanetState {
     pub placement_anims: Vec<PlacementAnim>,
     // Minerals a drill has cut but not yet handed to a drone
     #[serde(skip)]
-    pub drill_buffers: std::collections::HashMap<(i32, i32), f32>,
+    pub output_buffers: std::collections::HashMap<(i32, i32), f32>,
     // Ore delivered to a processing building and not yet consumed
     #[serde(default)]
     pub input_buffers: std::collections::HashMap<(i32, i32), f32>,
@@ -251,7 +251,7 @@ impl PlanetState {
             particles: ParticleSystem::new(),
             particle_timer: 0.0,
             placement_anims: Vec::new(),
-            drill_buffers: std::collections::HashMap::new(),
+            output_buffers: std::collections::HashMap::new(),
             input_buffers: std::collections::HashMap::new(),
             traffic: std::collections::HashMap::new(),
         };

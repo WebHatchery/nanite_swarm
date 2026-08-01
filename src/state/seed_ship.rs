@@ -227,20 +227,45 @@ mod tests {
         (state, drill, smelter)
     }
 
-    /// The first production chain: ore is carried to a Smelter, refined into
-    /// alloy, and the Seed Ship's later stages take nothing else instead.
+    /// The whole chain in one go: ore is carried to a Smelter, refined into
+    /// alloy, and the alloy is carried on to the Core by the Smelter's own
+    /// drones. Nothing teleports at either end.
     #[test]
-    fn a_smelter_refines_the_ore_that_is_carried_to_it() {
+    fn ore_is_carried_in_refined_and_the_alloy_carried_out() {
         let (mut state, _drill, smelter) = state_with_smelter();
 
+        // Long enough for a full load of alloy to be made and then delivered.
+        for _ in 0..400 {
+            state.step(0.1, false);
+        }
+
+        assert!(state.resources.alloy > 0.0, "no alloy reached the Core");
+        assert!(state.alloy_rate() > 0.0);
+        // Ore reached the hopper rather than the global pool...
+        assert!(state.input_buffers.contains_key(&(smelter.x, smelter.y)));
+        // ...and the Smelter has its own crew to carry the alloy out.
+        assert!(!state.drones.drones_at(smelter).is_empty());
+    }
+
+    #[test]
+    fn alloy_waits_on_the_smelter_pad_until_a_drone_takes_it() {
+        let (mut state, _drill, smelter) = state_with_smelter();
+
+        // Short enough that a full load has not been collected yet.
         for _ in 0..100 {
             state.step(0.1, false);
         }
 
-        assert!(state.resources.alloy > 0.0, "the smelter made nothing");
-        assert!(state.alloy_rate() > 0.0);
-        // Ore reached the hopper rather than the global pool.
-        assert!(state.input_buffers.contains_key(&(smelter.x, smelter.y)));
+        let on_pad = state
+            .output_buffers
+            .get(&(smelter.x, smelter.y))
+            .copied()
+            .unwrap_or(0.0);
+        assert!(on_pad > 0.0, "the Smelter refined nothing");
+        assert_eq!(
+            state.resources.alloy, 0.0,
+            "alloy reached the pool without being carried"
+        );
     }
 
     #[test]
@@ -275,15 +300,12 @@ mod tests {
             state.step(0.1, false);
         }
 
-        let hopper = state
-            .input_buffers
+        let refined = state
+            .output_buffers
             .get(&(smelter.x, smelter.y))
             .copied()
             .unwrap_or(0.0);
-        assert!(
-            hopper > 0.0 || state.resources.alloy > 0.0,
-            "nothing reached the smelter"
-        );
+        assert!(refined > 0.0, "nothing reached the smelter");
         assert_eq!(
             state.resources.minerals, 0.0,
             "ore went to the pool while the smelter had room"

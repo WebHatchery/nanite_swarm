@@ -10,6 +10,7 @@ pub enum ResourceType {
     Energy,
     Data,
     Biomass,
+    Alloy,
 }
 
 /// Drone states for the automation system
@@ -28,7 +29,7 @@ pub struct Drone {
     pub id: u32,
     pub position: GridPos,
     pub target: GridPos,
-    pub home_drill: GridPos,
+    pub home: GridPos,
     pub state: DroneState,
     pub resource_type: ResourceType,
     pub carrying: f32,
@@ -45,7 +46,7 @@ impl Drone {
             id,
             position: drill_pos,
             target: drill_pos,
-            home_drill: drill_pos,
+            home: drill_pos,
             state: DroneState::Idle,
             resource_type: ResourceType::Minerals,
             carrying: 0.0,
@@ -59,8 +60,15 @@ impl Drone {
 
     /// Send this drone somewhere with a load: the Core, or a building that
     /// wants what it is carrying.
-    pub fn dispatch(&mut self, destination: GridPos, path: Vec<GridPos>, amount: f32) {
+    pub fn dispatch(
+        &mut self,
+        destination: GridPos,
+        path: Vec<GridPos>,
+        amount: f32,
+        resource: ResourceType,
+    ) {
         self.target = destination;
+        self.resource_type = resource;
         self.carrying = amount.min(self.capacity);
         self.state = DroneState::MovingToCore;
         self.path = path;
@@ -70,7 +78,7 @@ impl Drone {
 
     /// Start returning to drill
     pub fn return_to_drill(&mut self, path: Vec<GridPos>) {
-        self.target = self.home_drill;
+        self.target = self.home;
         self.carrying = 0.0;
         self.state = DroneState::MovingToDrill;
         self.path = path;
@@ -112,6 +120,7 @@ impl Drone {
                                 drone_id: self.id,
                                 amount: self.carrying,
                                 at: self.target,
+                                resource: self.resource_type,
                             });
                         }
                         self.state = DroneState::Idle;
@@ -159,6 +168,7 @@ pub enum DroneEvent {
         drone_id: u32,
         amount: f32,
         at: GridPos,
+        resource: ResourceType,
     },
     ReachedDrill {
         drone_id: u32,
@@ -216,24 +226,13 @@ impl DroneManager {
     }
 
     /// Get drones at a specific drill
-    pub fn drones_at_drill(&self, drill_pos: GridPos) -> Vec<&Drone> {
-        self.drones
-            .iter()
-            .filter(|d| d.home_drill == drill_pos)
-            .collect()
+    pub fn drones_at(&self, drill_pos: GridPos) -> Vec<&Drone> {
+        self.drones.iter().filter(|d| d.home == drill_pos).collect()
     }
 
     /// Remove all drones assigned to a specific drill
-    pub fn remove_drones_at_drill(&mut self, drill_pos: GridPos) {
-        self.drones.retain(|drone| drone.home_drill != drill_pos);
-    }
-
-    /// Get idle drones at a specific drill
-    pub fn idle_drones_at_drill(&mut self, drill_pos: GridPos) -> Vec<&mut Drone> {
-        self.drones
-            .iter_mut()
-            .filter(|d| d.home_drill == drill_pos && d.state == DroneState::Idle)
-            .collect()
+    pub fn remove_drones_at(&mut self, drill_pos: GridPos) {
+        self.drones.retain(|drone| drone.home != drill_pos);
     }
 
     /// Update all drones and return events
@@ -269,7 +268,12 @@ mod tests {
     #[test]
     fn dispatch_to_core_caps_carrying_at_capacity() {
         let mut drone = Drone::new(1, GridPos::new(0, 0), 10.0, 5.0);
-        drone.dispatch(GridPos::new(3, 0), straight_path(3), 999.0);
+        drone.dispatch(
+            GridPos::new(3, 0),
+            straight_path(3),
+            999.0,
+            ResourceType::Minerals,
+        );
         assert_eq!(drone.carrying, 10.0);
         assert_eq!(drone.state, DroneState::MovingToCore);
         assert_eq!(drone.path_index, 0);
@@ -278,7 +282,12 @@ mod tests {
     #[test]
     fn update_does_not_arrive_before_crossing_full_progress() {
         let mut drone = Drone::new(1, GridPos::new(0, 0), 10.0, 5.0);
-        drone.dispatch(GridPos::new(1, 0), straight_path(1), 5.0);
+        drone.dispatch(
+            GridPos::new(1, 0),
+            straight_path(1),
+            5.0,
+            ResourceType::Minerals,
+        );
 
         // speed(5.0) * delta(0.1) = 0.5 progress: not enough to cross one edge yet.
         let event = drone.update(0.1);
@@ -290,7 +299,12 @@ mod tests {
     #[test]
     fn update_reaches_core_after_crossing_a_single_hop_path() {
         let mut drone = Drone::new(1, GridPos::new(0, 0), 10.0, 5.0);
-        drone.dispatch(GridPos::new(1, 0), straight_path(1), 5.0);
+        drone.dispatch(
+            GridPos::new(1, 0),
+            straight_path(1),
+            5.0,
+            ResourceType::Minerals,
+        );
 
         // speed(5.0) * delta(0.3) = 1.5 progress: crosses the single edge.
         let event = drone.update(0.3);
@@ -305,7 +319,12 @@ mod tests {
     #[test]
     fn update_eventually_reaches_core_over_a_multi_hop_path() {
         let mut drone = Drone::new(1, GridPos::new(0, 0), 10.0, 5.0);
-        drone.dispatch(GridPos::new(3, 0), straight_path(3), 5.0);
+        drone.dispatch(
+            GridPos::new(3, 0),
+            straight_path(3),
+            5.0,
+            ResourceType::Minerals,
+        );
 
         let mut delivered = None;
         for _ in 0..20 {
@@ -352,10 +371,10 @@ mod tests {
         manager.spawn_drone(drill_b);
 
         assert_eq!(manager.total_count(), 3);
-        assert_eq!(manager.drones_at_drill(drill_a).len(), 2);
+        assert_eq!(manager.drones_at(drill_a).len(), 2);
         assert_eq!(manager.count_by_state(DroneState::Idle), 3);
 
-        manager.remove_drones_at_drill(drill_a);
+        manager.remove_drones_at(drill_a);
         assert_eq!(manager.total_count(), 1);
     }
 
@@ -373,7 +392,12 @@ mod tests {
     #[test]
     fn a_long_step_crosses_several_tiles_instead_of_capping_at_one() {
         let mut drone = Drone::new(1, GridPos::new(0, 0), 10.0, 5.0);
-        drone.dispatch(GridPos::new(6, 0), straight_path(6), 5.0);
+        drone.dispatch(
+            GridPos::new(6, 0),
+            straight_path(6),
+            5.0,
+            ResourceType::Minerals,
+        );
 
         // speed(5.0) * delta(0.7) = 3.5 tiles of travel in a single step.
         assert!(drone.update(0.7).is_none());
@@ -384,7 +408,12 @@ mod tests {
     #[test]
     fn a_step_long_enough_to_overshoot_still_arrives_once() {
         let mut drone = Drone::new(1, GridPos::new(0, 0), 10.0, 5.0);
-        drone.dispatch(GridPos::new(3, 0), straight_path(3), 5.0);
+        drone.dispatch(
+            GridPos::new(3, 0),
+            straight_path(3),
+            5.0,
+            ResourceType::Minerals,
+        );
 
         // Sixty seconds of travel over a three tile path: arrive, do not wrap.
         let event = drone.update(60.0);
@@ -396,7 +425,12 @@ mod tests {
     #[test]
     fn position_tracks_the_tile_the_drone_last_reached() {
         let mut drone = Drone::new(1, GridPos::new(0, 0), 10.0, 5.0);
-        drone.dispatch(GridPos::new(3, 0), straight_path(3), 5.0);
+        drone.dispatch(
+            GridPos::new(3, 0),
+            straight_path(3),
+            5.0,
+            ResourceType::Minerals,
+        );
 
         // Half way along the first hop: still standing on the drill tile.
         drone.update(0.1);
@@ -412,7 +446,12 @@ mod tests {
     #[test]
     fn blocking_a_drone_stops_it_where_it_stands_and_keeps_its_cargo() {
         let mut drone = Drone::new(1, GridPos::new(0, 0), 10.0, 5.0);
-        drone.dispatch(GridPos::new(3, 0), straight_path(3), 7.0);
+        drone.dispatch(
+            GridPos::new(3, 0),
+            straight_path(3),
+            7.0,
+            ResourceType::Minerals,
+        );
         drone.update(0.3);
 
         let event = drone.block();

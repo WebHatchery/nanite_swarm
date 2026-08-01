@@ -137,16 +137,17 @@ pub(super) fn draw(
         } else {
             "Blueprint".to_string()
         };
-        // A processing building's hopper is the difference between "idle" and
+        // What is waiting on a building is the difference between "idle" and
         // "waiting on a drone", and the player cannot tell them apart otherwise.
         if let Some(pos) = hovered_pos.or(state.selected_tile) {
-            let hopper = state
-                .input_buffers
-                .get(&(pos.x, pos.y))
-                .copied()
-                .unwrap_or(0.0);
-            if hopper > 0.0 {
-                status_text = format!("{} - {:.0} ore", status_text, hopper);
+            let key = (pos.x, pos.y);
+            let waiting_in = state.input_buffers.get(&key).copied().unwrap_or(0.0);
+            let waiting_out = state.output_buffers.get(&key).copied().unwrap_or(0.0);
+            if waiting_in >= 1.0 {
+                status_text = format!("{} - {:.0} in", status_text, waiting_in);
+            }
+            if waiting_out >= 1.0 {
+                status_text = format!("{} - {:.0} out", status_text, waiting_out);
             }
         }
         let status_color = if tile_building.is_some() && !tile_powered {

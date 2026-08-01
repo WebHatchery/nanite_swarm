@@ -24,7 +24,7 @@ impl PlanetState {
                 // Spawn initial drone for drills
                 if building_type == BuildingType::Drill {
                     self.drones.spawn_drone(pos);
-                    self.drill_buffers.insert((pos.x, pos.y), 0.0);
+                    self.output_buffers.insert((pos.x, pos.y), 0.0);
                 }
 
                 // Reveal area around new building
@@ -106,8 +106,8 @@ impl PlanetState {
 
         if let Some(removed) = self.grid.remove_building(pos) {
             if removed.building_type == BuildingType::Drill {
-                self.drill_buffers.remove(&(pos.x, pos.y));
-                self.drones.remove_drones_at_drill(pos);
+                self.output_buffers.remove(&(pos.x, pos.y));
+                self.drones.remove_drones_at(pos);
             }
 
             self.resources.minerals += mineral_cost * refund_ratio;
@@ -208,7 +208,7 @@ mod tests {
         assert!(state.try_place_building(pos));
         assert!(state.resources.minerals < before_minerals);
         assert_eq!(state.drones.total_count(), 1);
-        assert!(state.drill_buffers.contains_key(&(pos.x, pos.y)));
+        assert!(state.output_buffers.contains_key(&(pos.x, pos.y)));
     }
 
     #[test]

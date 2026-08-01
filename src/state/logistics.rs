@@ -6,16 +6,16 @@
 
 use crate::engine::{
     route_over_network, tile_carries_traffic, BuildingType, Drone, DroneEvent, DroneState, Grid,
-    GridPos, StatId,
+    GridPos, ResourceType, StatId,
 };
 
 use super::game_state::PlanetState;
 use super::simulation::{HAZARD_COUNTER_RADIUS, HAZARD_COUNTER_STRENGTH};
 
-/// How much a drill may stockpile while its drone is away, as a multiple of a
-/// drone load. Past this the ore is simply not cut: a drill that outruns its
-/// logistics is the pressure, not free storage.
-const DRILL_BUFFER_LOADS: f32 = 3.0;
+/// How much a producer may stockpile on its pad while its drones are away, as
+/// a multiple of a drone load. Past this it simply stops producing: a building
+/// that outruns its logistics is the pressure, not free storage.
+const PAD_LOADS: f32 = 3.0;
 /// How many drone loads a processing building will let pile up in its hopper
 /// before drones start taking ore elsewhere.
 const HOPPER_LOADS: f32 = 3.0;
@@ -37,7 +37,8 @@ impl PlanetState {
             }
         }
 
-        self.update_drills(delta_time, core);
+        self.update_drills(delta_time);
+        self.dispatch_producers(core);
         self.update_traffic();
     }
 
@@ -75,7 +76,7 @@ impl PlanetState {
                     // drop it before heading home: a drone that walks the route
                     // back is what makes a long run cost throughput.
                     drone.carrying = 0.0;
-                    match route_over_network(grid, drone.position, drone.home_drill) {
+                    match route_over_network(grid, drone.position, drone.home) {
                         Some(route) => drone.return_to_drill(route),
                         None => events.push(drone.block()),
                     }
@@ -121,7 +122,7 @@ impl PlanetState {
 
         for drone in self.drones.drones_mut() {
             let mut speed = base_speed;
-            if let Some(building) = grid.get(drone.home_drill).and_then(|t| t.building.as_ref()) {
+            if let Some(building) = grid.get(drone.home).and_then(|t| t.building.as_ref()) {
                 speed *= building.dust_drone_speed_multiplier();
             }
             if let Some(tile) = drone.path.get(drone.path_index) {
@@ -220,15 +221,15 @@ impl PlanetState {
             .collect()
     }
 
-    /// Cut ore into each drill's buffer, and send a drone the moment there is
-    /// a full load waiting for it.
-    fn update_drills(&mut self, delta_time: f32, core: GridPos) {
+    /// Cut ore into each drill's buffer.
+    ///
+    /// Everything a drill produces goes on its pad; getting it anywhere is
+    /// [`Self::dispatch_producers`]'s problem, the same as for a Smelter.
+    fn update_drills(&mut self, delta_time: f32) {
         let rate = self
             .stats
             .apply(StatId::DrillOutput, self.config.buildings.drill_output_rate);
-        let load = self.drones.drone_capacity;
-        let ceiling = load * DRILL_BUFFER_LOADS;
-        let crew = self.drone_crew_size();
+        let ceiling = self.drones.drone_capacity * PAD_LOADS;
 
         for drill_pos in self.grid.find_buildings(BuildingType::Drill) {
             let Some(building) = self.grid.get(drill_pos).and_then(|t| t.building.as_ref()) else {
@@ -238,27 +239,50 @@ impl PlanetState {
                 continue;
             }
             let efficiency = building.dust_efficiency();
-
-            // Research can grow a drill's crew; the extra drones turn up at
-            // the next cycle rather than needing the drill rebuilt.
-            while self.drones.drones_at_drill(drill_pos).len() < crew {
-                self.drones.spawn_drone(drill_pos);
-            }
-
             let buffer = self
-                .drill_buffers
+                .output_buffers
                 .entry((drill_pos.x, drill_pos.y))
                 .or_insert(0.0);
             *buffer = (*buffer + rate * efficiency * delta_time).min(ceiling);
-            if *buffer < load {
+        }
+    }
+
+    /// Give every producer a crew, and send a drone whenever a full load is
+    /// waiting on its pad.
+    ///
+    /// A drill and a Smelter are the same problem here: something has piled up
+    /// somewhere and has to be carried to whatever wants it. Only the resource
+    /// and therefore the destination differ.
+    fn dispatch_producers(&mut self, core: GridPos) {
+        let load = self.drones.drone_capacity;
+        let crew = self.drone_crew_size();
+
+        for (producer, resource) in self.producers() {
+            // Research can grow a crew; the extra drones turn up at the next
+            // cycle rather than needing the building rebuilt.
+            while self.drones.drones_at(producer).len() < crew {
+                self.drones.spawn_drone(producer);
+            }
+
+            let waiting = self
+                .output_buffers
+                .get(&(producer.x, producer.y))
+                .copied()
+                .unwrap_or(0.0);
+            if waiting < load {
                 continue;
             }
 
-            // Ore goes to whatever wants it and is nearest on the network,
-            // and to the Core only when nothing does.
-            let Some((destination, route)) = self.delivery_for(drill_pos, core) else {
-                // Powered but no pipe anywhere: the ore piles up at the drill
-                // instead of teleporting into the pool.
+            // Ore goes to whatever wants it and is nearest on the network, and
+            // to the Core only when nothing does. Refined output has no
+            // consumer yet, so it always goes home to the Core.
+            let delivery = match resource {
+                ResourceType::Minerals => self.delivery_for(producer, core),
+                _ => route_over_network(&self.grid, producer, core).map(|route| (core, route)),
+            };
+            let Some((destination, route)) = delivery else {
+                // Powered but no pipe anywhere: it piles up on the pad instead
+                // of teleporting into the pool.
                 continue;
             };
 
@@ -266,19 +290,45 @@ impl PlanetState {
                 .drones
                 .drones()
                 .iter()
-                .find(|d| d.home_drill == drill_pos && d.state == DroneState::Idle)
+                .find(|d| d.home == producer && d.state == DroneState::Idle)
                 .map(|d| d.id);
 
             let Some(drone_id) = idle_drone else {
                 continue;
             };
-            if let Some(buffer) = self.drill_buffers.get_mut(&(drill_pos.x, drill_pos.y)) {
+            if let Some(buffer) = self.output_buffers.get_mut(&(producer.x, producer.y)) {
                 *buffer -= load;
             }
             if let Some(drone) = self.drones.get_drone_mut(drone_id) {
-                drone.dispatch(destination, route, load);
+                drone.dispatch(destination, route, load, resource);
             }
         }
+    }
+
+    /// Every powered building that piles something up for collection, and what
+    /// that something is.
+    fn producers(&self) -> Vec<(GridPos, ResourceType)> {
+        let mut producers: Vec<(GridPos, ResourceType)> = self
+            .powered_positions(BuildingType::Drill)
+            .into_iter()
+            .map(|pos| (pos, ResourceType::Minerals))
+            .collect();
+
+        for def in crate::data::game_data()
+            .buildings
+            .iter()
+            .filter(|def| def.recipe.alloy_out > 0.0)
+        {
+            let Some(kind) = BuildingType::from_id(&def.id) else {
+                continue;
+            };
+            producers.extend(
+                self.powered_positions(kind)
+                    .into_iter()
+                    .map(|pos| (pos, ResourceType::Alloy)),
+            );
+        }
+        producers
     }
 }
 
@@ -291,12 +341,12 @@ fn repath(grid: &Grid, drone: &mut Drone, core: GridPos) -> bool {
     let destination = match drone.state {
         // Whatever it was sent to, which may be a processing building.
         DroneState::MovingToCore => drone.target,
-        DroneState::MovingToDrill => drone.home_drill,
+        DroneState::MovingToDrill => drone.home,
         _ if carrying > 0.0 => core,
-        _ => drone.home_drill,
+        _ => drone.home,
     };
 
-    if destination == drone.home_drill && drone.position == destination {
+    if destination == drone.home && drone.position == destination {
         drone.state = DroneState::Idle;
         return true;
     }
@@ -306,7 +356,9 @@ fn repath(grid: &Grid, drone: &mut Drone, core: GridPos) -> bool {
     };
 
     if destination == core {
-        drone.dispatch(destination, route, carrying);
+        // Whatever it was already carrying stays what it is carrying.
+        let resource = drone.resource_type;
+        drone.dispatch(destination, route, carrying, resource);
     } else {
         drone.return_to_drill(route);
     }
@@ -404,7 +456,7 @@ mod tests {
         for _ in 0..count {
             let id = state.drones.spawn_drone(tile);
             let drone = state.drones.get_drone_mut(id).unwrap();
-            drone.dispatch(tile, vec![tile], 1.0);
+            drone.dispatch(tile, vec![tile], 1.0, ResourceType::Minerals);
         }
         state.update_traffic();
     }
@@ -414,7 +466,7 @@ mod tests {
         let (mut state, _core, drill) = state_with_run(2);
         assert_eq!(state.drone_crew_size(), 1);
         state.step(FILL_SECONDS, false);
-        assert_eq!(state.drones.drones_at_drill(drill).len(), 1);
+        assert_eq!(state.drones.drones_at(drill).len(), 1);
     }
 
     #[test]
@@ -429,7 +481,7 @@ mod tests {
 
         // The crew turns up without the drill being rebuilt.
         state.step(FILL_SECONDS, false);
-        assert_eq!(state.drones.drones_at_drill(drill).len(), 2);
+        assert_eq!(state.drones.drones_at(drill).len(), 2);
     }
 
     #[test]
@@ -545,7 +597,7 @@ mod tests {
         assert_eq!(drone.state, DroneState::MovingToCore);
         assert_eq!(drone.path.len(), 4);
         assert_eq!(drone.path.last(), Some(&core));
-        assert_eq!(drone.home_drill, drill);
+        assert_eq!(drone.home, drill);
     }
 
     #[test]

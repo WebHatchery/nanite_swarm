@@ -87,13 +87,24 @@ impl PlanetState {
 
         // Update drones
         if self.power_collapse_shutdown <= 0.0 {
+            let core = self.grid.find_core();
             let events = self.drones.update(sim_delta);
             let mut delivered_total = 0.0;
             for event in events {
                 match event {
-                    crate::engine::DroneEvent::Delivered { amount, at, .. } => {
-                        if Some(at) == self.grid.find_core() {
-                            delivered_total += amount;
+                    crate::engine::DroneEvent::Delivered {
+                        amount,
+                        at,
+                        resource,
+                        ..
+                    } => {
+                        if Some(at) == core {
+                            match resource {
+                                crate::engine::ResourceType::Alloy => {
+                                    self.resources.alloy += amount
+                                }
+                                _ => delivered_total += amount,
+                            }
                         } else {
                             // Ore dropped at a processing building waits there
                             // until that building gets round to it.
@@ -225,7 +236,8 @@ impl PlanetState {
                 }
             }
             self.resources.biomass -= recipe.biomass_in * scale;
-            self.resources.alloy += recipe.alloy_out * scale;
+            // Output waits on the pad for a drone, the same as a drill's ore.
+            *self.output_buffers.entry((pos.x, pos.y)).or_insert(0.0) += recipe.alloy_out * scale;
         }
     }
 

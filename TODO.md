@@ -60,11 +60,11 @@ Techs declare their effects as modifiers in `research.json` (`engine::modifiers`
 
 ## Content
 
-The first chain exists: drones carry ore to a Smelter, which refines it into alloy while powered, and the Seed Ship's last two stages take nothing else instead. A drill sends its load to the nearest processing building with room and only falls back to the Core, so where a Smelter sits is a logistics decision.
+The first chain runs end to end and nothing teleports: a drill piles ore on its pad, its crew carries it to the nearest Smelter with room, the Smelter refines it and piles alloy on its own pad, and its own crew carries that to the Core. Both halves are the same code — a producer, a load, and whatever wants it — so a third link is data.
 
-- Alloy still teleports. A Smelter pushes its output straight into the global pool rather than a drone carrying it to the Core, so the second half of the round trip is missing and a Smelter parked at the far end of the map exports for free.
-- A Smelter has no drones of its own; it is fed entirely by drill crews, so a distant Smelter starves its own drill's throughput rather than the two being planned separately.
-- `biomass_in` still draws from the global pool, because no recipe uses it yet. The next recipe that does needs the hopper generalised past ore.
+- Alloy has no consumer building, so it always routes to the Core. The moment something eats alloy, `dispatch_producers` will pick it the same way it picks a Smelter, but nothing does yet.
+- `biomass_in` still draws from the global pool, because no recipe uses it. The next recipe that does needs the hopper to hold more than ore.
+- Every producer's crew is one drone (two with `swarm_dispatch`), so a Smelter fed by three drills has the same collection capacity as one fed by one.
 - One recipe, one product. Deeper chains (alloy plus biomass into something) and more processing buildings are the content this unlocks.
 - `RecipeDef` is a fixed struct of named fields, so a third input needs a code change rather than a data change. It wants to be a map of resource id to amount once there are more than two.
 - Grow the building set beyond 12 across processing, logistics, and megastructure parts. Hazard counters exist now; nothing else on that list does.
