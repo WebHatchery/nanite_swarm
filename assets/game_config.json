@@ -40,5 +40,14 @@
     "min_data_loss": 0.1,
     "max_data_loss": 0.35,
     "notice_seconds": 10.0
+  },
+  "ore": {
+    "rich_chance": 0.18,
+    "rich_min": 1.4,
+    "rich_max": 2.2,
+    "lean_chance": 0.22,
+    "lean_min": 0.5,
+    "lean_max": 0.8,
+    "depletion_per_unit": 0.0004
   }
 }

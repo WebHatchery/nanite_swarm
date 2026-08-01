@@ -13,6 +13,9 @@ use super::tile::Tile;
 
 type TerrainRng = SeededRng;
 
+use crate::data::OreConfig;
+use macroquad_toolkit::math::lerp;
+
 /// The game grid containing all tiles
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Grid {
@@ -40,6 +43,17 @@ impl Grid {
     /// over is open ground, which is what makes one world a forest and another
     /// a field of holes.
     pub fn new_with_terrain(width: u32, height: u32, seed: u64, weights: &TerrainWeights) -> Self {
+        Self::generate(width, height, seed, weights, &OreConfig::default())
+    }
+
+    /// The same, with the ore spread declared rather than assumed.
+    pub fn generate(
+        width: u32,
+        height: u32,
+        seed: u64,
+        weights: &TerrainWeights,
+        ore: &OreConfig,
+    ) -> Self {
         let mut rng = TerrainRng::new(seed);
         let size = (width * height) as usize;
         let mut tiles = Vec::with_capacity(size);
@@ -78,6 +92,17 @@ impl Grid {
             // Reveal tiles near center
             let revealed = dist_from_center <= 4;
 
+            // Ore is rolled for every tile, from the same seeded stream as
+            // the terrain, so a world's ground is as reproducible as its shape.
+            let ore_roll = rng.next_f32();
+            let ore_richness = if ore_roll < ore.rich_chance {
+                lerp(ore.rich_min, ore.rich_max, rng.next_f32())
+            } else if ore_roll < ore.rich_chance + ore.lean_chance {
+                lerp(ore.lean_min, ore.lean_max, rng.next_f32())
+            } else {
+                1.0
+            };
+
             tiles.push(Tile {
                 terrain,
                 building: None,
@@ -86,6 +111,7 @@ impl Grid {
                 mountain_harvested: false,
                 forest_cleared: false,
                 biomass_amount: 0.0,
+                ore_richness,
             });
         }
 

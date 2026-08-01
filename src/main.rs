@@ -523,6 +523,14 @@ impl Game {
             "logistics" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();
+                // Select the drill's own tile, so the inspector is reading
+                // ground rather than a palette choice.
+                let planet = self.campaign.current_mut();
+                let drill = planet
+                    .grid
+                    .find_buildings(engine::BuildingType::Drill)
+                    .pop();
+                planet.selected_tile = drill;
             }
             // A Core that has grown past its landing pod.
             "core_stage" => {

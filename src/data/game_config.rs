@@ -10,6 +10,8 @@ pub struct GameConfig {
     pub buildings: BuildingConfig,
     #[serde(default = "CollapseConfig::default")]
     pub collapse: CollapseConfig,
+    #[serde(default = "OreConfig::default")]
+    pub ore: OreConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -67,6 +69,22 @@ pub struct CollapseConfig {
     pub notice_seconds: f32,
 }
 
+/// How ore is spread through the ground, and what happens to a rich patch as
+/// it is cut. Only the bonus above ordinary ground depletes (gdd.md §3).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OreConfig {
+    /// Share of ground that is a rich deposit, and how rich it can be.
+    pub rich_chance: f32,
+    pub rich_min: f32,
+    pub rich_max: f32,
+    /// Share that is poorer than ordinary, and how poor.
+    pub lean_chance: f32,
+    pub lean_min: f32,
+    pub lean_max: f32,
+    /// Richness lost per unit of ore cut out of the tile.
+    pub depletion_per_unit: f32,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuildingConfig {
     pub core_power_consumption: f32,
@@ -120,6 +138,21 @@ impl Default for GameConfig {
                 partial_load_min_share: 0.5,
             },
             collapse: CollapseConfig::default(),
+            ore: OreConfig::default(),
+        }
+    }
+}
+
+impl Default for OreConfig {
+    fn default() -> Self {
+        Self {
+            rich_chance: 0.18,
+            rich_min: 1.4,
+            rich_max: 2.2,
+            lean_chance: 0.22,
+            lean_min: 0.5,
+            lean_max: 0.8,
+            depletion_per_unit: 0.0004,
         }
     }
 }

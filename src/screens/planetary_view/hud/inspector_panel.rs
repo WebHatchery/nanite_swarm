@@ -108,7 +108,9 @@ pub(super) fn draw(
         );
         draw_ui_text(&description, info_x, header_y + 40.0, 10.0, dim);
         let output = format_power_delta(building_type.power_delta());
-        let row_base = inspector_y + inspector_h - 62.0;
+        // Four rows now. They start higher than they did, but not so high as
+        // to run into the description above them.
+        let row_base = inspector_y + inspector_h - 72.0;
         draw_status_row(
             theme,
             right_x + 16.0,
@@ -128,6 +130,22 @@ pub(super) fn draw(
             &format!("{:.0}% {}", tile_dust, dust_label),
             dust_color,
         );
+
+        // What the ground itself is worth. Without this a deposit is invisible
+        // and drill placement is guesswork.
+        if let Some(tile) = display_pos.and_then(|pos| state.grid.get(pos)) {
+            let (ore_label, ore_color) = ore_status(tile.ore_richness, colors);
+            draw_status_row(
+                theme,
+                right_x + 16.0,
+                row_base + 60.0,
+                right_w - 32.0,
+                "Ore",
+                &format!("{:.0}% {}", tile.ore_richness * 100.0, ore_label),
+                ore_color,
+            );
+        }
+
         let mut status_text = if tile_building.is_some() {
             if tile_powered {
                 "Powered".to_string()
@@ -225,5 +243,16 @@ pub(super) fn draw(
                 dim,
             );
         }
+    }
+}
+
+/// How the ground under a tile reads: a deposit, ordinary, or poor.
+fn ore_status(richness: f32, colors: &PanelColors) -> (&'static str, Color) {
+    if richness > 1.05 {
+        ("DEPOSIT", colors.success)
+    } else if richness < 0.95 {
+        ("LEAN", colors.warning)
+    } else {
+        ("ORDINARY", colors.dim)
     }
 }

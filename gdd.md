@@ -79,6 +79,22 @@ The map is composed of tiles with distinct properties. The player must choose be
 - **Option A:** Consume for Biomass/Carbon.
 - **Option B:** Keep as a buffer against pollution/heat mechanics.
 
+#### Decision: a deposit is spent down to ordinary ground, never past it (2026-08-02)
+
+Ground carries an ore richness, so where a drill goes is a spatial decision and
+not just a question of how long the run home is. The open question was what
+depletion does at the bottom.
+
+**Only the bonus depletes.** A rich deposit is cut down towards ordinary ground
+and stops there; ordinary and lean ground never change at all. A bonanza is a
+strong opening that fades, not a resource that runs out.
+
+The alternative — deposits emptying to nothing — turns an idle game into a
+relocation treadmill and contradicts the pitch's promise that you never lose
+progress. This way a mature base keeps every drill it built working at the rate
+it was always going to settle at, and the reward for prospecting is *earlier*
+output rather than permanently better output.
+
 ### The Synapse (Research)
 
 Research is not a list; it is a visual representation of the AI's growing intelligence.
