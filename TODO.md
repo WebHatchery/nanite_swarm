@@ -44,9 +44,9 @@ A network tile passes `conduit_capacity` drones at full speed; past that they sh
 
 Hazards are per-world data (`planets.json`). Acid rain corrodes anything carrying the network, riding the existing dust-to-stall chain so a neglected Venus run eventually breaks; the cold takes a share of drone speed. The counters are buildings placed on the map — Shield Generators and Heater Nodes, each holding 90% of one hazard off within four tiles — so covering a sprawling base is a layout and power problem. Ceramic Plating remains a small global backstop.
 
-- Coverage is invisible until you watch the numbers move: a Shield Generator does not show what it protects, so laying them out is guesswork. The sweeper has the same problem and would want the same fix.
+- Coverage is drawn for whatever upkeep building is selected or being placed, and wear is tinted onto the map, so a corroding run is visible from across the base. What is still missing is the reverse view: nothing shows which buildings are *uncovered*, which is the question you actually ask when a base sprawls.
 - A hazard is uniform across a world. Acid squalls that move, or cold that bites hardest far from the Core, would give the map a shape to plan around.
-- No hazard has a visual: a corroding conduit looks exactly like a dusty one, and a frozen drone just looks slow.
+- Acid and dust share one wear tint, because they share one number in the sim. If they should read differently on the map they need to be different quantities first. A frozen drone still just looks slow.
 - Per-planet constraints are still only a ban list plus hazards. The positive half is missing: infinite geothermal, fusion-only worlds, generators that exist on one world and nowhere else.
 - Add the Heat mechanic the GDD gives Server Banks; water tiles carry a "may provide cooling" comment with no logic behind it.
 

@@ -194,6 +194,16 @@ impl PlanetState {
         }
     }
 
+    /// How far a building's upkeep effect reaches, if it has one. The view
+    /// asks rather than duplicating the numbers.
+    pub fn coverage_radius(&self, building_type: BuildingType) -> Option<i32> {
+        match building_type {
+            BuildingType::Sweeper => Some(SWEEPER_RADIUS),
+            BuildingType::ShieldGenerator | BuildingType::HeaterNode => Some(HAZARD_COUNTER_RADIUS),
+            _ => None,
+        }
+    }
+
     /// Positions of powered, working buildings of a type.
     pub(super) fn powered_positions(
         &self,

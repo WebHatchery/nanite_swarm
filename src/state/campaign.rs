@@ -362,6 +362,52 @@ mod tests {
         );
     }
 
+    /// The map draws coverage from `coverage_radius`, and the simulation
+    /// applies it from its own constant. If those ever disagree the player is
+    /// being lied to, so pin them to each other at the boundary.
+    #[test]
+    fn the_drawn_coverage_radius_is_the_one_the_acid_respects() {
+        let mut venus = world(1);
+        venus.resources.minerals = 10_000.0;
+        venus.resources.energy = 10_000.0;
+        venus.config.resources.max_energy = 10_000.0;
+        venus.unlock_building(BuildingType::Conduit);
+        venus.unlock_building(BuildingType::ShieldGenerator);
+
+        let radius = venus
+            .coverage_radius(BuildingType::ShieldGenerator)
+            .expect("shield generators cover an area");
+
+        // Beside the Core, so the shield is actually powered: an unpowered one
+        // protects nothing, which is a rule worth not tripping over silently.
+        let core = venus.grid.find_core().unwrap();
+        let shield = GridPos::new(core.x, core.y + 1);
+        let inside = GridPos::new(shield.x + radius, shield.y);
+        let outside = GridPos::new(shield.x + radius + 1, shield.y);
+        venus.grid.reveal_around(shield, 16);
+        for pos in [shield, inside, outside] {
+            venus.grid.get_mut(pos).unwrap().terrain = crate::engine::TerrainType::Empty;
+        }
+        venus.select_building(BuildingType::ShieldGenerator);
+        assert!(venus.try_place_building(shield));
+        venus.select_building(BuildingType::Conduit);
+        assert!(venus.try_place_building(inside));
+        assert!(venus.try_place_building(outside));
+        venus.grid.update_power_grid();
+
+        for _ in 0..60 {
+            venus.step(1.0, false);
+        }
+
+        let dust_at = |pos: GridPos| venus.grid.get(pos).unwrap().building.as_ref().unwrap().dust;
+        assert!(
+            dust_at(inside) < dust_at(outside),
+            "the tile at exactly the drawn radius took {} and the one past it took {}",
+            dust_at(inside),
+            dust_at(outside)
+        );
+    }
+
     #[test]
     fn ceramic_plating_holds_the_acid_off() {
         let bare = world(1);

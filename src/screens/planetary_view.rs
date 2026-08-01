@@ -6,6 +6,7 @@ mod hud;
 mod input;
 mod metrics;
 mod terrain_render;
+mod upkeep_render;
 
 use crate::assets::GameTextures;
 use crate::data::UiTheme;
@@ -59,6 +60,8 @@ pub fn render_planetary_view(
 
     terrain_render::draw_planetary_background(screen_w, screen_h, time);
     terrain_render::draw_grid_tiles(state, textures, metrics, hovered_pos, pulse, global_pulse);
+    upkeep_render::draw_wear(state, metrics, time);
+    upkeep_render::draw_coverage(state, metrics, hovered_pos);
     entity_render::draw_congestion(state, metrics, time);
     entity_render::draw_drones(state, metrics, time);
     entity_render::draw_particles(state, metrics);

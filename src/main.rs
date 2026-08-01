@@ -372,6 +372,54 @@ impl Game {
                     planet.grid.reveal_around(core, 12);
                 }
             }
+            "upkeep" => {
+                self.phase = GamePhase::Playing;
+                self.campaign.colonize(1);
+                self.campaign.travel_to(1);
+                self.research_state
+                    .unlocked
+                    .push("ceramic_plating".to_string());
+                let planet = self.campaign.current_mut();
+                planet.resources.minerals = 10_000.0;
+                planet.resources.energy = 10_000.0;
+                planet.config.resources.max_energy = 10_000.0;
+                for def in &data::game_data().buildings {
+                    if let Some(building_type) = engine::BuildingType::from_id(&def.id) {
+                        planet.unlock_building(building_type);
+                    }
+                }
+                let Some(core) = planet.grid.find_core() else {
+                    return;
+                };
+                planet.grid.reveal_around(core, 14);
+
+                // A run heading east, with a shield covering only its first half.
+                for step in 1..=10 {
+                    let pos = engine::GridPos::new(core.x + step, core.y);
+                    if let Some(tile) = planet.grid.get_mut(pos) {
+                        tile.terrain = engine::TerrainType::Empty;
+                        tile.building = None;
+                    }
+                    planet.select_building(engine::BuildingType::Conduit);
+                    planet.try_place_building(pos);
+                }
+                let shield = engine::GridPos::new(core.x + 2, core.y + 1);
+                if let Some(tile) = planet.grid.get_mut(shield) {
+                    tile.terrain = engine::TerrainType::Empty;
+                    tile.building = None;
+                }
+                planet.select_building(engine::BuildingType::ShieldGenerator);
+                planet.try_place_building(shield);
+                planet.grid.update_power_grid();
+
+                // Long enough for the acid to bite where it is not held off.
+                for _ in 0..90 {
+                    planet.step(1.0, false);
+                }
+                // Leave the shield selected so its coverage is on screen.
+                planet.select_building(engine::BuildingType::ShieldGenerator);
+                planet.selected_tile = Some(shield);
+            }
             "congestion" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();
