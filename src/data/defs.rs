@@ -101,6 +101,29 @@ pub struct ResearchData {
     pub nodes: Vec<ResearchNodeDef>,
 }
 
+/// What one Seed Ship stage swallows before it is done.
+#[derive(Debug, Clone, Copy, Default, Deserialize)]
+pub struct SeedShipCost {
+    pub minerals: f32,
+    pub data: f32,
+    pub biomass: f32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct SeedShipStageDef {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub cost: SeedShipCost,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct SeedShipData {
+    /// Ceiling on how fast the yard can swallow each resource, per second.
+    pub intake_per_second: SeedShipCost,
+    pub stages: Vec<SeedShipStageDef>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct BuildingDataFile {
     pub buildings: Vec<BuildingDef>,
@@ -118,6 +141,7 @@ pub struct GameData {
     pub terrain: Vec<TerrainDef>,
     pub terrain_by_id: HashMap<String, TerrainDef>,
     pub research: ResearchData,
+    pub seed_ship: SeedShipData,
 }
 
 impl GameData {
@@ -129,8 +153,15 @@ impl GameData {
             .unwrap_or_else(|_| include_str!("../../assets/terrain.json").to_string());
         let research_json = fs::read_to_string("assets/research.json")
             .unwrap_or_else(|_| include_str!("../../assets/research.json").to_string());
+        let seed_ship_json = fs::read_to_string("assets/seed_ship.json")
+            .unwrap_or_else(|_| include_str!("../../assets/seed_ship.json").to_string());
 
-        Self::from_json_strings(&buildings_json, &terrain_json, &research_json)
+        Self::from_json_strings(
+            &buildings_json,
+            &terrain_json,
+            &research_json,
+            &seed_ship_json,
+        )
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -144,11 +175,24 @@ impl GameData {
         let research_json = load_string("assets/research.json")
             .await
             .unwrap_or_else(|_| include_str!("../../assets/research.json").to_string());
+        let seed_ship_json = load_string("assets/seed_ship.json")
+            .await
+            .unwrap_or_else(|_| include_str!("../../assets/seed_ship.json").to_string());
 
-        Self::from_json_strings(&buildings_json, &terrain_json, &research_json)
+        Self::from_json_strings(
+            &buildings_json,
+            &terrain_json,
+            &research_json,
+            &seed_ship_json,
+        )
     }
 
-    fn from_json_strings(buildings_json: &str, terrain_json: &str, research_json: &str) -> Self {
+    fn from_json_strings(
+        buildings_json: &str,
+        terrain_json: &str,
+        research_json: &str,
+        seed_ship_json: &str,
+    ) -> Self {
         let building_file: BuildingDataFile =
             load_json(buildings_json).unwrap_or_else(|_| BuildingDataFile { buildings: vec![] });
         let terrain_file: TerrainDataFile =
@@ -168,6 +212,11 @@ impl GameData {
             }
         }
 
+        let seed_ship: SeedShipData = load_json(seed_ship_json).unwrap_or_else(|_| SeedShipData {
+            intake_per_second: SeedShipCost::default(),
+            stages: vec![],
+        });
+
         let mut buildings_by_id = HashMap::new();
         for def in &building_file.buildings {
             buildings_by_id.insert(def.id.clone(), def.clone());
@@ -184,6 +233,7 @@ impl GameData {
             terrain: terrain_file.terrain,
             terrain_by_id,
             research,
+            seed_ship,
         }
     }
 
@@ -226,10 +276,11 @@ mod tests {
              "harvest_rewards": {"minerals": 0.0, "biomass": 0.0}, "harvested_to": "empty",
              "preservation_bonus": null, "texture": "t", "color": [0.1, 0.1, 0.1, 1.0]}
         ]}"#;
+        let seed_ship_json = r#"{"intake_per_second": {"minerals": 1.0, "data": 1.0, "biomass": 1.0}, "stages": []}"#;
         let research_json = r#"{"starting_unlocked": ["core"], "nodes": [
             {"id": "core", "name": "Core", "description": "d", "data_cost": 0.0, "prerequisites": [], "position": [0.0, 0.0]}
         ]}"#;
-        GameData::from_json_strings(buildings_json, terrain_json, research_json)
+        GameData::from_json_strings(buildings_json, terrain_json, research_json, seed_ship_json)
     }
 
     #[test]
@@ -243,7 +294,7 @@ mod tests {
 
     #[test]
     fn from_json_strings_falls_back_to_empty_on_malformed_json() {
-        let data = GameData::from_json_strings("not json", "not json", "not json");
+        let data = GameData::from_json_strings("not json", "not json", "not json", "not json");
         assert!(data.buildings.is_empty());
         assert!(data.terrain.is_empty());
         // Research falls back to a minimal starting set rather than an empty tree.

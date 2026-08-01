@@ -104,6 +104,7 @@ impl PlanetState {
         if self.power_collapse_shutdown <= 0.0 {
             self.update_logistics(sim_delta, allow_visuals);
             self.update_servers(sim_delta);
+            self.update_seed_ship(sim_delta);
         }
 
         // Particles for drone motion

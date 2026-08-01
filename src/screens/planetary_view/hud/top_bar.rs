@@ -118,30 +118,33 @@ pub(super) fn draw(
     );
 
     let button_y = 10.0;
-    let button_gap = 8.0;
-    let button_w = (actions_w - button_gap * 2.0) / 3.0;
+    let button_gap = 6.0;
+    let button_w = (actions_w - button_gap * 3.0) / 4.0;
+    let button_slot = |index: f32| action_x + (button_w + button_gap) * index;
     if draw_hud_button(
         theme,
-        Rect::new(action_x, button_y, button_w, 34.0),
+        Rect::new(button_slot(0.0), button_y, button_w, 34.0),
         "RESEARCH",
     ) {
         ui_action = PlanetaryAction::OpenResearch;
     }
     if draw_hud_button(
         theme,
-        Rect::new(action_x + button_w + button_gap, button_y, button_w, 34.0),
+        Rect::new(button_slot(1.0), button_y, button_w, 34.0),
+        "SHIP",
+    ) {
+        ui_action = PlanetaryAction::OpenSeedShip;
+    }
+    if draw_hud_button(
+        theme,
+        Rect::new(button_slot(2.0), button_y, button_w, 34.0),
         "MAP",
     ) {
         ui_action = PlanetaryAction::OpenInterplanetary;
     }
     if draw_hud_button(
         theme,
-        Rect::new(
-            action_x + (button_w + button_gap) * 2.0,
-            button_y,
-            button_w,
-            34.0,
-        ),
+        Rect::new(button_slot(3.0), button_y, button_w, 34.0),
         "MENU",
     ) {
         ui_action = PlanetaryAction::OpenMenu;

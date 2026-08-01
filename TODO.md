@@ -6,8 +6,12 @@ logistics puzzle at the heart of the GDD are the gaps.
 
 ## Core loop and win condition
 
-- Build the Seed Ship: multi-stage megastructure, large resource sinks, launch sequence, per-planet victory (absent from code).
-- Add campaign-complete and terminal-failure states; `GamePhase` has only MainMenu/Playing/Research/Interplanetary/Settings.
+The Seed Ship exists: four stages declared in `assets/seed_ship.json`, its own screen behind the SHIP button, and a commit toggle that pours production into the yard at a capped intake, so it can only be paid for with sustained output.
+
+- Decide what launching *does*. Finishing the ship marks the world spent and unlocks an achievement, but there is no launch: it should carry the swarm to a new world, which collides with the Mass Driver redesign in the meta-layer section. Design the two together.
+- Give the stages consequences beyond cost — new capabilities, a changed skyline, a reason to reach stage three other than reaching stage four.
+- Tie the ship to research: every stage is buildable from turn one, so the tree and the megastructure never meet.
+- Add campaign-complete and terminal-failure states; `GamePhase` now has a SeedShip screen but still no ending.
 - Decide whether infrastructure collapse can actually end a run, and design the difficulty curve around it — today it is a 20-second timeout with a data penalty.
 - Make the five core stages mechanical, not just visual: tie Crash-Lander/Fortress/Space Elevator/Planetary Ring (GDD §5) to research and throughput milestones with new capabilities each.
 
@@ -79,7 +83,8 @@ The sim runs on a fixed 1/30s timestep with an accumulator (`PlanetState::advanc
 - Add pause and game speed — the HUD advertises "PAUSE Space" and shows speed buttons whose return values are ignored.
 - Wire or remove the controls that are still decoration: BOX SELECT and the BUILD/DEMOLISH hints do nothing, and the main-menu Quit button is a no-op. (PAN and ZOOM now work: middle-drag and wheel, per-planet camera.)
 - Replace the six-condition text checklist with a real persisted tutorial with highlighting and interactive gating.
-- Add a notification/toast system; achievements currently unlock with no feedback beyond a counter.
+- Add a notification/toast system; achievements currently unlock with no feedback beyond a counter, and finishing a Seed Ship stage passes silently.
+- The right-hand panel stack is full at 720p — a fifth panel overflows the four existing ones, which is why the Seed Ship got its own screen. Any new readout needs the stack's internal layouts made height-aware first.
 - Make settings work and persist — `ui_scale` is stored but never applied, audio sliders drive nothing, and the Settings struct is never saved.
 - Add genre-standard build tools: demolish mode, drag-demolish, relocation, blueprint stamps, undo.
 - Add production statistics — rates, consumption, and net-flow graphs; the bottom-bar graph is decorative.

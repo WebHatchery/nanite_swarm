@@ -22,8 +22,8 @@ use data::{load_game_config, load_game_data, load_ui_theme, set_game_data};
 use engine::{ResearchState, ResearchTree};
 use screens::{
     render_interplanetary_view, render_main_menu, render_planetary_view, render_research_view,
-    render_settings_menu, InterplanetaryAction, MenuAction, PlanetaryAction, ResearchAction,
-    SettingsAction,
+    render_seed_ship_view, render_settings_menu, InterplanetaryAction, MenuAction, PlanetaryAction,
+    ResearchAction, SeedShipAction, SettingsAction,
 };
 use state::{load_from_file, save_to_file, Campaign};
 
@@ -33,6 +33,7 @@ pub enum GamePhase {
     MainMenu,
     Playing,
     Research,
+    SeedShip,
     Interplanetary,
     Settings,
 }
@@ -147,6 +148,9 @@ impl Game {
                     PlanetaryAction::OpenResearch => {
                         self.phase = GamePhase::Research;
                     }
+                    PlanetaryAction::OpenSeedShip => {
+                        self.phase = GamePhase::SeedShip;
+                    }
                     PlanetaryAction::OpenInterplanetary => {
                         self.phase = GamePhase::Interplanetary;
                     }
@@ -176,6 +180,18 @@ impl Game {
                         );
                     }
                     ResearchAction::None => {}
+                }
+            }
+            GamePhase::SeedShip => {
+                self.advance_simulation();
+                match render_seed_ship_view(self.campaign.current()) {
+                    SeedShipAction::Close => {
+                        self.phase = GamePhase::Playing;
+                    }
+                    SeedShipAction::ToggleCommitment => {
+                        self.campaign.current_mut().toggle_seed_ship_commitment();
+                    }
+                    SeedShipAction::None => {}
                 }
             }
             GamePhase::Interplanetary => {
@@ -320,6 +336,19 @@ impl Game {
             "logistics" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();
+            }
+            "seedship" => {
+                self.phase = GamePhase::SeedShip;
+                self.seed_logistics_scene();
+                // Mid-build, with the swarm diverting production into the yard.
+                let planet = self.campaign.current_mut();
+                planet.config.resources.base_mineral_cap = 100_000.0;
+                planet.resources.minerals = 400.0;
+                planet.resources.data = 120.0;
+                planet.toggle_seed_ship_commitment();
+                for _ in 0..20 {
+                    planet.update_seed_ship(1.0);
+                }
             }
             "camera" => {
                 self.phase = GamePhase::Playing;

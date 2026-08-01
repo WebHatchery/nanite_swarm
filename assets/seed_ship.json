@@ -1,0 +1,29 @@
+{
+  "intake_per_second": { "minerals": 12.0, "data": 3.0, "biomass": 6.0 },
+  "stages": [
+    {
+      "id": "cradle",
+      "name": "Foundry Cradle",
+      "description": "A berth to grow the hull in. The ground beneath it will not be needed again.",
+      "cost": { "minerals": 150.0, "data": 0.0, "biomass": 0.0 }
+    },
+    {
+      "id": "spine",
+      "name": "Ion Spine",
+      "description": "Drive assembly. Consumes the crust it was mined from at a favourable ratio.",
+      "cost": { "minerals": 250.0, "data": 40.0, "biomass": 0.0 }
+    },
+    {
+      "id": "payload",
+      "name": "Nanite Payload",
+      "description": "A compressed copy of this swarm, folded small enough to survive transit.",
+      "cost": { "minerals": 400.0, "data": 80.0, "biomass": 60.0 }
+    },
+    {
+      "id": "ignition",
+      "name": "Ignition Charge",
+      "description": "The last of this world, spent on leaving it.",
+      "cost": { "minerals": 600.0, "data": 150.0, "biomass": 0.0 }
+    }
+  ]
+}

@@ -22,6 +22,7 @@ use metrics::{is_cursor_over_ui, screen_to_grid, HudMetrics};
 pub enum PlanetaryAction {
     None,
     OpenResearch,
+    OpenSeedShip,
     OpenInterplanetary,
     OpenMenu,
 }

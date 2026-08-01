@@ -1,6 +1,7 @@
 //! Current planetary state
 
 use super::camera::Camera;
+use super::seed_ship::SeedShip;
 use crate::data::GameConfig;
 use crate::engine::{BuildingType, DroneManager, Grid, GridPos, Stats};
 use macroquad::miniquad;
@@ -85,6 +86,9 @@ pub struct PlanetState {
     pub last_saved_unix: i64,
     pub achievements: Achievements,
     pub unlocked_buildings: Vec<BuildingType>,
+    /// The megastructure this world is being converted into.
+    #[serde(default)]
+    pub seed_ship: SeedShip,
     /// Everything unlocked research does to the simulation, folded into one
     /// sheet. Derived from `research.unlocked_techs` — never edited directly,
     /// always rebuilt by [`PlanetState::refresh_stats`].
@@ -193,6 +197,7 @@ impl PlanetState {
             tutorial_hidden: false,
             tutorial_done: false,
             unlocked_buildings,
+            seed_ship: SeedShip::default(),
             last_offline_seconds: 0.0,
             last_offline_simulated: 0.0,
             offline_notice_timer: 0.0,
@@ -248,5 +253,10 @@ pub(crate) fn achievement_definitions() -> Vec<Achievement> {
         ),
         Achievement::new("data_miner", "Data Miner", "Accumulate 25 data."),
         Achievement::new("builder", "Builder", "Place 10 buildings."),
+        Achievement::new(
+            "seed_ship",
+            "Seed Ship",
+            "Finish a Seed Ship and leave a world spent.",
+        ),
     ]
 }
