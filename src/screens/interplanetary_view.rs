@@ -25,6 +25,7 @@ pub fn render_interplanetary_view(
     has_mass_driver: bool,
     seed_ship_ready: bool,
     colonized_planets: &[bool],
+    stockpiles: &[Option<f32>],
 ) -> InterplanetaryAction {
     // A new world costs a whole Seed Ship, thrown by a Mass Driver.
     let can_launch = has_mass_driver && seed_ship_ready;
@@ -84,6 +85,13 @@ pub fn render_interplanetary_view(
         16.0,
         Colors::PRIMARY,
     );
+    draw_ui_text(
+        "minerals",
+        list_x + list_w - 58.0,
+        list_y + 28.0,
+        10.0,
+        Colors::TEXT_DIM,
+    );
     let mut list_row_y = list_y + 56.0;
     for (index, planet) in planets.iter().enumerate() {
         let is_current = index == current_planet;
@@ -96,6 +104,17 @@ pub fn render_interplanetary_view(
             Colors::TEXT_DIM
         };
         draw_ui_text(&planet.name, list_x + 12.0, list_row_y, 13.0, label_color);
+        // A world left behind keeps working, so the map says what is piling up
+        // on it rather than making the player fly there to find out.
+        if let Some(Some(minerals)) = stockpiles.get(index) {
+            draw_ui_text(
+                &format!("{:.0}", minerals),
+                list_x + list_w - 58.0,
+                list_row_y,
+                12.0,
+                Colors::ACCENT,
+            );
+        }
         list_row_y += 20.0;
     }
 

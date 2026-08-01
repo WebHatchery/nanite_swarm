@@ -17,6 +17,12 @@ pub const PLANET_COUNT: usize = 5;
 pub const STARTING_PLANET: usize = 2;
 
 const DIRECTIVE_ROTATION_SECONDS: f32 = 600.0;
+/// Step length for worlds the player is not looking at. Coarse on purpose: a
+/// left-behind world only has to keep producing, not animate.
+const BACKGROUND_TICK_SECONDS: f32 = 1.0;
+/// Ceiling on background steps per call, so a long stall cannot turn into a
+/// stutter across four planets at once.
+const MAX_BACKGROUND_TICKS: u32 = 4;
 /// How long a world's arrival line stays on screen.
 const ARRIVAL_NOTICE_SECONDS: f32 = 10.0;
 /// How long the saved marker stays on screen.
@@ -34,6 +40,9 @@ pub struct Campaign {
     /// World time since the campaign was last written to disk.
     #[serde(skip, default)]
     since_save: f32,
+    /// Unspent time owed to the worlds nobody is watching.
+    #[serde(skip, default)]
+    background_accumulator: f32,
 }
 
 impl Campaign {
@@ -47,6 +56,7 @@ impl Campaign {
             directive_timer: 0.0,
             directive_tier: 0,
             since_save: 0.0,
+            background_accumulator: 0.0,
         };
         campaign.planets[STARTING_PLANET] = Some(campaign.generate(STARTING_PLANET, &config));
         campaign
@@ -65,7 +75,57 @@ impl Campaign {
             directive_timer: 0.0,
             directive_tier: 0,
             since_save: 0.0,
+            background_accumulator: 0.0,
         }
+    }
+
+    /// Run every world the player is *not* standing on.
+    ///
+    /// The GDD's meta-layer promise is that Planet 1 does not disappear, and a
+    /// world that is preserved but frozen only half keeps it: come back and
+    /// nothing has happened. These run the same simulation the foreground
+    /// world does, in coarse one-second steps and without visuals, which is
+    /// cheap enough for four planets and avoids a second economy that could
+    /// disagree with the real one.
+    pub fn update_background(&mut self, delta_time: f32) {
+        if delta_time <= 0.0 || !delta_time.is_finite() {
+            return;
+        }
+        self.background_accumulator += delta_time;
+
+        let mut ticks = 0;
+        while self.background_accumulator >= BACKGROUND_TICK_SECONDS && ticks < MAX_BACKGROUND_TICKS
+        {
+            self.background_accumulator -= BACKGROUND_TICK_SECONDS;
+            ticks += 1;
+        }
+        if ticks == MAX_BACKGROUND_TICKS {
+            self.background_accumulator = 0.0;
+        }
+        if ticks == 0 {
+            return;
+        }
+
+        let current = self.current;
+        for (index, slot) in self.planets.iter_mut().enumerate() {
+            if index == current {
+                continue;
+            }
+            let Some(planet) = slot.as_mut() else {
+                continue;
+            };
+            for _ in 0..ticks {
+                planet.step(BACKGROUND_TICK_SECONDS, false);
+            }
+        }
+    }
+
+    /// Minerals stockpiled on a world, for the map to show what is waiting.
+    pub fn stockpile(&self, index: usize) -> Option<f32> {
+        self.planets
+            .get(index)
+            .and_then(Option::as_ref)
+            .map(|planet| planet.resources.minerals)
     }
 
     /// Enough has happened that the campaign is worth writing down.
@@ -744,6 +804,76 @@ mod tests {
         // Standing on Venus, whose yard is empty.
         assert!(!campaign.launch_seed_ship(3));
         assert!(!campaign.is_colonized(3));
+    }
+
+    /// A world with a powered drill beside its Core, ready to produce.
+    fn put_a_drill_on(campaign: &mut Campaign, index: usize) {
+        let here = campaign.current_index();
+        campaign.travel_to(index);
+        let planet = campaign.current_mut();
+        planet.resources.minerals = 0.0;
+        planet.config.resources.base_mineral_cap = 100_000.0;
+        let core = planet.grid.find_core().unwrap();
+        let drill = GridPos::new(core.x + 1, core.y);
+        planet.grid.get_mut(drill).unwrap().terrain = crate::engine::TerrainType::Empty;
+        planet.grid.reveal_around(drill, 1);
+        planet.resources.minerals = 1_000.0;
+        planet.select_building(BuildingType::Drill);
+        assert!(planet.try_place_building(drill));
+        planet.grid.update_power_grid();
+        planet.resources.minerals = 0.0;
+        campaign.travel_to(here);
+    }
+
+    #[test]
+    fn a_world_left_behind_keeps_working() {
+        let mut campaign = campaign();
+        campaign.colonize(0);
+        put_a_drill_on(&mut campaign, 0);
+        assert_eq!(campaign.current_index(), STARTING_PLANET);
+        assert_eq!(campaign.stockpile(0), Some(0.0));
+
+        for _ in 0..600 {
+            campaign.update_background(0.1);
+        }
+
+        let stocked = campaign.stockpile(0).unwrap();
+        assert!(stocked > 0.0, "the world froze the moment it was left");
+    }
+
+    #[test]
+    fn the_world_in_front_of_the_player_is_not_run_twice() {
+        let mut campaign = campaign();
+        put_a_drill_on(&mut campaign, STARTING_PLANET);
+        let before = campaign.current().time_played;
+
+        for _ in 0..600 {
+            campaign.update_background(0.1);
+        }
+
+        assert_eq!(
+            campaign.current().time_played,
+            before,
+            "the foreground world was stepped by the background pass"
+        );
+    }
+
+    #[test]
+    fn background_time_does_not_pile_up_into_a_stutter() {
+        let mut campaign = campaign();
+        campaign.colonize(0);
+        put_a_drill_on(&mut campaign, 0);
+
+        // One enormous frame: the backlog is dropped, not replayed.
+        campaign.update_background(10_000.0);
+        let after_stall = campaign.stockpile(0).unwrap();
+
+        campaign.update_background(1.0);
+        let after_normal = campaign.stockpile(0).unwrap();
+        assert!(
+            after_normal - after_stall < after_stall.max(1.0) * 10.0,
+            "a stalled frame turned into an unbounded catch-up"
+        );
     }
 
     #[test]

@@ -226,11 +226,14 @@ impl Game {
                 CampaignCompleteAction::None => {}
             },
             GamePhase::Interplanetary => {
+                let stockpiles: [Option<f32>; state::PLANET_COUNT] =
+                    std::array::from_fn(|index| self.campaign.stockpile(index));
                 match render_interplanetary_view(
                     self.campaign.current_index(),
                     self.has_mass_driver(),
                     self.campaign.current().seed_ship.is_ready_to_launch(),
                     &self.campaign.colonized_flags(),
+                    &stockpiles,
                 ) {
                     InterplanetaryAction::Close => {
                         self.phase = GamePhase::Playing;
@@ -273,6 +276,8 @@ impl Game {
         let simulated = ticks as f32 * state::TICK_SECONDS;
         self.update_research(simulated);
         self.campaign.update_directive(simulated);
+        // The worlds nobody is looking at keep working.
+        self.campaign.update_background(simulated);
         self.check_campaign_complete();
         if self
             .campaign
@@ -677,6 +682,29 @@ impl Game {
                 self.phase = GamePhase::Interplanetary;
                 self.research_state.unlocked.push("mass_driver".to_string());
                 self.campaign.colonize(4);
+                // Something producing on the world left behind, so the map has
+                // a stockpile to report.
+                if let Some(core) = self
+                    .campaign
+                    .stockpile(4)
+                    .and(self.campaign.current().grid.find_core())
+                {
+                    self.campaign.travel_to(4);
+                    let away = self.campaign.current_mut();
+                    away.config.resources.base_mineral_cap = 100_000.0;
+                    let drill = engine::GridPos::new(core.x + 1, core.y);
+                    if let Some(tile) = away.grid.get_mut(drill) {
+                        tile.terrain = engine::TerrainType::Empty;
+                    }
+                    away.grid.reveal_around(drill, 1);
+                    away.select_building(engine::BuildingType::Drill);
+                    away.try_place_building(drill);
+                    away.grid.update_power_grid();
+                    self.campaign.travel_to(2);
+                    for _ in 0..400 {
+                        self.campaign.update_background(1.0);
+                    }
+                }
                 // A ship on the pad, so the map shows a launch is possible.
                 let planet = self.campaign.current_mut();
                 planet.config.resources.base_mineral_cap = 1_000_000.0;
