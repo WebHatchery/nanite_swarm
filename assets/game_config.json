@@ -23,6 +23,6 @@
     "buildings": {
         "core_power_consumption": 5.0,
         "drill_output_rate": 5.0,
-        "conduit_throughput": 10.0
+        "conduit_capacity": 2.0
     }
 }

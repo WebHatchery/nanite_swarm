@@ -34,6 +34,7 @@ impl PlanetState {
         }
 
         self.update_drills(delta_time, core);
+        self.update_traffic();
     }
 
     /// Number of drones currently stalled on a broken route.
@@ -80,6 +81,64 @@ impl PlanetState {
         }
 
         events
+    }
+
+    /// Count the drones on each network tile, then set every drone's speed
+    /// from the dust on its drill and the traffic on the tile it is crossing.
+    ///
+    /// A conduit tile passes `conduit_capacity` drones at full speed; past
+    /// that they share it, so a shared trunk slows everything routed through
+    /// it. This is the pressure that makes a second route worth building.
+    fn update_traffic(&mut self) {
+        self.traffic.clear();
+        for drone in self.drones.drones() {
+            if !matches!(
+                drone.state,
+                DroneState::MovingToCore | DroneState::MovingToDrill
+            ) {
+                continue;
+            }
+            let Some(tile) = drone.path.get(drone.path_index) else {
+                continue;
+            };
+            *self.traffic.entry((tile.x, tile.y)).or_insert(0) += 1;
+        }
+
+        let capacity = self.config.buildings.conduit_capacity.max(1.0);
+        let base_speed = self.drones.drone_speed;
+        let grid = &self.grid;
+        let traffic = &self.traffic;
+
+        for drone in self.drones.drones_mut() {
+            let mut speed = base_speed;
+            if let Some(building) = grid.get(drone.home_drill).and_then(|t| t.building.as_ref()) {
+                speed *= building.dust_drone_speed_multiplier();
+            }
+            if let Some(tile) = drone.path.get(drone.path_index) {
+                let load = traffic.get(&(tile.x, tile.y)).copied().unwrap_or(0) as f32;
+                if load > capacity {
+                    speed *= capacity / load;
+                }
+            }
+            drone.speed = speed;
+        }
+    }
+
+    /// Tiles carrying more traffic than they can pass.
+    pub fn congested_tiles(&self) -> usize {
+        let capacity = self.config.buildings.conduit_capacity.max(1.0);
+        self.traffic
+            .values()
+            .filter(|load| **load as f32 > capacity)
+            .count()
+    }
+
+    /// Is this tile over its throughput limit right now?
+    pub fn is_congested(&self, pos: GridPos) -> bool {
+        let capacity = self.config.buildings.conduit_capacity.max(1.0);
+        self.traffic
+            .get(&(pos.x, pos.y))
+            .is_some_and(|load| *load as f32 > capacity)
     }
 
     /// Cut ore into each drill's buffer, and send a drone the moment there is
@@ -248,6 +307,100 @@ mod tests {
         let (mut near, _, _) = state_with_run(1);
         let (mut far, _, _) = state_with_run(9);
         assert!(loads_delivered(&mut far, 30.0) < loads_delivered(&mut near, 30.0));
+    }
+
+    /// Put `count` drones on the same tile, mid-route, and let the traffic
+    /// pass settle.
+    fn crowd_one_tile(state: &mut PlanetState, count: usize, tile: GridPos) {
+        for _ in 0..count {
+            let id = state.drones.spawn_drone(tile);
+            let drone = state.drones.get_drone_mut(id).unwrap();
+            drone.dispatch_to_core(tile, vec![tile], 1.0);
+        }
+        state.update_traffic();
+    }
+
+    #[test]
+    fn traffic_below_capacity_costs_nothing() {
+        let (mut state, core, _) = state_with_run(2);
+        state.drones.drones_mut().iter_mut().for_each(|drone| {
+            drone.state = DroneState::Idle;
+        });
+        crowd_one_tile(&mut state, 2, core);
+
+        assert_eq!(state.congested_tiles(), 0);
+        assert!(!state.is_congested(core));
+        for drone in state.drones.drones() {
+            if drone.state == DroneState::MovingToCore {
+                assert_eq!(drone.speed, state.drones.drone_speed);
+            }
+        }
+    }
+
+    #[test]
+    fn a_crowded_tile_slows_everything_crossing_it() {
+        let (mut state, core, _) = state_with_run(2);
+        state.drones.drones_mut().iter_mut().for_each(|drone| {
+            drone.state = DroneState::Idle;
+        });
+        let capacity = state.config.buildings.conduit_capacity;
+        crowd_one_tile(&mut state, 6, core);
+
+        assert!(state.is_congested(core));
+        assert_eq!(state.congested_tiles(), 1);
+
+        let expected = state.drones.drone_speed * (capacity / 6.0);
+        for drone in state.drones.drones() {
+            if drone.state == DroneState::MovingToCore {
+                assert!(
+                    (drone.speed - expected).abs() < 1e-3,
+                    "{} vs {expected}",
+                    drone.speed
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn traffic_only_counts_drones_that_are_actually_moving() {
+        let (mut state, core, _) = state_with_run(2);
+        state.drones.drones_mut().iter_mut().for_each(|drone| {
+            drone.state = DroneState::Idle;
+        });
+        crowd_one_tile(&mut state, 6, core);
+        assert!(state.is_congested(core));
+
+        // Park them all: the jam clears.
+        for drone in state.drones.drones_mut() {
+            drone.state = DroneState::Idle;
+        }
+        state.update_traffic();
+        assert_eq!(state.congested_tiles(), 0);
+        assert_eq!(state.drones.drones()[0].speed, state.drones.drone_speed);
+    }
+
+    /// Two drills sharing one run, measured over a minute at a given tile
+    /// capacity.
+    fn shared_trunk_throughput(capacity: f32) -> u32 {
+        let (mut state, _core, drill) = state_with_run(4);
+        state.config.buildings.conduit_capacity = capacity;
+        // A second drill hanging off the same run.
+        let spur = GridPos::new(drill.x - 1, drill.y - 1);
+        state.grid.get_mut(spur).unwrap().terrain = crate::engine::TerrainType::Empty;
+        state.select_building(BuildingType::Drill);
+        assert!(state.try_place_building(spur));
+        state.grid.update_power_grid();
+        loads_delivered(&mut state, 60.0)
+    }
+
+    #[test]
+    fn a_saturated_trunk_delivers_less_than_a_clear_one() {
+        let clear = shared_trunk_throughput(100.0);
+        let saturated = shared_trunk_throughput(0.5);
+        assert!(
+            saturated < clear,
+            "saturated run delivered {saturated}, clear run delivered {clear}"
+        );
     }
 
     #[test]

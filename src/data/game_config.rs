@@ -39,7 +39,8 @@ pub struct ResourceConfig {
 pub struct BuildingConfig {
     pub core_power_consumption: f32,
     pub drill_output_rate: f32,
-    pub conduit_throughput: f32,
+    /// Drones one network tile passes at full speed before they share it.
+    pub conduit_capacity: f32,
 }
 
 impl Default for GameConfig {
@@ -71,7 +72,7 @@ impl Default for GameConfig {
                 core_power_consumption: 5.0,
                 // Minerals cut per second by one drill.
                 drill_output_rate: 5.0,
-                conduit_throughput: 10.0,
+                conduit_capacity: 2.0,
             },
         }
     }

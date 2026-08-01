@@ -350,6 +350,37 @@ impl Game {
                     planet.update_seed_ship(1.0);
                 }
             }
+            "congestion" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                // A deliberately undersized run, so the saturation readout and
+                // the tile outlines are visible in a still frame.
+                let planet = self.campaign.current_mut();
+                for _ in 0..120 {
+                    planet.step(state::TICK_SECONDS, false);
+                }
+                // Pile a shift of drones onto one run so the tile is over its
+                // limit, and crawl them so the still frame catches the jam.
+                let (Some(core), Some(drill)) = (
+                    planet.grid.find_core(),
+                    planet
+                        .grid
+                        .find_buildings(engine::BuildingType::Drill)
+                        .first()
+                        .copied(),
+                ) else {
+                    return;
+                };
+                if let Some(route) = engine::route_over_network(&planet.grid, drill, core) {
+                    for _ in 0..3 {
+                        let id = planet.drones.spawn_drone(drill);
+                        if let Some(drone) = planet.drones.get_drone_mut(id) {
+                            drone.dispatch_to_core(core, route.clone(), 5.0);
+                        }
+                    }
+                }
+                planet.drones.drone_speed = 0.05;
+            }
             "camera" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();

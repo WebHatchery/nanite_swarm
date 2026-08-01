@@ -21,8 +21,11 @@ Pillar decided 2026-08-01: **drones route along the conduit network** (rationale
 in `gdd.md` §3). Drones now walk Conduit/Power Node/Core tiles only, stop and
 flag when a run is cut, and resume when it is repaired.
 
-- Give conduit segments a throughput limit so a shared trunk congests: route cost should rise with traffic, and the HUD should show a saturated run. `conduit_throughput` (10.0) is still a dead config field.
-- Let a drill dispatch more than one drone, and let drones queue on a segment, so throughput has something to push against — today it is one drone per drill with no interaction.
+A network tile passes `conduit_capacity` drones at full speed; past that they share it, so a shared trunk slows everything routed through it. Saturated tiles are outlined on the map and raise a bottom-bar alert.
+
+- Let a drill dispatch more than one drone, so a single base can saturate its own trunk. Today congestion needs three drills feeding one run, which is late-game scale for a mechanic that should bite earlier.
+- Congestion slows drones but never queues them: they pass through each other on a full tile rather than waiting. A real queue would make a junction readable at a glance.
+- Route cost ignores traffic — `route_over_network` still picks the shortest path even when it is the saturated one. Weighting by load would let drones spread across parallel runs by themselves.
 - Re-validating every in-flight drone's remaining path each tick is O(drones x path length); add a network revision counter and re-check only when the grid changes if it shows up in profiling.
 - A stalled drone shows an error flag and a HUD counter, but nothing points at *where* the break is; highlight the severed run on the map.
 - Add ore deposits with richness and depletion — every drill cuts the same `drill_output_rate` from any tile, so placement is spatially meaningless.

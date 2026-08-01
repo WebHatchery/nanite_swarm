@@ -48,7 +48,7 @@ impl PlanetState {
     }
 
     /// One simulation step. Every caller passes a fixed, known step length.
-    pub(crate) fn step(&mut self, delta_time: f32, allow_visuals: bool) {
+    pub fn step(&mut self, delta_time: f32, allow_visuals: bool) {
         let sim_delta = if self.battery_seconds <= 0.0 {
             delta_time * 0.1
         } else {
@@ -58,7 +58,7 @@ impl PlanetState {
         self.time_played += sim_delta as f64;
 
         self.update_dust(sim_delta);
-        self.update_drone_speeds();
+
         self.update_biomass_harvesters(sim_delta);
         self.update_tutorial();
 
@@ -238,19 +238,6 @@ impl PlanetState {
 
             building.dust =
                 (building.dust + rate * delta_time - clean_rate * delta_time).clamp(0.0, 100.0);
-        }
-    }
-
-    fn update_drone_speeds(&mut self) {
-        let base_speed = self.drones.drone_speed;
-        for drone in self.drones.drones_mut() {
-            let mut speed = base_speed;
-            if let Some(tile) = self.grid.get(drone.home_drill) {
-                if let Some(ref building) = tile.building {
-                    speed *= building.dust_drone_speed_multiplier();
-                }
-            }
-            drone.speed = speed;
         }
     }
 

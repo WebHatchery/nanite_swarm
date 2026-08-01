@@ -114,6 +114,27 @@ pub(super) fn draw_drones(state: &PlanetState, metrics: HudMetrics, time: f32) {
     }
 }
 
+/// Outline the network tiles carrying more traffic than they can pass, so a
+/// jam is something the player can see and route around.
+pub(super) fn draw_congestion(state: &PlanetState, metrics: HudMetrics, time: f32) {
+    let pulse = 0.45 + (time * 4.0).sin().abs() * 0.35;
+    for (x, y) in state.traffic.keys() {
+        let pos = GridPos::new(*x, *y);
+        if !state.is_congested(pos) {
+            continue;
+        }
+        let (screen_x, screen_y) = grid_to_screen(pos, metrics);
+        draw_rectangle_lines(
+            screen_x + 1.0,
+            screen_y + 1.0,
+            metrics.tile_size - 2.0,
+            metrics.tile_size - 2.0,
+            2.0,
+            with_alpha(Colors::WARNING, pulse),
+        );
+    }
+}
+
 pub(super) fn draw_particles(state: &PlanetState, metrics: HudMetrics) {
     for particle in state.particles.particles() {
         let screen_x = metrics.grid_offset_x()

@@ -59,6 +59,7 @@ pub fn render_planetary_view(
 
     terrain_render::draw_planetary_background(screen_w, screen_h, time);
     terrain_render::draw_grid_tiles(state, textures, metrics, hovered_pos, pulse, global_pulse);
+    entity_render::draw_congestion(state, metrics, time);
     entity_render::draw_drones(state, metrics, time);
     entity_render::draw_particles(state, metrics);
 

@@ -47,9 +47,12 @@ pub(super) fn draw(
         ),
         None,
     );
+    let congested = state.congested_tiles();
     let alert_count = i32::from(state.power_balance < 0.0)
         + i32::from(state.battery_seconds <= 0.0)
-        + i32::from(state.power_collapse_shutdown > 0.0);
+        + i32::from(state.power_collapse_shutdown > 0.0)
+        + i32::from(congested > 0)
+        + i32::from(state.stalled_drone_count() > 0);
     draw_ui_text("ALERTS", 30.0, bottom_y + 31.0, 12.0, warning);
     draw_ui_text(
         &format!("{}", alert_count),
@@ -68,6 +71,10 @@ pub(super) fn draw(
         "LOW BATTERY"
     } else if state.power_balance < 0.0 {
         "NEGATIVE POWER"
+    } else if state.stalled_drone_count() > 0 {
+        "ROUTE SEVERED"
+    } else if congested > 0 {
+        "TRAFFIC SATURATED"
     } else {
         "SYSTEM NOMINAL"
     };
