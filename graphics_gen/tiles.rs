@@ -71,6 +71,8 @@ pub fn generate_tiles() {
     save_building_with_icon("building_sweeper", create_sweeper());
     save_building_with_icon("building_storage", create_storage());
     save_building_with_icon("building_biomass_harvester", create_biomass_harvester());
+    save_building_with_icon("building_heater_node", create_heater_node());
+    save_building_with_icon("building_shield_generator", create_shield_generator());
 }
 
 fn create_ground() -> RgbaImage {
@@ -516,6 +518,35 @@ fn create_sweeper() -> RgbaImage {
     // Sensor dome
     draw_circle(&mut img, 16, 14, 5, Rgba([30, 140, 180, 255]));
     draw_circle(&mut img, 16, 14, 2, Rgba([180, 240, 255, 255]));
+    add_edge_darkening(&mut img, 2, 8);
+    img
+}
+
+fn create_heater_node() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([48, 34, 32, 255]));
+    add_noise(&mut img, 6, 2121);
+    // Element stack, glowing from the middle out
+    draw_rect(&mut img, 9, 9, 14, 14, Rgba([80, 60, 55, 255]));
+    draw_rect(&mut img, 11, 11, 10, 10, Rgba([180, 80, 40, 255]));
+    draw_circle(&mut img, 16, 16, 3, Rgba([255, 190, 110, 255]));
+    // Vents
+    draw_rect(&mut img, 7, 6, 18, 2, Rgba([110, 80, 70, 255]));
+    draw_rect(&mut img, 7, 24, 18, 2, Rgba([110, 80, 70, 255]));
+    add_edge_darkening(&mut img, 2, 8);
+    img
+}
+
+fn create_shield_generator() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([32, 40, 48, 255]));
+    add_noise(&mut img, 6, 2222);
+    // Emitter base
+    draw_rect(&mut img, 11, 20, 10, 7, Rgba([70, 80, 95, 255]));
+    // Dome
+    draw_circle(&mut img, 16, 15, 8, Rgba([40, 90, 130, 200]));
+    draw_circle(&mut img, 16, 15, 5, Rgba([90, 190, 230, 220]));
+    draw_circle(&mut img, 16, 15, 2, Rgba([220, 250, 255, 255]));
+    // Mast
+    draw_rect(&mut img, 15, 4, 2, 5, Rgba([180, 190, 200, 255]));
     add_edge_darkening(&mut img, 2, 8);
     img
 }

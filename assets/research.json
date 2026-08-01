@@ -99,24 +99,21 @@
     {
       "id": "ceramic_plating",
       "name": "Ceramic Plating",
-      "description": "-70% acid corrosion on the network",
+      "description": "-30% acid corrosion, and unlocks Shield Generators",
       "data_cost": 40.0,
       "prerequisites": ["power_grid"],
       "position": [2.2, -3.0],
       "modifiers": [
-        { "stat": "acid_resistance", "op": "percent", "value": -0.7 }
+        { "stat": "acid_resistance", "op": "percent", "value": -0.3 }
       ]
     },
     {
       "id": "heater_nodes",
       "name": "Heater Nodes",
-      "description": "-70% of the cold's drag on drones",
+      "description": "Unlocks Heater Nodes, which thaw the network around them",
       "data_cost": 40.0,
       "prerequisites": ["power_grid"],
-      "position": [1.4, -3.4],
-      "modifiers": [
-        { "stat": "freeze_resistance", "op": "percent", "value": -0.7 }
-      ]
+      "position": [1.4, -3.4]
     },
     {
       "id": "storage_systems",

@@ -324,6 +324,45 @@ mod tests {
     }
 
     #[test]
+    fn a_shield_generator_protects_the_run_beside_it_and_not_the_far_one() {
+        let mut venus = world(1);
+        venus.resources.minerals = 10_000.0;
+        venus.resources.energy = 10_000.0;
+        venus.config.resources.max_energy = 10_000.0;
+        venus.unlock_building(BuildingType::Conduit);
+        venus.unlock_building(BuildingType::ShieldGenerator);
+
+        let core = venus.grid.find_core().unwrap();
+        venus.grid.reveal_around(core, 16);
+
+        // One conduit beside the Core, another well outside a shield's reach.
+        let sheltered = GridPos::new(core.x + 1, core.y);
+        let exposed = GridPos::new(core.x, core.y + 8);
+        let shield = GridPos::new(core.x + 1, core.y + 1);
+        for pos in [sheltered, exposed, shield] {
+            venus.grid.get_mut(pos).unwrap().terrain = crate::engine::TerrainType::Empty;
+        }
+        venus.select_building(BuildingType::Conduit);
+        assert!(venus.try_place_building(sheltered));
+        assert!(venus.try_place_building(exposed));
+        venus.select_building(BuildingType::ShieldGenerator);
+        assert!(venus.try_place_building(shield));
+        venus.grid.update_power_grid();
+
+        for _ in 0..60 {
+            venus.step(1.0, false);
+        }
+
+        let dust_at = |pos: GridPos| venus.grid.get(pos).unwrap().building.as_ref().unwrap().dust;
+        assert!(
+            dust_at(sheltered) < dust_at(exposed),
+            "sheltered conduit took {} , exposed took {}",
+            dust_at(sheltered),
+            dust_at(exposed)
+        );
+    }
+
+    #[test]
     fn ceramic_plating_holds_the_acid_off() {
         let bare = world(1);
         let mut plated = world(1);
@@ -337,47 +376,68 @@ mod tests {
         assert!(plated.acid_strength() > 0.0, "plating is not immunity");
     }
 
+    /// A world with a short conduit run and a drill on the end of it, with an
+    /// optional Heater Node beside the run. Returns the speed of a drone once
+    /// it is actually walking.
+    fn moving_drone_speed(index: usize, heater: bool) -> f32 {
+        let mut campaign = campaign();
+        campaign.colonize(index);
+        campaign.travel_to(index);
+        let state = campaign.current_mut();
+        state.resources.minerals = 10_000.0;
+        state.resources.energy = 10_000.0;
+        state.config.resources.max_energy = 10_000.0;
+        state.unlock_building(BuildingType::Conduit);
+        state.unlock_building(BuildingType::HeaterNode);
+
+        let core = state.grid.find_core().unwrap();
+        state.grid.reveal_around(core, 12);
+        for step in 1..=4 {
+            let pos = GridPos::new(core.x + step, core.y);
+            state.grid.get_mut(pos).unwrap().terrain = crate::engine::TerrainType::Empty;
+            state.select_building(BuildingType::Conduit);
+            assert!(state.try_place_building(pos));
+        }
+        if heater {
+            let pos = GridPos::new(core.x + 2, core.y + 1);
+            state.grid.get_mut(pos).unwrap().terrain = crate::engine::TerrainType::Empty;
+            state.select_building(BuildingType::HeaterNode);
+            assert!(state.try_place_building(pos));
+        }
+        let drill = GridPos::new(core.x + 5, core.y);
+        state.grid.get_mut(drill).unwrap().terrain = crate::engine::TerrainType::Empty;
+        state.select_building(BuildingType::Drill);
+        assert!(state.try_place_building(drill));
+        state.grid.update_power_grid();
+
+        for _ in 0..400 {
+            state.step(0.05, false);
+            let drone = &state.drones.drones()[0];
+            if drone.state == crate::engine::DroneState::MovingToCore {
+                return drone.speed;
+            }
+        }
+        panic!("no drone ever set out");
+    }
+
     #[test]
-    fn the_cold_slows_drones_and_heaters_warm_them_back_up() {
+    fn the_cold_slows_drones_and_a_heater_node_thaws_the_run() {
         let saturn = world(4);
         assert!(saturn.freeze_strength() > 0.0);
         assert!(saturn.hazard_label().contains("FREEZE"));
 
-        let mut heated = world(4);
-        heated
-            .research
-            .unlocked_techs
-            .push("heater_nodes".to_string());
-        heated.refresh_stats();
-        assert!(heated.freeze_strength() < saturn.freeze_strength());
+        let frozen = moving_drone_speed(4, false);
+        let heated = moving_drone_speed(4, true);
+        assert!(
+            heated > frozen,
+            "heated run moved at {heated}, frozen run at {frozen}"
+        );
     }
 
     #[test]
     fn drones_move_slower_on_a_frozen_world_than_a_temperate_one() {
-        // Same base, same drill, different world.
-        let drone_speed = |index: usize| {
-            let mut campaign = campaign();
-            campaign.colonize(index);
-            campaign.travel_to(index);
-            let state = campaign.current_mut();
-
-            let core = state.grid.find_core().unwrap();
-            let drill = GridPos::new(core.x + 1, core.y);
-            state.grid.get_mut(drill).unwrap().terrain = crate::engine::TerrainType::Empty;
-            state.grid.reveal_around(drill, 1);
-            state.select_building(BuildingType::Drill);
-            assert!(state.try_place_building(drill));
-            state.grid.update_power_grid();
-
-            // Long enough for the drill to fill and dispatch.
-            for _ in 0..30 {
-                state.step(0.1, false);
-            }
-            state.drones.drones()[0].speed
-        };
-
-        let temperate = drone_speed(STARTING_PLANET);
-        let frozen = drone_speed(4);
+        let temperate = moving_drone_speed(STARTING_PLANET, false);
+        let frozen = moving_drone_speed(4, false);
         assert!(
             frozen < temperate,
             "frozen drones moved at {frozen}, temperate at {temperate}"

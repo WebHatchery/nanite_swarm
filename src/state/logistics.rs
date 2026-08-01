@@ -10,6 +10,7 @@ use crate::engine::{
 };
 
 use super::game_state::PlanetState;
+use super::simulation::{HAZARD_COUNTER_RADIUS, HAZARD_COUNTER_STRENGTH};
 
 /// How much a drill may stockpile while its drone is away, as a multiple of a
 /// drone load. Past this the ore is simply not cut: a drill that outruns its
@@ -105,7 +106,13 @@ impl PlanetState {
         }
 
         let capacity = self.config.buildings.conduit_capacity.max(1.0);
-        let base_speed = self.drones.drone_speed * (1.0 - self.freeze_strength());
+        let freeze = self.freeze_strength();
+        let heaters = if freeze > 0.0 {
+            self.powered_positions(BuildingType::HeaterNode)
+        } else {
+            Vec::new()
+        };
+        let base_speed = self.drones.drone_speed;
         let grid = &self.grid;
         let traffic = &self.traffic;
 
@@ -115,6 +122,20 @@ impl PlanetState {
                 speed *= building.dust_drone_speed_multiplier();
             }
             if let Some(tile) = drone.path.get(drone.path_index) {
+                // The cold bites where the network is not heated, so a long run
+                // wants nodes spaced along it rather than one at the Core.
+                if freeze > 0.0 {
+                    let warmed = heaters
+                        .iter()
+                        .any(|heater| tile.distance(*heater) as i32 <= HAZARD_COUNTER_RADIUS);
+                    let bite = if warmed {
+                        freeze * (1.0 - HAZARD_COUNTER_STRENGTH)
+                    } else {
+                        freeze
+                    };
+                    speed *= 1.0 - bite;
+                }
+
                 let load = traffic.get(&(tile.x, tile.y)).copied().unwrap_or(0) as f32;
                 if load > capacity {
                     speed *= capacity / load;

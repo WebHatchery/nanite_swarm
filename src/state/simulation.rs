@@ -14,6 +14,10 @@ const POLLUTION_RATE_MULTIPLIER: f32 = 1.3;
 /// Acid at full strength corrodes the network this many times faster than dust
 /// settles on it.
 const ACID_RAIN_MULTIPLIER: f32 = 4.0;
+/// Tiles a Shield Generator or Heater Node protects, measured like the sweeper.
+pub(super) const HAZARD_COUNTER_RADIUS: i32 = 4;
+/// Share of a hazard a counter building holds off inside its radius.
+pub(super) const HAZARD_COUNTER_STRENGTH: f32 = 0.9;
 // Config-driven values are loaded from assets/game_config.json.
 
 /// The simulation advances in whole steps of this length and nothing else.
@@ -190,12 +194,30 @@ impl PlanetState {
         }
     }
 
+    /// Positions of powered, working buildings of a type.
+    pub(super) fn powered_positions(
+        &self,
+        building_type: BuildingType,
+    ) -> Vec<crate::engine::GridPos> {
+        self.grid
+            .find_buildings(building_type)
+            .into_iter()
+            .filter(|pos| {
+                self.grid
+                    .get(*pos)
+                    .and_then(|tile| tile.building.as_ref())
+                    .is_some_and(|building| building.powered && !building.is_dust_stalled())
+            })
+            .collect()
+    }
+
     fn update_dust(&mut self, delta_time: f32) {
         let dust_rate = self.stats.apply(StatId::DustAccumulation, DUST_RATE);
         // Acid eats the network specifically: a corroded conduit stalls, and a
         // stalled conduit stops carrying traffic, which is how a Venus run
         // fails rather than merely slowing.
         let acid_rate = DUST_RATE * self.acid_strength() * ACID_RAIN_MULTIPLIER;
+        let shields = self.powered_positions(BuildingType::ShieldGenerator);
         let sweeper_positions = self.grid.find_buildings(BuildingType::Sweeper);
         let powered_sweepers: Vec<_> = sweeper_positions
             .into_iter()
@@ -224,7 +246,14 @@ impl PlanetState {
             };
             let mut rate = dust_rate;
             if acid_rate > 0.0 && building.transmits_power() {
-                rate += acid_rate;
+                let sheltered = shields
+                    .iter()
+                    .any(|shield| pos.distance(*shield) as i32 <= HAZARD_COUNTER_RADIUS);
+                rate += if sheltered {
+                    acid_rate * (1.0 - HAZARD_COUNTER_STRENGTH)
+                } else {
+                    acid_rate
+                };
             }
 
             if filter_positions

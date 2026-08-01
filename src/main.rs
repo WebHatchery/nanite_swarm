@@ -354,6 +354,12 @@ impl Game {
                 self.phase = GamePhase::Playing;
                 self.campaign.colonize(1);
                 self.campaign.travel_to(1);
+                self.research_state
+                    .unlocked
+                    .push("ceramic_plating".to_string());
+                self.research_state
+                    .unlocked
+                    .push("heater_nodes".to_string());
                 let planet = self.campaign.current_mut();
                 // Everything researched, so the palette shows what this world
                 // refuses rather than what the swarm has not reached yet.

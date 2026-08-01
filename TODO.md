@@ -42,9 +42,9 @@ A network tile passes `conduit_capacity` drones at full speed; past that they sh
 
 ## Planet hazards
 
-Hazards are per-world data (`planets.json`). Acid rain corrodes anything carrying the network, riding the existing dust-to-stall chain so a neglected Venus run eventually breaks; the cold takes a share of drone speed. Ceramic Plating and Heater Nodes research each hold 70% of one back.
+Hazards are per-world data (`planets.json`). Acid rain corrodes anything carrying the network, riding the existing dust-to-stall chain so a neglected Venus run eventually breaks; the cold takes a share of drone speed. The counters are buildings placed on the map — Shield Generators and Heater Nodes, each holding 90% of one hazard off within four tiles — so covering a sprawling base is a layout and power problem. Ceramic Plating remains a small global backstop.
 
-- Both counters are research, so they are bought once and apply everywhere. The GDD wants Heater Nodes *placed along the network* and Shield Generators as buildings, which would make the counter a spatial problem rather than a purchase.
+- Coverage is invisible until you watch the numbers move: a Shield Generator does not show what it protects, so laying them out is guesswork. The sweeper has the same problem and would want the same fix.
 - A hazard is uniform across a world. Acid squalls that move, or cold that bites hardest far from the Core, would give the map a shape to plan around.
 - No hazard has a visual: a corroding conduit looks exactly like a dusty one, and a frozen drone just looks slow.
 - Per-planet constraints are still only a ban list plus hazards. The positive half is missing: infinite geothermal, fusion-only worlds, generators that exist on one world and nowhere else.
@@ -61,7 +61,7 @@ Techs declare their effects as modifiers in `research.json` (`engine::modifiers`
 ## Content
 
 - Add production chains: intermediate products, recipes, and processing buildings. A drill now buffers ore until a drone takes it, but everything still lands in one global mineral pool.
-- Grow the building set beyond 10 across processing, logistics, hazard counters, and megastructure parts.
+- Grow the building set beyond 12 across processing, logistics, and megastructure parts. Hazard counters exist now; nothing else on that list does.
 - Tier the resource set beyond Minerals/Energy/Data/Biomass to support chains and mass-driver strategy.
 - Larger and more varied maps with landmark features. Sizes are per-world data now (20x20 to 26x26) and the camera does not cap them, but the generator has no notion of a feature.
 - Replace the four `tier % 4` directives and four hardcoded achievements with a real objective/milestone system and a full achievement set. The Power Surplus directive still uses one number as both the power threshold and the seconds it must be held, so the two scale together by accident.
