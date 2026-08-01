@@ -95,12 +95,15 @@ impl Drone {
             DroneState::MovingToCore | DroneState::MovingToDrill => {
                 self.progress += self.speed * delta_time;
 
-                if self.progress >= 1.0 {
-                    self.progress = 0.0;
+                // Carry the overflow: a long step crosses several tiles rather
+                // than capping the drone at one tile per call.
+                while self.progress >= 1.0 {
+                    self.progress -= 1.0;
                     self.path_index += 1;
 
                     if self.path_index >= self.path.len() {
                         // Reached destination
+                        self.progress = 0.0;
                         self.position = self.target;
                         if self.state == DroneState::MovingToCore {
                             self.state = DroneState::Delivering;
@@ -108,15 +111,14 @@ impl Drone {
                                 drone_id: self.id,
                                 amount: self.carrying,
                             });
-                        } else {
-                            self.state = DroneState::Idle;
-                            return Some(DroneEvent::ReachedDrill { drone_id: self.id });
                         }
-                    } else {
-                        // `path_index` is the tile being moved toward, so the
-                        // tile just reached is the one before it.
-                        self.position = self.path[self.path_index - 1];
+                        self.state = DroneState::Idle;
+                        return Some(DroneEvent::ReachedDrill { drone_id: self.id });
                     }
+
+                    // `path_index` is the tile being moved toward, so the tile
+                    // just reached is the one before it.
+                    self.position = self.path[self.path_index - 1];
                 }
                 None
             }
@@ -354,6 +356,29 @@ mod tests {
         assert!(manager.get_drone_mut(id1).is_some());
         assert!(manager.get_drone_mut(id2).is_some());
         assert!(manager.get_drone_mut(id2 + 100).is_none());
+    }
+
+    #[test]
+    fn a_long_step_crosses_several_tiles_instead_of_capping_at_one() {
+        let mut drone = Drone::new(1, GridPos::new(0, 0), 10.0, 5.0);
+        drone.dispatch_to_core(GridPos::new(6, 0), straight_path(6), 5.0);
+
+        // speed(5.0) * delta(0.7) = 3.5 tiles of travel in a single step.
+        assert!(drone.update(0.7).is_none());
+        assert_eq!(drone.position, GridPos::new(3, 0));
+        assert!((drone.progress - 0.5).abs() < 1e-5);
+    }
+
+    #[test]
+    fn a_step_long_enough_to_overshoot_still_arrives_once() {
+        let mut drone = Drone::new(1, GridPos::new(0, 0), 10.0, 5.0);
+        drone.dispatch_to_core(GridPos::new(3, 0), straight_path(3), 5.0);
+
+        // Sixty seconds of travel over a three tile path: arrive, do not wrap.
+        let event = drone.update(60.0);
+        assert!(matches!(event, Some(DroneEvent::ReachedCore { .. })));
+        assert_eq!(drone.position, GridPos::new(3, 0));
+        assert_eq!(drone.progress, 0.0);
     }
 
     #[test]

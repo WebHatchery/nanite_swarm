@@ -77,6 +77,9 @@ pub struct PlanetState {
     pub power_balance: f32,
     #[serde(skip, default)]
     pub biomass_power_bonus: f32,
+    /// Unspent real time between fixed simulation steps.
+    #[serde(skip, default)]
+    pub sim_accumulator: f32,
     pub battery_seconds: f32,
     pub last_saved_unix: i64,
     pub achievements: Achievements,
@@ -167,6 +170,7 @@ impl PlanetState {
             selected_building: Some(BuildingType::Drill),
             power_balance: 10.0,
             biomass_power_bonus: 0.0,
+            sim_accumulator: 0.0,
             battery_seconds: 4.0 * 60.0 * 60.0,
             last_saved_unix: unix_seconds_now(),
             achievements: Achievements::from_definitions(achievement_definitions()),

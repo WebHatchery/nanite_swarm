@@ -14,3 +14,4 @@ mod simulation;
 
 pub use game_state::*;
 pub use persistence::*;
+pub use simulation::TICK_SECONDS;

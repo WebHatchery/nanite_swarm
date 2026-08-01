@@ -56,7 +56,8 @@ impl Default for GameConfig {
                 starting_energy: 50.0,
                 starting_minerals: 50.0,
                 drone_carry_capacity: 10.0,
-                drone_speed: 50.0,
+                // Tiles per second. Keep in step with assets/game_config.json.
+                drone_speed: 8.0,
                 max_energy: 50.0,
                 base_mineral_cap: 100.0,
                 storage_bonus: 100.0,

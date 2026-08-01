@@ -2,6 +2,10 @@ use crate::engine::{BuildingType, GridPos};
 
 use super::game_state::PlanetState;
 
+/// Offline catch-up step. Coarser than the live tick by design — see
+/// [`apply_offline_progress`](PlanetState::apply_offline_progress).
+const OFFLINE_TICK_SECONDS: f32 = 1.0;
+
 impl PlanetState {
     /// Select a building type for placement.
     pub fn select_building(&mut self, building_type: BuildingType) {
@@ -54,11 +58,15 @@ impl PlanetState {
             return;
         }
 
-        let mut remaining = offline_seconds;
-        while remaining > 0.0 {
-            let step = remaining.min(60.0);
-            self.update_simulation(step, false);
-            remaining -= step;
+        // Catch-up runs whole steps like the live loop, just coarser ones:
+        // four hours at the live tick rate would be 432,000 steps on load.
+        let steps = (offline_seconds / OFFLINE_TICK_SECONDS).floor() as u64;
+        for _ in 0..steps {
+            self.step(OFFLINE_TICK_SECONDS, false);
+        }
+        let remainder = offline_seconds - steps as f32 * OFFLINE_TICK_SECONDS;
+        if remainder > 0.0 {
+            self.step(remainder, false);
         }
 
         self.last_offline_seconds = offline_seconds;

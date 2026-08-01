@@ -51,14 +51,16 @@ flag when a run is cut, and resume when it is repaired.
 - Grow the building set beyond 10 across processing, logistics, hazard counters, and megastructure parts.
 - Tier the resource set beyond Minerals/Energy/Data/Biomass to support chains and mass-driver strategy.
 - Larger and more varied maps with per-planet generators and landmark features (needs the camera work below).
-- Replace the four `tier % 4` directives and four hardcoded achievements with a real objective/milestone system and a full achievement set.
+- Replace the four `tier % 4` directives and four hardcoded achievements with a real objective/milestone system and a full achievement set. The Power Surplus directive still uses one number as both the power threshold and the seconds it must be held, so the two scale together by accident.
 - Write the GDD's "indifferent optimizer" tone into directives, research descriptions, and planet-arrival vignettes; it appears nowhere in game text today.
 
 ## Simulation architecture
 
-- Move to a fixed timestep with an accumulator; `get_frame_time()` feeds the sim directly, so behaviour is frame-rate dependent and diverges from the 60s offline chunks.
+The sim runs on a fixed 1/30s timestep with an accumulator (`PlanetState::advance`), capped at 6 catch-up steps; research and directives advance on exactly the time the planet simulated.
+
+- Offline catch-up still steps at a coarser 1s, because four hours at the live tick rate is 432,000 steps on load. Unify it when the offline model becomes an earnings report (see Save system).
 - Pull simulation out of `screens/` so planetary, interplanetary, and background-planet simulation share one engine.
-- Tick-quantise timers and float accumulation, then add deterministic snapshot tests for terrain harvest, power failure, drone routing, research unlocks, and collapse thresholds.
+- Extend the deterministic snapshot tests past harvest throughput: power failure, research unlocks, and collapse thresholds still have no pinned numbers.
 - Move hardcoded balance constants into validated JSON fixtures — drill output is `10.0/cycle` while the HUD shows the unused config value `2.0`, and `conduit_throughput` and `core_power_consumption` are dead config fields.
 - Validate data at load with real error messages; `game_data().building(id)` panics on a missing id.
 
@@ -94,7 +96,7 @@ flag when a run is cut, and resume when it is repaired.
 
 ## Engineering quality
 
-- Expand test coverage past the single offline-hibernation test: power flood-fill and repeater range, drone pathfinding and re-path, placement rules, harvest consequences, research effects, save round-trip and migration, offline sim, collapse thresholds. Wire the headless capture harness scenes into CI.
+- Expand test coverage: research effects, save migration, and placement rules still have none. Wire the headless capture harness scenes (`mainmenu`, `research`, `logistics`) into CI.
 - Stress-test drone routing and conduit networks on congested maps and across interplanetary transitions.
 - Add opt-in telemetry and crash reporting for balance funnels and errors beyond the manual bug-report widget.
 - Set performance budgets and profile for multi-planet background sim, larger maps, and hundreds of drones, especially on WASM.

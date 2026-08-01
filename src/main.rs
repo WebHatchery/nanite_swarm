@@ -156,10 +156,7 @@ impl Game {
                 SettingsAction::None => {}
             },
             GamePhase::Playing => {
-                let delta = get_frame_time();
-                self.planet_state.update(delta);
-                self.update_research(delta);
-                self.update_directives(delta);
+                self.advance_simulation();
 
                 match render_planetary_view(
                     &mut self.planet_state,
@@ -181,9 +178,7 @@ impl Game {
                 }
             }
             GamePhase::Research => {
-                let delta = get_frame_time();
-                self.planet_state.update(delta);
-                self.update_research(delta);
+                self.advance_simulation();
                 match render_research_view(
                     &self.research_state,
                     &self.research_tree,
@@ -241,6 +236,19 @@ impl Game {
         }
 
         self.debug_overlay.draw(&[]);
+    }
+
+    /// Advance the world by whole simulation ticks. Research and directives run
+    /// on exactly the time the planet simulated, so nothing drifts apart when
+    /// the frame rate moves or a catch-up backlog is dropped.
+    fn advance_simulation(&mut self) {
+        let ticks = self.planet_state.advance(get_frame_time(), true);
+        if ticks == 0 {
+            return;
+        }
+        let simulated = ticks as f32 * state::TICK_SECONDS;
+        self.update_research(simulated);
+        self.update_directives(simulated);
     }
 
     fn update_research(&mut self, delta_time: f32) {
@@ -329,11 +337,59 @@ impl Game {
         match scene {
             "mainmenu" => self.phase = GamePhase::MainMenu,
             "research" => self.phase = GamePhase::Research,
+            "logistics" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+            }
             _ => {
                 // Default: jump straight into gameplay on the starting planet.
                 self.phase = GamePhase::Playing;
             }
         }
+    }
+
+    /// A working conduit run with a drill on the end of it, so drone routing
+    /// can be eyeballed without playing up to it.
+    fn seed_logistics_scene(&mut self) {
+        use engine::{BuildingType, GridPos};
+
+        let state = &mut self.planet_state;
+        let Some(core) = state.grid.find_core() else {
+            return;
+        };
+        state.grid.reveal_around(core, 12);
+        state.resources.minerals = 500.0;
+        state.resources.energy = 500.0;
+        state.config.resources.max_energy = 500.0;
+        state.unlock_building(BuildingType::Conduit);
+        state.unlock_building(BuildingType::PowerNode);
+
+        // An L-shaped run: five tiles east, then four north, drill on the end.
+        let mut run: Vec<GridPos> = (1..=5).map(|x| GridPos::new(core.x + x, core.y)).collect();
+        run.extend((1..=4).map(|y| GridPos::new(core.x + 5, core.y - y)));
+
+        for (index, pos) in run.iter().enumerate() {
+            if let Some(tile) = state.grid.get_mut(*pos) {
+                tile.terrain = engine::TerrainType::Empty;
+                tile.building = None;
+            }
+            let piece = if index == 4 {
+                BuildingType::PowerNode
+            } else {
+                BuildingType::Conduit
+            };
+            state.select_building(piece);
+            state.try_place_building(*pos);
+        }
+
+        let drill = GridPos::new(core.x + 5, core.y - 5);
+        if let Some(tile) = state.grid.get_mut(drill) {
+            tile.terrain = engine::TerrainType::Empty;
+            tile.building = None;
+        }
+        state.select_building(BuildingType::Drill);
+        state.try_place_building(drill);
+        state.grid.update_power_grid();
     }
 
     fn update_directives(&mut self, delta_time: f32) {

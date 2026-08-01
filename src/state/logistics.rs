@@ -63,7 +63,17 @@ impl PlanetState {
                         events.push(drone.block());
                     }
                 }
-                DroneState::Idle | DroneState::Delivering => {}
+                DroneState::Delivering => {
+                    // The cargo is already banked by the ReachedCore event, so
+                    // drop it before heading home: a drone that walks the route
+                    // back is what makes a long run cost throughput.
+                    drone.carrying = 0.0;
+                    match route_over_network(grid, drone.position, drone.home_drill) {
+                        Some(route) => drone.return_to_drill(route),
+                        None => events.push(drone.block()),
+                    }
+                }
+                DroneState::Idle => {}
             }
         }
 
@@ -169,12 +179,20 @@ mod tests {
         state.resources.energy = 10_000.0;
         state.config.resources.max_energy = 10_000.0;
         state.unlock_building(BuildingType::Conduit);
+        state.unlock_building(BuildingType::PowerNode);
 
         for step in 1..=length {
             let pos = GridPos::new(core.x + step, core.y);
             state.grid.get_mut(pos).unwrap().terrain = crate::engine::TerrainType::Empty;
-            state.select_building(BuildingType::Conduit);
-            assert!(state.try_place_building(pos), "conduit at step {step}");
+            // A repeater every five tiles keeps a long run powered; power nodes
+            // carry traffic too, so the route length is unaffected.
+            let piece = if step % 5 == 0 {
+                BuildingType::PowerNode
+            } else {
+                BuildingType::Conduit
+            };
+            state.select_building(piece);
+            assert!(state.try_place_building(pos), "run piece at step {step}");
         }
 
         let drill = GridPos::new(core.x + length + 1, core.y);
@@ -184,6 +202,39 @@ mod tests {
         state.grid.update_power_grid();
 
         (state, core, drill)
+    }
+
+    /// Loads delivered by a single drill over `seconds` of fixed-step
+    /// simulation, with the storage cap lifted out of the way.
+    fn loads_delivered(state: &mut PlanetState, seconds: f32) -> u32 {
+        state.resources.minerals = 0.0;
+        state.config.resources.base_mineral_cap = 100_000.0;
+
+        let ticks = (seconds / crate::state::TICK_SECONDS) as u32;
+        for _ in 0..ticks {
+            state.step(crate::state::TICK_SECONDS, false);
+        }
+
+        (state.resources.minerals / DRILL_OUTPUT_PER_CYCLE).round() as u32
+    }
+
+    /// Snapshot of the whole harvest loop at the fixed timestep: drill cycle,
+    /// dispatch, travel out over the network, delivery, and the walk home. If
+    /// the tick length, drone speed, drill cycle or route cost changes, this
+    /// number moves.
+    #[test]
+    fn a_drill_beside_the_core_delivers_four_loads_in_ten_seconds() {
+        let (mut state, _core, _drill) = state_with_run(0);
+        assert_eq!(loads_delivered(&mut state, 10.0), 4);
+    }
+
+    /// The point of the pillar: the same drill on the end of a long run
+    /// delivers less, because the round trip now costs more than the cycle.
+    #[test]
+    fn a_drill_at_the_end_of_a_long_run_delivers_less() {
+        let (mut near, _, _) = state_with_run(1);
+        let (mut far, _, _) = state_with_run(9);
+        assert!(loads_delivered(&mut far, 30.0) < loads_delivered(&mut near, 30.0));
     }
 
     #[test]

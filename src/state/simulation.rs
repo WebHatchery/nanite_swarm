@@ -13,13 +13,42 @@ const POLLUTION_RADIUS: i32 = 3;
 const POLLUTION_RATE_MULTIPLIER: f32 = 1.3;
 // Config-driven values are loaded from assets/game_config.json.
 
+/// The simulation advances in whole steps of this length and nothing else.
+/// Frame time only decides *how many* steps run, never how long one is, so the
+/// world behaves the same at 30fps, at 144fps, and in a headless test.
+pub const TICK_SECONDS: f32 = 1.0 / 30.0;
+
+/// Ceiling on catch-up steps per call. A long stall (a load, a dragged window)
+/// drops the excess rather than spending minutes replaying it.
+const MAX_CATCHUP_TICKS: u32 = 6;
+
 impl PlanetState {
-    /// Update game simulation
-    pub fn update(&mut self, delta_time: f32) {
-        self.update_simulation(delta_time, true);
+    /// Advance the world by real elapsed time, running whole [`TICK_SECONDS`]
+    /// steps and banking the remainder. Returns how many steps ran, so callers
+    /// that keep their own timers can advance by the same amount.
+    pub fn advance(&mut self, real_delta: f32, allow_visuals: bool) -> u32 {
+        if !real_delta.is_finite() || real_delta <= 0.0 {
+            return 0;
+        }
+
+        self.sim_accumulator += real_delta;
+        let mut ticks = 0;
+        while self.sim_accumulator >= TICK_SECONDS && ticks < MAX_CATCHUP_TICKS {
+            self.sim_accumulator -= TICK_SECONDS;
+            self.step(TICK_SECONDS, allow_visuals);
+            ticks += 1;
+        }
+
+        if ticks == MAX_CATCHUP_TICKS {
+            // Dropped time: never let a backlog snowball into a freeze.
+            self.sim_accumulator = 0.0;
+        }
+
+        ticks
     }
 
-    pub fn update_simulation(&mut self, delta_time: f32, allow_visuals: bool) {
+    /// One simulation step. Every caller passes a fixed, known step length.
+    pub(crate) fn step(&mut self, delta_time: f32, allow_visuals: bool) {
         let sim_delta = if self.battery_seconds <= 0.0 {
             delta_time * 0.1
         } else {
@@ -370,6 +399,57 @@ mod tests {
     }
 
     #[test]
+    fn advance_runs_whole_ticks_and_banks_the_remainder() {
+        let mut state = state();
+        assert_eq!(state.advance(TICK_SECONDS * 2.5, false), 2);
+        assert!((state.sim_accumulator - TICK_SECONDS * 0.5).abs() < 1e-4);
+        assert!((state.time_played - (TICK_SECONDS * 2.0) as f64).abs() < 1e-4);
+
+        // The banked half tick means the next one needs only half a tick more.
+        assert_eq!(state.advance(TICK_SECONDS * 0.6, false), 1);
+    }
+
+    #[test]
+    fn advance_ignores_a_zero_or_nonsense_delta() {
+        let mut state = state();
+        assert_eq!(state.advance(0.0, false), 0);
+        assert_eq!(state.advance(-1.0, false), 0);
+        assert_eq!(state.advance(f32::NAN, false), 0);
+        assert_eq!(state.time_played, 0.0);
+    }
+
+    #[test]
+    fn advance_drops_a_long_backlog_instead_of_replaying_it() {
+        let mut state = state();
+        // Ten seconds of stall: run the cap, then start clean.
+        assert_eq!(state.advance(10.0, false), MAX_CATCHUP_TICKS);
+        assert_eq!(state.sim_accumulator, 0.0);
+    }
+
+    #[test]
+    fn frame_rate_does_not_change_how_much_world_time_passes() {
+        let mut fast = state();
+        let mut slow = state();
+
+        // Two seconds of wall clock, at 120fps and at 40fps.
+        let mut fast_ticks = 0;
+        for _ in 0..240 {
+            fast_ticks += fast.advance(1.0 / 120.0, false);
+        }
+        let mut slow_ticks = 0;
+        for _ in 0..80 {
+            slow_ticks += slow.advance(1.0 / 40.0, false);
+        }
+
+        assert!(
+            (fast_ticks as i64 - slow_ticks as i64).abs() <= 1,
+            "{fast_ticks} vs {slow_ticks} ticks for the same wall clock"
+        );
+        assert!((fast.time_played - slow.time_played).abs() <= TICK_SECONDS as f64 * 1.5);
+        assert!((fast.resources.energy - slow.resources.energy).abs() <= 1.0);
+    }
+
+    #[test]
     fn power_collapse_triggers_after_sustained_negative_power() {
         let mut state = state();
         // Force a persistent deficit and drive the simulation past the 60s threshold.
@@ -388,7 +468,7 @@ mod tests {
         assert!(state.grid.net_power() < 0.0);
 
         for _ in 0..70 {
-            state.update_simulation(1.0, false);
+            state.step(1.0, false);
         }
 
         assert!(state.power_collapse_cooldown > 0.0);

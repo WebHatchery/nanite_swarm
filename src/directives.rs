@@ -21,12 +21,16 @@ pub struct Directive {
     pub duration: f32,
     pub reward_data: f32,
     pub completed: bool,
+    /// Seconds of sustained surplus, kept as a float so a fractional
+    /// simulation step still counts toward the integer `progress`.
+    #[serde(default)]
+    pub sustained: f32,
 }
 
 impl Directive {
     pub fn new(kind: DirectiveKind, target: i32, duration: f32, reward_data: f32) -> Self {
         let description = match kind {
-            DirectiveKind::PowerSurplus => format!("Sustain +{} power for 60s", target),
+            DirectiveKind::PowerSurplus => format!("Sustain +{} power for {}s", target, target),
             DirectiveKind::DrillCount => format!("Operate {} drills", target),
             DirectiveKind::ServerBanks => format!("Run {} server banks", target),
             DirectiveKind::HarvestForest => format!("Harvest {} forests", target),
@@ -39,6 +43,7 @@ impl Directive {
             duration,
             reward_data,
             completed: false,
+            sustained: 0.0,
         }
     }
 
@@ -49,11 +54,17 @@ impl Directive {
         self.duration = (self.duration - delta).max(0.0);
         match self.kind {
             DirectiveKind::PowerSurplus => {
-                if state.power_balance >= self.target as f32 {
-                    self.progress = (self.progress + (delta * 1.0) as i32).min(self.target);
+                // One second of surplus is one point of progress, and losing
+                // the surplus bleeds it back at the same rate. Counting in
+                // whole frames instead made this never move at 60fps and run
+                // deeply negative whenever power dipped.
+                let step = if state.power_balance >= self.target as f32 {
+                    delta
                 } else {
-                    self.progress = self.progress.saturating_sub(1);
-                }
+                    -delta
+                };
+                self.sustained = (self.sustained + step).clamp(0.0, self.target as f32);
+                self.progress = self.sustained as i32;
             }
             DirectiveKind::DrillCount => {
                 let count = state.grid.find_buildings(BuildingType::Drill).len() as i32;
