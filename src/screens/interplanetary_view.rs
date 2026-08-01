@@ -87,15 +87,18 @@ pub enum InterplanetaryAction {
     None,
     Close,
     SelectPlanet(usize),
-    LaunchMassDriver(usize),
+    LaunchSeedShip(usize),
 }
 
 /// Render the interplanetary solar system view
 pub fn render_interplanetary_view(
     current_planet: usize,
     has_mass_driver: bool,
+    seed_ship_ready: bool,
     colonized_planets: &[bool],
 ) -> InterplanetaryAction {
+    // A new world costs a whole Seed Ship, thrown by a Mass Driver.
+    let can_launch = has_mass_driver && seed_ship_ready;
     clear_background(Colors::BACKGROUND);
 
     let screen_w = screen_width();
@@ -112,23 +115,19 @@ pub fn render_interplanetary_view(
         return InterplanetaryAction::Close;
     }
 
-    if has_mass_driver {
-        draw_ui_text(
-            "Mass Driver: ONLINE",
-            screen_w - 320.0,
-            50.0,
-            12.0,
-            Colors::SUCCESS,
-        );
+    let (driver_label, driver_color) = if has_mass_driver {
+        ("Mass Driver: ONLINE", Colors::SUCCESS)
     } else {
-        draw_ui_text(
-            "Mass Driver: OFFLINE",
-            screen_w - 320.0,
-            50.0,
-            12.0,
-            Colors::TEXT_DIM,
-        );
-    }
+        ("Mass Driver: OFFLINE", Colors::TEXT_DIM)
+    };
+    draw_ui_text(driver_label, screen_w - 320.0, 34.0, 12.0, driver_color);
+
+    let (ship_label, ship_color) = if seed_ship_ready {
+        ("Seed Ship: READY", Colors::SUCCESS)
+    } else {
+        ("Seed Ship: UNDER CONSTRUCTION", Colors::TEXT_DIM)
+    };
+    draw_ui_text(ship_label, screen_w - 320.0, 54.0, 12.0, ship_color);
 
     // Draw sun at center
     let center_x = screen_w / 2.0;
@@ -292,23 +291,7 @@ pub fn render_interplanetary_view(
                 11.0,
                 Colors::PRIMARY,
             );
-        } else if has_mass_driver && !is_colonized {
-            draw_ui_text(
-                "Click to launch probe",
-                panel_x + 15.0,
-                panel_y + 150.0,
-                12.0,
-                Colors::SUCCESS,
-            );
-        } else if !has_mass_driver && !is_colonized {
-            draw_ui_text(
-                "Requires: Mass Driver",
-                panel_x + 15.0,
-                panel_y + 150.0,
-                11.0,
-                Colors::ERROR,
-            );
-        } else if is_colonized && !is_current {
+        } else if is_colonized {
             draw_ui_text(
                 "Click to travel",
                 panel_x + 15.0,
@@ -316,14 +299,35 @@ pub fn render_interplanetary_view(
                 12.0,
                 Colors::PRIMARY,
             );
+        } else if can_launch {
+            draw_ui_text(
+                "Click to launch the Seed Ship",
+                panel_x + 15.0,
+                panel_y + 150.0,
+                12.0,
+                Colors::SUCCESS,
+            );
+        } else {
+            let blocker = if !has_mass_driver {
+                "Requires: Mass Driver"
+            } else {
+                "Requires: a finished Seed Ship"
+            };
+            draw_ui_text(
+                blocker,
+                panel_x + 15.0,
+                panel_y + 150.0,
+                11.0,
+                Colors::ERROR,
+            );
         }
 
         // Handle click
         if is_mouse_button_pressed(MouseButton::Left) {
             if is_colonized && !is_current {
                 action = InterplanetaryAction::SelectPlanet(index);
-            } else if has_mass_driver && !is_colonized {
-                action = InterplanetaryAction::LaunchMassDriver(index);
+            } else if can_launch && !is_colonized {
+                action = InterplanetaryAction::LaunchSeedShip(index);
             }
         }
     }

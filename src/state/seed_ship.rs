@@ -28,6 +28,10 @@ pub struct SeedShip {
     progress: StageProgress,
     /// Whether the swarm is currently diverting production into the yard.
     pub committed: bool,
+    /// How many ships this world has already sent. Leaving again means
+    /// building another one from the keel up.
+    #[serde(default)]
+    launches: u32,
 }
 
 impl SeedShip {
@@ -56,6 +60,25 @@ impl SeedShip {
 
     pub fn progress(&self) -> StageProgress {
         self.progress
+    }
+
+    /// Built, and still sitting on the pad.
+    pub fn is_ready_to_launch(&self) -> bool {
+        self.is_complete()
+    }
+
+    /// How many ships have left this world.
+    pub fn launches(&self) -> u32 {
+        self.launches
+    }
+
+    /// Spend the ship. The yard is left empty: leaving again means building
+    /// another from the keel up, which is also why this cannot double-launch.
+    pub(super) fn mark_launched(&mut self) {
+        self.launches += 1;
+        self.stage = 0;
+        self.progress = StageProgress::default();
+        self.committed = false;
     }
 
     /// How far the current stage is from paid, 0..1 across all its resources.

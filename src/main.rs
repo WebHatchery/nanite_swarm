@@ -53,7 +53,6 @@ pub struct Game {
 }
 
 const SAVE_PATH: &str = "save.json";
-const COLONIZE_COST: f32 = 100.0;
 const RESEARCH_RATE: f32 = 5.0; // data per second
 
 impl Game {
@@ -198,6 +197,7 @@ impl Game {
                 match render_interplanetary_view(
                     self.campaign.current_index(),
                     self.has_mass_driver(),
+                    self.campaign.current().seed_ship.is_ready_to_launch(),
                     &self.campaign.colonized_flags(),
                 ) {
                     InterplanetaryAction::Close => {
@@ -212,12 +212,12 @@ impl Game {
                             self.phase = GamePhase::Playing;
                         }
                     }
-                    InterplanetaryAction::LaunchMassDriver(index) => {
-                        // Launch colonization probe (costs resources)
-                        if self.campaign.current().resources.minerals >= COLONIZE_COST
-                            && self.campaign.colonize(index)
-                        {
-                            self.campaign.current_mut().resources.minerals -= COLONIZE_COST;
+                    InterplanetaryAction::LaunchSeedShip(index) => {
+                        // The ship is spent carrying the swarm to a new world.
+                        if self.has_mass_driver() && self.campaign.launch_seed_ship(index) {
+                            self.sync_research_to_planet();
+                            self.sync_building_unlocks();
+                            self.phase = GamePhase::Playing;
                         }
                     }
                     InterplanetaryAction::None => {}
@@ -363,6 +363,16 @@ impl Game {
                 self.phase = GamePhase::Interplanetary;
                 self.research_state.unlocked.push("mass_driver".to_string());
                 self.campaign.colonize(4);
+                // A ship on the pad, so the map shows a launch is possible.
+                let planet = self.campaign.current_mut();
+                planet.config.resources.base_mineral_cap = 1_000_000.0;
+                planet.resources.minerals = 100_000.0;
+                planet.resources.data = 100_000.0;
+                planet.resources.biomass = 100_000.0;
+                planet.toggle_seed_ship_commitment();
+                for _ in 0..2_000 {
+                    planet.update_seed_ship(1.0);
+                }
             }
             _ => {
                 // Default: jump straight into gameplay on the starting planet.

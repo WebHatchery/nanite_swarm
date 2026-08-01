@@ -117,6 +117,23 @@ impl Campaign {
         true
     }
 
+    /// Send the finished Seed Ship to an untouched world, and ride it there.
+    ///
+    /// This is the only way to reach somewhere the swarm has never been: free
+    /// travel works between worlds it already holds, but a new one costs a
+    /// whole ship.
+    pub fn launch_seed_ship(&mut self, target: usize) -> bool {
+        if !self.current().seed_ship.is_ready_to_launch() {
+            return false;
+        }
+        if !self.colonize(target) {
+            return false;
+        }
+        self.current_mut().seed_ship.mark_launched();
+        self.current = target;
+        true
+    }
+
     /// Move the swarm's attention to another colonized world. The world it
     /// leaves keeps everything it had.
     pub fn travel_to(&mut self, index: usize) -> bool {
@@ -266,6 +283,73 @@ mod tests {
                 .collect()
         };
         assert_eq!(terrain(&first), terrain(&second));
+    }
+
+    /// Finish the current world's Seed Ship the slow way, through the sim.
+    fn build_seed_ship(campaign: &mut Campaign) {
+        let planet = campaign.current_mut();
+        planet.config.resources.base_mineral_cap = 1_000_000.0;
+        planet.resources.minerals = 100_000.0;
+        planet.resources.data = 100_000.0;
+        planet.resources.biomass = 100_000.0;
+        planet.toggle_seed_ship_commitment();
+        for _ in 0..2_000 {
+            planet.update_seed_ship(1.0);
+        }
+        assert!(planet.seed_ship.is_ready_to_launch());
+    }
+
+    #[test]
+    fn an_untouched_world_cannot_be_reached_without_a_ship() {
+        let mut campaign = campaign();
+        assert!(!campaign.current().seed_ship.is_ready_to_launch());
+        assert!(!campaign.launch_seed_ship(0));
+        assert!(!campaign.is_colonized(0));
+        assert_eq!(campaign.current_index(), STARTING_PLANET);
+    }
+
+    #[test]
+    fn launching_colonizes_the_target_and_carries_the_swarm_there() {
+        let mut campaign = campaign();
+        build_seed_ship(&mut campaign);
+
+        assert!(campaign.launch_seed_ship(1));
+        assert!(campaign.is_colonized(1));
+        assert_eq!(campaign.current_index(), 1);
+        assert_eq!(campaign.current().name, "Venus");
+    }
+
+    #[test]
+    fn the_ship_is_spent_by_the_launch() {
+        let mut campaign = campaign();
+        build_seed_ship(&mut campaign);
+        campaign.launch_seed_ship(1);
+        campaign.travel_to(STARTING_PLANET);
+
+        let ship = &campaign.current().seed_ship;
+        assert_eq!(ship.launches(), 1);
+        assert!(!ship.is_ready_to_launch());
+        assert_eq!(ship.stage_index(), 0);
+        assert!(!ship.committed);
+    }
+
+    #[test]
+    fn one_ship_cannot_reach_two_worlds() {
+        let mut campaign = campaign();
+        build_seed_ship(&mut campaign);
+        assert!(campaign.launch_seed_ship(1));
+        // Standing on Venus, whose yard is empty.
+        assert!(!campaign.launch_seed_ship(3));
+        assert!(!campaign.is_colonized(3));
+    }
+
+    #[test]
+    fn a_launch_at_an_already_colonized_world_is_refused() {
+        let mut campaign = campaign();
+        build_seed_ship(&mut campaign);
+        assert!(!campaign.launch_seed_ship(STARTING_PLANET));
+        // The ship is still on the pad.
+        assert!(campaign.current().seed_ship.is_ready_to_launch());
     }
 
     #[test]

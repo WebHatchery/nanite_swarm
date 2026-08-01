@@ -6,9 +6,9 @@ logistics puzzle at the heart of the GDD are the gaps.
 
 ## Core loop and win condition
 
-The Seed Ship exists: four stages declared in `assets/seed_ship.json`, its own screen behind the SHIP button, and a commit toggle that pours production into the yard at a capped intake, so it can only be paid for with sustained output.
+The Seed Ship exists: four stages declared in `assets/seed_ship.json`, its own screen behind the SHIP button, and a commit toggle that pours production into the yard at a capped intake, so it can only be paid for with sustained output. Launching it is the only way to reach an untouched world, and it is consumed doing so (rationale in `gdd.md` §4).
 
-- Decide what launching *does*. Finishing the ship marks the world spent and unlocks an achievement, but there is no launch: it should carry the swarm to a new world, which collides with the Mass Driver redesign in the meta-layer section. Design the two together.
+- The launch is instant and silent. Give it the sequence the GDD asks for: a countdown, the ship leaving, an arrival vignette on the new world.
 - Give the stages consequences beyond cost — new capabilities, a changed skyline, a reason to reach stage three other than reaching stage four.
 - Tie the ship to research: every stage is buildable from turn one, so the tree and the megastructure never meet.
 - Add campaign-complete and terminal-failure states; `GamePhase` now has a SeedShip screen but still no ending.
@@ -33,7 +33,7 @@ flag when a run is cut, and resume when it is repaired.
 `state::Campaign` owns all five worlds, the current index, and the directive; travel keeps every planet exactly as it was left, and the save carries the lot.
 
 - Simulate colonized planets in the background (scheduled tick or summary) so left-behind worlds keep producing. `Campaign` holds them all, so the missing piece is a cheap off-screen model, not the plumbing.
-- Turn Mass Drivers into gameplay: a building, export schedules, transit time, and receiving landing pads, instead of a tech flag plus 100 minerals.
+- Turn Mass Drivers into gameplay: a building, export schedules, transit time, and receiving landing pads. The tech now gates Seed Ship launches, so it is no longer a flag that does nothing, but nothing is exported over it yet.
 - Hoist research to the campaign. Every `PlanetState` carries its own `research` copy and only the current planet's is authoritative, kept in step by `sync_research_to_planet` on travel — a left-behind world's stat sheet is stale, which will matter the moment background simulation lands.
 - Give each planet its own generation rules; all five are `PlanetState::new(24, 24, derived_seed)` with difficulty as flavour text. Planet identity is also split between `Campaign::PLANET_NAMES` and the view's `get_planets()`; put it in one data file.
 

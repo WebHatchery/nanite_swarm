@@ -113,6 +113,23 @@ When the player moves to Planet 2, Planet 1 does not disappear.
 - **Mass Drivers:** The player can set up an export schedule. (e.g., "Launch 500 Steel/Minute from Mars to Saturn").
 - **The Strategy:** Use the abundant resources of early, easy planets to brute-force the difficult puzzles of later planets.
 
+#### Decision: reaching a world costs a ship, moving between them is free (2026-08-01)
+
+Two systems were competing to be "how you get somewhere new". They divide by
+what they carry:
+
+- **The Seed Ship** carries *the swarm*. It is the only way to reach a world
+  that has never been touched, it is consumed by the trip, and leaving again
+  means building another. That makes the megastructure the gate on progression
+  rather than a trophy, and gives a mature base something to spend itself on.
+- **Mass Drivers** are the infrastructure that throws things off a planet: the
+  ship needs one to launch, and export schedules will run over the same
+  hardware. They move *cargo*, not the player.
+
+Travel between worlds the swarm already holds is free and instant. The cost of
+the campaign is in reaching each new world the first time, not in commuting
+between the ones already taken.
+
 ## 5. Visuals & User Experience
 
 ### The Evolving Core
