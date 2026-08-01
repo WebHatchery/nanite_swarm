@@ -150,6 +150,31 @@ The central base (The Player) changes visually as the Tech Tree fills up.
 
 - **Smart Drag:** Click a building, drag a line to the destination. The game auto-places the pipes along the grid.
 
+## 5b. Endings
+
+### Decision: the campaign ends, a run does not fail (2026-08-01)
+
+There is exactly one ending and it is a win. The campaign is over when every
+world in the system has been taken and the Seed Ship on the pad has nowhere
+left to send itself — the moment the loop the whole game is built on runs out
+of somewhere to point. The player is shown what they consumed and offered the
+choice to carry on building in the finished system.
+
+**There is no losing.** Infrastructure collapse is a setback with teeth — drones
+drop, data corrupts, research locks — but it never ends a run, and nothing else
+will either. The reasons:
+
+- The game runs while the player is not watching. A failure state that can
+  trigger offline would mean logging in to find the run over, which is the
+  worst thing an idle game can do to someone.
+- The swarm is not a protagonist under threat. It is an indifferent optimizer;
+  "you died" is a story about stakes this game has deliberately not got.
+- Collapse already costs real time and real progress. Adding death on top would
+  make the correct play defensive, and the game is about expansion.
+
+If difficulty needs to bite harder, it does so by making a world more expensive
+to take, not by ending the campaign.
+
 ## 6. Narrative Tone
 
 - **Perspective:** "The Consumer."

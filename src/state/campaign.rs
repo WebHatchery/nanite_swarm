@@ -152,6 +152,43 @@ impl Campaign {
         true
     }
 
+    /// The system is spent: every world taken, and a finished ship with
+    /// nowhere left to send it.
+    ///
+    /// The campaign ends on the ship that has no destination rather than on a
+    /// counter reaching five, because that is the moment the loop the whole
+    /// game is built on runs out of somewhere to point.
+    pub fn is_complete(&self) -> bool {
+        self.planets.iter().all(Option::is_some) && self.current().seed_ship.is_ready_to_launch()
+    }
+
+    /// Ships sent across the whole campaign, for the ending to count.
+    pub fn total_launches(&self) -> u32 {
+        self.planets
+            .iter()
+            .filter_map(Option::as_ref)
+            .map(|planet| planet.seed_ship.launches())
+            .sum()
+    }
+
+    /// World time lived across every planet.
+    pub fn total_time_played(&self) -> f64 {
+        self.planets
+            .iter()
+            .filter_map(Option::as_ref)
+            .map(|planet| planet.time_played)
+            .sum()
+    }
+
+    /// Buildings standing across the whole campaign.
+    pub fn total_structures(&self) -> usize {
+        self.planets
+            .iter()
+            .filter_map(Option::as_ref)
+            .map(|planet| planet.grid.total_buildings())
+            .sum()
+    }
+
     /// Move the swarm's attention to another colonized world. The world it
     /// leaves keeps everything it had.
     pub fn travel_to(&mut self, index: usize) -> bool {
@@ -707,6 +744,39 @@ mod tests {
         // Standing on Venus, whose yard is empty.
         assert!(!campaign.launch_seed_ship(3));
         assert!(!campaign.is_colonized(3));
+    }
+
+    #[test]
+    fn a_campaign_with_worlds_left_is_not_over() {
+        let mut campaign = campaign();
+        build_seed_ship(&mut campaign);
+        // A finished ship, but four untouched worlds to send it to.
+        assert!(campaign.current().seed_ship.is_ready_to_launch());
+        assert!(!campaign.is_complete());
+    }
+
+    #[test]
+    fn every_world_taken_and_a_ship_with_nowhere_to_go_ends_it() {
+        let mut campaign = campaign();
+        for index in 0..PLANET_COUNT {
+            campaign.colonize(index);
+        }
+        // Every world taken, but nothing built to leave on.
+        assert!(!campaign.is_complete());
+
+        build_seed_ship(&mut campaign);
+        assert!(campaign.is_complete());
+    }
+
+    #[test]
+    fn the_ending_counts_the_whole_campaign_not_just_this_world() {
+        let mut campaign = campaign();
+        build_seed_ship(&mut campaign);
+        assert!(campaign.launch_seed_ship(1));
+
+        assert_eq!(campaign.total_launches(), 1);
+        assert!(campaign.total_structures() >= 2, "two Cores at least");
+        assert!(campaign.total_time_played() >= 0.0);
     }
 
     #[test]

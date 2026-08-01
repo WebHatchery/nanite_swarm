@@ -226,7 +226,7 @@ impl PlanetState {
     ///
     /// `unlock` returns whether this was the moment it happened, which is the
     /// only reason the toast is not repeated every tick.
-    pub(super) fn announce_achievement(&mut self, id: &str) {
+    pub fn announce_achievement(&mut self, id: &str) {
         if !self.achievements.unlock(id) {
             return;
         }

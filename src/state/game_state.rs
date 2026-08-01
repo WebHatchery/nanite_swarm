@@ -339,5 +339,10 @@ pub(crate) fn achievement_definitions() -> Vec<Achievement> {
             "Seed Ship",
             "Finish a Seed Ship and leave a world spent.",
         ),
+        Achievement::new(
+            "system_consumed",
+            "System Consumed",
+            "Process every world in the system.",
+        ),
     ]
 }

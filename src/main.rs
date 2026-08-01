@@ -21,9 +21,10 @@ use assets::GameTextures;
 use data::{load_game_config, load_game_data, load_ui_theme, set_game_data};
 use engine::{ResearchState, ResearchTree};
 use screens::{
-    render_interplanetary_view, render_main_menu, render_planetary_view, render_research_view,
-    render_seed_ship_view, render_settings_menu, InterplanetaryAction, MenuAction, PlanetaryAction,
-    ResearchAction, SeedShipAction, SettingsAction,
+    render_campaign_complete_view, render_interplanetary_view, render_main_menu,
+    render_planetary_view, render_research_view, render_seed_ship_view, render_settings_menu,
+    CampaignCompleteAction, InterplanetaryAction, MenuAction, PlanetaryAction, ResearchAction,
+    SeedShipAction, SettingsAction,
 };
 use state::{load_from_file, save_to_file, Campaign, GAME_NAME};
 
@@ -36,6 +37,8 @@ pub enum GamePhase {
     SeedShip,
     Interplanetary,
     Settings,
+    /// The system is spent. Reachable once and then only by choice.
+    CampaignComplete,
 }
 
 /// Main game state container
@@ -47,6 +50,8 @@ pub struct Game {
     settings: GameSettings,
     debug_overlay: DebugOverlay,
     has_save: bool,
+    /// The ending has been shown once; seeing it again is the player's choice.
+    ending_seen: bool,
     textures: GameTextures,
     config: data::GameConfig,
     ui_theme: data::UiTheme,
@@ -89,6 +94,7 @@ impl Game {
             settings,
             debug_overlay: DebugOverlay::new(),
             has_save: false,
+            ending_seen: false,
             textures: GameTextures::load().await,
             config,
             ui_theme,
@@ -209,6 +215,16 @@ impl Game {
                     SeedShipAction::None => {}
                 }
             }
+            GamePhase::CampaignComplete => match render_campaign_complete_view(&self.campaign) {
+                CampaignCompleteAction::KeepGoing => {
+                    self.phase = GamePhase::Playing;
+                }
+                CampaignCompleteAction::Close => {
+                    self.save_campaign();
+                    self.phase = GamePhase::MainMenu;
+                }
+                CampaignCompleteAction::None => {}
+            },
             GamePhase::Interplanetary => {
                 match render_interplanetary_view(
                     self.campaign.current_index(),
@@ -257,12 +273,30 @@ impl Game {
         let simulated = ticks as f32 * state::TICK_SECONDS;
         self.update_research(simulated);
         self.campaign.update_directive(simulated);
+        self.check_campaign_complete();
         if self
             .campaign
             .due_for_autosave(self.settings.autosave_interval)
         {
             self.save_campaign();
         }
+    }
+
+    /// Show the ending the first time the system runs out of worlds.
+    ///
+    /// Only once: after that the player can go back to it from the map, but
+    /// the game does not keep interrupting a finished campaign they have
+    /// chosen to carry on playing.
+    fn check_campaign_complete(&mut self) {
+        if self.ending_seen || !self.campaign.is_complete() {
+            return;
+        }
+        self.ending_seen = true;
+        self.campaign
+            .current_mut()
+            .announce_achievement("system_consumed");
+        self.save_campaign();
+        self.phase = GamePhase::CampaignComplete;
     }
 
     /// Write the campaign down, and say so on screen either way.
@@ -559,6 +593,40 @@ impl Game {
                 planet
                     .notifications
                     .warning("Seed Ship: Ion Spine under way");
+            }
+            "ending" => {
+                self.phase = GamePhase::CampaignComplete;
+                // Play the campaign out the way it is actually played: every
+                // world reached by building a ship and riding it there, so the
+                // numbers on the ending screen are real.
+                let build_ship = |campaign: &mut Campaign| {
+                    let planet = campaign.current_mut();
+                    planet.config.resources.base_mineral_cap = 1_000_000.0;
+                    planet.resources.minerals = 100_000.0;
+                    planet.resources.data = 100_000.0;
+                    planet.resources.biomass = 100_000.0;
+                    planet.resources.alloy = 100_000.0;
+                    if !planet.seed_ship.committed {
+                        planet.toggle_seed_ship_commitment();
+                    }
+                    for _ in 0..2_000 {
+                        planet.update_seed_ship(1.0);
+                        planet.step(1.0, false);
+                    }
+                };
+
+                for _ in 0..state::PLANET_COUNT {
+                    build_ship(&mut self.campaign);
+                    let target =
+                        (0..state::PLANET_COUNT).find(|index| !self.campaign.is_colonized(*index));
+                    match target {
+                        Some(index) => {
+                            self.campaign.launch_seed_ship(index);
+                        }
+                        // Nowhere left: the last ship is the ending.
+                        None => break,
+                    }
+                }
             }
             "congestion" => {
                 self.phase = GamePhase::Playing;

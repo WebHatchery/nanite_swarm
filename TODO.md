@@ -11,8 +11,10 @@ The Seed Ship exists: four stages declared in `assets/seed_ship.json`, its own s
 - The launch is instant and silent. Give it the sequence the GDD asks for: a countdown, the ship leaving, an arrival vignette on the new world.
 - Give the stages consequences beyond cost — new capabilities, a changed skyline, a reason to reach stage three other than reaching stage four.
 - Tie the ship to research: every stage is buildable from turn one, so the tree and the megastructure never meet.
-- Add campaign-complete and terminal-failure states; `GamePhase` now has a SeedShip screen but still no ending.
-- Decide whether infrastructure collapse can actually end a run, and design the difficulty curve around it — today it is a 20-second timeout with a data penalty.
+The campaign ends: every world taken and a finished ship with nowhere to send it shows SYSTEM CONSUMED with what the run consumed, once, and the player can carry on in the finished system. There is deliberately no failure state (rationale in `gdd.md` §5b).
+
+- Nothing after the ending changes. A finished campaign plays exactly like an unfinished one, so there is no reason to keep the save. New-game-plus, a harder second system, or a score to beat would all give it one.
+- Collapse stays a setback, never a death (decided 2026-08-01). It is still a flat 20-second shutdown and a data penalty on every world at every stage, so it stings hardest exactly when the player can least afford it and barely registers later; it wants scaling with the size of what collapsed.
 - Make the five core stages mechanical, not just visual: tie Crash-Lander/Fortress/Space Elevator/Planetary Ring (GDD §5) to research and throughput milestones with new capabilities each.
 
 ## The logistics puzzle
