@@ -14,6 +14,7 @@ use super::tile::Tile;
 type TerrainRng = SeededRng;
 
 use crate::data::OreConfig;
+use crate::engine::terrain_gen;
 use macroquad_toolkit::math::lerp;
 
 /// The game grid containing all tiles
@@ -54,51 +55,85 @@ impl Grid {
         weights: &TerrainWeights,
         ore: &OreConfig,
     ) -> Self {
-        let mut rng = TerrainRng::new(seed);
         let size = (width * height) as usize;
+        let center = GridPos::new(width as i32 / 2, height as i32 / 2);
+        // The clear ground the Core lands on is not eligible for anything, so
+        // it is left out of the shares as well as out of the fields.
+        let shaped = |pos: GridPos| pos.distance(center) > 2;
+
+        // One field per kind of ground, each with its own seed and its own
+        // sense of scale, so a world's ridges and its forests are not the same
+        // shape offset by a step.
+        let bands: [(TerrainType, f32, u64, f32); 4] = [
+            (
+                TerrainType::Mountain,
+                weights.mountain.max(0.0),
+                0x1111,
+                5.0,
+            ),
+            (TerrainType::Forest, weights.forest.max(0.0), 0x2222, 4.0),
+            (TerrainType::Water, weights.water.max(0.0), 0x3333, 3.5),
+            (TerrainType::Void, weights.void.max(0.0), 0x4444, 4.5),
+        ];
+
+        let positions: Vec<GridPos> = (0..size)
+            .map(|i| GridPos::from_index(i, width))
+            .filter(|pos| shaped(*pos))
+            .collect();
+
+        // Thresholds are quantiles of the field over this world, so each kind
+        // of ground covers exactly the share it was given.
+        let cuts: Vec<f32> = bands
+            .iter()
+            .map(|(_, share, band_seed, scale)| {
+                let mut values: Vec<f32> = positions
+                    .iter()
+                    .map(|pos| terrain_gen::field(seed ^ band_seed, pos.x, pos.y, *scale))
+                    .collect();
+                terrain_gen::threshold_for_share(&mut values, *share)
+            })
+            .collect();
+
+        let mut ore_values: Vec<f32> = positions
+            .iter()
+            .map(|pos| terrain_gen::field(seed ^ 0x5555, pos.x, pos.y, 3.0))
+            .collect();
+        let rich_cut = terrain_gen::threshold_for_share(&mut ore_values.clone(), ore.rich_chance);
+        let lean_cut = 1.0
+            - terrain_gen::threshold_for_share(
+                &mut ore_values.iter().map(|v| 1.0 - v).collect::<Vec<f32>>(),
+                ore.lean_chance,
+            );
+
         let mut tiles = Vec::with_capacity(size);
-
-        let center_x = width as i32 / 2;
-        let center_y = height as i32 / 2;
-
-        // Cumulative thresholds, so a roll lands in exactly one band.
-        let mountain = weights.mountain.max(0.0);
-        let forest = mountain + weights.forest.max(0.0);
-        let water = forest + weights.water.max(0.0);
-        let void = water + weights.void.max(0.0);
-
         for i in 0..size {
             let pos = GridPos::from_index(i, width);
-            let dist_from_center = pos.distance(GridPos::new(center_x, center_y));
 
-            // Terrain distribution based on distance from center
-            let terrain = if dist_from_center <= 2 {
-                TerrainType::Empty // Clear area around Core
+            let terrain = if !shaped(pos) {
+                TerrainType::Empty
             } else {
-                let roll: f32 = rng.next_f32();
-                if roll < mountain {
-                    TerrainType::Mountain
-                } else if roll < forest {
-                    TerrainType::Forest
-                } else if roll < water {
-                    TerrainType::Water
-                } else if roll < void {
-                    TerrainType::Void
-                } else {
-                    TerrainType::Empty
-                }
+                // First band whose field is over its cut wins, so overlapping
+                // regions resolve the same way every time.
+                bands
+                    .iter()
+                    .zip(cuts.iter())
+                    .find(|((_, share, band_seed, scale), cut)| {
+                        *share > 0.0
+                            && terrain_gen::field(seed ^ band_seed, pos.x, pos.y, *scale) >= **cut
+                    })
+                    .map(|((terrain, _, _, _), _)| *terrain)
+                    .unwrap_or(TerrainType::Empty)
             };
 
-            // Reveal tiles near center
-            let revealed = dist_from_center <= 4;
-
-            // Ore is rolled for every tile, from the same seeded stream as
-            // the terrain, so a world's ground is as reproducible as its shape.
-            let ore_roll = rng.next_f32();
-            let ore_richness = if ore_roll < ore.rich_chance {
-                lerp(ore.rich_min, ore.rich_max, rng.next_f32())
-            } else if ore_roll < ore.rich_chance + ore.lean_chance {
-                lerp(ore.lean_min, ore.lean_max, rng.next_f32())
+            // Ore rides its own field, so deposits come in patches worth
+            // walking to rather than one lucky tile at a time.
+            let ore_field = terrain_gen::field(seed ^ 0x5555, pos.x, pos.y, 3.0);
+            let ore_richness = if !shaped(pos) {
+                1.0
+            } else if ore_field >= rich_cut {
+                lerp(ore.rich_min, ore.rich_max, ore_field)
+            } else if ore_field <= lean_cut {
+                lerp(ore.lean_min, ore.lean_max, ore_field)
             } else {
                 1.0
             };
@@ -106,7 +141,7 @@ impl Grid {
             tiles.push(Tile {
                 terrain,
                 building: None,
-                revealed,
+                revealed: pos.distance(center) <= 4,
                 filter: false,
                 mountain_harvested: false,
                 forest_cleared: false,
@@ -352,6 +387,100 @@ mod tests {
             water,
             void,
         }
+    }
+
+    /// Share of neighbouring pairs that are the same kind of ground. Confetti
+    /// scores about what independence predicts; regions score far higher.
+    fn neighbour_agreement(grid: &Grid) -> f32 {
+        let mut same = 0.0;
+        let mut total = 0.0;
+        for y in 0..grid.height as i32 {
+            for x in 0..grid.width as i32 - 1 {
+                let a = grid.get(GridPos::new(x, y)).unwrap().terrain;
+                let b = grid.get(GridPos::new(x + 1, y)).unwrap().terrain;
+                total += 1.0;
+                if a == b {
+                    same += 1.0;
+                }
+            }
+        }
+        same / total
+    }
+
+    #[test]
+    fn a_world_comes_out_in_regions_rather_than_confetti() {
+        let weights = weights(0.2, 0.2, 0.1, 0.1);
+        let grid = Grid::new_with_terrain(30, 30, 99, &weights);
+
+        // With independent rolls the chance two neighbours match is the sum of
+        // the squared shares: about 0.25 here. Regions beat that comfortably.
+        let agreement = neighbour_agreement(&grid);
+        assert!(
+            agreement > 0.6,
+            "neighbours agreed {:.2} of the time — that is still confetti",
+            agreement
+        );
+    }
+
+    #[test]
+    fn clustering_does_not_quietly_retune_the_weights() {
+        let weights = weights(0.2, 0.15, 0.1, 0.05);
+        let grid = Grid::new_with_terrain(30, 30, 7, &weights);
+
+        let total = grid.tiles.len() as f32;
+        for (terrain, declared) in [
+            (TerrainType::Mountain, 0.2),
+            (TerrainType::Forest, 0.15),
+            (TerrainType::Water, 0.1),
+            (TerrainType::Void, 0.05),
+        ] {
+            let share = grid
+                .tiles
+                .iter()
+                .filter(|tile| tile.terrain == terrain)
+                .count() as f32
+                / total;
+            assert!(
+                (share - declared).abs() < 0.05,
+                "{:?} covers {:.2} of the world against a declared {:.2}",
+                terrain,
+                share,
+                declared
+            );
+        }
+    }
+
+    #[test]
+    fn deposits_come_in_patches_worth_walking_to() {
+        let grid = Grid::new_with_terrain(30, 30, 5, &weights(0.1, 0.1, 0.05, 0.05));
+        // A rich tile should nearly always have a rich neighbour: a deposit
+        // that is one tile wide is a lottery, not a decision.
+        let mut rich = 0;
+        let mut with_company = 0;
+        for y in 0..30 {
+            for x in 0..30 {
+                let pos = GridPos::new(x, y);
+                if grid.get(pos).unwrap().ore_richness <= 1.05 {
+                    continue;
+                }
+                rich += 1;
+                if pos
+                    .neighbors()
+                    .iter()
+                    .filter_map(|next| grid.get(*next))
+                    .any(|tile| tile.ore_richness > 1.05)
+                {
+                    with_company += 1;
+                }
+            }
+        }
+        assert!(rich > 20, "hardly any deposits at all: {}", rich);
+        assert!(
+            with_company as f32 / rich as f32 > 0.85,
+            "only {} of {} rich tiles had a rich neighbour",
+            with_company,
+            rich
+        );
     }
 
     #[test]

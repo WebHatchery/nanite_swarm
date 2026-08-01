@@ -548,7 +548,14 @@ mod tests {
         }
 
         let drill = GridPos::new(core.x + length + 1, core.y);
-        state.grid.get_mut(drill).unwrap().terrain = crate::engine::TerrainType::Empty;
+        {
+            // Ordinary ground under the drill. These tests are about routes
+            // and dispatch; letting them start on whatever deposit the world
+            // generator happened to lay there makes them measure geology.
+            let tile = state.grid.get_mut(drill).unwrap();
+            tile.terrain = crate::engine::TerrainType::Empty;
+            tile.ore_richness = 1.0;
+        }
         state.select_building(BuildingType::Drill);
         assert!(state.try_place_building(drill));
         state.grid.update_power_grid();
@@ -1033,12 +1040,10 @@ mod tests {
     fn shared_trunk_throughput(capacity: f32) -> u32 {
         let (mut state, _core, drill) = state_with_run(8);
         state.config.buildings.conduit_capacity = capacity;
-        // Ordinary ground under both drills, so this measures the trunk and
-        // not which of them happened to land on a deposit.
-        for pos in [drill, GridPos::new(drill.x - 1, drill.y - 1)] {
-            if let Some(tile) = state.grid.get_mut(pos) {
-                tile.ore_richness = 1.0;
-            }
+        // The spur drill gets ordinary ground too, so this measures the
+        // trunk and not which drill landed on a deposit.
+        if let Some(tile) = state.grid.get_mut(GridPos::new(drill.x - 1, drill.y - 1)) {
+            tile.ore_richness = 1.0;
         }
         // A second drill hanging off the same run.
         let spur = GridPos::new(drill.x - 1, drill.y - 1);
