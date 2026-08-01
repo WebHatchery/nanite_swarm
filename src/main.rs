@@ -524,6 +524,32 @@ impl Game {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();
             }
+            // A Core that has grown past its landing pod.
+            "core_stage" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                let planet = self.campaign.current_mut();
+                if let Some(core) = planet.grid.find_core() {
+                    planet.grid.reveal_around(core, 24);
+                    // Enough standing to reach the Foundry and then the
+                    // Fortress, through the real path.
+                    for step in 1..=26 {
+                        let pos =
+                            engine::GridPos::new(core.x - 1 - step % 8, core.y + 1 + step / 8);
+                        if let Some(tile) = planet.grid.get_mut(pos) {
+                            tile.terrain = engine::TerrainType::Empty;
+                        }
+                        planet
+                            .grid
+                            .place_building(pos, engine::BuildingType::Conduit);
+                    }
+                }
+                for tech in ["a", "b", "c", "d", "e", "f"] {
+                    planet.research.unlocked_techs.push(tech.to_string());
+                }
+                planet.grid.update_power_grid();
+                planet.step(state::TICK_SECONDS, false);
+            }
             // A run cut in the middle, with drones stalled beyond the break.
             "severed" => {
                 self.phase = GamePhase::Playing;

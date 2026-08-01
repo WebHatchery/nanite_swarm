@@ -1,0 +1,111 @@
+//! Things about a world the game knows how to measure.
+//!
+//! One vocabulary, shared: an achievement fires on one of these, and a Core
+//! stage is reached by meeting several at once. Adding either is a line of
+//! JSON as long as it asks about something already in here; asking about
+//! something new is the only part that is code.
+
+use crate::engine::BuildingType;
+
+use super::game_state::PlanetState;
+
+/// Something measurable about the world in front of the player.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Milestone {
+    /// Announced by code at the moment it happens, not measured from state.
+    Manual,
+    Drills,
+    ServerBanks,
+    Structures,
+    NetworkTiles,
+    Drones,
+    MineralsHeld,
+    DataHeld,
+    AlloyHeld,
+    Technologies,
+    ForestsHarvested,
+    PowerSurplus,
+    SeedShipStages,
+}
+
+impl Milestone {
+    pub fn id(self) -> &'static str {
+        match self {
+            Milestone::Manual => "manual",
+            Milestone::Drills => "drills",
+            Milestone::ServerBanks => "server_banks",
+            Milestone::Structures => "structures",
+            Milestone::NetworkTiles => "network_tiles",
+            Milestone::Drones => "drones",
+            Milestone::MineralsHeld => "minerals_held",
+            Milestone::DataHeld => "data_held",
+            Milestone::AlloyHeld => "alloy_held",
+            Milestone::Technologies => "technologies",
+            Milestone::ForestsHarvested => "forests_harvested",
+            Milestone::PowerSurplus => "power_surplus",
+            Milestone::SeedShipStages => "seed_ship_stages",
+        }
+    }
+
+    pub const ALL: [Milestone; 13] = [
+        Milestone::Manual,
+        Milestone::Drills,
+        Milestone::ServerBanks,
+        Milestone::Structures,
+        Milestone::NetworkTiles,
+        Milestone::Drones,
+        Milestone::MineralsHeld,
+        Milestone::DataHeld,
+        Milestone::AlloyHeld,
+        Milestone::Technologies,
+        Milestone::ForestsHarvested,
+        Milestone::PowerSurplus,
+        Milestone::SeedShipStages,
+    ];
+
+    pub fn from_id(id: &str) -> Option<Self> {
+        Milestone::ALL
+            .into_iter()
+            .find(|condition| condition.id() == id)
+    }
+}
+
+impl PlanetState {
+    /// Whether this world currently meets a milestone.
+    pub fn meets(&self, milestone: Milestone, target: f32) -> bool {
+        match milestone {
+            // Announced by code at the moment it happens; never true of state.
+            Milestone::Manual => false,
+            Milestone::Drills => self.count_of(BuildingType::Drill) >= target,
+            Milestone::ServerBanks => self.count_of(BuildingType::ServerBank) >= target,
+            Milestone::Structures => self.grid.total_buildings() as f32 >= target,
+            Milestone::NetworkTiles => self.network_tile_count() as f32 >= target,
+            Milestone::Drones => self.drones.total_count() as f32 >= target,
+            Milestone::MineralsHeld => self.resources.minerals >= target,
+            Milestone::DataHeld => self.resources.data >= target,
+            Milestone::AlloyHeld => self.resources.alloy >= target,
+            Milestone::Technologies => self.research.unlocked_techs.len() as f32 >= target,
+            Milestone::ForestsHarvested => self.forest_harvested_count as f32 >= target,
+            // A surplus is a surplus; the target only asks for a bigger one.
+            Milestone::PowerSurplus => self.power_balance > 0.0,
+            Milestone::SeedShipStages => self.seed_ship.stage_index() as f32 >= target,
+        }
+    }
+
+    fn count_of(&self, building_type: BuildingType) -> f32 {
+        self.grid.find_buildings(building_type).len() as f32
+    }
+
+    /// Tiles that carry drones, which is the size of the network the player
+    /// has actually laid.
+    fn network_tile_count(&self) -> usize {
+        self.grid
+            .iter_tiles()
+            .filter(|(_, tile)| {
+                tile.building
+                    .as_ref()
+                    .is_some_and(|building| building.carries_traffic())
+            })
+            .count()
+    }
+}

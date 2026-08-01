@@ -306,6 +306,26 @@ pub struct AchievementDef {
     pub condition: AchievementConditionDef,
 }
 
+/// One step of the Evolving Core: what it takes to get there and what it does
+/// once it is standing.
+#[derive(Debug, Clone, Deserialize)]
+pub struct CoreStageDef {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    /// Every one of these has to be met at once. Empty for the stage a world
+    /// lands with.
+    #[serde(default)]
+    pub requires: Vec<AchievementConditionDef>,
+    #[serde(default)]
+    pub modifiers: Vec<ModifierDef>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct CoreStageDataFile {
+    pub stages: Vec<CoreStageDef>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct AchievementDataFile {
     pub achievements: Vec<AchievementDef>,
@@ -345,6 +365,7 @@ pub struct GameData {
     pub tutorial: Vec<TutorialStepDef>,
     pub directives: DirectiveDataFile,
     pub achievements: Vec<AchievementDef>,
+    pub core_stages: Vec<CoreStageDef>,
 }
 
 impl GameData {
@@ -366,6 +387,8 @@ impl GameData {
             .unwrap_or_else(|_| include_str!("../../assets/directives.json").to_string());
         let achievements_json = fs::read_to_string("assets/achievements.json")
             .unwrap_or_else(|_| include_str!("../../assets/achievements.json").to_string());
+        let core_stages_json = fs::read_to_string("assets/core_stages.json")
+            .unwrap_or_else(|_| include_str!("../../assets/core_stages.json").to_string());
 
         Self::from_json_strings(
             &buildings_json,
@@ -376,6 +399,7 @@ impl GameData {
             &tutorial_json,
             &directives_json,
             &achievements_json,
+            &core_stages_json,
         )
     }
 
@@ -402,6 +426,9 @@ impl GameData {
         let achievements_json = load_string("assets/achievements.json")
             .await
             .unwrap_or_else(|_| include_str!("../../assets/achievements.json").to_string());
+        let core_stages_json = load_string("assets/core_stages.json")
+            .await
+            .unwrap_or_else(|_| include_str!("../../assets/core_stages.json").to_string());
         let tutorial_json = load_string("assets/tutorial.json")
             .await
             .unwrap_or_else(|_| include_str!("../../assets/tutorial.json").to_string());
@@ -415,6 +442,7 @@ impl GameData {
             &tutorial_json,
             &directives_json,
             &achievements_json,
+            &core_stages_json,
         )
     }
 
@@ -427,6 +455,7 @@ impl GameData {
         tutorial_json: &str,
         directives_json: &str,
         achievements_json: &str,
+        core_stages_json: &str,
     ) -> Self {
         let building_file: BuildingDataFile =
             load_json(buildings_json).unwrap_or_else(|_| BuildingDataFile { buildings: vec![] });
@@ -513,11 +542,29 @@ impl GameData {
         // An achievement whose condition cannot be read would never fire, and
         // would sit in the count forever making the set look unfinished.
         for def in &achievement_file.achievements {
-            if crate::state::AchievementCondition::from_id(&def.condition.kind).is_none() {
+            if crate::state::Milestone::from_id(&def.condition.kind).is_none() {
                 panic!(
                     "achievement \"{}\": unknown condition \"{}\"",
                     def.id, def.condition.kind
                 );
+            }
+        }
+
+        let core_stage_file: CoreStageDataFile =
+            load_json(core_stages_json).unwrap_or_else(|_| CoreStageDataFile { stages: vec![] });
+        for stage in &core_stage_file.stages {
+            for requirement in &stage.requires {
+                if crate::state::Milestone::from_id(&requirement.kind).is_none() {
+                    panic!(
+                        "core stage \"{}\": unknown requirement \"{}\"",
+                        stage.id, requirement.kind
+                    );
+                }
+            }
+            for modifier in &stage.modifiers {
+                if let Err(problem) = crate::engine::parse_modifier(modifier) {
+                    panic!("core stage \"{}\": {}", stage.id, problem);
+                }
             }
         }
 
@@ -542,6 +589,7 @@ impl GameData {
             tutorial: tutorial_file.steps,
             directives,
             achievements: achievement_file.achievements,
+            core_stages: core_stage_file.stages,
         }
     }
 
@@ -595,6 +643,7 @@ mod tests {
         let tutorial_json = r#"{"steps": []}"#;
         let directives_json = r#"{"rotation_seconds": 600.0, "directives": []}"#;
         let achievements_json = r#"{"achievements": []}"#;
+        let core_stages_json = r#"{"stages": []}"#;
         let seed_ship_json = r#"{"intake_per_second": {"minerals": 1.0, "data": 1.0, "biomass": 1.0}, "stages": []}"#;
         let research_json = r#"{"starting_unlocked": ["core"], "nodes": [
             {"id": "core", "name": "Core", "description": "d", "data_cost": 0.0, "prerequisites": [], "position": [0.0, 0.0]}
@@ -608,6 +657,7 @@ mod tests {
             tutorial_json,
             directives_json,
             achievements_json,
+            core_stages_json,
         )
     }
 
@@ -624,7 +674,7 @@ mod tests {
     fn from_json_strings_falls_back_to_empty_on_malformed_json() {
         let data = GameData::from_json_strings(
             "not json", "not json", "not json", "not json", "not json", "not json", "not json",
-            "not json",
+            "not json", "not json",
         );
         assert!(data.buildings.is_empty());
         assert!(data.terrain.is_empty());

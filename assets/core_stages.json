@@ -1,0 +1,48 @@
+{
+  "stages": [
+    {
+      "id": "crash_lander",
+      "name": "Crash-Lander",
+      "description": "What survived the descent, and nothing more.",
+      "requires": [],
+      "modifiers": []
+    },
+    {
+      "id": "foundry",
+      "name": "Foundry",
+      "description": "The pod has grown a yard around itself.",
+      "requires": [
+        { "kind": "structures", "target": 10 },
+        { "kind": "network_tiles", "target": 6 }
+      ],
+      "modifiers": [{ "stat": "mineral_capacity", "op": "add", "value": 50.0 }]
+    },
+    {
+      "id": "fortress",
+      "name": "Fortress",
+      "description": "The swarm stops being a landing site and starts being a place.",
+      "requires": [
+        { "kind": "structures", "target": 25 },
+        { "kind": "technologies", "target": 6 }
+      ],
+      "modifiers": [{ "stat": "power_consumption", "op": "percent", "value": -0.1 }]
+    },
+    {
+      "id": "space_elevator",
+      "name": "Space Elevator",
+      "description": "A tether, because everything after this leaves.",
+      "requires": [
+        { "kind": "technologies", "target": 10 },
+        { "kind": "seed_ship_stages", "target": 2 }
+      ],
+      "modifiers": [{ "stat": "data_generation", "op": "percent", "value": 0.25 }]
+    },
+    {
+      "id": "planetary_ring",
+      "name": "Planetary Ring",
+      "description": "The world is now mostly structure. It was always going to be.",
+      "requires": [{ "kind": "seed_ship_stages", "target": 4 }],
+      "modifiers": [{ "stat": "drill_output", "op": "percent", "value": 0.2 }]
+    }
+  ]
+}

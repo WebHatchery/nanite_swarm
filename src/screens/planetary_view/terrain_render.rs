@@ -178,26 +178,12 @@ fn draw_conduit_tile(
     );
 }
 
-/// Determine current Core evolution stage based on progress
-fn core_stage(state: &PlanetState) -> u8 {
-    let growth = state.time_played as f32 + (state.resources.minerals + state.resources.data) * 0.4;
-
-    if growth < 60.0 {
-        0
-    } else if growth < 120.0 {
-        1
-    } else if growth < 200.0 {
-        2
-    } else if growth < 320.0 {
-        3
-    } else {
-        4
-    }
-}
-
 /// Draw evolved Core visuals
 fn draw_core_visual(px: f32, py: f32, size: f32, state: &PlanetState, textures: &GameTextures) {
-    let stage = core_stage(state);
+    // Whatever the Core has actually grown into. This used to be worked out
+    // here from time played plus the stockpile, so spending minerals walked
+    // the Core backwards through its own history.
+    let stage = state.core_stage_index();
     let center_x = px + size * 0.5;
     let center_y = py + size * 0.5;
     let pulse = pulse01_at(state.time_played, 2.0);

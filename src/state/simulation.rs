@@ -208,6 +208,7 @@ impl PlanetState {
         self.resources.alloy = self.resources.alloy.min(1000.0);
 
         self.update_achievements();
+        self.update_core_stage();
 
         if self.offline_notice_timer > 0.0 {
             self.offline_notice_timer = (self.offline_notice_timer - delta_time).max(0.0);

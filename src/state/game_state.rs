@@ -142,6 +142,10 @@ pub struct PlanetState {
     pub delivered_since_sample: f32,
     #[serde(skip, default)]
     pub throughput_timer: f32,
+    /// How far the Core has evolved. Earned, monotonic, and saved: the stage
+    /// used to be a number the renderer guessed from the stockpile.
+    #[serde(default)]
+    pub core_stage: u8,
     #[serde(skip, default)]
     pub power_negative_seconds: f32,
     #[serde(skip, default)]
@@ -277,6 +281,7 @@ impl PlanetState {
             throughput: default_throughput(),
             delivered_since_sample: 0.0,
             throughput_timer: 0.0,
+            core_stage: 0,
             power_negative_seconds: 0.0,
             power_collapse_cooldown: 0.0,
             power_collapse_shutdown: 0.0,
@@ -359,6 +364,11 @@ impl PlanetState {
         // A Seed Ship stage that is standing works for the world it stands on,
         // until the ship takes it away.
         for stage in self.seed_ship.standing_stages() {
+            stats.add_declared(&stage.modifiers);
+        }
+        // Everything the Core has grown into, which unlike the ship's stages
+        // is never taken away again.
+        for stage in self.core_stages_reached() {
             stats.add_declared(&stage.modifiers);
         }
         self.stats = stats;

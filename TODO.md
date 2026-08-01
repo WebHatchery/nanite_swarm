@@ -15,7 +15,7 @@ The campaign ends: every world taken and a finished ship with nowhere to send it
 
 - Nothing after the ending changes. A finished campaign plays exactly like an unfinished one, so there is no reason to keep the save. New-game-plus, a harder second system, or a score to beat would all give it one.
 - Collapse stays a setback, never a death (decided 2026-08-01), and now scales with the size of what collapsed: shutdown, research lock and the share of Data lost all interpolate between a small-swarm figure and a full-scale one, declared in `game_config.json` under `collapse`. The banner counts down the shutdown rather than implying a fixed length. What it still does not do is distinguish *what* collapsed — losing the grid to one overdrawn Server Bank costs the same as losing it across a whole continent of drills.
-- Make the five core stages mechanical, not just visual: tie Crash-Lander/Fortress/Space Elevator/Planetary Ring (GDD §5) to research and throughput milestones with new capabilities each.
+- The five Core stages are earned state (`assets/core_stages.json`): each declares milestones that must all be met and modifiers it grants once standing, they are reached in order, never given back, saved, and announced. The stage used to be a number the *renderer* computed from time played plus the current stockpile, so spending minerals walked the Core backwards. Stages 3 and 4 still reuse the stage-2 sprite — see Art.
 
 ## The logistics puzzle
 
@@ -127,7 +127,7 @@ Settings load at startup, apply as they are changed, and are written to disk, so
 
 - Animate the procedural sprite set: rotating drills, blinking servers, turbine spin — everything is static today.
 - Do a cohesive style and palette pass, add screen juice (collapse shake, harvest impact), and give each planet its own atmosphere.
-- Build core stages 3 and 4 visuals: the Space Elevator tether and the background Planetary Ring, the GDD's signature image.
+- Build core stages 3 and 4 visuals: the Space Elevator tether and the background Planetary Ring, the GDD's signature image. Both stages exist mechanically now and are reached through real milestones; there are only five sprites and the last two share one, so reaching the Ring looks like reaching the Elevator.
 - Produce marketing art: key art, logo, store capsules, trailer. Only `catalog_thumbnail.png` exists.
 
 ## Engineering quality
