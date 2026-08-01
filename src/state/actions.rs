@@ -136,6 +136,10 @@ impl PlanetState {
 
             let terrain = tile.terrain;
             let (minerals, biomass) = terrain.harvest_rewards();
+            // What the ground is worth is terrain data; what the swarm gets out
+            // of it is a stat, so a tech can pay off on ground already surveyed.
+            let yield_multiplier = self.stats.apply(crate::engine::StatId::HarvestYield, 1.0);
+            let (minerals, biomass) = (minerals * yield_multiplier, biomass * yield_multiplier);
 
             // Apply harvest
             if let Some(tile) = self.grid.get_mut(pos) {
@@ -305,6 +309,29 @@ mod tests {
         assert_eq!(tile.terrain, TerrainType::Rough);
         assert!(tile.mountain_harvested);
         assert!(!state.can_harvest(pos));
+    }
+
+    #[test]
+    fn research_makes_the_same_mountain_worth_more() {
+        let harvest = |techs: &[&str]| {
+            let mut state = state();
+            for tech in techs {
+                state.research.unlocked_techs.push((*tech).to_string());
+            }
+            state.refresh_stats();
+            let core = state.grid.find_core().unwrap();
+            let pos = GridPos::new(core.x + 5, core.y);
+            state.grid.get_mut(pos).unwrap().terrain = TerrainType::Mountain;
+            state.grid.reveal_around(pos, 1);
+            let before = state.resources.minerals;
+            assert!(state.try_harvest_terrain(pos));
+            state.resources.minerals - before
+        };
+
+        assert!(
+            harvest(&["excavation_charges"]) > harvest(&[]),
+            "the charges paid for nothing"
+        );
     }
 
     #[test]

@@ -12,7 +12,6 @@ use crate::engine::{
 use std::collections::HashMap;
 
 use super::game_state::PlanetState;
-use super::simulation::{HAZARD_COUNTER_RADIUS, HAZARD_COUNTER_STRENGTH};
 
 /// How much a producer may stockpile on its pad while its drones are away, as
 /// a multiple of a drone load. Past this it simply stops producing: a building
@@ -175,6 +174,8 @@ impl PlanetState {
 
         let capacity = self.config.buildings.conduit_capacity.max(1.0);
         let freeze = self.freeze_strength();
+        let counter_radius = self.config.upkeep.hazard_counter_radius;
+        let counter_strength = self.config.upkeep.hazard_counter_strength;
         let heaters = if freeze > 0.0 {
             self.powered_positions(BuildingType::HeaterNode)
         } else {
@@ -195,9 +196,9 @@ impl PlanetState {
                 if freeze > 0.0 {
                     let warmed = heaters
                         .iter()
-                        .any(|heater| tile.distance(*heater) as i32 <= HAZARD_COUNTER_RADIUS);
+                        .any(|heater| tile.distance(*heater) as i32 <= counter_radius);
                     let bite = if warmed {
-                        freeze * (1.0 - HAZARD_COUNTER_STRENGTH)
+                        freeze * (1.0 - counter_strength)
                     } else {
                         freeze
                     };

@@ -14,6 +14,8 @@ pub struct GameConfig {
     pub ore: OreConfig,
     #[serde(default = "MassDriverConfig::default")]
     pub mass_driver: MassDriverConfig,
+    #[serde(default = "UpkeepConfig::default")]
+    pub upkeep: UpkeepConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -118,10 +120,40 @@ pub struct MassDriverConfig {
     pub cargo: Vec<String>,
 }
 
+/// What settles on the machinery, what cleans it off, and how far each of
+/// those reaches.
+///
+/// All of it used to be Rust constants, which meant the one loop the player
+/// spends the whole game fighting could not be retuned without a rebuild.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpkeepConfig {
+    /// Dust settling on every building per second, before research.
+    pub dust_rate: f32,
+    /// Dust one Sweeper clears per second, and how far it reaches.
+    pub sweeper_rate: f32,
+    pub sweeper_radius: i32,
+    /// A preserved forest filter's reach, and what it does to the rate inside
+    /// it.
+    pub filter_radius: i32,
+    pub filter_multiplier: f32,
+    /// Cleared forest's reach, and what it does to the rate inside it.
+    pub pollution_radius: i32,
+    pub pollution_multiplier: f32,
+    /// Acid at full strength corrodes the network this many times faster than
+    /// dust settles on it.
+    pub acid_multiplier: f32,
+    /// Tiles a Shield Generator or Heater Node protects, and the share of the
+    /// hazard it holds off inside that.
+    pub hazard_counter_radius: i32,
+    pub hazard_counter_strength: f32,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuildingConfig {
-    pub core_power_consumption: f32,
     pub drill_output_rate: f32,
+    /// Tiles the grid carries power before it needs a repeater to go further.
+    #[serde(default = "default_repeater_range")]
+    pub repeater_range: u32,
     /// Drones one network tile passes at full speed before they share it.
     pub conduit_capacity: f32,
     /// What each drone past that limit adds to the tile's routing cost, in
@@ -132,6 +164,10 @@ pub struct BuildingConfig {
     pub partial_load_min_route: f32,
     /// The least a partial load may be, as a share of a full one.
     pub partial_load_min_share: f32,
+}
+
+fn default_repeater_range() -> u32 {
+    6
 }
 
 impl Default for GameConfig {
@@ -163,9 +199,9 @@ impl Default for GameConfig {
                 biomass_consumption_rate: 1.0,
             },
             buildings: BuildingConfig {
-                core_power_consumption: 5.0,
                 // Minerals cut per second by one drill.
                 drill_output_rate: 5.0,
+                repeater_range: default_repeater_range(),
                 conduit_capacity: 2.0,
                 congestion_route_penalty: 1.5,
                 partial_load_min_route: 6.0,
@@ -174,6 +210,24 @@ impl Default for GameConfig {
             collapse: CollapseConfig::default(),
             ore: OreConfig::default(),
             mass_driver: MassDriverConfig::default(),
+            upkeep: UpkeepConfig::default(),
+        }
+    }
+}
+
+impl Default for UpkeepConfig {
+    fn default() -> Self {
+        Self {
+            dust_rate: 0.12,
+            sweeper_rate: 0.6,
+            sweeper_radius: 3,
+            filter_radius: 3,
+            filter_multiplier: 0.6,
+            pollution_radius: 3,
+            pollution_multiplier: 1.3,
+            acid_multiplier: 4.0,
+            hazard_counter_radius: 4,
+            hazard_counter_strength: 0.9,
         }
     }
 }

@@ -73,7 +73,7 @@ impl Grid {
                     if let Some(ref building) = tile.building {
                         if building.transmits_power()
                             && !building.is_dust_stalled()
-                            && next_distance <= Self::POWER_REPEATER_RANGE
+                            && next_distance <= self.repeater_range
                         {
                             let should_visit = match best_distance.get(&neighbor) {
                                 Some(existing) => next_distance < *existing,
@@ -194,7 +194,7 @@ mod tests {
     fn building_beyond_repeater_range_is_unpowered_without_a_node() {
         let (mut grid, core_pos) = grid_with_core(20, 4);
         // Lay a chain of conduits far past the repeater range with no PowerNode.
-        let far_x = core_pos.x + Grid::POWER_REPEATER_RANGE as i32 + 3;
+        let far_x = core_pos.x + grid.repeater_range as i32 + 3;
         for x in (core_pos.x + 1)..=far_x {
             grid.place_building(GridPos::new(x, core_pos.y), BuildingType::Conduit);
         }
@@ -214,7 +214,7 @@ mod tests {
     #[test]
     fn power_node_repeater_extends_range() {
         let (mut grid, core_pos) = grid_with_core(30, 4);
-        let range = Grid::POWER_REPEATER_RANGE as i32;
+        let range = grid.repeater_range as i32;
         for x in (core_pos.x + 1)..core_pos.x + range {
             grid.place_building(GridPos::new(x, core_pos.y), BuildingType::Conduit);
         }

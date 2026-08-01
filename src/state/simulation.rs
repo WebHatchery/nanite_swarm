@@ -5,23 +5,10 @@ use macroquad_toolkit::math::lerp;
 
 use super::game_state::PlanetState;
 
-pub(super) const DUST_RATE: f32 = 0.12; // dust per second
 /// One point on the throughput graph is one second of world time.
 const THROUGHPUT_SAMPLE_SECONDS: f32 = 1.0;
-const SWEEPER_RATE: f32 = 0.6; // dust cleared per second
-const SWEEPER_RADIUS: i32 = 3;
-const FILTER_RADIUS: i32 = 3;
-const FILTER_RATE_MULTIPLIER: f32 = 0.6;
-const POLLUTION_RADIUS: i32 = 3;
-const POLLUTION_RATE_MULTIPLIER: f32 = 1.3;
-/// Acid at full strength corrodes the network this many times faster than dust
-/// settles on it.
-const ACID_RAIN_MULTIPLIER: f32 = 4.0;
-/// Tiles a Shield Generator or Heater Node protects, measured like the sweeper.
-pub(super) const HAZARD_COUNTER_RADIUS: i32 = 4;
-/// Share of a hazard a counter building holds off inside its radius.
-pub(super) const HAZARD_COUNTER_STRENGTH: f32 = 0.9;
-// Config-driven values are loaded from assets/game_config.json.
+// Everything the upkeep loop runs on - dust, sweepers, filters, pollution,
+// acid and the hazard counters - is `upkeep` in assets/game_config.json.
 
 /// The simulation advances in whole steps of this length and nothing else.
 /// Frame time only decides *how many* steps run, never how long one is, so the
@@ -341,9 +328,12 @@ impl PlanetState {
     /// How far a building's upkeep effect reaches, if it has one. The view
     /// asks rather than duplicating the numbers.
     pub fn coverage_radius(&self, building_type: BuildingType) -> Option<i32> {
+        let upkeep = &self.config.upkeep;
         match building_type {
-            BuildingType::Sweeper => Some(SWEEPER_RADIUS),
-            BuildingType::ShieldGenerator | BuildingType::HeaterNode => Some(HAZARD_COUNTER_RADIUS),
+            BuildingType::Sweeper => Some(upkeep.sweeper_radius),
+            BuildingType::ShieldGenerator | BuildingType::HeaterNode => {
+                Some(upkeep.hazard_counter_radius)
+            }
             _ => None,
         }
     }
@@ -366,11 +356,12 @@ impl PlanetState {
     }
 
     fn update_dust(&mut self, delta_time: f32) {
-        let dust_rate = self.stats.apply(StatId::DustAccumulation, DUST_RATE);
+        let upkeep = self.config.upkeep.clone();
+        let dust_rate = self.stats.apply(StatId::DustAccumulation, upkeep.dust_rate);
         // Acid eats the network specifically: a corroded conduit stalls, and a
         // stalled conduit stops carrying traffic, which is how a Venus run
         // fails rather than merely slowing.
-        let acid_rate = DUST_RATE * self.acid_strength() * ACID_RAIN_MULTIPLIER;
+        let acid_rate = upkeep.dust_rate * self.acid_strength() * upkeep.acid_multiplier;
         let shields = self.powered_positions(BuildingType::ShieldGenerator);
         let sweeper_positions = self.grid.find_buildings(BuildingType::Sweeper);
         let powered_sweepers: Vec<_> = sweeper_positions
@@ -402,9 +393,9 @@ impl PlanetState {
             if acid_rate > 0.0 && building.transmits_power() {
                 let sheltered = shields
                     .iter()
-                    .any(|shield| pos.distance(*shield) as i32 <= HAZARD_COUNTER_RADIUS);
+                    .any(|shield| pos.distance(*shield) as i32 <= upkeep.hazard_counter_radius);
                 rate += if sheltered {
-                    acid_rate * (1.0 - HAZARD_COUNTER_STRENGTH)
+                    acid_rate * (1.0 - upkeep.hazard_counter_strength)
                 } else {
                     acid_rate
                 };
@@ -412,24 +403,24 @@ impl PlanetState {
 
             if filter_positions
                 .iter()
-                .any(|filter_pos| pos.distance(*filter_pos) as i32 <= FILTER_RADIUS)
+                .any(|filter_pos| pos.distance(*filter_pos) as i32 <= upkeep.filter_radius)
             {
-                rate *= FILTER_RATE_MULTIPLIER;
+                rate *= upkeep.filter_multiplier;
             }
             if cleared_forest_positions
                 .iter()
-                .any(|cleared_pos| pos.distance(*cleared_pos) as i32 <= POLLUTION_RADIUS)
+                .any(|cleared_pos| pos.distance(*cleared_pos) as i32 <= upkeep.pollution_radius)
             {
-                rate *= POLLUTION_RATE_MULTIPLIER;
+                rate *= upkeep.pollution_multiplier;
             }
 
             // Apply sweeper cleaning if nearby powered sweeper exists
             let mut clean_rate = 0.0;
             if powered_sweepers
                 .iter()
-                .any(|sweeper_pos| pos.distance(*sweeper_pos) as i32 <= SWEEPER_RADIUS)
+                .any(|sweeper_pos| pos.distance(*sweeper_pos) as i32 <= upkeep.sweeper_radius)
             {
-                clean_rate = SWEEPER_RATE;
+                clean_rate = upkeep.sweeper_rate;
             }
 
             building.dust =
@@ -761,6 +752,45 @@ mod tests {
         }
 
         assert!(made(true) > made(false));
+    }
+
+    #[test]
+    fn the_dust_rate_is_data_rather_than_a_constant() {
+        let mut slow = GameConfig::default();
+        slow.upkeep.dust_rate = 0.05;
+        let mut fast = GameConfig::default();
+        fast.upkeep.dust_rate = 0.5;
+
+        let settled = |config: GameConfig| {
+            let mut state = PlanetState::new(2, 42, config);
+            let core = state.grid.find_core().unwrap();
+            for _ in 0..300 {
+                state.step(TICK_SECONDS, false);
+            }
+            state
+                .grid
+                .get(core)
+                .and_then(|tile| tile.building.as_ref())
+                .map(|building| building.dust)
+                .unwrap_or(0.0)
+        };
+
+        assert!(
+            settled(fast) > settled(slow),
+            "a bigger declared dust rate should settle more dust"
+        );
+    }
+
+    #[test]
+    fn a_sweepers_reach_is_the_one_the_config_declares() {
+        let mut config = GameConfig::default();
+        config.upkeep.sweeper_radius = 9;
+        let state = PlanetState::new(2, 42, config);
+        assert_eq!(state.coverage_radius(BuildingType::Sweeper), Some(9));
+        assert_eq!(
+            state.coverage_radius(BuildingType::ShieldGenerator),
+            Some(state.config.upkeep.hazard_counter_radius)
+        );
     }
 
     #[test]

@@ -430,6 +430,22 @@ impl PlanetState {
         for drone in self.drones.drones_mut() {
             drone.capacity = capacity;
         }
+
+        // Both of these live outside the sheet - one on the drone manager, one
+        // on the grid - so they have to be pushed rather than read.
+        self.drones.drone_speed = self.stats.apply(
+            crate::engine::StatId::DroneSpeed,
+            self.config.resources.drone_speed,
+        );
+        self.grid.repeater_range = self
+            .stats
+            .apply(
+                crate::engine::StatId::RepeaterRange,
+                self.config.buildings.repeater_range as f32,
+            )
+            .max(1.0)
+            .round() as u32;
+        self.grid.update_power_grid();
     }
 }
 

@@ -31,10 +31,16 @@ pub enum StatId {
     AcidResistance,
     /// How much of a world's cold still reaches the drones.
     FreezeResistance,
+    /// Tiles a drone crosses per second.
+    DroneSpeed,
+    /// Tiles the grid carries power before it needs a repeater.
+    RepeaterRange,
+    /// What harvesting a tile of terrain by hand is worth.
+    HarvestYield,
 }
 
 impl StatId {
-    pub const ALL: [StatId; 10] = [
+    pub const ALL: [StatId; 13] = [
         StatId::DrillOutput,
         StatId::DroneCapacity,
         StatId::DronesPerDrill,
@@ -45,6 +51,9 @@ impl StatId {
         StatId::ResearchRate,
         StatId::AcidResistance,
         StatId::FreezeResistance,
+        StatId::DroneSpeed,
+        StatId::RepeaterRange,
+        StatId::HarvestYield,
     ];
 
     pub fn id(self) -> &'static str {
@@ -59,6 +68,9 @@ impl StatId {
             StatId::ResearchRate => "research_rate",
             StatId::AcidResistance => "acid_resistance",
             StatId::FreezeResistance => "freeze_resistance",
+            StatId::DroneSpeed => "drone_speed",
+            StatId::RepeaterRange => "repeater_range",
+            StatId::HarvestYield => "harvest_yield",
         }
     }
 

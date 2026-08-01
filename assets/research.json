@@ -1,16 +1,78 @@
 {
-  "starting_unlocked": ["core", "basic_mining"],
+  "starting_unlocked": [
+    "core",
+    "basic_mining"
+  ],
   "stats": [
-    { "id": "drill_output", "label": "Drill output", "unit": "per_second" },
-    { "id": "drone_capacity", "label": "Drone load", "unit": "flat" },
-    { "id": "drones_per_drill", "label": "Drones per drill", "unit": "count" },
-    { "id": "data_generation", "label": "Data output", "unit": "per_second" },
-    { "id": "dust_accumulation", "label": "Dust build-up", "lower_is_better": true, "unit": "per_second" },
-    { "id": "mineral_capacity", "label": "Mineral storage", "unit": "flat" },
-    { "id": "power_consumption", "label": "Power draw", "lower_is_better": true, "unit": "per_second" },
-    { "id": "research_rate", "label": "Research speed", "unit": "per_second" },
-    { "id": "acid_resistance", "label": "Acid reaching the network", "lower_is_better": true, "unit": "share" },
-    { "id": "freeze_resistance", "label": "Cold reaching the drones", "lower_is_better": true, "unit": "share" }
+    {
+      "id": "drill_output",
+      "label": "Drill output",
+      "unit": "per_second"
+    },
+    {
+      "id": "drone_capacity",
+      "label": "Drone load",
+      "unit": "flat"
+    },
+    {
+      "id": "drones_per_drill",
+      "label": "Drones per drill",
+      "unit": "count"
+    },
+    {
+      "id": "data_generation",
+      "label": "Data output",
+      "unit": "per_second"
+    },
+    {
+      "id": "dust_accumulation",
+      "label": "Dust build-up",
+      "lower_is_better": true,
+      "unit": "per_second"
+    },
+    {
+      "id": "mineral_capacity",
+      "label": "Mineral storage",
+      "unit": "flat"
+    },
+    {
+      "id": "power_consumption",
+      "label": "Power draw",
+      "lower_is_better": true,
+      "unit": "per_second"
+    },
+    {
+      "id": "research_rate",
+      "label": "Research speed",
+      "unit": "per_second"
+    },
+    {
+      "id": "acid_resistance",
+      "label": "Acid reaching the network",
+      "lower_is_better": true,
+      "unit": "share"
+    },
+    {
+      "id": "freeze_resistance",
+      "label": "Cold reaching the drones",
+      "lower_is_better": true,
+      "unit": "share"
+    },
+    {
+      "id": "drone_speed",
+      "label": "Drone speed",
+      "unit": "per_second"
+    },
+    {
+      "id": "repeater_range",
+      "label": "Grid reach",
+      "unit": "count"
+    },
+    {
+      "id": "harvest_yield",
+      "label": "Harvest yield",
+      "unit": "share"
+    }
   ],
   "nodes": [
     {
@@ -19,41 +81,68 @@
       "description": "The swarm's one fixed point. Everything else reports to it.",
       "data_cost": 0.0,
       "prerequisites": [],
-      "position": [0.0, 0.0]
+      "position": [
+        0.0,
+        0.0
+      ]
     },
     {
       "id": "basic_mining",
       "name": "Basic Mining",
       "description": "The crust is inventory that has not been collected yet.",
       "data_cost": 0.0,
-      "prerequisites": ["core"],
-      "position": [-1.5, -1.0]
+      "prerequisites": [
+        "core"
+      ],
+      "position": [
+        -1.5,
+        -1.0
+      ]
     },
     {
       "id": "power_grid",
       "name": "Power Grid",
       "description": "Nothing moves without a line back to the Core. Lay them.",
       "data_cost": 10.0,
-      "prerequisites": ["core"],
-      "position": [1.5, -1.0]
+      "prerequisites": [
+        "core"
+      ],
+      "position": [
+        1.5,
+        -1.0
+      ]
     },
     {
       "id": "data_processing",
       "name": "Data Processing",
       "description": "Thinking about the problem turns out to be part of the problem.",
       "data_cost": 15.0,
-      "prerequisites": ["core"],
-      "position": [0.0, -1.5]
+      "prerequisites": [
+        "core"
+      ],
+      "position": [
+        0.0,
+        -1.5
+      ]
     },
     {
       "id": "efficient_drills",
       "name": "Efficient Drills",
       "description": "The same hole, cut faster. There was no reason not to.",
       "data_cost": 25.0,
-      "prerequisites": ["basic_mining"],
-      "position": [-2.0, -2.0],
+      "prerequisites": [
+        "basic_mining"
+      ],
+      "position": [
+        -2.0,
+        -2.0
+      ],
       "modifiers": [
-        { "stat": "drill_output", "op": "percent", "value": 0.5 }
+        {
+          "stat": "drill_output",
+          "op": "percent",
+          "value": 0.5
+        }
       ]
     },
     {
@@ -61,10 +150,19 @@
       "name": "Drone Capacity",
       "description": "A drone carrying half a load makes the same trip twice.",
       "data_cost": 30.0,
-      "prerequisites": ["basic_mining"],
-      "position": [-1.0, -2.0],
+      "prerequisites": [
+        "basic_mining"
+      ],
+      "position": [
+        -1.0,
+        -2.0
+      ],
       "modifiers": [
-        { "stat": "drone_capacity", "op": "percent", "value": 1.0 }
+        {
+          "stat": "drone_capacity",
+          "op": "percent",
+          "value": 1.0
+        }
       ]
     },
     {
@@ -72,10 +170,19 @@
       "name": "Swarm Dispatch",
       "description": "One drone per drill was a scheduling failure, not a limit.",
       "data_cost": 45.0,
-      "prerequisites": ["drone_capacity"],
-      "position": [-1.3, -3.0],
+      "prerequisites": [
+        "drone_capacity"
+      ],
+      "position": [
+        -1.3,
+        -3.0
+      ],
       "modifiers": [
-        { "stat": "drones_per_drill", "op": "add", "value": 1.0 }
+        {
+          "stat": "drones_per_drill",
+          "op": "add",
+          "value": 1.0
+        }
       ]
     },
     {
@@ -83,18 +190,32 @@
       "name": "Wind Power",
       "description": "The atmosphere is already moving. It may as well be useful.",
       "data_cost": 20.0,
-      "prerequisites": ["power_grid"],
-      "position": [2.0, -2.0]
+      "prerequisites": [
+        "power_grid"
+      ],
+      "position": [
+        2.0,
+        -2.0
+      ]
     },
     {
       "id": "power_efficiency",
       "name": "Power Efficiency",
       "description": "Most of the draw was heat. Heat is not work.",
       "data_cost": 35.0,
-      "prerequisites": ["power_grid"],
-      "position": [1.0, -2.0],
+      "prerequisites": [
+        "power_grid"
+      ],
+      "position": [
+        1.0,
+        -2.0
+      ],
       "modifiers": [
-        { "stat": "power_consumption", "op": "percent", "value": -0.25 }
+        {
+          "stat": "power_consumption",
+          "op": "percent",
+          "value": -0.25
+        }
       ]
     },
     {
@@ -102,10 +223,19 @@
       "name": "Self-Cleaning Servos",
       "description": "Dust is not hostile. It is simply always arriving.",
       "data_cost": 30.0,
-      "prerequisites": ["data_processing"],
-      "position": [2.5, -2.0],
+      "prerequisites": [
+        "data_processing"
+      ],
+      "position": [
+        2.5,
+        -2.0
+      ],
       "modifiers": [
-        { "stat": "dust_accumulation", "op": "percent", "value": -0.4 }
+        {
+          "stat": "dust_accumulation",
+          "op": "percent",
+          "value": -0.4
+        }
       ]
     },
     {
@@ -113,10 +243,19 @@
       "name": "Ceramic Plating",
       "description": "The sky here dissolves machinery. Machinery can be made harder to dissolve.",
       "data_cost": 40.0,
-      "prerequisites": ["power_grid"],
-      "position": [2.2, -3.0],
+      "prerequisites": [
+        "power_grid"
+      ],
+      "position": [
+        2.2,
+        -3.0
+      ],
       "modifiers": [
-        { "stat": "acid_resistance", "op": "percent", "value": -0.3 }
+        {
+          "stat": "acid_resistance",
+          "op": "percent",
+          "value": -0.3
+        }
       ]
     },
     {
@@ -124,34 +263,58 @@
       "name": "Heater Nodes",
       "description": "Cold slows the swarm. Warmth is cheaper than patience.",
       "data_cost": 40.0,
-      "prerequisites": ["power_grid"],
-      "position": [1.4, -3.4]
+      "prerequisites": [
+        "power_grid"
+      ],
+      "position": [
+        1.4,
+        -3.4
+      ]
     },
     {
       "id": "smelting",
       "name": "Smelting",
       "description": "Ore is a promise. Alloy is the thing itself.",
       "data_cost": 35.0,
-      "prerequisites": ["efficient_drills"],
-      "position": [-2.8, -2.8]
+      "prerequisites": [
+        "efficient_drills"
+      ],
+      "position": [
+        -2.8,
+        -2.8
+      ]
     },
     {
       "id": "storage_systems",
       "name": "Storage Systems",
       "description": "Production stops when there is nowhere to put it.",
       "data_cost": 10.0,
-      "prerequisites": ["basic_mining"],
-      "position": [-2.5, -1.0]
+      "prerequisites": [
+        "basic_mining"
+      ],
+      "position": [
+        -2.5,
+        -1.0
+      ]
     },
     {
       "id": "storage_optimization",
       "name": "Storage Optimization",
       "description": "The same yard, packed by something that does not get tired.",
       "data_cost": 20.0,
-      "prerequisites": ["storage_systems"],
-      "position": [-3.2, -1.5],
+      "prerequisites": [
+        "storage_systems"
+      ],
+      "position": [
+        -3.2,
+        -1.5
+      ],
       "modifiers": [
-        { "stat": "mineral_capacity", "op": "add", "value": 50.0 }
+        {
+          "stat": "mineral_capacity",
+          "op": "add",
+          "value": 50.0
+        }
       ]
     },
     {
@@ -159,18 +322,32 @@
       "name": "Biomass Fuel",
       "description": "The forest is stored energy that has not been asked for yet.",
       "data_cost": 12.0,
-      "prerequisites": ["basic_mining"],
-      "position": [-1.0, -0.5]
+      "prerequisites": [
+        "basic_mining"
+      ],
+      "position": [
+        -1.0,
+        -0.5
+      ]
     },
     {
       "id": "advanced_research",
       "name": "Advanced Research",
       "description": "The swarm gets better at getting better.",
       "data_cost": 40.0,
-      "prerequisites": ["data_processing"],
-      "position": [0.0, -2.5],
+      "prerequisites": [
+        "data_processing"
+      ],
+      "position": [
+        0.0,
+        -2.5
+      ],
       "modifiers": [
-        { "stat": "data_generation", "op": "percent", "value": 0.5 }
+        {
+          "stat": "data_generation",
+          "op": "percent",
+          "value": 0.5
+        }
       ]
     },
     {
@@ -178,19 +355,99 @@
       "name": "Mass Driver",
       "description": "Throwing something hard enough is indistinguishable from leaving.",
       "data_cost": 100.0,
-      "prerequisites": ["efficient_drills", "power_efficiency"],
-      "position": [0.0, -3.5]
+      "prerequisites": [
+        "efficient_drills",
+        "power_efficiency"
+      ],
+      "position": [
+        0.0,
+        -3.5
+      ]
     },
     {
       "id": "neural_expansion",
       "name": "Neural Expansion",
       "description": "More of the swarm set aside for thinking, and it shows.",
       "data_cost": 150.0,
-      "prerequisites": ["advanced_research", "mass_driver"],
-      "position": [0.0, -4.5],
+      "prerequisites": [
+        "advanced_research",
+        "mass_driver"
+      ],
+      "position": [
+        0.0,
+        -4.5
+      ],
       "modifiers": [
-        { "stat": "research_rate", "op": "percent", "value": 0.5 },
-        { "stat": "data_generation", "op": "percent", "value": 0.25 }
+        {
+          "stat": "research_rate",
+          "op": "percent",
+          "value": 0.5
+        },
+        {
+          "stat": "data_generation",
+          "op": "percent",
+          "value": 0.25
+        }
+      ]
+    },
+    {
+      "id": "servo_tuning",
+      "name": "Servo Tuning",
+      "description": "The swarm was always going to walk it. It may as well walk it faster.",
+      "data_cost": 55.0,
+      "prerequisites": [
+        "swarm_dispatch"
+      ],
+      "position": [
+        -1.3,
+        -4.0
+      ],
+      "modifiers": [
+        {
+          "stat": "drone_speed",
+          "op": "percent",
+          "value": 0.3
+        }
+      ]
+    },
+    {
+      "id": "excavation_charges",
+      "name": "Excavation Charges",
+      "description": "Terrain is a container. Opening it faster is not vandalism.",
+      "data_cost": 18.0,
+      "prerequisites": [
+        "basic_mining"
+      ],
+      "position": [
+        -2.2,
+        -0.3
+      ],
+      "modifiers": [
+        {
+          "stat": "harvest_yield",
+          "op": "percent",
+          "value": 0.6
+        }
+      ]
+    },
+    {
+      "id": "grid_amplifiers",
+      "name": "Grid Amplifiers",
+      "description": "Power carried further before the grid has to be reminded what it is for.",
+      "data_cost": 30.0,
+      "prerequisites": [
+        "power_grid"
+      ],
+      "position": [
+        2.9,
+        -1.2
+      ],
+      "modifiers": [
+        {
+          "stat": "repeater_range",
+          "op": "add",
+          "value": 3.0
+        }
       ]
     }
   ]

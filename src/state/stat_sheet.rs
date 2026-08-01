@@ -106,12 +106,17 @@ impl PlanetState {
             StatId::DroneCapacity => resources.drone_carry_capacity,
             StatId::DronesPerDrill => resources.drones_per_drill,
             StatId::DataGeneration => resources.server_data_rate,
-            StatId::DustAccumulation => super::simulation::DUST_RATE,
+            StatId::DustAccumulation => self.config.upkeep.dust_rate,
             StatId::MineralCapacity => self.built_mineral_capacity(),
             StatId::PowerConsumption => self.grid.total_power_consumption(),
             StatId::ResearchRate => resources.research_rate,
             StatId::AcidResistance => self.hazards.acid_rain,
             StatId::FreezeResistance => self.hazards.freeze,
+            StatId::DroneSpeed => resources.drone_speed,
+            StatId::RepeaterRange => self.config.buildings.repeater_range as f32,
+            // A multiplier on whatever the terrain declares, so the base is
+            // "what the ground is worth" and the sheet reads it as a share.
+            StatId::HarvestYield => 1.0,
         };
         // The hazards are not scaled from a base, they are eaten into: a
         // counter reduces how much of the world still reaches the swarm.
@@ -207,6 +212,65 @@ mod tests {
         assert_eq!(acid.base, 0.0);
         assert_eq!(acid.value, 0.0);
         assert!(!acid.is_changed());
+    }
+
+    #[test]
+    fn faster_servos_reach_the_drones_and_not_only_the_sheet() {
+        let mut state = state();
+        let before = state.drones.drone_speed;
+
+        state
+            .research
+            .unlocked_techs
+            .push("servo_tuning".to_string());
+        state.refresh_stats();
+
+        let speed = reading(&state, StatId::DroneSpeed);
+        assert!(speed.value > speed.base, "the sheet did not move");
+        assert!(
+            state.drones.drone_speed > before,
+            "the drones are still walking at the old speed"
+        );
+        assert_eq!(state.drones.drone_speed, speed.value);
+    }
+
+    #[test]
+    fn amplifiers_widen_the_grid_the_power_flood_actually_uses() {
+        let mut state = state();
+        let before = state.grid.repeater_range;
+
+        state
+            .research
+            .unlocked_techs
+            .push("grid_amplifiers".to_string());
+        state.refresh_stats();
+
+        let reach = reading(&state, StatId::RepeaterRange);
+        assert!(reach.value > reach.base);
+        assert!(
+            state.grid.repeater_range > before,
+            "the grid is still carrying power the old distance"
+        );
+        assert_eq!(state.grid.repeater_range as f32, reach.value);
+    }
+
+    #[test]
+    fn harvest_yield_reads_as_a_share_of_ordinary_ground() {
+        let mut state = state();
+        let plain = reading(&state, StatId::HarvestYield);
+        assert_eq!(plain.base, 1.0);
+        assert!(!plain.is_changed());
+
+        state
+            .research
+            .unlocked_techs
+            .push("excavation_charges".to_string());
+        state.refresh_stats();
+
+        let charged = reading(&state, StatId::HarvestYield);
+        assert!(charged.value > 1.0);
+        assert!(charged.is_gain());
+        assert_eq!(StatUnit::of(StatId::HarvestYield), StatUnit::Share);
     }
 
     #[test]

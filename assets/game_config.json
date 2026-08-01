@@ -24,8 +24,8 @@
         "biomass_consumption_rate": 1.0
     },
     "buildings": {
-        "core_power_consumption": 5.0,
         "drill_output_rate": 5.0,
+        "repeater_range": 6,
         "conduit_capacity": 2.0,
     "congestion_route_penalty": 1.5,
     "partial_load_min_route": 6.0,
@@ -41,6 +41,18 @@
     "min_data_loss": 0.1,
     "max_data_loss": 0.35,
     "notice_seconds": 10.0
+  },
+  "upkeep": {
+    "dust_rate": 0.12,
+    "sweeper_rate": 0.6,
+    "sweeper_radius": 3,
+    "filter_radius": 3,
+    "filter_multiplier": 0.6,
+    "pollution_radius": 3,
+    "pollution_multiplier": 1.3,
+    "acid_multiplier": 4.0,
+    "hazard_counter_radius": 4,
+    "hazard_counter_strength": 0.9
   },
   "mass_driver": {
     "load_rate": 3.0,

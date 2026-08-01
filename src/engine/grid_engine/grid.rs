@@ -23,10 +23,17 @@ pub struct Grid {
     pub width: u32,
     pub height: u32,
     tiles: Vec<Tile>,
+    /// Tiles power carries before it needs a repeater. Held here rather than
+    /// read from a constant so research can widen it; kept in step by
+    /// `PlanetState::refresh_stats`.
+    #[serde(default = "Grid::default_repeater_range")]
+    pub repeater_range: u32,
 }
 
 impl Grid {
-    pub(super) const POWER_REPEATER_RANGE: u32 = 6;
+    pub(super) fn default_repeater_range() -> u32 {
+        6
+    }
 
     /// Create a new grid with default empty tiles
     pub fn new(width: u32, height: u32) -> Self {
@@ -35,6 +42,7 @@ impl Grid {
             width,
             height,
             tiles: vec![Tile::default(); size],
+            repeater_range: Self::default_repeater_range(),
         }
     }
 
@@ -155,6 +163,7 @@ impl Grid {
             width,
             height,
             tiles,
+            repeater_range: Self::default_repeater_range(),
         };
         grid.open_a_landing_site(center, min_start_region);
         grid

@@ -1,15 +1,74 @@
 //! Neural network research interface
 
-use crate::engine::{describe_modifier, ResearchState, ResearchTree};
+use crate::engine::{describe_modifier, ResearchNode, ResearchState, ResearchTree};
 use crate::state::{StatReading, StatUnit};
 use crate::ui::{draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::math::pulse01;
 use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text};
 
-const NODE_RADIUS: f32 = 25.0;
+const MAX_NODE_RADIUS: f32 = 25.0;
 const GRID_SCALE: f32 = 100.0;
 const HEADER_HEIGHT: f32 = 72.0;
+/// Below this the nodes are too small to read, whatever the tree wants.
+const MIN_NODE_RADIUS: f32 = 13.0;
+
+/// Where the declared node positions land on screen.
+///
+/// Fitted to whatever `research.json` declares rather than pinned to a fixed
+/// scale, because a tree that grows another row deep should not simply fall off
+/// the bottom of the screen - which is what the last two nodes were already
+/// doing at 720p, unclickable and invisible.
+struct TreeLayout {
+    origin_x: f32,
+    origin_y: f32,
+    scale: f32,
+}
+
+impl TreeLayout {
+    fn fit(nodes: &[ResearchNode], area: Rect) -> Self {
+        let mut min = (f32::MAX, f32::MAX);
+        let mut max = (f32::MIN, f32::MIN);
+        for node in nodes {
+            min = (min.0.min(node.position.0), min.1.min(node.position.1));
+            max = (max.0.max(node.position.0), max.1.max(node.position.1));
+        }
+        if nodes.is_empty() {
+            return Self {
+                origin_x: area.x + area.w * 0.5,
+                origin_y: area.y + area.h * 0.5,
+                scale: GRID_SCALE,
+            };
+        }
+
+        // Room for the circle itself, the name above it and the cost below.
+        let margin = MAX_NODE_RADIUS + 24.0;
+        let span = ((max.0 - min.0).max(0.001), (max.1 - min.1).max(0.001));
+        let scale = ((area.w - margin * 2.0) / span.0)
+            .min((area.h - margin * 2.0) / span.1)
+            .clamp(1.0, GRID_SCALE);
+        let used = (span.0 * scale, span.1 * scale);
+
+        Self {
+            origin_x: area.x + (area.w - used.0) * 0.5 - min.0 * scale,
+            origin_y: area.y + (area.h - used.1) * 0.5 + max.1 * scale,
+            scale,
+        }
+    }
+
+    fn to_screen(&self, position: (f32, f32)) -> (f32, f32) {
+        (
+            self.origin_x + position.0 * self.scale,
+            self.origin_y - position.1 * self.scale,
+        )
+    }
+
+    /// Nodes shrink with the tree, so a denser one does not draw itself as a
+    /// pile of overlapping circles.
+    fn node_radius(&self) -> f32 {
+        (MAX_NODE_RADIUS * self.scale / GRID_SCALE).clamp(MIN_NODE_RADIUS, MAX_NODE_RADIUS)
+    }
+}
 
 /// Actions from the research view
 #[derive(Debug, Clone, PartialEq)]
@@ -31,8 +90,6 @@ pub fn render_research_view(
 
     let screen_w = screen_width();
     let screen_h = screen_height();
-    let center_x = screen_w / 2.0;
-    let center_y = screen_h / 2.0 - 30.0;
     let pulse = pulse01(2.0);
 
     // Background neural haze
@@ -155,6 +212,16 @@ pub fn render_research_view(
         left_text_y += 24.0;
     }
 
+    // The tree gets whatever the two side panels leave it.
+    let tree_area = Rect::new(
+        left_panel_x + left_panel_w + 16.0,
+        HEADER_HEIGHT + 12.0,
+        right_panel_x - (left_panel_x + left_panel_w) - 32.0,
+        screen_h - HEADER_HEIGHT - 72.0,
+    );
+    let layout = TreeLayout::fit(&research_tree.nodes, tree_area);
+    let node_radius = layout.node_radius();
+
     // Get mouse position
     let (mouse_x, mouse_y) = mouse_position();
     let mut hovered_node: Option<&str> = None;
@@ -164,10 +231,8 @@ pub fn render_research_view(
         let from_unlocked = research_state.is_unlocked(&from.id);
         let to_unlocked = research_state.is_unlocked(&to.id);
 
-        let from_x = center_x + from.position.0 * GRID_SCALE;
-        let from_y = center_y - from.position.1 * GRID_SCALE;
-        let to_x = center_x + to.position.0 * GRID_SCALE;
-        let to_y = center_y - to.position.1 * GRID_SCALE;
+        let (from_x, from_y) = layout.to_screen(from.position);
+        let (to_x, to_y) = layout.to_screen(to.position);
 
         let line_color = if from_unlocked && to_unlocked {
             Colors::PRIMARY
@@ -190,8 +255,7 @@ pub fn render_research_view(
 
     // Draw nodes
     for node in &research_tree.nodes {
-        let node_x = center_x + node.position.0 * GRID_SCALE;
-        let node_y = center_y - node.position.1 * GRID_SCALE;
+        let (node_x, node_y) = layout.to_screen(node.position);
 
         let is_unlocked = research_state.is_unlocked(&node.id);
         let can_select = research_tree.can_select(&node.id, &research_state.unlocked);
@@ -201,7 +265,7 @@ pub fn render_research_view(
 
         // Check if mouse is hovering
         let dist = ((mouse_x - node_x).powi(2) + (mouse_y - node_y).powi(2)).sqrt();
-        let is_hovered = dist < NODE_RADIUS;
+        let is_hovered = dist < node_radius;
         if is_hovered {
             hovered_node = Some(&node.id);
         }
@@ -221,8 +285,8 @@ pub fn render_research_view(
 
         // Draw glow for unlocked nodes
         if is_unlocked {
-            let glow_outer = NODE_RADIUS + 6.0 + pulse * 3.0;
-            let glow_inner = NODE_RADIUS + 3.0 + pulse * 1.5;
+            let glow_outer = node_radius + 6.0 + pulse * 3.0;
+            let glow_inner = node_radius + 3.0 + pulse * 1.5;
             draw_circle(
                 node_x,
                 node_y,
@@ -238,8 +302,8 @@ pub fn render_research_view(
         }
 
         // Draw node
-        draw_circle(node_x, node_y, NODE_RADIUS, fill_color);
-        draw_circle_lines(node_x, node_y, NODE_RADIUS, 2.0, border_color);
+        draw_circle(node_x, node_y, node_radius, fill_color);
+        draw_circle_lines(node_x, node_y, node_radius, 2.0, border_color);
 
         // Progress ring for current research
         if is_current && node.data_cost > 0.0 {
@@ -249,7 +313,7 @@ pub fn render_research_view(
                 let t0 = (i as f32 / segments as f32) * std::f32::consts::TAU;
                 let t1 = ((i + 1) as f32 / segments as f32) * std::f32::consts::TAU;
                 if (i as f32 / segments as f32) <= pct {
-                    let r = NODE_RADIUS + 6.0;
+                    let r = node_radius + 6.0;
                     let x0 = node_x + t0.cos() * r;
                     let y0 = node_y + t0.sin() * r;
                     let x1 = node_x + t1.cos() * r;
@@ -264,14 +328,14 @@ pub fn render_research_view(
             draw_circle_lines(
                 node_x,
                 node_y,
-                NODE_RADIUS + 5.0 + pulse * 2.0,
+                node_radius + 5.0 + pulse * 2.0,
                 2.0,
                 Colors::PRIMARY,
             );
             draw_ui_text(
                 &node.name,
                 node_x - 22.0,
-                node_y - NODE_RADIUS - 12.0,
+                node_y - node_radius - 12.0,
                 12.0,
                 Colors::TEXT,
             );
@@ -304,7 +368,7 @@ pub fn render_research_view(
             draw_ui_text(
                 &cost_str,
                 node_x - 10.0,
-                node_y + NODE_RADIUS + 15.0,
+                node_y + node_radius + 15.0,
                 12.0,
                 cost_color,
             );

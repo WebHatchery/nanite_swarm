@@ -60,9 +60,9 @@ Hazards are per-world data (`planets.json`). Acid rain corrodes anything carryin
 
 Techs declare their effects as modifiers in `research.json` (`engine::modifiers`), validated at load; the stringly-typed `unlocked_techs.contains(...)` reads are gone.
 
-- Expand the tree well past 15 nodes, with per-planet branches and hazard counters as research.
+- Expand the tree past 22 nodes, with per-planet branches. Servo Tuning, Excavation Charges and Grid Amplifiers took it from 19 to 22, and the view fits itself to whatever the data declares now, so depth is no longer the constraint. Hazard counters are already research; per-planet branches are not - nothing in `research.json` can say "only on a frozen world".
 - The tree explains itself: the inspect panel lists every stat a node moves (named and signed from a `stats` block in `research.json`, green when it is a gain, amber when it is a cost) and every building it opens, and falls back to whatever is being researched when nothing is hovered. The research screen also carries the swarm's own sheet: every stat resolved against this world, in its declared unit, dim where nothing has moved it and coloured where something has. It is read-only and per-world, and it does not say *which* techs got it there.
-- Add stats for the values still fixed in Rust: drone speed, repeater range, collapse thresholds, harvest yields. The research rate moved into `game_config.json` when the sheet needed a base for it; dust accumulation is the next Rust const the sheet has to reach into.
+- Drone speed, grid reach and harvest yield are stats now, each with a tech that moves it, and each pushed where the simulation actually reads it - the drone manager, the grid's power flood, the harvest itself. What is still fixed in Rust is the dust *response* curve in `Building` (stall at 100, efficiency step at 25, speed at 50, leak at 75) and the collapse thresholds; neither is a stat, so no tech can soften either.
 
 ## Content
 
@@ -85,7 +85,7 @@ The sim runs on a fixed 1/30s timestep with an accumulator (`PlanetState::advanc
 
 - Offline catch-up still steps at a coarser 1s, because four hours at the live tick rate is 432,000 steps on load. Unify it when the offline model becomes an earnings report (see Save system).
 - Extend the deterministic snapshot tests past harvest throughput: power failure, research unlocks, and collapse thresholds still have no pinned numbers.
-- Move the remaining hardcoded balance constants into JSON — dust rates and sweeper/filter radii are Rust consts (the research rate and the collapse timings are no longer), and `conduit_throughput` and `core_power_consumption` are still dead config fields.
+- The upkeep loop is data: dust rate, sweeper rate and reach, the forest filter and pollution multipliers, the acid multiplier and the hazard counters all come from `upkeep` in `game_config.json`, and the dead `core_power_consumption` field is gone. What is still a Rust constant is the pad and hopper depth in `logistics` (`PAD_LOADS`, `HOPPER_LOADS`) and the notice timers on the campaign.
 - Validate the rest of the data at load the way research modifiers now are; `game_data().building(id)` still panics on a missing id with no context.
 
 ## Save system
