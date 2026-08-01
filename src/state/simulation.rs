@@ -39,7 +39,13 @@ impl PlanetState {
     /// steps and banking the remainder. Returns how many steps ran, so callers
     /// that keep their own timers can advance by the same amount.
     pub fn advance(&mut self, real_delta: f32, allow_visuals: bool) -> u32 {
-        if self.paused || !real_delta.is_finite() || real_delta <= 0.0 {
+        if !real_delta.is_finite() || real_delta <= 0.0 {
+            return 0;
+        }
+        // Toasts are UI, not world: they fade in real time and keep fading
+        // while the world is stopped.
+        self.notifications.update(real_delta);
+        if self.paused {
             return 0;
         }
 

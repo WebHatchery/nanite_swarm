@@ -285,7 +285,9 @@ impl Game {
 
         let remaining = (node.data_cost - self.research_state.research_progress).max(0.0);
         if remaining <= 0.0 {
+            let name = node.name.clone();
             self.research_state.complete_research();
+            self.announce_research(&name);
             self.sync_building_unlocks();
             self.sync_research_to_planet();
             return;
@@ -306,11 +308,22 @@ impl Game {
         self.research_state.research_progress += spend;
 
         if self.research_state.research_progress >= node.data_cost {
+            let name = node.name.clone();
             self.research_state.complete_research();
+            self.announce_research(&name);
         }
 
         self.sync_building_unlocks();
         self.sync_research_to_planet();
+    }
+
+    /// Finished research used to land with no more sign than a node changing
+    /// colour on a screen the player was probably not looking at.
+    fn announce_research(&mut self, name: &str) {
+        self.campaign
+            .current_mut()
+            .notifications
+            .success(format!("Research complete: {}", name));
     }
 
     fn sync_research_from_planet(&mut self) {
@@ -348,8 +361,17 @@ impl Game {
                     .as_deref()
                     .map(|tech| self.research_state.is_unlocked(tech))
                     .unwrap_or(false);
-            if unlocked {
-                self.campaign.current_mut().unlock_building(building_type);
+            if !unlocked {
+                continue;
+            }
+            let planet = self.campaign.current_mut();
+            // Only the moment it opens up is worth a toast, not every frame it
+            // stays open, and not the ones a world refuses anyway.
+            let is_new = !planet.is_building_researched(building_type);
+            planet.unlock_building(building_type);
+            if is_new && !planet.is_building_banned(building_type) && !def.start_unlocked {
+                let name = def.name.clone();
+                planet.notifications.info(format!("Available: {}", name));
             }
         }
     }
@@ -508,6 +530,20 @@ impl Game {
                 self.seed_logistics_scene();
                 let planet = self.campaign.current_mut();
                 planet.toggle_demolish_mode();
+            }
+            "toasts" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                let planet = self.campaign.current_mut();
+                // The drill in the seeded scene earns its own achievement
+                // toast; these are the ones a longer session would have shown.
+                planet
+                    .notifications
+                    .success("Research complete: Wind Power");
+                planet.notifications.info("Available: Wind Turbine");
+                planet
+                    .notifications
+                    .warning("Seed Ship: Ion Spine under way");
             }
             "congestion" => {
                 self.phase = GamePhase::Playing;

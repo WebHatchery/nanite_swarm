@@ -77,6 +77,8 @@ pub fn render_planetary_view(
         metrics,
     );
 
+    upkeep_render::draw_notifications(state, metrics, screen_w);
+
     if ui_action != PlanetaryAction::None {
         ui_action
     } else {

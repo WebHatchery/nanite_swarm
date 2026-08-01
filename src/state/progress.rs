@@ -206,20 +206,36 @@ impl PlanetState {
     pub(super) fn update_achievements(&mut self) {
         let has_drill = !self.grid.find_buildings(BuildingType::Drill).is_empty();
         if has_drill {
-            self.achievements.unlock("first_drill");
+            self.announce_achievement("first_drill");
         }
 
         if self.power_balance > 0.0 {
-            self.achievements.unlock("power_surplus");
+            self.announce_achievement("power_surplus");
         }
 
         if self.resources.data >= 25.0 {
-            self.achievements.unlock("data_miner");
+            self.announce_achievement("data_miner");
         }
 
         if self.grid.total_buildings() >= 10 {
-            self.achievements.unlock("builder");
+            self.announce_achievement("builder");
         }
+    }
+
+    /// Unlock an achievement, and say so if it had not already fired.
+    ///
+    /// `unlock` returns whether this was the moment it happened, which is the
+    /// only reason the toast is not repeated every tick.
+    pub(super) fn announce_achievement(&mut self, id: &str) {
+        if !self.achievements.unlock(id) {
+            return;
+        }
+        let name = self
+            .achievements
+            .get(id)
+            .map(|achievement| achievement.name.clone())
+            .unwrap_or_else(|| id.to_string());
+        self.notifications.success(format!("Achievement: {}", name));
     }
 }
 
@@ -379,6 +395,41 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(state.battery_time_left(), (1, 1));
+    }
+
+    #[test]
+    fn an_achievement_announces_itself_once_and_not_again() {
+        let mut state = PlanetState::default();
+        assert!(state.notifications.is_empty());
+
+        state.announce_achievement("first_drill");
+        assert_eq!(state.notifications.count(), 1);
+        let message = state.notifications.get_notifications()[0].message.clone();
+        assert!(message.contains("First Drill"), "{message}");
+
+        // Ticking on does not re-announce something already unlocked.
+        state.announce_achievement("first_drill");
+        assert_eq!(state.notifications.count(), 1);
+    }
+
+    #[test]
+    fn toasts_fade_in_real_time_even_while_the_world_is_paused() {
+        let mut state = PlanetState::default();
+        state.announce_achievement("first_drill");
+        // `opacity` only moves in the toast's last second, so the timer itself
+        // is the thing to watch.
+        let before = state.notifications.get_notifications()[0].progress();
+
+        state.toggle_pause();
+        for _ in 0..20 {
+            assert_eq!(state.advance(0.1, false), 0, "the world moved while paused");
+        }
+
+        let after = state.notifications.get_notifications()[0].progress();
+        assert!(
+            after > before,
+            "the toast froze with the world: {before} then {after}"
+        );
     }
 
     #[test]

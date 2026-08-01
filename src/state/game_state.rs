@@ -7,6 +7,7 @@ use crate::engine::{BuildingType, DroneManager, Grid, GridPos, Stats};
 use macroquad::miniquad;
 use macroquad_toolkit::achievements::{Achievement, Achievements};
 use macroquad_toolkit::fx::ParticleSystem;
+use macroquad_toolkit::notifications::NotificationManager;
 use macroquad_toolkit::ui::ScrollArea;
 use serde::{Deserialize, Serialize};
 
@@ -179,6 +180,10 @@ pub struct PlanetState {
     pub show_help: bool,
     #[serde(skip, default)]
     pub build_palette_scroll: ScrollArea,
+    /// Things worth telling the player about as they happen. Achievements,
+    /// finished research and Seed Ship stages all used to land silently.
+    #[serde(skip, default)]
+    pub notifications: NotificationManager,
     #[serde(skip, default)]
     pub particles: ParticleSystem,
     #[serde(skip, default)]
@@ -278,6 +283,7 @@ impl PlanetState {
             camera_drag_anchor: None,
             show_help: false,
             build_palette_scroll: ScrollArea::new(),
+            notifications: NotificationManager::default(),
             particles: ParticleSystem::new(),
             particle_timer: 0.0,
             placement_anims: Vec::new(),

@@ -169,12 +169,20 @@ impl PlanetState {
             return;
         }
         let intake = crate::data::game_data().seed_ship.intake_per_second;
-        if self
+        let finished_stage = self
             .seed_ship
-            .absorb(&mut self.resources, intake, delta_time)
-            && self.seed_ship.is_complete()
-        {
-            self.achievements.unlock("seed_ship");
+            .absorb(&mut self.resources, intake, delta_time);
+        if !finished_stage {
+            return;
+        }
+
+        if self.seed_ship.is_complete() {
+            self.notifications
+                .success("Seed Ship complete. This world is spent.");
+            self.announce_achievement("seed_ship");
+        } else if let Some(stage) = self.seed_ship.stage() {
+            self.notifications
+                .info(format!("Seed Ship: {} under way", stage.name));
         }
     }
 
