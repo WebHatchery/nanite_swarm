@@ -103,7 +103,7 @@
     {
       "id": "server_bank",
       "name": "Server Bank",
-      "description": "Consumes power to generate research data.",
+      "description": "Thinks. Give it alloy and it thinks harder.",
       "cost": { "minerals": 40.0, "energy": 30.0 },
       "power_generation": 0.0,
       "power_consumption": 5.0,
@@ -118,7 +118,12 @@
       "carries_traffic": false,
       "generates_power": false,
       "consumes_power": true,
-      "uses_efficiency": false
+      "uses_efficiency": false,
+      "recipe": {
+        "inputs": { "alloy": 0.5 },
+        "outputs": { "data": 1.5 },
+        "carried": "alloy"
+      }
     },
     {
       "id": "bridge",
@@ -199,7 +204,11 @@
       "generates_power": false,
       "consumes_power": true,
       "uses_efficiency": false,
-      "recipe": { "minerals_in": 6.0, "alloy_out": 1.0 }
+      "recipe": {
+        "inputs": { "minerals": 6.0 },
+        "outputs": { "alloy": 1.0 },
+        "carried": "minerals"
+      }
     },
     {
       "id": "heater_node",

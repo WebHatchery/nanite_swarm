@@ -235,44 +235,81 @@ impl PlanetState {
                 continue;
             }
 
-            let delivered = self
+            let carried = recipe
+                .carried
+                .as_deref()
+                .and_then(crate::engine::ResourceType::from_id);
+            let hopper = self
                 .input_buffers
                 .get(&(pos.x, pos.y))
                 .copied()
                 .unwrap_or(0.0);
 
+            // How much of a second's work every input can actually cover. The
+            // carried one comes out of this building's hopper; a building with
+            // an empty hopper is idle however full the global pool is.
             let mut scale = building.dust_efficiency() * delta_time;
-            if recipe.minerals_in > 0.0 {
-                // Ore has to have been carried here. A smelter with an empty
-                // hopper is idle however full the global pool is.
-                scale = scale.min(delivered / recipe.minerals_in);
-            }
-            if recipe.biomass_in > 0.0 {
-                scale = scale.min(self.resources.biomass / recipe.biomass_in);
+            for (id, rate) in &recipe.inputs {
+                if *rate <= 0.0 {
+                    continue;
+                }
+                let Some(resource) = crate::engine::ResourceType::from_id(id) else {
+                    continue;
+                };
+                let available = if Some(resource) == carried {
+                    hopper
+                } else {
+                    self.resources.get(resource)
+                };
+                scale = scale.min(available / rate);
             }
             if scale <= 0.0 {
                 continue;
             }
 
-            if recipe.minerals_in > 0.0 {
-                let taken = recipe.minerals_in * scale;
-                if let Some(buffer) = self.input_buffers.get_mut(&(pos.x, pos.y)) {
-                    *buffer = (*buffer - taken).max(0.0);
+            for (id, rate) in &recipe.inputs {
+                let Some(resource) = crate::engine::ResourceType::from_id(id) else {
+                    continue;
+                };
+                let taken = rate * scale;
+                if Some(resource) == carried {
+                    if let Some(buffer) = self.input_buffers.get_mut(&(pos.x, pos.y)) {
+                        *buffer = (*buffer - taken).max(0.0);
+                    }
+                } else {
+                    self.resources.add(resource, -taken);
                 }
             }
-            self.resources.biomass -= recipe.biomass_in * scale;
-            // Output waits on the pad for a drone, the same as a drill's ore.
-            *self.output_buffers.entry((pos.x, pos.y)).or_insert(0.0) += recipe.alloy_out * scale;
+
+            for (id, rate) in &recipe.outputs {
+                let Some(resource) = crate::engine::ResourceType::from_id(id) else {
+                    continue;
+                };
+                // Data is the one output research speaks to by name, so it
+                // goes through the same stat the server banks use.
+                let made = if resource == crate::engine::ResourceType::Data {
+                    self.stats.apply(StatId::DataGeneration, rate * scale)
+                } else {
+                    rate * scale
+                };
+                if resource.is_physical() {
+                    // Waits on the pad for a drone, the same as a drill's ore.
+                    *self.output_buffers.entry((pos.x, pos.y)).or_insert(0.0) += made;
+                } else {
+                    // Nothing carries Data. It is simply known.
+                    self.resources.add(resource, made);
+                }
+            }
         }
     }
 
     /// Every placed building that has a recipe, with it.
-    fn recipe_buildings(&self) -> Vec<(crate::engine::GridPos, crate::data::RecipeDef)> {
+    fn recipe_buildings(&self) -> Vec<(crate::engine::GridPos, &'static crate::data::RecipeDef)> {
         crate::data::game_data()
             .buildings
             .iter()
             .filter(|def| !def.recipe.is_empty())
-            .filter_map(|def| BuildingType::from_id(&def.id).map(|kind| (kind, def.recipe)))
+            .filter_map(|def| BuildingType::from_id(&def.id).map(|kind| (kind, &def.recipe)))
             .flat_map(|(kind, recipe)| {
                 self.grid
                     .find_buildings(kind)
@@ -630,6 +667,99 @@ mod tests {
         state.sample_throughput(4.0);
         assert_eq!(state.throughput.len(), 4);
         assert_eq!(state.throughput.max(), Some(5.0));
+    }
+
+    /// A powered building of `kind` beside the Core, with `hopper` of its
+    /// carried input already delivered to it.
+    fn processing_world(kind: BuildingType, hopper: f32) -> (PlanetState, GridPos) {
+        let mut state = state();
+        state.resources.minerals = 10_000.0;
+        state.resources.energy = 10_000.0;
+        state.config.resources.max_energy = 10_000.0;
+        let core = state.grid.find_core().unwrap();
+        let pos = GridPos::new(core.x + 1, core.y);
+        state.grid.reveal_around(pos, 2);
+        if let Some(tile) = state.grid.get_mut(pos) {
+            tile.terrain = TerrainType::Empty;
+        }
+        state.unlock_building(kind);
+        state.select_building(kind);
+        assert!(state.try_place_building(pos), "could not place {:?}", kind);
+        state.grid.update_power_grid();
+        state.input_buffers.insert((pos.x, pos.y), hopper);
+        (state, pos)
+    }
+
+    #[test]
+    fn a_recipe_takes_its_carried_input_from_the_hopper_and_pays_out_on_the_pad() {
+        let (mut state, pos) = processing_world(BuildingType::Smelter, 60.0);
+
+        state.update_recipes(1.0);
+
+        let hopper = state.input_buffers.get(&(pos.x, pos.y)).copied().unwrap();
+        let pad = state.output_buffers.get(&(pos.x, pos.y)).copied().unwrap();
+        assert!(hopper < 60.0, "the hopper was not drawn down");
+        assert!(pad > 0.0, "nothing was made");
+        // Alloy is something a drone can carry, so it waits to be collected
+        // rather than appearing in the pool.
+        assert_eq!(state.resources.alloy, 0.0);
+    }
+
+    #[test]
+    fn a_recipe_with_an_empty_hopper_does_nothing_however_full_the_pool_is() {
+        let (mut state, pos) = processing_world(BuildingType::Smelter, 0.0);
+        state.resources.minerals = 100_000.0;
+
+        state.update_recipes(1.0);
+
+        assert_eq!(
+            state
+                .output_buffers
+                .get(&(pos.x, pos.y))
+                .copied()
+                .unwrap_or(0.0),
+            0.0
+        );
+    }
+
+    #[test]
+    fn an_output_nothing_can_carry_goes_straight_into_the_pool() {
+        // A Server Bank turns carried alloy into Data, and nothing carries Data.
+        let (mut state, pos) = processing_world(BuildingType::ServerBank, 10.0);
+        state.resources.data = 0.0;
+
+        state.update_recipes(1.0);
+
+        assert!(state.resources.data > 0.0, "no Data was thought up");
+        assert_eq!(
+            state
+                .output_buffers
+                .get(&(pos.x, pos.y))
+                .copied()
+                .unwrap_or(0.0),
+            0.0,
+            "Data was left on the pad for a drone"
+        );
+        assert!(state.input_buffers.get(&(pos.x, pos.y)).copied().unwrap() < 10.0);
+    }
+
+    #[test]
+    fn research_that_speeds_up_thinking_speeds_up_a_data_recipe_too() {
+        fn made(with_research: bool) -> f32 {
+            let (mut state, _) = processing_world(BuildingType::ServerBank, 10.0);
+            state.resources.data = 0.0;
+            if with_research {
+                state
+                    .research
+                    .unlocked_techs
+                    .push("advanced_research".to_string());
+            }
+            state.refresh_stats();
+            state.update_recipes(1.0);
+            state.resources.data
+        }
+
+        assert!(made(true) > made(false));
     }
 
     #[test]

@@ -100,10 +100,11 @@ impl PlanetState {
         crate::data::game_data()
             .buildings
             .iter()
-            .filter(|def| def.recipe.alloy_out > 0.0)
             .filter_map(|def| {
-                BuildingType::from_id(&def.id).map(|kind| (kind, def.recipe.alloy_out))
+                let out = def.recipe.outputs.get("alloy").copied().unwrap_or(0.0);
+                (out > 0.0).then_some((def, out))
             })
+            .filter_map(|(def, out)| BuildingType::from_id(&def.id).map(|kind| (kind, out)))
             .map(|(kind, out)| {
                 self.grid
                     .find_buildings(kind)

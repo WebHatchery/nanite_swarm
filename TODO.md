@@ -64,11 +64,11 @@ Techs declare their effects as modifiers in `research.json` (`engine::modifiers`
 
 The first chain runs end to end and nothing teleports: a drill piles ore on its pad, its crew carries it to the nearest Smelter with room, the Smelter refines it and piles alloy on its own pad, and its own crew carries that to the Core. Both halves are the same code — a producer, a load, and whatever wants it — so a third link is data.
 
-- Alloy has no consumer building, so it always routes to the Core. The moment something eats alloy, `dispatch_producers` will pick it the same way it picks a Smelter, but nothing does yet.
-- `biomass_in` still draws from the global pool, because no recipe uses it. The next recipe that does needs the hopper to hold more than ore.
+- Alloy has a consumer: a Server Bank takes carried alloy and thinks harder for it, so the chain runs drill to Smelter to Server Bank and only the leftovers go to the Core. Routing picks it the same way it picks a Smelter, because it is now the same code for every resource.
+- A recipe may take one *carried* input plus any number from the global pool, because a building has one hopper. A recipe that needs two things carried to it still cannot be expressed.
 - Every producer's crew is one drone (two with `swarm_dispatch`), so a Smelter fed by three drills has the same collection capacity as one fed by one.
-- One recipe, one product. Deeper chains (alloy plus biomass into something) and more processing buildings are the content this unlocks.
-- `RecipeDef` is a fixed struct of named fields, so a third input needs a code change rather than a data change. It wants to be a map of resource id to amount once there are more than two.
+- Two recipes, two products. Deeper chains and more processing buildings are still the content this unlocks — and a new building needs a sprite, which is the part that is not just data.
+- `RecipeDef` is maps of resource id to amount, in and out, with one input marked as the carried one. Outputs a drone can carry wait on the pad; Data goes straight to the pool, and is the one output the engine special-cases (it runs through the `data_generation` stat, because that is what the stat is named for).
 - Grow the building set beyond 12 across processing, logistics, and megastructure parts. Hazard counters exist now; nothing else on that list does.
 - Tier the resource set further. Alloy is the first refined product; mass-driver strategy still has nothing worth shipping between worlds.
 - Larger and more varied maps with landmark features. Sizes are per-world data now (20x20 to 26x26) and the camera does not cap them, but the generator has no notion of a feature.

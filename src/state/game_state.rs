@@ -3,7 +3,7 @@
 use super::camera::Camera;
 use super::seed_ship::SeedShip;
 use crate::data::{GameConfig, PlanetHazards};
-use crate::engine::{BuildingType, DroneManager, Grid, GridPos, Stats};
+use crate::engine::{BuildingType, DroneManager, Grid, GridPos, ResourceType, Stats};
 use macroquad::miniquad;
 use macroquad_toolkit::achievements::{Achievement, Achievements};
 use macroquad_toolkit::fx::ParticleSystem;
@@ -50,6 +50,30 @@ pub struct Resources {
     /// swarm cannot dig straight out of the ground.
     #[serde(default)]
     pub alloy: f32,
+}
+
+impl Resources {
+    /// Read a pool by resource id, so a recipe declared in JSON can ask about
+    /// something without the engine having a branch per resource.
+    pub fn get(&self, resource: ResourceType) -> f32 {
+        match resource {
+            ResourceType::Energy => self.energy,
+            ResourceType::Minerals => self.minerals,
+            ResourceType::Data => self.data,
+            ResourceType::Biomass => self.biomass,
+            ResourceType::Alloy => self.alloy,
+        }
+    }
+
+    pub fn add(&mut self, resource: ResourceType, amount: f32) {
+        match resource {
+            ResourceType::Energy => self.energy += amount,
+            ResourceType::Minerals => self.minerals += amount,
+            ResourceType::Data => self.data += amount,
+            ResourceType::Biomass => self.biomass += amount,
+            ResourceType::Alloy => self.alloy += amount,
+        }
+    }
 }
 
 impl Resources {

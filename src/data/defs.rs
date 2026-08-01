@@ -17,19 +17,33 @@ pub struct Cost {
 }
 
 /// What a processing building turns into what, per second, while powered.
-#[derive(Debug, Clone, Copy, Default, Deserialize)]
+///
+/// Inputs and outputs are maps of resource id to amount, so a third input is a
+/// line of JSON rather than another named field and another branch.
+#[derive(Debug, Clone, Default, Deserialize)]
 pub struct RecipeDef {
     #[serde(default)]
-    pub minerals_in: f32,
+    pub inputs: HashMap<String, f32>,
     #[serde(default)]
-    pub biomass_in: f32,
+    pub outputs: HashMap<String, f32>,
+    /// The one input drones have to carry here rather than draw from the pool.
+    /// One, because a building has one hopper; the rest come from the pool.
     #[serde(default)]
-    pub alloy_out: f32,
+    pub carried: Option<String>,
 }
 
 impl RecipeDef {
     pub fn is_empty(&self) -> bool {
-        self.minerals_in <= 0.0 && self.biomass_in <= 0.0 && self.alloy_out <= 0.0
+        self.inputs.is_empty() && self.outputs.is_empty()
+    }
+
+    /// How much of the carried resource one second of work needs, if any.
+    pub fn carried_rate(&self) -> f32 {
+        self.carried
+            .as_ref()
+            .and_then(|id| self.inputs.get(id))
+            .copied()
+            .unwrap_or(0.0)
     }
 }
 

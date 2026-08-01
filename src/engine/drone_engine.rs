@@ -13,6 +13,39 @@ pub enum ResourceType {
     Alloy,
 }
 
+impl ResourceType {
+    pub fn id(self) -> &'static str {
+        match self {
+            ResourceType::Minerals => "minerals",
+            ResourceType::Energy => "energy",
+            ResourceType::Data => "data",
+            ResourceType::Biomass => "biomass",
+            ResourceType::Alloy => "alloy",
+        }
+    }
+
+    pub const ALL: [ResourceType; 5] = [
+        ResourceType::Minerals,
+        ResourceType::Energy,
+        ResourceType::Data,
+        ResourceType::Biomass,
+        ResourceType::Alloy,
+    ];
+
+    pub fn from_id(id: &str) -> Option<Self> {
+        ResourceType::ALL.into_iter().find(|kind| kind.id() == id)
+    }
+
+    /// Whether a drone can pick this up and walk it somewhere. Data is
+    /// information and Energy is in the wires; neither rides a drone.
+    pub fn is_physical(self) -> bool {
+        matches!(
+            self,
+            ResourceType::Minerals | ResourceType::Biomass | ResourceType::Alloy
+        )
+    }
+}
+
 /// Drone states for the automation system
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DroneState {

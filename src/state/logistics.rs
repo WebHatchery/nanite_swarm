@@ -261,11 +261,16 @@ impl PlanetState {
     /// Core, nearest first, so a Smelter parked beside the drills is fed before
     /// the ore ever reaches the pool. Placement is the decision; this only
     /// reads it.
-    fn delivery_for(&self, from: GridPos, core: GridPos) -> Option<(GridPos, Vec<GridPos>)> {
+    fn delivery_for(
+        &self,
+        from: GridPos,
+        core: GridPos,
+        resource: ResourceType,
+    ) -> Option<(GridPos, Vec<GridPos>)> {
         let hopper_ceiling = self.drones.drone_capacity * HOPPER_LOADS;
         let mut best: Option<(GridPos, Vec<GridPos>)> = None;
 
-        for pos in self.ore_consumers() {
+        for pos in self.consumers_of(resource) {
             let delivered = self
                 .input_buffers
                 .get(&(pos.x, pos.y))
@@ -293,11 +298,18 @@ impl PlanetState {
     }
 
     /// Powered buildings whose recipe eats ore.
-    fn ore_consumers(&self) -> Vec<GridPos> {
+    /// Powered buildings whose hopper wants this resource carried to it.
+    ///
+    /// A drone looks for one of these before falling back to the Core, which
+    /// is what makes a Smelter parked beside the drills get fed first.
+    fn consumers_of(&self, resource: ResourceType) -> Vec<GridPos> {
         crate::data::game_data()
             .buildings
             .iter()
-            .filter(|def| def.recipe.minerals_in > 0.0)
+            .filter(|def| {
+                def.recipe.carried.as_deref() == Some(resource.id())
+                    && def.recipe.carried_rate() > 0.0
+            })
             .filter_map(|def| BuildingType::from_id(&def.id))
             .flat_map(|kind| self.powered_positions(kind))
             .collect()
@@ -376,11 +388,9 @@ impl PlanetState {
             // Ore goes to whatever wants it and is nearest on the network, and
             // to the Core only when nothing does. Refined output has no
             // consumer yet, so it always goes home to the Core.
-            let delivery = match resource {
-                ResourceType::Minerals => self.delivery_for(producer, core),
-                _ => route_over_network_weighted(&self.grid, producer, core, self.route_cost())
-                    .map(|route| (core, route)),
-            };
+            // Everything looks for something that wants it and is nearest on
+            // the network, and goes home to the Core only when nothing does.
+            let delivery = self.delivery_for(producer, core, resource);
             let Some((destination, route)) = delivery else {
                 // Powered but no pipe anywhere: it piles up on the pad instead
                 // of teleporting into the pool.
@@ -424,19 +434,25 @@ impl PlanetState {
             .map(|pos| (pos, ResourceType::Minerals))
             .collect();
 
-        for def in crate::data::game_data()
-            .buildings
-            .iter()
-            .filter(|def| def.recipe.alloy_out > 0.0)
-        {
+        // Anything whose recipe makes something a drone can carry is a
+        // producer too, whatever that something turns out to be.
+        for def in &crate::data::game_data().buildings {
             let Some(kind) = BuildingType::from_id(&def.id) else {
                 continue;
             };
-            producers.extend(
-                self.powered_positions(kind)
-                    .into_iter()
-                    .map(|pos| (pos, ResourceType::Alloy)),
-            );
+            for (id, rate) in &def.recipe.outputs {
+                let Some(resource) = ResourceType::from_id(id) else {
+                    continue;
+                };
+                if *rate <= 0.0 || !resource.is_physical() {
+                    continue;
+                }
+                producers.extend(
+                    self.powered_positions(kind)
+                        .into_iter()
+                        .map(|pos| (pos, resource)),
+                );
+            }
         }
         producers
     }
@@ -571,6 +587,48 @@ mod tests {
     /// dispatch, travel out over the network, delivery, and the walk home. If
     /// the tick length, drone speed, drill cycle or route cost changes, this
     /// number moves.
+    #[test]
+    fn alloy_is_carried_to_whatever_eats_it_rather_than_always_to_the_core() {
+        let (mut state, core, _drill) = state_with_run(4);
+        // A Smelter on the run, and a Server Bank beside the Core that wants
+        // what the Smelter makes.
+        let smelter = GridPos::new(core.x + 2, core.y - 1);
+        let bank = GridPos::new(core.x, core.y - 1);
+        for (pos, kind) in [
+            (smelter, BuildingType::Smelter),
+            (bank, BuildingType::ServerBank),
+        ] {
+            state.grid.get_mut(pos).unwrap().terrain = crate::engine::TerrainType::Empty;
+            state.unlock_building(kind);
+            state.select_building(kind);
+            assert!(
+                state.try_place_building(pos),
+                "could not place at {:?}",
+                pos
+            );
+        }
+        state.grid.update_power_grid();
+
+        let delivery = state
+            .delivery_for(smelter, core, ResourceType::Alloy)
+            .expect("somewhere for the alloy to go");
+        assert_eq!(
+            delivery.0, bank,
+            "alloy went to {:?} rather than to the thing that eats it",
+            delivery.0
+        );
+    }
+
+    #[test]
+    fn a_resource_nothing_wants_still_goes_home_to_the_core() {
+        let (state, core, drill) = state_with_run(4);
+        // Biomass has no consumer building at all.
+        let delivery = state
+            .delivery_for(drill, core, ResourceType::Biomass)
+            .expect("a route home");
+        assert_eq!(delivery.0, core);
+    }
+
     #[test]
     fn a_drill_on_a_deposit_cuts_more_than_one_on_ordinary_ground() {
         /// Ore banked in ten seconds by a drill on ground of this richness.
@@ -814,7 +872,9 @@ mod tests {
         state.grid.update_power_grid();
 
         // With everything clear, the drill routes down the short run.
-        let clear = state.delivery_for(drill, core).expect("a route home");
+        let clear = state
+            .delivery_for(drill, core, ResourceType::Minerals)
+            .expect("a route home");
         assert!(
             clear.1.iter().all(|pos| pos.y == core.y),
             "the clear route left the short run: {:?}",
@@ -825,7 +885,9 @@ mod tests {
         for step in 1..=4 {
             state.traffic.insert((core.x + step, core.y), 6);
         }
-        let crowded = state.delivery_for(drill, core).expect("a route home");
+        let crowded = state
+            .delivery_for(drill, core, ResourceType::Minerals)
+            .expect("a route home");
         assert!(
             crowded.1.iter().any(|pos| pos.y == core.y + 1),
             "the crowded route stayed on the saturated run: {:?}",
