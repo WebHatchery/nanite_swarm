@@ -84,12 +84,12 @@ The sim runs on a fixed 1/30s timestep with an accumulator (`PlanetState::advanc
 
 ## Save system
 
-The campaign autosaves every minute of world time, on travel, on launch, and on the way to the menu, and says so in the bottom bar. A failed write raises an alert rather than passing silently.
+The campaign autosaves every minute of world time, on travel, on launch, and on the way to the menu, and says so in the bottom bar. Every save rotates the previous one into a backup, and a load that cannot read the main save falls back to it and says so. A failed write raises an alert rather than passing silently.
 
 - Nothing catches the window closing, so the last minute of an idle session is still lost if the player alt-F4s. macroquad has no close hook to hang this on; it may need a platform-specific one or a much shorter interval.
-- The autosave overwrites the only slot, so a corrupt write takes the campaign with it. This wants the backup rotation below before it is trustworthy.
+- Recovery is one save deep. A campaign that has been quietly broken for several minutes has already rotated the good copy out.
 - The save is versioned (`SaveGame`, version 1) and reads the old unversioned single-planet save, but there is no migration *framework* — the next shape change needs a real per-version upgrade path rather than a second fallback branch.
-- Add multiple slots and corruption recovery with backup rotation.
+- Add multiple *player-visible* slots. Rotation and recovery exist (one backup, automatic), but there is still one campaign and no way to keep a second run or go back more than one save.
 - Persist the meta-state the campaign does not hold: settings and tutorial progress are still lost on reload.
 - Harden offline progress with a clock-tamper guard and hard caps, and turn the offline banner into an earnings report.
 

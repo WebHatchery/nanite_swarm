@@ -60,6 +60,7 @@ pub(super) fn draw(
     );
     let congested = state.congested_tiles();
     let alert_count = i32::from(state.save_failed)
+        + i32::from(state.restored_from_backup)
         + i32::from(state.power_balance < 0.0)
         + i32::from(state.battery_seconds <= 0.0)
         + i32::from(state.power_collapse_shutdown > 0.0)
@@ -79,6 +80,8 @@ pub(super) fn draw(
     );
     let alert_text = if state.save_failed {
         "SAVE FAILED"
+    } else if state.restored_from_backup {
+        "RESTORED FROM BACKUP"
     } else if state.power_collapse_shutdown > 0.0 {
         "POWER COLLAPSE"
     } else if state.battery_seconds <= 0.0 {

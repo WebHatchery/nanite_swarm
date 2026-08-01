@@ -71,14 +71,83 @@ fn planet_seed_fallback() -> u64 {
     0x5EED_0000_0000_0001
 }
 
-pub fn save_to_file(campaign: &mut Campaign, path: &str) -> Result<(), io::Error> {
-    let json = save_to_json(campaign).map_err(io::Error::other)?;
-    save_string_key(GAME_NAME, path, &json).map_err(io::Error::other)
+/// Where saves are kept. The game uses the toolkit's key store; tests use a
+/// map, so the rotation and recovery rules can be exercised without touching a
+/// player's actual save.
+pub trait SaveStore {
+    fn read(&self, key: &str) -> Option<String>;
+    fn write(&mut self, key: &str, content: &str) -> Result<(), String>;
 }
 
-pub fn load_from_file(path: &str) -> Result<Campaign, io::Error> {
-    let json = load_string_key(GAME_NAME, path).map_err(io::Error::other)?;
-    load_from_json(&json).map_err(io::Error::other)
+struct KeyStore;
+
+impl SaveStore for KeyStore {
+    fn read(&self, key: &str) -> Option<String> {
+        load_string_key(GAME_NAME, key).ok()
+    }
+
+    fn write(&mut self, key: &str, content: &str) -> Result<(), String> {
+        save_string_key(GAME_NAME, key, content)
+    }
+}
+
+/// Which copy a campaign came back from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LoadSource {
+    Primary,
+    Backup,
+}
+
+fn backup_key(key: &str) -> String {
+    format!("{}_backup", key)
+}
+
+/// Write the campaign, keeping the previous save as a backup first.
+///
+/// Autosave overwrites the same slot every minute, so without this one bad
+/// write - a bug, a half-full disk, a shape the loader cannot read - would take
+/// the whole campaign with it. The backup is always the last save that was
+/// good enough to have been written.
+fn save_campaign(
+    store: &mut dyn SaveStore,
+    key: &str,
+    campaign: &mut Campaign,
+) -> Result<(), String> {
+    let json = save_to_json(campaign).map_err(|error| error.to_string())?;
+    if let Some(previous) = store.read(key) {
+        // A failed rotation is not worth losing the new save over, but it does
+        // mean the backup is stale, so it is not silently ignored either.
+        store.write(&backup_key(key), &previous)?;
+    }
+    store.write(key, &json)
+}
+
+/// Read the campaign, falling back to the backup if the main save will not
+/// parse. Says which one it came from so the player can be told.
+fn load_campaign(store: &dyn SaveStore, key: &str) -> Result<(Campaign, LoadSource), String> {
+    let primary_error = match store.read(key) {
+        Some(json) => match load_from_json(&json) {
+            Ok(campaign) => return Ok((campaign, LoadSource::Primary)),
+            Err(error) => error.to_string(),
+        },
+        None => "no save found".to_string(),
+    };
+
+    match store.read(&backup_key(key)) {
+        Some(json) => match load_from_json(&json) {
+            Ok(campaign) => Ok((campaign, LoadSource::Backup)),
+            Err(_) => Err(primary_error),
+        },
+        None => Err(primary_error),
+    }
+}
+
+pub fn save_to_file(campaign: &mut Campaign, path: &str) -> Result<(), io::Error> {
+    save_campaign(&mut KeyStore, path, campaign).map_err(io::Error::other)
+}
+
+pub fn load_from_file(path: &str) -> Result<(Campaign, LoadSource), io::Error> {
+    load_campaign(&KeyStore, path).map_err(io::Error::other)
 }
 
 #[cfg(test)]
@@ -89,6 +158,114 @@ mod tests {
 
     fn campaign() -> Campaign {
         Campaign::new(GameConfig::default(), 7)
+    }
+
+    /// A save store that lives in memory, so the rotation rules can be tested
+    /// without going near a real save.
+    #[derive(Default)]
+    struct MapStore {
+        entries: std::collections::HashMap<String, String>,
+        fail_writes_to: Option<String>,
+    }
+
+    impl SaveStore for MapStore {
+        fn read(&self, key: &str) -> Option<String> {
+            self.entries.get(key).cloned()
+        }
+
+        fn write(&mut self, key: &str, content: &str) -> Result<(), String> {
+            if self.fail_writes_to.as_deref() == Some(key) {
+                return Err("disk is on fire".to_string());
+            }
+            self.entries.insert(key.to_string(), content.to_string());
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn the_first_save_writes_no_backup_because_there_is_nothing_to_keep() {
+        let mut store = MapStore::default();
+        let mut campaign = campaign();
+        save_campaign(&mut store, "save", &mut campaign).unwrap();
+
+        assert!(store.read("save").is_some());
+        assert!(store.read("save_backup").is_none());
+    }
+
+    #[test]
+    fn saving_keeps_the_previous_save_as_the_backup() {
+        let mut store = MapStore::default();
+        let mut first = campaign();
+        first.current_mut().resources.biomass = 11.0;
+        save_campaign(&mut store, "save", &mut first).unwrap();
+
+        let mut second = campaign();
+        second.current_mut().resources.biomass = 22.0;
+        save_campaign(&mut store, "save", &mut second).unwrap();
+
+        let (current, source) = load_campaign(&store, "save").unwrap();
+        assert_eq!(source, LoadSource::Primary);
+        assert_eq!(current.current().resources.biomass, 22.0);
+
+        let backup = load_from_json(&store.read("save_backup").unwrap()).unwrap();
+        assert_eq!(backup.current().resources.biomass, 11.0);
+    }
+
+    #[test]
+    fn a_corrupt_save_is_recovered_from_the_backup() {
+        let mut store = MapStore::default();
+        let mut good = campaign();
+        good.current_mut().resources.biomass = 33.0;
+        save_campaign(&mut store, "save", &mut good).unwrap();
+        // Second save rotates the good one into the backup...
+        let mut newer = campaign();
+        save_campaign(&mut store, "save", &mut newer).unwrap();
+        // ...and then the main save goes bad.
+        store.write("save", "{ this is not a save }").unwrap();
+
+        let (recovered, source) = load_campaign(&store, "save").unwrap();
+        assert_eq!(source, LoadSource::Backup);
+        assert_eq!(recovered.current().resources.biomass, 33.0);
+    }
+
+    #[test]
+    fn a_missing_save_with_a_good_backup_still_loads() {
+        let mut store = MapStore::default();
+        let mut good = campaign();
+        good.current_mut().resources.biomass = 44.0;
+        save_campaign(&mut store, "save", &mut good).unwrap();
+        let mut newer = campaign();
+        save_campaign(&mut store, "save", &mut newer).unwrap();
+        store.entries.remove("save");
+
+        let (recovered, source) = load_campaign(&store, "save").unwrap();
+        assert_eq!(source, LoadSource::Backup);
+        assert_eq!(recovered.current().resources.biomass, 44.0);
+    }
+
+    #[test]
+    fn two_bad_copies_is_an_error_rather_than_a_silent_new_game() {
+        let mut store = MapStore::default();
+        store.write("save", "rubbish").unwrap();
+        store.write("save_backup", "also rubbish").unwrap();
+        assert!(load_campaign(&store, "save").is_err());
+    }
+
+    #[test]
+    fn a_failed_rotation_does_not_quietly_overwrite_the_good_save() {
+        let mut store = MapStore::default();
+        let mut first = campaign();
+        first.current_mut().resources.biomass = 55.0;
+        save_campaign(&mut store, "save", &mut first).unwrap();
+
+        store.fail_writes_to = Some("save_backup".to_string());
+        let mut second = campaign();
+        second.current_mut().resources.biomass = 66.0;
+        assert!(save_campaign(&mut store, "save", &mut second).is_err());
+
+        // The old save is still there and still readable.
+        let (kept, _) = load_campaign(&store, "save").unwrap();
+        assert_eq!(kept.current().resources.biomass, 55.0);
     }
 
     #[test]

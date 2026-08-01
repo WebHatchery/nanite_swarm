@@ -144,6 +144,9 @@ pub struct PlanetState {
     /// The last write to disk failed, and the player should know.
     #[serde(skip, default)]
     pub save_failed: bool,
+    /// This campaign came back from the backup, not the main save.
+    #[serde(skip, default)]
+    pub restored_from_backup: bool,
     #[serde(skip, default)]
     pub forest_harvested_count: i32,
     #[serde(skip, default)]
@@ -249,6 +252,7 @@ impl PlanetState {
             arrival_notice_timer: 0.0,
             save_notice_timer: 0.0,
             save_failed: false,
+            restored_from_backup: false,
             forest_harvested_count: 0,
             tutorial_step: 0,
             tutorial_hidden: false,

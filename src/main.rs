@@ -115,12 +115,15 @@ impl Game {
                     self.phase = GamePhase::Playing;
                 }
                 MenuAction::Load => {
-                    if let Ok(campaign) = load_from_file(SAVE_PATH) {
+                    if let Ok((campaign, source)) = load_from_file(SAVE_PATH) {
                         self.campaign = campaign;
                         self.sync_research_from_planet();
                         self.phase = GamePhase::Playing;
                         self.has_save = true;
                         self.sync_building_unlocks();
+                        // The player is owed the truth about which copy this is.
+                        self.campaign.current_mut().restored_from_backup =
+                            source == state::LoadSource::Backup;
                     }
                 }
                 MenuAction::Save => {
