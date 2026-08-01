@@ -27,6 +27,7 @@ pub enum PlanetaryAction {
     OpenResearch,
     OpenSeedShip,
     OpenInterplanetary,
+    OpenRecords,
     OpenMenu,
 }
 

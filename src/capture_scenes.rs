@@ -126,6 +126,26 @@ impl Game {
                     planet.update_seed_ship(1.0);
                 }
             }
+            "records" => {
+                self.phase = GamePhase::Records;
+                self.seed_logistics_scene();
+                // A world part-way through the set, so the screen shows earned
+                // rows, locked rows and a few half-finished bars at once.
+                let planet = self.campaign.current_mut();
+                planet.config.resources.base_mineral_cap = 100_000.0;
+                planet.resources.minerals = 260.0;
+                planet.resources.data = 30.0;
+                planet.resources.alloy = 12.0;
+                planet.forest_harvested_count = 2;
+                for tech in ["power_grid", "data_processing", "efficient_drills"] {
+                    planet.research.unlocked_techs.push(tech.to_string());
+                }
+                planet.refresh_stats();
+                // A step is what fires them, the same as in play.
+                for _ in 0..4 {
+                    planet.step(state::TICK_SECONDS, false);
+                }
+            }
             "seedship" => {
                 self.phase = GamePhase::SeedShip;
                 self.seed_logistics_scene();

@@ -110,13 +110,16 @@ pub(super) fn draw_ui_panels(
 ) -> PlanetaryAction {
     let colors = PanelColors::from_theme(theme, state.power_balance);
 
-    let ui_action = top_bar::draw(state, screen_w, metrics, theme, &colors);
+    let mut ui_action = top_bar::draw(state, screen_w, metrics, theme, &colors);
 
     build_palette::draw(state, theme, textures, metrics, &colors, screen_h);
 
     let right = RightStackLayout::compute(screen_w, screen_h, metrics);
     inspector_panel::draw(state, hovered_pos, textures, theme, &colors, &right);
-    power_ops_panel::draw(state, theme, &colors, &right);
+    let ops_action = power_ops_panel::draw(state, theme, &colors, &right);
+    if ui_action == PlanetaryAction::None {
+        ui_action = ops_action;
+    }
     directive_panel::draw(state, directive, theme, &colors, &right);
 
     match bottom_bar::draw(state, screen_w, screen_h, theme, metrics, &colors) {

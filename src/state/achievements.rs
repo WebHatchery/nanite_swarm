@@ -31,6 +31,62 @@ impl PlanetState {
         Milestone::from_id(&def.condition.kind)
             .is_some_and(|milestone| self.meets(milestone, def.condition.target))
     }
+
+    /// The whole set as a screen can show it: earned or not, and how far along
+    /// the ones that are not.
+    ///
+    /// In declaration order, so the list does not reshuffle itself as things
+    /// are earned.
+    pub fn achievement_records(&self) -> Vec<AchievementRecord> {
+        crate::data::game_data()
+            .achievements
+            .iter()
+            .map(|def| {
+                let milestone = Milestone::from_id(&def.condition.kind);
+                let target = def.condition.target;
+                AchievementRecord {
+                    name: def.name.as_str(),
+                    description: def.description.as_str(),
+                    unlocked: self.achievements.is_unlocked(&def.id),
+                    // A manual achievement is announced by code at the moment
+                    // it happens, so there is no running total to show.
+                    progress: milestone.map(|milestone| self.measure(milestone)),
+                    target,
+                    countable: milestone.is_some_and(|milestone| {
+                        milestone != Milestone::Manual && milestone != Milestone::PowerSurplus
+                    }) && target > 1.0,
+                }
+            })
+            .collect()
+    }
+}
+
+/// One achievement as the records screen reads it.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct AchievementRecord {
+    pub name: &'static str,
+    pub description: &'static str,
+    pub unlocked: bool,
+    /// Where the world stands, for the ones measured off state.
+    pub progress: Option<f32>,
+    pub target: f32,
+    /// Whether "7 / 10" says anything useful. A one-shot condition is either
+    /// done or not, and a bar for it is noise.
+    pub countable: bool,
+}
+
+impl AchievementRecord {
+    /// How far along, from zero to one. Anything earned reads as full however
+    /// the world has moved on since.
+    pub fn fraction(&self) -> f32 {
+        if self.unlocked {
+            return 1.0;
+        }
+        match self.progress {
+            Some(progress) if self.target > 0.0 => (progress / self.target).clamp(0.0, 1.0),
+            _ => 0.0,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -115,5 +171,64 @@ mod tests {
         // It still fires when the code that owns it says so.
         state.announce_achievement("seed_ship");
         assert!(state.achievements.is_unlocked("seed_ship"));
+    }
+
+    fn record(state: &PlanetState, name: &str) -> AchievementRecord {
+        state
+            .achievement_records()
+            .into_iter()
+            .find(|record| record.name == name)
+            .expect("the shipped set still has this one")
+    }
+
+    #[test]
+    fn the_records_cover_the_declared_set_in_declaration_order() {
+        let records = state().achievement_records();
+        let declared = &crate::data::game_data().achievements;
+        assert_eq!(records.len(), declared.len());
+        for (record, def) in records.iter().zip(declared) {
+            assert_eq!(record.name, def.name);
+            assert!(!record.unlocked, "nothing is earned on an untouched world");
+        }
+    }
+
+    #[test]
+    fn a_locked_record_says_how_far_along_it_is() {
+        let mut state = state();
+        state.config.resources.base_mineral_cap = 100_000.0;
+        state.resources.minerals = 250.0;
+
+        let stockpile = record(&state, "Stockpile");
+        assert!(!stockpile.unlocked);
+        assert!(stockpile.countable, "500 minerals is worth counting");
+        assert_eq!(stockpile.progress, Some(250.0));
+        assert_eq!(stockpile.target, 500.0);
+        assert!((stockpile.fraction() - 0.5).abs() < 0.001);
+    }
+
+    #[test]
+    fn an_earned_record_stays_full_however_the_world_moves_on() {
+        let mut state = state();
+        state.config.resources.base_mineral_cap = 100_000.0;
+        state.resources.minerals = 500.0;
+        state.update_achievements();
+        // Spent again, right back down to nothing.
+        state.resources.minerals = 0.0;
+
+        let stockpile = record(&state, "Stockpile");
+        assert!(stockpile.unlocked);
+        assert_eq!(stockpile.fraction(), 1.0);
+    }
+
+    #[test]
+    fn a_record_with_nothing_to_count_does_not_pretend_otherwise() {
+        let state = state();
+        // Announced by code, so there is no running total behind it.
+        let manual = record(&state, "Seed Ship");
+        assert!(!manual.countable);
+        assert_eq!(manual.fraction(), 0.0);
+        // A one-shot condition is done or not; "0 / 1" says nothing.
+        let surplus = record(&state, "Power Surplus");
+        assert!(!surplus.countable);
     }
 }

@@ -71,24 +71,46 @@ impl Milestone {
 }
 
 impl PlanetState {
+    /// Where this world currently stands against a milestone, in whatever it
+    /// is counted in.
+    ///
+    /// Separate from [`PlanetState::meets`] because "how far along is this"
+    /// is a different question from "is it done", and a records screen with
+    /// only the second one is a list of padlocks.
+    pub fn measure(&self, milestone: Milestone) -> f32 {
+        match milestone {
+            // Announced by code at the moment it happens; never read off state.
+            Milestone::Manual => 0.0,
+            Milestone::Drills => self.count_of(BuildingType::Drill),
+            Milestone::ServerBanks => self.count_of(BuildingType::ServerBank),
+            Milestone::Structures => self.grid.total_buildings() as f32,
+            Milestone::NetworkTiles => self.network_tile_count() as f32,
+            Milestone::Drones => self.drones.total_count() as f32,
+            Milestone::MineralsHeld => self.resources.minerals,
+            Milestone::DataHeld => self.resources.data,
+            Milestone::AlloyHeld => self.resources.alloy,
+            Milestone::Technologies => self.research.unlocked_techs.len() as f32,
+            Milestone::ForestsHarvested => self.forest_harvested_count as f32,
+            // A surplus is a surplus; the target only asks for a bigger one.
+            Milestone::PowerSurplus => {
+                if self.power_balance > 0.0 {
+                    1.0
+                } else {
+                    0.0
+                }
+            }
+            Milestone::SeedShipStages => self.seed_ship.stage_index() as f32,
+        }
+    }
+
     /// Whether this world currently meets a milestone.
     pub fn meets(&self, milestone: Milestone, target: f32) -> bool {
         match milestone {
-            // Announced by code at the moment it happens; never true of state.
             Milestone::Manual => false,
-            Milestone::Drills => self.count_of(BuildingType::Drill) >= target,
-            Milestone::ServerBanks => self.count_of(BuildingType::ServerBank) >= target,
-            Milestone::Structures => self.grid.total_buildings() as f32 >= target,
-            Milestone::NetworkTiles => self.network_tile_count() as f32 >= target,
-            Milestone::Drones => self.drones.total_count() as f32 >= target,
-            Milestone::MineralsHeld => self.resources.minerals >= target,
-            Milestone::DataHeld => self.resources.data >= target,
-            Milestone::AlloyHeld => self.resources.alloy >= target,
-            Milestone::Technologies => self.research.unlocked_techs.len() as f32 >= target,
-            Milestone::ForestsHarvested => self.forest_harvested_count as f32 >= target,
-            // A surplus is a surplus; the target only asks for a bigger one.
-            Milestone::PowerSurplus => self.power_balance > 0.0,
-            Milestone::SeedShipStages => self.seed_ship.stage_index() as f32 >= target,
+            // A surplus has no scale to it: any surplus at all is the whole
+            // condition, whatever number the data asks for.
+            Milestone::PowerSurplus => self.measure(milestone) > 0.0,
+            _ => self.measure(milestone) >= target,
         }
     }
 

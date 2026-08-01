@@ -127,6 +127,9 @@ pub(super) fn handle_input(
         if is_key_pressed(KeyCode::M) {
             return PlanetaryAction::OpenInterplanetary;
         }
+        if is_key_pressed(KeyCode::A) {
+            return PlanetaryAction::OpenRecords;
+        }
         return PlanetaryAction::None;
     }
 
@@ -192,6 +195,9 @@ pub(super) fn handle_input(
     }
     if is_key_pressed(KeyCode::M) {
         return PlanetaryAction::OpenInterplanetary;
+    }
+    if is_key_pressed(KeyCode::A) {
+        return PlanetaryAction::OpenRecords;
     }
 
     PlanetaryAction::None

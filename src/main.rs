@@ -23,9 +23,10 @@ use data::{load_game_config, load_game_data, load_ui_theme, set_game_data};
 use engine::{ResearchState, ResearchTree};
 use screens::{
     render_campaign_complete_view, render_interplanetary_view, render_launch_view,
-    render_main_menu, render_planetary_view, render_research_view, render_seed_ship_view,
-    render_settings_menu, CampaignCompleteAction, InterplanetaryAction, LaunchAction, MenuAction,
-    PlanetaryAction, ResearchAction, SeedShipAction, SettingsAction,
+    render_main_menu, render_planetary_view, render_records_view, render_research_view,
+    render_seed_ship_view, render_settings_menu, CampaignCompleteAction, InterplanetaryAction,
+    LaunchAction, MenuAction, PlanetaryAction, RecordsAction, ResearchAction, SeedShipAction,
+    SettingsAction,
 };
 use state::{load_from_file, save_to_file, Campaign, LaunchSequence, GAME_NAME};
 
@@ -37,6 +38,7 @@ pub enum GamePhase {
     Research,
     SeedShip,
     Interplanetary,
+    Records,
     Settings,
     /// A ship is on its way. The world is not being simulated while it plays.
     Launch,
@@ -186,6 +188,9 @@ impl Game {
                     PlanetaryAction::OpenInterplanetary => {
                         self.phase = GamePhase::Interplanetary;
                     }
+                    PlanetaryAction::OpenRecords => {
+                        self.phase = GamePhase::Records;
+                    }
                     PlanetaryAction::OpenMenu => {
                         // Leaving the world is a good moment to write it down,
                         // and the menu used to only *claim* a save existed.
@@ -228,6 +233,16 @@ impl Game {
                         self.campaign.current_mut().toggle_seed_ship_commitment();
                     }
                     SeedShipAction::None => {}
+                }
+            }
+            GamePhase::Records => {
+                // The world keeps running while the player reads what it has
+                // done, the same as the map and the research tree.
+                self.advance_simulation();
+                let planet = self.campaign.current();
+                let records = planet.achievement_records();
+                if render_records_view(&planet.name, &records) == RecordsAction::Close {
+                    self.phase = GamePhase::Playing;
                 }
             }
             GamePhase::CampaignComplete => match render_campaign_complete_view(&self.campaign) {
@@ -328,7 +343,9 @@ impl Game {
         // entirely, which is exactly when a finished directive matters.
         match self.phase {
             // The ship screen fills the middle, so its toasts go in the corner.
-            GamePhase::SeedShip => {
+            // Both of these fill the middle of the screen, so their toasts go
+            // low where there is nothing to cover.
+            GamePhase::SeedShip | GamePhase::Records => {
                 let anchor = screens::menu_anchor_low(screen_height());
                 screens::draw_toasts(self.campaign.current(), anchor);
             }
