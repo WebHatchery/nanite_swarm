@@ -1,6 +1,6 @@
 //! Neural network research interface
 
-use crate::engine::{ResearchState, ResearchTree};
+use crate::engine::{describe_modifier, ResearchState, ResearchTree};
 use crate::ui::{draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::math::pulse01;
@@ -309,11 +309,18 @@ pub fn render_research_view(
         }
     }
 
-    // Info panel for hovered node
-    if let Some(node_id) = hovered_node {
+    // Info panel. With nothing under the cursor it falls back to whatever is
+    // being researched, so the panel is worth having between hovers.
+    let inspected = hovered_node.or(research_state.current_research.as_deref());
+    if let Some(node_id) = inspected {
         if let Some(node) = research_tree.get_node(node_id) {
+            let heading = if hovered_node.is_some() {
+                "Hovered Node"
+            } else {
+                "Researching"
+            };
             draw_ui_text(
-                "Hovered Node",
+                heading,
                 left_panel_x + 12.0,
                 left_text_y,
                 12.0,
@@ -334,15 +341,18 @@ pub fn render_research_view(
                 Colors::TEXT_DIM,
             );
 
+            // What it actually does, under what it says it does.
+            let mut y = left_text_y + 58.0;
+            for (text, color) in node_effects(node_id) {
+                draw_ui_text(&text, left_panel_x + 12.0, y, 12.0, color);
+                y += 16.0;
+            }
+            y += 4.0;
+
             if !research_state.is_unlocked(node_id) {
                 let cost_text = format!("Cost {:.0} Data", node.data_cost);
-                draw_ui_text(
-                    &cost_text,
-                    left_panel_x + 12.0,
-                    left_text_y + 54.0,
-                    12.0,
-                    Colors::ACCENT,
-                );
+                draw_ui_text(&cost_text, left_panel_x + 12.0, y, 12.0, Colors::ACCENT);
+                y += 18.0;
 
                 if research_tree.can_select(node_id, &research_state.unlocked) {
                     if research_tree.can_research(node_id, &research_state.unlocked, data_available)
@@ -350,7 +360,7 @@ pub fn render_research_view(
                         draw_ui_text(
                             "Click to research",
                             left_panel_x + 12.0,
-                            left_text_y + 72.0,
+                            y,
                             12.0,
                             Colors::SUCCESS,
                         );
@@ -358,7 +368,7 @@ pub fn render_research_view(
                         draw_ui_text(
                             "Click to select (insufficient Data)",
                             left_panel_x + 12.0,
-                            left_text_y + 72.0,
+                            y,
                             11.0,
                             Colors::WARNING,
                         );
@@ -371,7 +381,7 @@ pub fn render_research_view(
                     draw_ui_text(
                         "Prerequisites not met",
                         left_panel_x + 12.0,
-                        left_text_y + 72.0,
+                        y,
                         12.0,
                         Colors::ERROR,
                     );
@@ -379,19 +389,13 @@ pub fn render_research_view(
                     draw_ui_text(
                         "Not enough Data",
                         left_panel_x + 12.0,
-                        left_text_y + 72.0,
+                        y,
                         12.0,
                         Colors::WARNING,
                     );
                 }
             } else {
-                draw_ui_text(
-                    "UNLOCKED",
-                    left_panel_x + 12.0,
-                    left_text_y + 60.0,
-                    12.0,
-                    Colors::SUCCESS,
-                );
+                draw_ui_text("UNLOCKED", left_panel_x + 12.0, y, 12.0, Colors::SUCCESS);
             }
         }
     } else {
@@ -482,4 +486,39 @@ pub fn render_research_view(
     }
 
     ResearchAction::None
+}
+
+/// What a node does, as lines for the hover panel: every stat it moves, then
+/// anything it lets the swarm build.
+///
+/// A node with neither says so rather than showing nothing, because "no
+/// effect" and "the panel forgot to draw" look identical otherwise.
+fn node_effects(node_id: &str) -> Vec<(String, Color)> {
+    let data = crate::data::game_data();
+    let mut lines = Vec::new();
+
+    if let Some(def) = data.research.nodes.iter().find(|node| node.id == node_id) {
+        for modifier in &def.modifiers {
+            let Some(summary) = describe_modifier(modifier) else {
+                continue;
+            };
+            let color = if summary.is_gain {
+                Colors::SUCCESS
+            } else {
+                Colors::WARNING
+            };
+            lines.push((format!("{} {}", summary.label, summary.change), color));
+        }
+    }
+
+    for building in &data.buildings {
+        if building.unlocked_by.as_deref() == Some(node_id) {
+            lines.push((format!("Unlocks {}", building.name), Colors::PRIMARY));
+        }
+    }
+
+    if lines.is_empty() {
+        lines.push(("No direct effect".to_string(), Colors::TEXT_DIM));
+    }
+    lines
 }

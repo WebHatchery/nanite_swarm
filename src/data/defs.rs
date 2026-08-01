@@ -116,10 +116,24 @@ impl ResearchNodeDef {
     }
 }
 
+/// What a stat is called where a player can see it, and which direction is
+/// good news. Without this a modifier can only be shown as its raw id.
+#[derive(Debug, Clone, Deserialize)]
+pub struct StatLabelDef {
+    pub id: String,
+    pub label: String,
+    /// True for stats a tech is trying to push *down* - dust, power draw, how
+    /// much of a hazard still gets through.
+    #[serde(default)]
+    pub lower_is_better: bool,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct ResearchData {
     pub starting_unlocked: Vec<String>,
     pub nodes: Vec<ResearchNodeDef>,
+    #[serde(default)]
+    pub stats: Vec<StatLabelDef>,
 }
 
 /// What one Seed Ship stage swallows before it is done.
@@ -345,7 +359,25 @@ impl GameData {
         let research: ResearchData = load_json(research_json).unwrap_or_else(|_| ResearchData {
             starting_unlocked: vec!["core".to_string(), "basic_mining".to_string()],
             nodes: vec![],
+            stats: vec![],
         });
+
+        // Every stat needs a name a player can read, or the tree can only
+        // explain itself in the ids the JSON is written in. Checked against
+        // the file just parsed, never through game_data(): this runs while
+        // that is still being built.
+        if !research.stats.is_empty() {
+            for entry in &research.stats {
+                if crate::engine::StatId::from_id(&entry.id).is_none() {
+                    panic!("research stats: unknown stat \"{}\"", entry.id);
+                }
+            }
+            for stat in crate::engine::StatId::ALL {
+                if !research.stats.iter().any(|entry| entry.id == stat.id()) {
+                    panic!("research stats: no label for \"{}\"", stat.id());
+                }
+            }
+        }
 
         // A typo in a modifier would otherwise be a tech that silently does
         // nothing - the exact bug this system exists to stop.

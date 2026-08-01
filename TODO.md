@@ -57,7 +57,7 @@ Hazards are per-world data (`planets.json`). Acid rain corrodes anything carryin
 Techs declare their effects as modifiers in `research.json` (`engine::modifiers`), validated at load; the stringly-typed `unlocked_techs.contains(...)` reads are gone.
 
 - Expand the tree well past 15 nodes, with per-planet branches and hazard counters as research.
-- The research view shows a node's prose description but not the stats it moves; render the declared modifiers so the tree explains itself.
+- The tree explains itself: the inspect panel lists every stat a node moves (named and signed from a `stats` block in `research.json`, green when it is a gain, amber when it is a cost) and every building it opens, and falls back to whatever is being researched when nothing is hovered. Still missing: nothing shows the *cumulative* stat sheet, so a player cannot see what the swarm's drill output actually is, only what each tech would add to it.
 - Add stats for the values still fixed in Rust: drone speed, repeater range, collapse thresholds, harvest yields.
 
 ## Content
@@ -73,7 +73,7 @@ The first chain runs end to end and nothing teleports: a drill piles ore on its 
 - Tier the resource set further. Alloy is the first refined product; mass-driver strategy still has nothing worth shipping between worlds.
 - Larger and more varied maps with landmark features. Sizes are per-world data now (20x20 to 26x26) and the camera does not cap them, but the generator has no notion of a feature.
 - Replace the four `tier % 4` directives and four hardcoded achievements with a real objective/milestone system and a full achievement set. The Power Surplus directive still uses one number as both the power threshold and the seconds it must be held, so the two scale together by accident.
-- Write the GDD's "indifferent optimizer" tone into directives and research descriptions. Arrival lines have it (`planets.json`), and the Seed Ship stages do; everything else still reads like a spreadsheet.
+- Write the GDD's "indifferent optimizer" tone into directives. Arrival lines have it (`planets.json`), the Seed Ship stages do, and all 19 research descriptions now do — they stopped restating the numbers once the inspect panel started rendering them. The four `tier % 4` directives are what is left.
 
 ## Simulation architecture
 

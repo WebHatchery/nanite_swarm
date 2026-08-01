@@ -478,7 +478,17 @@ impl Game {
         self.capture_still = true;
         match scene {
             "mainmenu" => self.phase = GamePhase::MainMenu,
-            "research" => self.phase = GamePhase::Research,
+            "research" => {
+                self.phase = GamePhase::Research;
+                // A node that both moves a stat and opens a building, so the
+                // panel shows everything it can say about one.
+                self.research_state.unlocked.push("power_grid".to_string());
+                self.research_state
+                    .unlocked
+                    .push("data_processing".to_string());
+                self.research_state.current_research = Some("self_cleaning_servos".to_string());
+                self.sync_research_to_planet();
+            }
             "logistics" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();

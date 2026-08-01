@@ -65,6 +65,72 @@ impl StatId {
     pub fn from_id(id: &str) -> Option<Self> {
         StatId::ALL.into_iter().find(|stat| stat.id() == id)
     }
+
+    /// What this stat is called where a player can see it. Falls back to the
+    /// raw id, which is what an unlabelled stat deserves.
+    pub fn label(self) -> &'static str {
+        crate::data::game_data()
+            .research
+            .stats
+            .iter()
+            .find(|entry| entry.id == self.id())
+            .map(|entry| entry.label.as_str())
+            .unwrap_or_else(|| self.id())
+    }
+
+    /// Whether a tech moving this stat down is doing the player a favour.
+    pub fn lower_is_better(self) -> bool {
+        crate::data::game_data()
+            .research
+            .stats
+            .iter()
+            .find(|entry| entry.id == self.id())
+            .is_some_and(|entry| entry.lower_is_better)
+    }
+}
+
+/// One declared modifier, said in words: what it moves, by how much, and
+/// whether that is good news.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ModifierSummary {
+    pub label: &'static str,
+    pub change: String,
+    /// False when the tech is charging the player something for the rest.
+    pub is_gain: bool,
+}
+
+/// Describe a declared modifier for display. `None` for a modifier that does
+/// not parse, which cannot happen in shipped data - it is rejected at load.
+pub fn describe_modifier(def: &ModifierDef) -> Option<ModifierSummary> {
+    let (stat, op, value) = parse_modifier(def).ok()?;
+    let change = match op {
+        ModifierOp::Percent => format!("{}{:.0}%", sign(value), value * 100.0),
+        ModifierOp::Add => format!("{}{}", sign(value), trim_number(value)),
+    };
+    Some(ModifierSummary {
+        label: stat.label(),
+        change,
+        is_gain: (value < 0.0) == stat.lower_is_better(),
+    })
+}
+
+fn sign(value: f32) -> &'static str {
+    if value < 0.0 {
+        // The number already carries its minus.
+        ""
+    } else {
+        "+"
+    }
+}
+
+/// Whole numbers without a trailing `.0`, because "+1 drone" reads better
+/// than "+1.0 drone".
+fn trim_number(value: f32) -> String {
+    if (value - value.round()).abs() < 0.001 {
+        format!("{:.0}", value)
+    } else {
+        format!("{:.2}", value)
+    }
 }
 
 /// How a modifier folds into a stat.
@@ -179,6 +245,47 @@ mod tests {
             op: op.to_string(),
             value,
         }
+    }
+
+    #[test]
+    fn every_stat_the_game_knows_has_something_to_call_itself() {
+        for stat in StatId::ALL {
+            assert_ne!(
+                stat.label(),
+                stat.id(),
+                "{} is only ever shown as its raw id",
+                stat.id()
+            );
+        }
+    }
+
+    #[test]
+    fn a_percent_is_said_as_a_percent_and_a_count_as_a_count() {
+        let percent = describe_modifier(&modifier("drill_output", "percent", 0.25)).unwrap();
+        assert_eq!(percent.change, "+25%");
+        let count = describe_modifier(&modifier("drones_per_drill", "add", 1.0)).unwrap();
+        assert_eq!(count.change, "+1");
+        assert_eq!(count.label, StatId::DronesPerDrill.label());
+    }
+
+    #[test]
+    fn less_of_a_bad_thing_reads_as_a_gain_and_more_of_it_does_not() {
+        let quieter = describe_modifier(&modifier("dust_accumulation", "percent", -0.3)).unwrap();
+        assert_eq!(quieter.change, "-30%");
+        assert!(quieter.is_gain, "less dust is good news");
+
+        let hungrier = describe_modifier(&modifier("power_consumption", "percent", 0.2)).unwrap();
+        assert!(!hungrier.is_gain, "more power draw is a cost");
+
+        // And the ordinary direction still holds for ordinary stats.
+        let weaker = describe_modifier(&modifier("drill_output", "percent", -0.1)).unwrap();
+        assert!(!weaker.is_gain);
+    }
+
+    #[test]
+    fn a_modifier_the_game_cannot_read_is_not_described() {
+        assert!(describe_modifier(&modifier("not_a_stat", "add", 1.0)).is_none());
+        assert!(describe_modifier(&modifier("drill_output", "multiply", 1.0)).is_none());
     }
 
     #[test]

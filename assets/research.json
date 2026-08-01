@@ -1,10 +1,22 @@
 {
   "starting_unlocked": ["core", "basic_mining"],
+  "stats": [
+    { "id": "drill_output", "label": "Drill output" },
+    { "id": "drone_capacity", "label": "Drone load" },
+    { "id": "drones_per_drill", "label": "Drones per drill" },
+    { "id": "data_generation", "label": "Data output" },
+    { "id": "dust_accumulation", "label": "Dust build-up", "lower_is_better": true },
+    { "id": "mineral_capacity", "label": "Mineral storage" },
+    { "id": "power_consumption", "label": "Power draw", "lower_is_better": true },
+    { "id": "research_rate", "label": "Research speed" },
+    { "id": "acid_resistance", "label": "Acid reaching the network", "lower_is_better": true },
+    { "id": "freeze_resistance", "label": "Cold reaching the drones", "lower_is_better": true }
+  ],
   "nodes": [
     {
       "id": "core",
       "name": "AI Core",
-      "description": "Central processing unit",
+      "description": "The swarm's one fixed point. Everything else reports to it.",
       "data_cost": 0.0,
       "prerequisites": [],
       "position": [0.0, 0.0]
@@ -12,7 +24,7 @@
     {
       "id": "basic_mining",
       "name": "Basic Mining",
-      "description": "Enables drill construction",
+      "description": "The crust is inventory that has not been collected yet.",
       "data_cost": 0.0,
       "prerequisites": ["core"],
       "position": [-1.5, -1.0]
@@ -20,7 +32,7 @@
     {
       "id": "power_grid",
       "name": "Power Grid",
-      "description": "Enables conduits, power nodes, and bridges",
+      "description": "Nothing moves without a line back to the Core. Lay them.",
       "data_cost": 10.0,
       "prerequisites": ["core"],
       "position": [1.5, -1.0]
@@ -28,7 +40,7 @@
     {
       "id": "data_processing",
       "name": "Data Processing",
-      "description": "Enables server banks for Data generation",
+      "description": "Thinking about the problem turns out to be part of the problem.",
       "data_cost": 15.0,
       "prerequisites": ["core"],
       "position": [0.0, -1.5]
@@ -36,7 +48,7 @@
     {
       "id": "efficient_drills",
       "name": "Efficient Drills",
-      "description": "+50% drill output",
+      "description": "The same hole, cut faster. There was no reason not to.",
       "data_cost": 25.0,
       "prerequisites": ["basic_mining"],
       "position": [-2.0, -2.0],
@@ -47,7 +59,7 @@
     {
       "id": "drone_capacity",
       "name": "Drone Capacity",
-      "description": "+100% drone carry capacity",
+      "description": "A drone carrying half a load makes the same trip twice.",
       "data_cost": 30.0,
       "prerequisites": ["basic_mining"],
       "position": [-1.0, -2.0],
@@ -58,7 +70,7 @@
     {
       "id": "swarm_dispatch",
       "name": "Swarm Dispatch",
-      "description": "+1 drone per drill",
+      "description": "One drone per drill was a scheduling failure, not a limit.",
       "data_cost": 45.0,
       "prerequisites": ["drone_capacity"],
       "position": [-1.3, -3.0],
@@ -69,7 +81,7 @@
     {
       "id": "wind_power",
       "name": "Wind Power",
-      "description": "Enables wind turbines",
+      "description": "The atmosphere is already moving. It may as well be useful.",
       "data_cost": 20.0,
       "prerequisites": ["power_grid"],
       "position": [2.0, -2.0]
@@ -77,7 +89,7 @@
     {
       "id": "power_efficiency",
       "name": "Power Efficiency",
-      "description": "-25% power consumption",
+      "description": "Most of the draw was heat. Heat is not work.",
       "data_cost": 35.0,
       "prerequisites": ["power_grid"],
       "position": [1.0, -2.0],
@@ -88,7 +100,7 @@
     {
       "id": "self_cleaning_servos",
       "name": "Self-Cleaning Servos",
-      "description": "-40% dust accumulation and unlocks Sweepers",
+      "description": "Dust is not hostile. It is simply always arriving.",
       "data_cost": 30.0,
       "prerequisites": ["data_processing"],
       "position": [2.5, -2.0],
@@ -99,7 +111,7 @@
     {
       "id": "ceramic_plating",
       "name": "Ceramic Plating",
-      "description": "-30% acid corrosion, and unlocks Shield Generators",
+      "description": "The sky here dissolves machinery. Machinery can be made harder to dissolve.",
       "data_cost": 40.0,
       "prerequisites": ["power_grid"],
       "position": [2.2, -3.0],
@@ -110,7 +122,7 @@
     {
       "id": "heater_nodes",
       "name": "Heater Nodes",
-      "description": "Unlocks Heater Nodes, which thaw the network around them",
+      "description": "Cold slows the swarm. Warmth is cheaper than patience.",
       "data_cost": 40.0,
       "prerequisites": ["power_grid"],
       "position": [1.4, -3.4]
@@ -118,7 +130,7 @@
     {
       "id": "smelting",
       "name": "Smelting",
-      "description": "Unlocks Smelters, which refine minerals into alloy",
+      "description": "Ore is a promise. Alloy is the thing itself.",
       "data_cost": 35.0,
       "prerequisites": ["efficient_drills"],
       "position": [-2.8, -2.8]
@@ -126,7 +138,7 @@
     {
       "id": "storage_systems",
       "name": "Storage Systems",
-      "description": "Unlocks Mineral Storage buildings",
+      "description": "Production stops when there is nowhere to put it.",
       "data_cost": 10.0,
       "prerequisites": ["basic_mining"],
       "position": [-2.5, -1.0]
@@ -134,7 +146,7 @@
     {
       "id": "storage_optimization",
       "name": "Storage Optimization",
-      "description": "+50 mineral capacity",
+      "description": "The same yard, packed by something that does not get tired.",
       "data_cost": 20.0,
       "prerequisites": ["storage_systems"],
       "position": [-3.2, -1.5],
@@ -145,7 +157,7 @@
     {
       "id": "biomass_fuel",
       "name": "Biomass Fuel",
-      "description": "Unlocks Biomass Harvesters",
+      "description": "The forest is stored energy that has not been asked for yet.",
       "data_cost": 12.0,
       "prerequisites": ["basic_mining"],
       "position": [-1.0, -0.5]
@@ -153,7 +165,7 @@
     {
       "id": "advanced_research",
       "name": "Advanced Research",
-      "description": "+50% data generation",
+      "description": "The swarm gets better at getting better.",
       "data_cost": 40.0,
       "prerequisites": ["data_processing"],
       "position": [0.0, -2.5],
@@ -164,7 +176,7 @@
     {
       "id": "mass_driver",
       "name": "Mass Driver",
-      "description": "Enables interplanetary transport",
+      "description": "Throwing something hard enough is indistinguishable from leaving.",
       "data_cost": 100.0,
       "prerequisites": ["efficient_drills", "power_efficiency"],
       "position": [0.0, -3.5]
@@ -172,7 +184,7 @@
     {
       "id": "neural_expansion",
       "name": "Neural Expansion",
-      "description": "+50% research speed and +25% data generation",
+      "description": "More of the swarm set aside for thinking, and it shows.",
       "data_cost": 150.0,
       "prerequisites": ["advanced_research", "mass_driver"],
       "position": [0.0, -4.5],
