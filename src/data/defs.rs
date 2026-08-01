@@ -138,6 +138,13 @@ pub struct SeedShipStageDef {
     pub name: String,
     pub description: String,
     pub cost: SeedShipCost,
+    /// One line on what standing this stage up does for the world it is being
+    /// built on. Empty on the last stage, which does nothing but leave.
+    #[serde(default)]
+    pub boon: String,
+    /// What that boon actually is, in the same declared form research uses.
+    #[serde(default)]
+    pub modifiers: Vec<ModifierDef>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -326,11 +333,17 @@ impl GameData {
                 }
             }
         }
-
         let seed_ship: SeedShipData = load_json(seed_ship_json).unwrap_or_else(|_| SeedShipData {
             intake_per_second: SeedShipCost::default(),
             stages: vec![],
         });
+        for stage in &seed_ship.stages {
+            for modifier in &stage.modifiers {
+                if let Err(problem) = crate::engine::parse_modifier(modifier) {
+                    panic!("seed ship stage \"{}\": {}", stage.id, problem);
+                }
+            }
+        }
 
         let planet_file: PlanetDataFile =
             load_json(planets_json).unwrap_or_else(|_| PlanetDataFile { planets: vec![] });

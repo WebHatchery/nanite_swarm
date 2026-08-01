@@ -54,6 +54,16 @@ impl SeedShip {
         Self::stages().get(self.stage)
     }
 
+    /// The stages already built and still on the pad.
+    ///
+    /// They stop counting the moment the ship launches, which is the point:
+    /// the yard's advantages leave with it, and the next ship has to earn them
+    /// again.
+    pub fn standing_stages(&self) -> &'static [SeedShipStageDef] {
+        let built = self.stage.min(Self::stages().len());
+        &Self::stages()[..built]
+    }
+
     /// Every stage is paid for and the ship is ready to leave.
     pub fn is_complete(&self) -> bool {
         let count = self.stage_count();
@@ -176,13 +186,30 @@ impl PlanetState {
             return;
         }
 
+        // A finished stage changes what this world can do, so the stat sheet
+        // has to be rebuilt before anything reads it again.
+        self.refresh_stats();
+
         if self.seed_ship.is_complete() {
             self.notifications
                 .success("Seed Ship complete. This world is spent.");
             self.announce_achievement("seed_ship");
-        } else if let Some(stage) = self.seed_ship.stage() {
-            self.notifications
-                .info(format!("Seed Ship: {} under way", stage.name));
+            return;
+        }
+
+        // Report the boon of the stage just finished, not the next one's name:
+        // what the player gained is the interesting half.
+        let built = self.seed_ship.standing_stages();
+        match built.last().filter(|stage| !stage.boon.is_empty()) {
+            Some(stage) => self
+                .notifications
+                .success(format!("{} standing. {}", stage.name, stage.boon)),
+            None => {
+                if let Some(stage) = self.seed_ship.stage() {
+                    self.notifications
+                        .info(format!("Seed Ship: {} under way", stage.name));
+                }
+            }
         }
     }
 
@@ -389,6 +416,64 @@ mod tests {
             ship.absorb(&mut resources, intake(), 10_000.0);
         }
         assert!(ship.is_complete());
+    }
+
+    #[test]
+    fn the_shipped_stages_declare_only_modifiers_the_game_can_read() {
+        let stages = &crate::data::game_data().seed_ship.stages;
+        let with_boons = stages.iter().filter(|s| !s.modifiers.is_empty()).count();
+        assert!(with_boons >= 3, "the ship is still all cost and no payoff");
+        for stage in stages {
+            for modifier in &stage.modifiers {
+                assert!(
+                    crate::engine::parse_modifier(modifier).is_ok(),
+                    "stage {} declares an unreadable modifier",
+                    stage.id
+                );
+            }
+            if !stage.modifiers.is_empty() {
+                assert!(!stage.boon.is_empty(), "stage {} does not say", stage.id);
+            }
+        }
+    }
+
+    #[test]
+    fn a_standing_stage_works_for_the_world_it_stands_on() {
+        let mut state = state();
+        let before = state.stats.multiplier(crate::engine::StatId::DrillOutput);
+
+        // Finish the first stage, which pays the drills back.
+        state.toggle_seed_ship_commitment();
+        while state.seed_ship.stage_index() == 0 {
+            state.update_seed_ship(1.0);
+        }
+
+        assert_eq!(state.seed_ship.standing_stages().len(), 1);
+        assert!(
+            state.stats.multiplier(crate::engine::StatId::DrillOutput) > before,
+            "the finished stage did nothing"
+        );
+    }
+
+    #[test]
+    fn the_yards_advantages_leave_with_the_ship() {
+        let mut state = state();
+        state.toggle_seed_ship_commitment();
+        for _ in 0..2_000 {
+            state.update_seed_ship(1.0);
+        }
+        assert!(state.seed_ship.is_complete());
+        let boosted = state.stats.multiplier(crate::engine::StatId::DrillOutput);
+        assert!(boosted > 1.0);
+
+        state.seed_ship.mark_launched();
+        state.refresh_stats();
+
+        assert!(state.seed_ship.standing_stages().is_empty());
+        assert!(
+            state.stats.multiplier(crate::engine::StatId::DrillOutput) < boosted,
+            "the ship left but its yard did not"
+        );
     }
 
     #[test]

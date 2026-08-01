@@ -138,6 +138,17 @@ impl Stats {
         stats
     }
 
+    /// Fold in declared modifiers from somewhere other than research, such as
+    /// a finished Seed Ship stage. Unparseable entries are skipped here; they
+    /// are rejected at data load.
+    pub fn add_declared(&mut self, defs: &[ModifierDef]) {
+        for def in defs {
+            if let Ok((stat, op, value)) = parse_modifier(def) {
+                self.push(stat, op, value);
+            }
+        }
+    }
+
     fn push(&mut self, stat: StatId, op: ModifierOp, value: f32) {
         let index = stat as usize;
         match op {

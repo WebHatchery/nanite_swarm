@@ -7,7 +7,7 @@ use macroquad_toolkit::math::pulse01;
 use macroquad_toolkit::ui::draw_ui_text;
 
 const HEADER_HEIGHT: f32 = 72.0;
-const STAGE_HEIGHT: f32 = 86.0;
+const STAGE_HEIGHT: f32 = 102.0;
 const STAGE_GAP: f32 = 12.0;
 
 /// Actions from the Seed Ship view
@@ -153,6 +153,21 @@ fn draw_stage(
         11.0,
         Colors::TEXT_DIM,
     );
+    // What standing it up does for this world. A stage that only costs is a
+    // stage with no reason to be reached before the next one.
+    if !stage.boon.is_empty() {
+        draw_ui_text(
+            &stage.boon,
+            x + 14.0,
+            y + 62.0,
+            11.0,
+            if built {
+                Colors::SUCCESS
+            } else {
+                Colors::PRIMARY_SOFT
+            },
+        );
+    }
 
     let status = if built {
         "BUILT".to_string()
@@ -168,7 +183,7 @@ fn draw_stage(
     } else {
         Colors::SECONDARY
     };
-    draw_ui_text(&status, x + 14.0, y + 68.0, 12.0, status_color);
+    draw_ui_text(&status, x + 14.0, y + 84.0, 12.0, status_color);
 
     if active {
         let bar_w = width - 28.0;

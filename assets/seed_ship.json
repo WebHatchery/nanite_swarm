@@ -5,19 +5,31 @@
       "id": "cradle",
       "name": "Foundry Cradle",
       "description": "A berth to grow the hull in. The ground beneath it will not be needed again.",
-      "cost": { "minerals": 150.0, "data": 0.0, "biomass": 0.0 }
+      "cost": { "minerals": 150.0, "data": 0.0, "biomass": 0.0 },
+      "boon": "The foundry it feeds also feeds the drills.",
+      "modifiers": [
+        { "stat": "drill_output", "op": "percent", "value": 0.25 }
+      ]
     },
     {
       "id": "spine",
       "name": "Ion Spine",
       "description": "Drive assembly. Consumes the crust it was mined from at a favourable ratio.",
-      "cost": { "minerals": 250.0, "data": 40.0, "biomass": 0.0 }
+      "cost": { "minerals": 250.0, "data": 40.0, "biomass": 0.0 },
+      "boon": "Spare drive parts become spare drones.",
+      "modifiers": [
+        { "stat": "drones_per_drill", "op": "add", "value": 1.0 }
+      ]
     },
     {
       "id": "payload",
       "name": "Nanite Payload",
       "description": "A compressed copy of this swarm, folded small enough to survive transit.",
-      "cost": { "minerals": 400.0, "data": 80.0, "biomass": 60.0, "alloy": 60.0 }
+      "cost": { "minerals": 400.0, "data": 80.0, "biomass": 60.0, "alloy": 60.0 },
+      "boon": "Folding a swarm small teaches the swarm to think.",
+      "modifiers": [
+        { "stat": "data_generation", "op": "percent", "value": 0.5 }
+      ]
     },
     {
       "id": "ignition",

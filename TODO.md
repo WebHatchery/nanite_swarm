@@ -9,7 +9,7 @@ logistics puzzle at the heart of the GDD are the gaps.
 The Seed Ship exists: four stages declared in `assets/seed_ship.json`, its own screen behind the SHIP button, and a commit toggle that pours production into the yard at a capped intake, so it can only be paid for with sustained output. Launching it is the only way to reach an untouched world, and it is consumed doing so (rationale in `gdd.md` §4).
 
 - The launch is instant and silent. Give it the sequence the GDD asks for: a countdown, the ship leaving, an arrival vignette on the new world.
-- Give the stages consequences beyond cost — new capabilities, a changed skyline, a reason to reach stage three other than reaching stage four.
+- Each standing stage now works for the world it stands on — the Cradle feeds the drills, the Spine adds a drone per drill, the Payload sharpens data — declared as modifiers in `seed_ship.json` and lost when the ship launches with them. What is still missing is the skyline: nothing on the map shows a ship being built, so the whole megastructure exists only on its own screen.
 - Tie the ship to research: every stage is buildable from turn one, so the tree and the megastructure never meet.
 The campaign ends: every world taken and a finished ship with nowhere to send it shows SYSTEM CONSUMED with what the run consumed, once, and the player can carry on in the finished system. There is deliberately no failure state (rationale in `gdd.md` §5b).
 

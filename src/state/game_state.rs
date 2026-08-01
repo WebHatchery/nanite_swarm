@@ -331,7 +331,13 @@ impl PlanetState {
     /// values that live outside it into place. Call this after anything that
     /// changes `research.unlocked_techs`.
     pub fn refresh_stats(&mut self) {
-        self.stats = Stats::from_unlocked(&self.research.unlocked_techs);
+        let mut stats = Stats::from_unlocked(&self.research.unlocked_techs);
+        // A Seed Ship stage that is standing works for the world it stands on,
+        // until the ship takes it away.
+        for stage in self.seed_ship.standing_stages() {
+            stats.add_declared(&stage.modifiers);
+        }
+        self.stats = stats;
 
         let capacity = self.stats.apply(
             crate::engine::StatId::DroneCapacity,
