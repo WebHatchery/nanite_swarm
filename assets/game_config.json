@@ -25,6 +25,7 @@
     "buildings": {
         "core_power_consumption": 5.0,
         "drill_output_rate": 5.0,
-        "conduit_capacity": 2.0
+        "conduit_capacity": 2.0,
+    "congestion_route_penalty": 1.5
     }
 }

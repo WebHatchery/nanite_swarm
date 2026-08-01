@@ -7,7 +7,7 @@
 //! the player is actually optimising.
 
 use super::{Grid, GridPos};
-use macroquad_toolkit::grid::bfs_path as toolkit_bfs_path;
+use macroquad_toolkit::pathfinding::{find_path_with, Heuristic, Pos};
 
 /// Whether a drone may travel through this tile.
 ///
@@ -20,32 +20,65 @@ pub fn tile_carries_traffic(grid: &Grid, pos: GridPos) -> bool {
         .unwrap_or(false)
 }
 
-/// Shortest route from `from` to `to` across the conduit network.
+/// Shortest route from `from` to `to` across the conduit network, counting
+/// every tile the same.
 ///
 /// Returns the tiles to walk, excluding `from` and including `to`, or `None`
 /// when the network is broken between them. An empty route means the drone is
 /// already there.
 pub fn route_over_network(grid: &Grid, from: GridPos, to: GridPos) -> Option<Vec<GridPos>> {
+    route_over_network_weighted(grid, from, to, |_| 1.0)
+}
+
+/// The same route, with each tile costing whatever `tile_cost` says it does.
+///
+/// This is what makes a second parallel run worth laying: a saturated trunk
+/// can be made to cost more than the detour around it, and drones spread
+/// across the network by themselves rather than all queueing on the shortest
+/// path. A cost below one tile is clamped away — the search leans on costs
+/// never being cheaper than a step for its estimates to hold.
+pub fn route_over_network_weighted(
+    grid: &Grid,
+    from: GridPos,
+    to: GridPos,
+    tile_cost: impl Fn(GridPos) -> f32,
+) -> Option<Vec<GridPos>> {
     if from == to {
         return Some(Vec::new());
     }
 
-    toolkit_bfs_path(
-        from.to_tile_pos(),
-        to.to_tile_pos(),
-        false,
-        |pos| GridPos::from_tile_pos(pos).in_bounds(grid.width, grid.height),
+    find_path_with(
+        Pos::new(from.x, from.y),
+        Pos::new(to.x, to.y),
+        grid.width as usize,
+        grid.height as usize,
         |pos| {
-            let pos = GridPos::from_tile_pos(pos);
+            let pos = GridPos::new(pos.x, pos.y);
             pos == from || pos == to || tile_carries_traffic(grid, pos)
         },
+        |pos| tile_cost(GridPos::new(pos.x, pos.y)).max(1.0),
+        Heuristic::Manhattan,
+        false,
     )
     .map(|path| {
-        path.into_iter()
+        path.waypoints
+            .into_iter()
             .skip(1)
-            .map(GridPos::from_tile_pos)
+            .map(|pos| GridPos::new(pos.x, pos.y))
             .collect()
     })
+}
+
+/// What crossing a tile is worth to a router, given how many drones are
+/// already headed across it.
+///
+/// At or under capacity a tile is worth exactly one step. Every drone past the
+/// limit adds `penalty`, so a five-tile trunk carrying twice what it should can
+/// be worth a ten-tile detour, and the detour stops looking worth it again the
+/// moment the trunk clears.
+pub fn traffic_cost(load: u32, capacity: f32, penalty: f32) -> f32 {
+    let over = (load as f32 - capacity.max(1.0)).max(0.0);
+    1.0 + over * penalty.max(0.0)
 }
 
 #[cfg(test)]
@@ -65,6 +98,84 @@ mod tests {
         let drill = GridPos::new(length + 1, 0);
         grid.place_building(drill, BuildingType::Drill);
         (grid, core, drill)
+    }
+
+    /// Two runs from the drill to the Core: a short one along the top and a
+    /// longer one that dips down a row and comes back.
+    fn two_runs() -> (Grid, GridPos, GridPos, Vec<GridPos>, Vec<GridPos>) {
+        let mut grid = Grid::new(8, 4);
+        grid.reveal_around(GridPos::new(3, 1), 64);
+        let core = GridPos::new(0, 0);
+        let drill = GridPos::new(5, 0);
+        grid.place_building(core, BuildingType::Core);
+        grid.place_building(drill, BuildingType::Drill);
+
+        let short: Vec<GridPos> = (1..=4).map(|x| GridPos::new(x, 0)).collect();
+        let long: Vec<GridPos> = [
+            GridPos::new(5, 1),
+            GridPos::new(4, 1),
+            GridPos::new(3, 1),
+            GridPos::new(2, 1),
+            GridPos::new(1, 1),
+            GridPos::new(0, 1),
+        ]
+        .into_iter()
+        .collect();
+        for pos in short.iter().chain(long.iter()) {
+            grid.place_building(*pos, BuildingType::Conduit);
+        }
+        (grid, core, drill, short, long)
+    }
+
+    #[test]
+    fn a_tile_under_its_limit_costs_one_step_and_a_crowded_one_costs_more() {
+        assert_eq!(traffic_cost(0, 2.0, 1.5), 1.0);
+        assert_eq!(
+            traffic_cost(2, 2.0, 1.5),
+            1.0,
+            "at capacity is still a step"
+        );
+        assert_eq!(traffic_cost(4, 2.0, 1.5), 1.0 + 2.0 * 1.5);
+        // A penalty of nothing is how the old behaviour is spelled.
+        assert_eq!(traffic_cost(9, 2.0, 0.0), 1.0);
+    }
+
+    #[test]
+    fn the_shortest_run_is_taken_while_it_is_clear() {
+        let (grid, core, drill, short, _) = two_runs();
+        let route = route_over_network(&grid, drill, core).unwrap();
+        for pos in &short {
+            assert!(route.contains(pos), "{:?} was not on the route", pos);
+        }
+    }
+
+    #[test]
+    fn a_saturated_trunk_is_worth_going_around() {
+        let (grid, core, drill, short, long) = two_runs();
+        // Four drones on a run that passes two: the detour is now cheaper.
+        let route = route_over_network_weighted(&grid, drill, core, |pos| {
+            if short.contains(&pos) {
+                traffic_cost(4, 2.0, 1.5)
+            } else {
+                1.0
+            }
+        })
+        .unwrap();
+        for pos in &long {
+            assert!(route.contains(pos), "{:?} was not on the detour", pos);
+        }
+        for pos in &short {
+            assert!(!route.contains(pos), "{:?} was still used", pos);
+        }
+    }
+
+    #[test]
+    fn a_busy_trunk_that_is_still_the_only_way_home_is_used_anyway() {
+        // Congestion makes a tile expensive, never impassable: a single run
+        // carrying everything must not strand the swarm.
+        let (grid, core, drill) = line_network(4);
+        let route = route_over_network_weighted(&grid, drill, core, |_| traffic_cost(20, 2.0, 1.5));
+        assert_eq!(route.unwrap().len(), 5);
     }
 
     #[test]

@@ -27,8 +27,8 @@ A network tile passes `conduit_capacity` drones at full speed; past that they sh
 
 - A drill still dispatches at most one drone per tick, and only when a whole load is waiting, so a crew of two only helps on runs longer than the drill's fill time. Dispatching a partial load when a drone is idle and the run is long would make the crew worth having everywhere.
 - Congestion slows drones but never queues them: they pass through each other on a full tile rather than waiting. A real queue would make a junction readable at a glance.
-- Route cost ignores traffic — `route_over_network` still picks the shortest path even when it is the saturated one. Weighting by load would let drones spread across parallel runs by themselves.
-- Re-validating every in-flight drone's remaining path each tick is O(drones x path length); add a network revision counter and re-check only when the grid changes if it shows up in profiling.
+- Routing weights tiles by traffic (`traffic_cost`, `congestion_route_penalty` in `game_config.json`), so a saturated trunk is worth going around and a second parallel run finally earns its minerals. Congestion makes a tile expensive, never impassable. What it does not do is look ahead: each drone routes against the traffic that exists *now*, so a wave dispatched in the same tick all picks the same clear run and creates the jam it was avoiding.
+- Re-validating every in-flight drone's remaining path each tick is O(drones x path length), and routing is now A* over the network rather than a plain BFS; add a network revision counter and re-check only when the grid changes if either shows up in profiling.
 - A stalled drone shows an error flag and a HUD counter, but nothing points at *where* the break is; highlight the severed run on the map.
 - Add ore deposits with richness and depletion — every drill cuts the same `drill_output_rate` from any tile, so placement is spatially meaningless.
 - Make Bridge tiles real; they are a bool flag that does not even transmit power.

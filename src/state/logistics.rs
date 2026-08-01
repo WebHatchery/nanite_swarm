@@ -5,9 +5,11 @@
 //! back to work by itself once the network is whole again.
 
 use crate::engine::{
-    route_over_network, tile_carries_traffic, BuildingType, Drone, DroneEvent, DroneState, Grid,
-    GridPos, ResourceType, StatId,
+    route_over_network, route_over_network_weighted, tile_carries_traffic, traffic_cost,
+    BuildingType, Drone, DroneEvent, DroneState, Grid, GridPos, ResourceType, StatId,
 };
+
+use std::collections::HashMap;
 
 use super::game_state::PlanetState;
 use super::simulation::{HAZARD_COUNTER_RADIUS, HAZARD_COUNTER_STRENGTH};
@@ -58,16 +60,23 @@ impl PlanetState {
     /// Stop drones whose route has been cut, and restart the ones whose route
     /// has come back.
     fn resolve_routes(&mut self, core: GridPos) -> Vec<DroneEvent> {
+        // Borrowed field by field: the router reads the traffic map while the
+        // drones are being handed new routes.
         let grid = &self.grid;
+        let cost = network_cost(
+            &self.traffic,
+            self.config.buildings.conduit_capacity,
+            self.config.buildings.congestion_route_penalty,
+        );
         let mut events = Vec::new();
 
         for drone in self.drones.drones_mut() {
             match drone.state {
                 DroneState::Error => {
-                    repath(grid, drone, core);
+                    repath(grid, drone, core, &cost);
                 }
                 DroneState::MovingToCore | DroneState::MovingToDrill => {
-                    if !route_is_intact(grid, drone) && !repath(grid, drone, core) {
+                    if !route_is_intact(grid, drone) && !repath(grid, drone, core, &cost) {
                         events.push(drone.block());
                     }
                 }
@@ -76,7 +85,7 @@ impl PlanetState {
                     // drop it before heading home: a drone that walks the route
                     // back is what makes a long run cost throughput.
                     drone.carrying = 0.0;
-                    match route_over_network(grid, drone.position, drone.home) {
+                    match route_over_network_weighted(grid, drone.position, drone.home, &cost) {
                         Some(route) => drone.return_to_drill(route),
                         None => events.push(drone.block()),
                     }
@@ -169,6 +178,20 @@ impl PlanetState {
             .count()
     }
 
+    /// What each network tile is worth to a router this tick.
+    ///
+    /// Routing that ignores traffic sends every drone down the same shortest
+    /// run no matter how saturated it is, which leaves a second parallel run
+    /// doing nothing. Weighting by load is what makes laying one worth the
+    /// minerals.
+    fn route_cost(&self) -> impl Fn(GridPos) -> f32 + '_ {
+        network_cost(
+            &self.traffic,
+            self.config.buildings.conduit_capacity,
+            self.config.buildings.congestion_route_penalty,
+        )
+    }
+
     /// Is this tile over its throughput limit right now?
     pub fn is_congested(&self, pos: GridPos) -> bool {
         let capacity = self.config.buildings.conduit_capacity.max(1.0);
@@ -196,7 +219,8 @@ impl PlanetState {
             if delivered + self.drones.drone_capacity > hopper_ceiling {
                 continue;
             }
-            let Some(route) = route_over_network(&self.grid, from, pos) else {
+            let Some(route) = route_over_network_weighted(&self.grid, from, pos, self.route_cost())
+            else {
                 continue;
             };
             if best
@@ -207,7 +231,10 @@ impl PlanetState {
             }
         }
 
-        best.or_else(|| route_over_network(&self.grid, from, core).map(|route| (core, route)))
+        best.or_else(|| {
+            route_over_network_weighted(&self.grid, from, core, self.route_cost())
+                .map(|route| (core, route))
+        })
     }
 
     /// Powered buildings whose recipe eats ore.
@@ -276,7 +303,8 @@ impl PlanetState {
             // consumer yet, so it always goes home to the Core.
             let delivery = match resource {
                 ResourceType::Minerals => self.delivery_for(producer, core),
-                _ => route_over_network(&self.grid, producer, core).map(|route| (core, route)),
+                _ => route_over_network_weighted(&self.grid, producer, core, self.route_cost())
+                    .map(|route| (core, route)),
             };
             let Some((destination, route)) = delivery else {
                 // Powered but no pipe anywhere: it piles up on the pad instead
@@ -334,7 +362,7 @@ impl PlanetState {
 /// carrying, otherwise home to its drill. This is both how a re-route around a
 /// cut happens and how a stalled drone goes back to work once the network is
 /// whole. Returns `false` when the network cannot carry it there at all.
-fn repath(grid: &Grid, drone: &mut Drone, core: GridPos) -> bool {
+fn repath(grid: &Grid, drone: &mut Drone, core: GridPos, cost: impl Fn(GridPos) -> f32) -> bool {
     let carrying = drone.carrying;
     let destination = match drone.state {
         // Whatever it was sent to, which may be a processing building.
@@ -349,7 +377,7 @@ fn repath(grid: &Grid, drone: &mut Drone, core: GridPos) -> bool {
         return true;
     }
 
-    let Some(route) = route_over_network(grid, drone.position, destination) else {
+    let Some(route) = route_over_network_weighted(grid, drone.position, destination, cost) else {
         return false;
     };
 
@@ -371,6 +399,19 @@ fn route_is_intact(grid: &Grid, drone: &Drone) -> bool {
         return true;
     };
     corridor.iter().all(|pos| tile_carries_traffic(grid, *pos))
+}
+
+/// The routing cost of every network tile, given who is already on it.
+fn network_cost(
+    traffic: &HashMap<(i32, i32), u32>,
+    capacity: f32,
+    penalty: f32,
+) -> impl Fn(GridPos) -> f32 + '_ {
+    let capacity = capacity.max(1.0);
+    move |pos: GridPos| {
+        let load = traffic.get(&(pos.x, pos.y)).copied().unwrap_or(0);
+        traffic_cost(load, capacity, penalty)
+    }
 }
 
 #[cfg(test)]
@@ -433,6 +474,44 @@ mod tests {
     /// dispatch, travel out over the network, delivery, and the walk home. If
     /// the tick length, drone speed, drill cycle or route cost changes, this
     /// number moves.
+    #[test]
+    fn a_second_run_takes_the_load_the_first_one_cannot() {
+        // A short run and a longer parallel one, both reaching the drill.
+        let (mut state, core, drill) = state_with_run(4);
+        let detour: Vec<GridPos> = (0..=5)
+            .map(|step| GridPos::new(core.x + step, core.y + 1))
+            .collect();
+        for pos in &detour {
+            state.grid.get_mut(*pos).unwrap().terrain = crate::engine::TerrainType::Empty;
+            state.select_building(BuildingType::Conduit);
+            assert!(state.try_place_building(*pos), "detour piece at {:?}", pos);
+        }
+        state.grid.update_power_grid();
+
+        // With everything clear, the drill routes down the short run.
+        let clear = state.delivery_for(drill, core).expect("a route home");
+        assert!(
+            clear.1.iter().all(|pos| pos.y == core.y),
+            "the clear route left the short run: {:?}",
+            clear.1
+        );
+
+        // Now saturate it. The same drill should prefer the longer way round.
+        for step in 1..=4 {
+            state.traffic.insert((core.x + step, core.y), 6);
+        }
+        let crowded = state.delivery_for(drill, core).expect("a route home");
+        assert!(
+            crowded.1.iter().any(|pos| pos.y == core.y + 1),
+            "the crowded route stayed on the saturated run: {:?}",
+            crowded.1
+        );
+        assert!(
+            crowded.1.len() > clear.1.len(),
+            "the detour was not actually longer"
+        );
+    }
+
     #[test]
     fn a_drill_beside_the_core_delivers_four_loads_in_ten_seconds() {
         let (mut state, _core, _drill) = state_with_run(0);

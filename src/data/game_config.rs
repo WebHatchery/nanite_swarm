@@ -44,6 +44,9 @@ pub struct BuildingConfig {
     pub drill_output_rate: f32,
     /// Drones one network tile passes at full speed before they share it.
     pub conduit_capacity: f32,
+    /// What each drone past that limit adds to the tile's routing cost, in
+    /// tiles. Zero routes everything down the shortest run regardless.
+    pub congestion_route_penalty: f32,
 }
 
 impl Default for GameConfig {
@@ -78,6 +81,7 @@ impl Default for GameConfig {
                 // Minerals cut per second by one drill.
                 drill_output_rate: 5.0,
                 conduit_capacity: 2.0,
+                congestion_route_penalty: 1.5,
             },
         }
     }
