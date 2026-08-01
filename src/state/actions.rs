@@ -114,6 +114,7 @@ impl PlanetState {
             self.output_buffers.remove(&(pos.x, pos.y));
             self.input_buffers.remove(&(pos.x, pos.y));
             self.pod_loads.remove(&(pos.x, pos.y));
+            self.pad_cargo.remove(&(pos.x, pos.y));
 
             self.resources.minerals += mineral_cost * refund_ratio;
             self.resources.energy += energy_cost * refund_ratio;

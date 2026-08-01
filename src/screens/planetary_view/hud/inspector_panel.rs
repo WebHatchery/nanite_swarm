@@ -168,11 +168,14 @@ pub(super) fn draw(
                 status_text = format!("{} - {:.0} out", status_text, waiting_out);
             }
         }
-        // A driver's route matters more than the word "Powered" does, and the
-        // Power row above is already saying that.
-        if building_type == BuildingType::MassDriver {
-            if let Some(tile_pos) = tile_pos_with_building {
-                status_text = state.export_summary(tile_pos);
+        // What a driver is throwing and what a pad is holding both matter more
+        // than the word "Powered" does, and the Power row above already says
+        // whether it has any.
+        if let Some(tile_pos) = tile_pos_with_building {
+            match building_type {
+                BuildingType::MassDriver => status_text = state.export_summary(tile_pos),
+                BuildingType::LandingPad => status_text = state.pad_summary(tile_pos),
+                _ => {}
             }
         }
         let status_color = if tile_building.is_some() && !tile_powered {

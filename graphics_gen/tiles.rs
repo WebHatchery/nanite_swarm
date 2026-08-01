@@ -75,6 +75,7 @@ pub fn generate_tiles() {
     save_building_with_icon("building_shield_generator", create_shield_generator());
     save_building_with_icon("building_smelter", create_smelter());
     save_building_with_icon("building_mass_driver", create_mass_driver());
+    save_building_with_icon("building_landing_pad", create_landing_pad());
 }
 
 fn create_ground() -> RgbaImage {
@@ -587,6 +588,28 @@ fn create_mass_driver() -> RgbaImage {
     // Breech and its footing
     draw_rect(&mut img, 3, 22, 8, 8, Rgba([72, 78, 92, 255]));
     draw_rect(&mut img, 5, 24, 4, 4, Rgba([200, 140, 60, 255]));
+    add_edge_darkening(&mut img, 2, 8);
+    img
+}
+
+fn create_landing_pad() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([36, 40, 44, 255]));
+    add_noise(&mut img, 5, 2525);
+    // Apron, with the scorched ring a pod leaves behind
+    draw_circle(&mut img, 16, 16, 12, Rgba([58, 62, 70, 255]));
+    draw_circle(&mut img, 16, 16, 10, Rgba([46, 50, 58, 255]));
+    // Approach markings
+    draw_line(&mut img, 16, 6, 16, 11, Rgba([210, 170, 70, 255]));
+    draw_line(&mut img, 16, 21, 16, 26, Rgba([210, 170, 70, 255]));
+    draw_line(&mut img, 6, 16, 11, 16, Rgba([210, 170, 70, 255]));
+    draw_line(&mut img, 21, 16, 26, 16, Rgba([210, 170, 70, 255]));
+    // Catch cradle
+    draw_rect(&mut img, 12, 12, 8, 8, Rgba([84, 90, 102, 255]));
+    draw_rect(&mut img, 14, 14, 4, 4, Rgba([120, 200, 230, 255]));
+    // Corner beacons
+    for (x, y) in [(7, 7), (24, 7), (7, 24), (24, 24)] {
+        draw_circle(&mut img, x, y, 1, Rgba([120, 220, 255, 255]));
+    }
     add_edge_darkening(&mut img, 2, 8);
     img
 }

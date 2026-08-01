@@ -20,6 +20,7 @@ pub enum BuildingType {
     HeaterNode,       // Thaws the network nearby on frozen worlds
     ShieldGenerator,  // Holds acid off everything nearby
     MassDriver,       // Throws cargo at another world
+    LandingPad,       // Catches what another world threw
 }
 
 impl BuildingType {
@@ -39,6 +40,7 @@ impl BuildingType {
             BuildingType::HeaterNode => "heater_node",
             BuildingType::ShieldGenerator => "shield_generator",
             BuildingType::MassDriver => "mass_driver",
+            BuildingType::LandingPad => "landing_pad",
         }
     }
 
@@ -58,6 +60,7 @@ impl BuildingType {
             "heater_node" => Some(BuildingType::HeaterNode),
             "shield_generator" => Some(BuildingType::ShieldGenerator),
             "mass_driver" => Some(BuildingType::MassDriver),
+            "landing_pad" => Some(BuildingType::LandingPad),
             _ => None,
         }
     }
@@ -101,7 +104,7 @@ impl BuildingType {
 mod tests {
     use super::BuildingType;
 
-    const ALL: [BuildingType; 14] = [
+    const ALL: [BuildingType; 15] = [
         BuildingType::Core,
         BuildingType::Drill,
         BuildingType::Conduit,
@@ -116,6 +119,7 @@ mod tests {
         BuildingType::HeaterNode,
         BuildingType::ShieldGenerator,
         BuildingType::MassDriver,
+        BuildingType::LandingPad,
     ];
 
     #[test]

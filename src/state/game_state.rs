@@ -162,6 +162,10 @@ pub struct PlanetState {
     /// Pods thrown this step, waiting for the campaign to put them in flight.
     #[serde(default)]
     pub launched_pods: Vec<super::shipping::Shipment>,
+    /// What each Landing Pad is currently piled with. A pad holds one cargo at
+    /// a time, the same way a drill's pad only ever holds ore.
+    #[serde(default)]
+    pub pad_cargo: std::collections::HashMap<(i32, i32), ResourceType>,
     /// Everything unlocked research does to the simulation, folded into one
     /// sheet. Derived from `research.unlocked_techs` — never edited directly,
     /// always rebuilt by [`PlanetState::refresh_stats`].
@@ -348,6 +352,7 @@ impl PlanetState {
             export: None,
             pod_loads: std::collections::HashMap::new(),
             launched_pods: Vec::new(),
+            pad_cargo: std::collections::HashMap::new(),
             last_offline_seconds: 0.0,
             last_offline_simulated: 0.0,
             offline_notice_timer: 0.0,

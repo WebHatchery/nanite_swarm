@@ -467,6 +467,20 @@ impl PlanetState {
                 );
             }
         }
+
+        // A Landing Pad with a pod on it is a producer of whatever that pod
+        // held. Nothing else about it is special: the cargo sits there until a
+        // drone walks it somewhere, so a pad with no pipe to it is a pile.
+        for pos in self.powered_positions(BuildingType::LandingPad) {
+            let key = (pos.x, pos.y);
+            if self.output_buffers.get(&key).copied().unwrap_or(0.0) <= 0.0 {
+                continue;
+            }
+            if let Some(cargo) = self.pad_cargo.get(&key) {
+                producers.push((pos, *cargo));
+            }
+        }
+
         producers
     }
 }

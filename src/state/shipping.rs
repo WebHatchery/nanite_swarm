@@ -47,6 +47,12 @@ impl Shipment {
         }
         (1.0 - self.remaining / self.transit).clamp(0.0, 1.0)
     }
+
+    /// Arrived, and circling: the destination has no pad with room on it. The
+    /// cargo is not lost — it lands the moment somewhere can take it.
+    pub fn is_holding(&self) -> bool {
+        self.remaining <= 0.0
+    }
 }
 
 /// How long a throw between two worlds takes, off their orbits.
@@ -60,6 +66,66 @@ impl PlanetState {
     /// Powered Mass Drivers standing on this world.
     pub fn mass_drivers_online(&self) -> usize {
         self.powered_positions(BuildingType::MassDriver).len()
+    }
+
+    /// Powered Landing Pads standing on this world. A world with none of these
+    /// cannot be shipped to, however many drivers are pointed at it.
+    pub fn landing_pads_online(&self) -> usize {
+        self.powered_positions(BuildingType::LandingPad).len()
+    }
+
+    /// Unload a pod onto the emptiest pad with room for it, and say whether
+    /// anything caught it.
+    ///
+    /// A pad holds one cargo at a time, because what lands on it goes on the
+    /// pad exactly as a drill's ore goes on its own — one pile, one resource,
+    /// one crew to carry it off. A pod that finds nowhere to land stays up.
+    pub(super) fn accept_pod(&mut self, cargo: ResourceType, amount: f32) -> bool {
+        let capacity = self.config.mass_driver.pad_capacity;
+        let mut best: Option<(GridPos, f32)> = None;
+        for pos in self.powered_positions(BuildingType::LandingPad) {
+            let key = (pos.x, pos.y);
+            let held = self.output_buffers.get(&key).copied().unwrap_or(0.0);
+            // A pad already piled with something else is not a place to put
+            // this, however much room is left on it.
+            if held > 0.0 && self.pad_cargo.get(&key) != Some(&cargo) {
+                continue;
+            }
+            if held + amount > capacity {
+                continue;
+            }
+            if best.is_none_or(|(_, most)| held < most) {
+                best = Some((pos, held));
+            }
+        }
+
+        let Some((pos, _)) = best else {
+            return false;
+        };
+        let key = (pos.x, pos.y);
+        *self.output_buffers.entry(key).or_insert(0.0) += amount;
+        self.pad_cargo.insert(key, cargo);
+        true
+    }
+
+    /// What a pad is holding, for the inspector.
+    pub fn pad_summary(&self, pos: GridPos) -> String {
+        let key = (pos.x, pos.y);
+        let held = self.output_buffers.get(&key).copied().unwrap_or(0.0);
+        if held <= 0.0 {
+            return "Empty - waiting on a pod".to_string();
+        }
+        let cargo = self
+            .pad_cargo
+            .get(&key)
+            .copied()
+            .unwrap_or(ResourceType::Minerals);
+        format!(
+            "{:.0}/{:.0} {}",
+            held,
+            self.config.mass_driver.pad_capacity,
+            cargo_name(cargo)
+        )
     }
 
     /// How full the fullest pod on the world is, as a share of a whole one.
@@ -208,28 +274,49 @@ impl Campaign {
             }
         }
 
-        let mut landed = Vec::new();
-        self.shipments.retain(|shipment| {
-            if shipment.remaining > 0.0 {
-                return true;
-            }
-            landed.push(shipment.clone());
-            false
-        });
+        // A pod that has arrived only comes down if something on the ground can
+        // catch it. Anything else stays in the list holding, and tries again
+        // next step: cargo circling overhead is recoverable, cargo deleted for
+        // want of a pad is not.
+        let arrived: Vec<usize> = self
+            .shipments
+            .iter()
+            .enumerate()
+            .filter(|(_, shipment)| shipment.is_holding())
+            .map(|(index, _)| index)
+            .collect();
 
-        for shipment in landed {
+        let mut caught = Vec::new();
+        for index in arrived {
+            let shipment = self.shipments[index].clone();
             let Some(planet) = self.planet_mut(shipment.to) else {
                 // The only world that can vanish is one that never existed.
+                caught.push(index);
                 continue;
             };
-            planet.resources.add(shipment.cargo, shipment.amount);
+            if !planet.accept_pod(shipment.cargo, shipment.amount) {
+                continue;
+            }
             planet.notifications.success(format!(
                 "{:.0} {} landed from {}",
                 shipment.amount,
                 cargo_name(shipment.cargo),
                 crate::data::game_data().planet(shipment.from).name
             ));
+            caught.push(index);
         }
+
+        for index in caught.into_iter().rev() {
+            self.shipments.remove(index);
+        }
+    }
+
+    /// Pods that have arrived and found nowhere to land.
+    pub fn holding_shipments(&self) -> usize {
+        self.shipments
+            .iter()
+            .filter(|shipment| shipment.is_holding())
+            .count()
     }
 }
 

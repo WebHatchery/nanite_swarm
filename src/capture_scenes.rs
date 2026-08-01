@@ -529,6 +529,24 @@ impl Game {
                 transit,
             });
         }
+        // Something on the far end to catch them, or the panel is a warning
+        // rather than a working route.
+        if let Some(receiver) = self.campaign.planet_mut(target) {
+            if let Some(core) = receiver.grid.find_core() {
+                let pad = GridPos::new(core.x, core.y + 1);
+                if let Some(tile) = receiver.grid.get_mut(pad) {
+                    tile.terrain = engine::TerrainType::Empty;
+                }
+                receiver.resources.energy = 500.0;
+                receiver.config.resources.max_energy = 500.0;
+                receiver.grid.reveal_around(pad, 1);
+                receiver.unlock_building(BuildingType::LandingPad);
+                receiver.select_building(BuildingType::LandingPad);
+                receiver.try_place_building(pad);
+                receiver.grid.update_power_grid();
+            }
+        }
+
         self.campaign.update_shipments(0.0);
     }
 

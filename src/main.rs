@@ -246,6 +246,12 @@ impl Game {
                 let stockpiles: [Option<f32>; state::PLANET_COUNT] =
                     std::array::from_fn(|index| self.campaign.stockpile(index));
                 let colonized = self.campaign.colonized_flags();
+                let pads: [usize; state::PLANET_COUNT] = std::array::from_fn(|index| {
+                    self.campaign
+                        .planet(index)
+                        .map(|planet| planet.landing_pads_online())
+                        .unwrap_or(0)
+                });
                 let view = screens::MapView {
                     current_planet: self.campaign.current_index(),
                     has_mass_driver: self.has_mass_driver(),
@@ -253,6 +259,7 @@ impl Game {
                     colonized: &colonized,
                     stockpiles: &stockpiles,
                     drivers_online: self.campaign.current().mass_drivers_online(),
+                    pads: &pads,
                     export: self.campaign.export_order(),
                     pod_fraction: self.campaign.current().pod_fraction(),
                     shipments: self.campaign.shipments(),

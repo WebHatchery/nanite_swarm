@@ -111,6 +111,9 @@ pub struct MassDriverConfig {
     pub seconds_per_orbit_unit: f32,
     /// However close two worlds are, a throw takes at least this long.
     pub min_transit_seconds: f32,
+    /// How much cargo one Landing Pad can hold waiting for collection. A pod
+    /// that finds every pad full holds in orbit until one has room.
+    pub pad_capacity: f32,
     /// Resource ids a driver will accept, in the order the map cycles them.
     pub cargo: Vec<String>,
 }
@@ -182,6 +185,7 @@ impl Default for MassDriverConfig {
             pod_capacity: 60.0,
             seconds_per_orbit_unit: 0.6,
             min_transit_seconds: 20.0,
+            pad_capacity: 120.0,
             cargo: vec!["minerals".to_string(), "alloy".to_string()],
         }
     }

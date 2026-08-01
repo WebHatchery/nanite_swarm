@@ -35,6 +35,9 @@ pub struct MapView<'a> {
     pub stockpiles: &'a [Option<f32>],
     /// Powered Mass Drivers standing on the current world.
     pub drivers_online: usize,
+    /// Powered Landing Pads on each world, so the panel can say when the
+    /// target has nothing to catch a pod with.
+    pub pads: &'a [usize],
     pub export: Option<ExportOrder>,
     pub pod_fraction: f32,
     pub shipments: &'a [Shipment],

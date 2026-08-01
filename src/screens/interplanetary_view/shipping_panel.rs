@@ -63,9 +63,26 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
         action = InterplanetaryAction::CycleExportTarget;
     }
 
+    // A route to a world with nothing to catch a pod is not an error, but the
+    // pods will circle it until one gets built, so say so where it is set.
+    if let Some(order) = view.export {
+        if view.pads.get(order.target).copied().unwrap_or(0) == 0 {
+            draw_ui_text(
+                &format!(
+                    "{} has no Landing Pad",
+                    crate::data::game_data().planet(order.target).name
+                ),
+                x + 12.0,
+                y + 128.0,
+                10.0,
+                Colors::WARNING,
+            );
+        }
+    }
+
     // The pod being loaded, so a route that is set but starved reads as
     // starved rather than as broken.
-    let bar_y = y + 132.0;
+    let bar_y = y + 144.0;
     draw_rectangle(x + 12.0, bar_y, button_w, 8.0, Colors::SURFACE_DARK);
     draw_rectangle(
         x + 12.0,
@@ -110,13 +127,14 @@ fn draw_in_flight_list(shipments: &[Shipment], x: f32, y: f32, w: f32) {
             10.0,
             Colors::TEXT,
         );
-        draw_ui_text(
-            &format!("{:.0}s", shipment.remaining),
-            x + w - 46.0,
-            row_y,
-            10.0,
-            Colors::TEXT_DIM,
-        );
+        // A pod that has arrived and found nowhere to land says so rather than
+        // sitting on "0s" forever.
+        let (eta, eta_color) = if shipment.is_holding() {
+            ("HOLD".to_string(), Colors::WARNING)
+        } else {
+            (format!("{:.0}s", shipment.remaining), Colors::TEXT_DIM)
+        };
+        draw_ui_text(&eta, x + w - 46.0, row_y, 10.0, eta_color);
         row_y += 16.0;
     }
     if shipments.len() > LISTED_SHIPMENTS {
