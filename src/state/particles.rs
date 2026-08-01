@@ -55,6 +55,21 @@ impl PlanetState {
         self.particles.spawn_burst(origin, 10, &config);
     }
 
+    /// A drone waving its error flag: the route under it just went away.
+    pub(super) fn spawn_route_break_burst(&mut self, pos: GridPos) {
+        let origin = Vec2::new(pos.x as f32, pos.y as f32);
+        let config = BurstConfig {
+            speed: (0.4, 1.0),
+            size: (2.0, 2.0),
+            life: (0.4, 0.8),
+            colors: vec![Color::new(1.0, 0.3, 0.3, 1.0)],
+            drag: 1.4,
+            shrink: true,
+            ..Default::default()
+        };
+        self.particles.spawn_burst(origin, 8, &config);
+    }
+
     pub(super) fn spawn_drone_trails(&mut self, delta_time: f32) {
         self.particle_timer += delta_time;
         if self.particle_timer < 0.08 {

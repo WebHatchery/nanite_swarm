@@ -72,14 +72,23 @@ pub(super) fn draw(
     draw_hud_panel(theme, right.ops, Some("OPERATIONS"));
     let ops_content_y = ops_y + if ops_h < 110.0 { 48.0 } else { 54.0 };
     let ops_row_gap = if ops_h < 110.0 { 17.0 } else { 20.0 };
+    let stalled = state.stalled_drone_count();
+    let (drone_label, drone_color) = if stalled > 0 {
+        (
+            format!("{} ({} STALLED)", state.drones.total_count(), stalled),
+            error,
+        )
+    } else {
+        (format!("{}", state.drones.total_count()), text)
+    };
     draw_status_row(
         theme,
         right_x + 12.0,
         ops_content_y,
         right_w - 24.0,
         "Drones",
-        &format!("{}", state.drones.total_count()),
-        text,
+        &drone_label,
+        drone_color,
     );
     draw_status_row(
         theme,

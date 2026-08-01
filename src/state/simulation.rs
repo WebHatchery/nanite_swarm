@@ -1,6 +1,6 @@
 //! Per-tick simulation: drills, servers, dust, biomass, tutorial, power collapse
 
-use crate::engine::{find_path, BuildingType, DroneState, TerrainType};
+use crate::engine::{BuildingType, DroneState, TerrainType};
 
 use super::game_state::PlanetState;
 
@@ -73,7 +73,7 @@ impl PlanetState {
 
         // Process drills and server banks
         if self.power_collapse_shutdown <= 0.0 {
-            self.update_drills(sim_delta);
+            self.update_logistics(sim_delta, allow_visuals);
             self.update_servers(sim_delta);
         }
 
@@ -133,53 +133,6 @@ impl PlanetState {
             anim.timer = (anim.timer - delta_time).max(0.0);
         }
         self.placement_anims.retain(|anim| anim.timer > 0.0);
-    }
-
-    /// Update drill production and drone dispatching
-    fn update_drills(&mut self, delta_time: f32) {
-        let drill_positions = self.grid.find_buildings(BuildingType::Drill);
-        let core_pos = self.grid.find_core();
-
-        if let Some(core) = core_pos {
-            for drill_pos in drill_positions {
-                // Check if drill is powered
-                let Some(building) = self.grid.get(drill_pos).and_then(|t| t.building.as_ref())
-                else {
-                    continue;
-                };
-                let is_powered = building.powered;
-                if building.is_dust_stalled() {
-                    continue;
-                }
-                let efficiency = building.dust_efficiency();
-
-                if !is_powered {
-                    continue;
-                }
-
-                let key = (drill_pos.x, drill_pos.y);
-                let timer = self.drill_timers.entry(key).or_insert(0.0);
-                *timer += delta_time;
-
-                if *timer >= 2.0 {
-                    *timer = 0.0;
-
-                    let idle_drone = self
-                        .drones
-                        .drones()
-                        .iter()
-                        .find(|d| d.home_drill == drill_pos && d.state == DroneState::Idle)
-                        .map(|d| d.id);
-
-                    if let Some(drone_id) = idle_drone {
-                        let path = find_path(&self.grid, drill_pos, core);
-                        if let Some(drone) = self.drones.get_drone_mut(drone_id) {
-                            drone.dispatch_to_core(core, path, 10.0 * efficiency);
-                        }
-                    }
-                }
-            }
-        }
     }
 
     /// Update server bank data generation

@@ -15,6 +15,7 @@
       "start_unlocked": true,
       "unlocked_by": null,
       "transmits_power": true,
+      "carries_traffic": true,
       "generates_power": true,
       "consumes_power": false,
       "uses_efficiency": false
@@ -34,6 +35,7 @@
       "start_unlocked": true,
       "unlocked_by": null,
       "transmits_power": false,
+      "carries_traffic": false,
       "generates_power": false,
       "consumes_power": true,
       "uses_efficiency": false
@@ -53,6 +55,7 @@
       "start_unlocked": false,
       "unlocked_by": "power_grid",
       "transmits_power": true,
+      "carries_traffic": true,
       "generates_power": false,
       "consumes_power": false,
       "uses_efficiency": false
@@ -72,6 +75,7 @@
       "start_unlocked": false,
       "unlocked_by": "power_grid",
       "transmits_power": true,
+      "carries_traffic": true,
       "generates_power": false,
       "consumes_power": false,
       "uses_efficiency": false
@@ -91,6 +95,7 @@
       "start_unlocked": false,
       "unlocked_by": "wind_power",
       "transmits_power": false,
+      "carries_traffic": false,
       "generates_power": true,
       "consumes_power": false,
       "uses_efficiency": true
@@ -110,6 +115,7 @@
       "start_unlocked": false,
       "unlocked_by": "data_processing",
       "transmits_power": false,
+      "carries_traffic": false,
       "generates_power": false,
       "consumes_power": true,
       "uses_efficiency": false
@@ -129,6 +135,7 @@
       "start_unlocked": false,
       "unlocked_by": "power_grid",
       "transmits_power": false,
+      "carries_traffic": false,
       "generates_power": false,
       "consumes_power": false,
       "uses_efficiency": false
@@ -148,6 +155,7 @@
       "start_unlocked": false,
       "unlocked_by": "self_cleaning_servos",
       "transmits_power": false,
+      "carries_traffic": false,
       "generates_power": false,
       "consumes_power": true,
       "uses_efficiency": false
@@ -167,6 +175,7 @@
       "start_unlocked": false,
       "unlocked_by": "storage_systems",
       "transmits_power": false,
+      "carries_traffic": false,
       "generates_power": false,
       "consumes_power": true,
       "uses_efficiency": false
@@ -186,6 +195,7 @@
       "start_unlocked": false,
       "unlocked_by": "biomass_fuel",
       "transmits_power": false,
+      "carries_traffic": false,
       "generates_power": false,
       "consumes_power": false,
       "uses_efficiency": false

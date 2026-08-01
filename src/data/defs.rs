@@ -33,6 +33,10 @@ pub struct BuildingDef {
     pub start_unlocked: bool,
     pub unlocked_by: Option<String>,
     pub transmits_power: bool,
+    /// Whether drones may travel through this building's tile. The logistics
+    /// network is the conduit spaghetti the player lays down, not open ground.
+    #[serde(default)]
+    pub carries_traffic: bool,
     pub generates_power: bool,
     pub consumes_power: bool,
     pub uses_efficiency: bool,

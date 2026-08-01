@@ -36,6 +36,35 @@ The difficulty comes from spatial management, not just resource costs.
 - **Power Grid:** Energy spreads to adjacent buildings automatically but requires "Repeater Nodes" to travel long distances.
 - **Drone Swarm:** Resources are not invisible numbers; they are physical items carried by small Worker Drones along your pipes. If a pipe is broken, the drones stop and wave an error flag.
 
+#### Decision: drones route on the network (2026-08-01)
+
+The pillar was open between routing drones along the conduit network and
+redesigning around free-flying drones with congestion. **The network wins.**
+Conduits are the logistics graph, not just a power cable: a delivery only
+happens if an unbroken run of Conduit / Power Node / Core tiles joins a Drill to
+the Core, and travel time is the length of that run, not the straight-line
+distance.
+
+The reasoning:
+
+- Free flight deletes the puzzle. With drones crossing open ground the only
+  spatial decision left is "build the drill nearer the Core", and the map stops
+  being a thing you route through.
+- Three of the campaign's hazards only exist because the network is physical:
+  Acid Rain dissolving pipes, Heater Nodes placed *along* the pipe run, and
+  Venus's Void gaps that force Bridges. Free flight makes all three inert.
+- Congestion pressure is easier to make legible on a graph than in open space.
+  Throughput belongs to a conduit segment the player can see and widen; a
+  free-flight jam is invisible and unfixable.
+- It is the cheaper build. Power connectivity already flood-fills the same
+  graph, so routing reuses the structure the game has instead of adding a
+  steering/avoidance layer.
+
+What follows from it: conduit segments carry a throughput limit (congestion is a
+property of the run, not the drone count); Bridges become real crossings rather
+than a cosmetic flag; and terrain matters because it dictates where a run can
+physically go.
+
 ### The Terrain Dilemma (Cannibalization)
 
 The map is composed of tiles with distinct properties. The player must choose between Harvesting or Utilizing.

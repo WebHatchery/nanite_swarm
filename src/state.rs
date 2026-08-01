@@ -6,6 +6,7 @@
 
 mod actions;
 mod game_state;
+mod logistics;
 mod particles;
 mod persistence;
 mod progress;

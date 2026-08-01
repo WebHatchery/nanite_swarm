@@ -13,9 +13,14 @@ logistics puzzle at the heart of the GDD are the gaps.
 
 ## The logistics puzzle
 
-- **Decide the pillar**: either route drones along the conduit network with throughput limits and real crossings (the GDD's "Spaghetti"), or formally redesign around free-flying drones with congestion. Conduits are power-only today; drones BFS over raw terrain and ignore conduits, buildings, and each other. Content and balance downstream both depend on this.
-- Re-path drones when the grid changes, emit the existing unused `DroneEvent::PathBlocked`, and surface a broken-route error flag as the GDD promises.
-- Make congestion and throughput a scaling pressure; today it is one drone per drill with no interaction.
+Pillar decided 2026-08-01: **drones route along the conduit network** (rationale
+in `gdd.md` §3). Drones now walk Conduit/Power Node/Core tiles only, stop and
+flag when a run is cut, and resume when it is repaired.
+
+- Give conduit segments a throughput limit so a shared trunk congests: route cost should rise with traffic, and the HUD should show a saturated run. `conduit_throughput` (10.0) is still a dead config field.
+- Let a drill dispatch more than one drone, and let drones queue on a segment, so throughput has something to push against — today it is one drone per drill with no interaction.
+- Re-validating every in-flight drone's remaining path each tick is O(drones x path length); add a network revision counter and re-check only when the grid changes if it shows up in profiling.
+- A stalled drone shows an error flag and a HUD counter, but nothing points at *where* the break is; highlight the severed run on the map.
 - Add ore deposits with richness and depletion — drills currently output a hardcoded 10 minerals/cycle from any tile, so placement is spatially meaningless.
 - Make Bridge tiles real; they are a bool flag that does not even transmit power.
 

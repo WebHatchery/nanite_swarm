@@ -1,7 +1,6 @@
 //! Resource flow and automation logic
 
-use super::{Grid, GridPos};
-use macroquad_toolkit::grid::bfs_path as toolkit_bfs_path;
+use super::GridPos;
 use serde::{Deserialize, Serialize};
 
 /// Resource types that can be gathered and transported
@@ -78,6 +77,17 @@ impl Drone {
         self.progress = 0.0;
     }
 
+    /// Stop where the drone stands and wave an error flag. Cargo is kept: the
+    /// route is broken, not the drone.
+    pub fn block(&mut self) -> DroneEvent {
+        self.state = DroneState::Error;
+        self.target = self.position;
+        self.path.clear();
+        self.path_index = 0;
+        self.progress = 0.0;
+        DroneEvent::PathBlocked { drone_id: self.id }
+    }
+
     /// Update drone position and state
     pub fn update(&mut self, delta_time: f32) -> Option<DroneEvent> {
         match self.state {
@@ -103,7 +113,9 @@ impl Drone {
                             return Some(DroneEvent::ReachedDrill { drone_id: self.id });
                         }
                     } else {
-                        self.position = self.path[self.path_index];
+                        // `path_index` is the tile being moved toward, so the
+                        // tile just reached is the one before it.
+                        self.position = self.path[self.path_index - 1];
                     }
                 }
                 None
@@ -119,15 +131,18 @@ impl Drone {
 
     /// Get interpolated visual position for smooth rendering
     pub fn visual_position(&self) -> (f32, f32) {
-        if self.path_index < self.path.len() && self.path_index > 0 {
-            let from = self.path[self.path_index - 1];
-            let to = self.path[self.path_index];
-            let interp_x = from.x as f32 + (to.x - from.x) as f32 * self.progress;
-            let interp_y = from.y as f32 + (to.y - from.y) as f32 * self.progress;
-            (interp_x, interp_y)
+        let Some(to) = self.path.get(self.path_index) else {
+            return (self.position.x as f32, self.position.y as f32);
+        };
+        // On the first hop the drone is still leaving its current tile.
+        let from = if self.path_index > 0 {
+            self.path[self.path_index - 1]
         } else {
-            (self.position.x as f32, self.position.y as f32)
-        }
+            self.position
+        };
+        let interp_x = from.x as f32 + (to.x - from.x) as f32 * self.progress;
+        let interp_y = from.y as f32 + (to.y - from.y) as f32 * self.progress;
+        (interp_x, interp_y)
     }
 }
 
@@ -227,51 +242,6 @@ impl DroneManager {
     pub fn total_count(&self) -> usize {
         self.drones.len()
     }
-}
-
-/// Simple pathfinding - returns direct path (no obstacle avoidance yet)
-pub fn find_path(grid: &Grid, from: GridPos, to: GridPos) -> Vec<GridPos> {
-    if from == to {
-        return Vec::new();
-    }
-
-    let passable = |pos: GridPos, grid: &Grid| {
-        if let Some(tile) = grid.get(pos) {
-            !matches!(
-                tile.terrain,
-                super::TerrainType::Void | super::TerrainType::Water
-            ) || tile.bridge
-        } else {
-            false
-        }
-    };
-
-    if let Some(path) = toolkit_bfs_path(
-        from.to_tile_pos(),
-        to.to_tile_pos(),
-        false,
-        |pos| GridPos::from_tile_pos(pos).in_bounds(grid.width, grid.height),
-        |pos| passable(GridPos::from_tile_pos(pos), grid),
-    ) {
-        return path
-            .into_iter()
-            .skip(1)
-            .map(GridPos::from_tile_pos)
-            .collect();
-    }
-
-    // Fallback to direct path if BFS fails.
-    let mut path = Vec::new();
-    let mut current = from;
-    while current.x != to.x {
-        current.x += if current.x < to.x { 1 } else { -1 };
-        path.push(current);
-    }
-    while current.y != to.y {
-        current.y += if current.y < to.y { 1 } else { -1 };
-        path.push(current);
-    }
-    path
 }
 
 #[cfg(test)]
@@ -387,17 +357,44 @@ mod tests {
     }
 
     #[test]
-    fn find_path_returns_empty_for_same_position() {
-        let grid = Grid::new(4, 4);
-        let pos = GridPos::new(1, 1);
-        assert_eq!(find_path(&grid, pos, pos), Vec::new());
+    fn position_tracks_the_tile_the_drone_last_reached() {
+        let mut drone = Drone::new(1, GridPos::new(0, 0), 10.0, 5.0);
+        drone.dispatch_to_core(GridPos::new(3, 0), straight_path(3), 5.0);
+
+        // Half way along the first hop: still standing on the drill tile.
+        drone.update(0.1);
+        assert_eq!(drone.position, GridPos::new(0, 0));
+        let (vx, _) = drone.visual_position();
+        assert!(vx > 0.0 && vx < 1.0);
+
+        // Crossing the first hop lands the drone on the first path tile.
+        drone.update(0.2);
+        assert_eq!(drone.position, GridPos::new(1, 0));
     }
 
     #[test]
-    fn find_path_reaches_destination_across_open_ground() {
-        let grid = Grid::new(5, 5);
-        let path = find_path(&grid, GridPos::new(0, 0), GridPos::new(4, 4));
-        assert_eq!(path.last(), Some(&GridPos::new(4, 4)));
-        assert!(!path.is_empty());
+    fn blocking_a_drone_stops_it_where_it_stands_and_keeps_its_cargo() {
+        let mut drone = Drone::new(1, GridPos::new(0, 0), 10.0, 5.0);
+        drone.dispatch_to_core(GridPos::new(3, 0), straight_path(3), 7.0);
+        drone.update(0.3);
+
+        let event = drone.block();
+        assert!(matches!(event, DroneEvent::PathBlocked { drone_id: 1 }));
+        assert_eq!(drone.state, DroneState::Error);
+        assert_eq!(drone.carrying, 7.0);
+        assert_eq!(drone.position, GridPos::new(1, 0));
+        assert!(drone.path.is_empty());
+        // A blocked drone does not drift onwards.
+        assert!(drone.update(1.0).is_none());
+        assert_eq!(drone.position, GridPos::new(1, 0));
+    }
+
+    #[test]
+    fn block_is_idempotent_for_an_already_blocked_drone() {
+        let mut drone = Drone::new(1, GridPos::new(0, 0), 10.0, 5.0);
+        drone.block();
+        drone.block();
+        assert_eq!(drone.state, DroneState::Error);
+        assert_eq!(drone.position, GridPos::new(0, 0));
     }
 }

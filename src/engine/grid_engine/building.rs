@@ -38,6 +38,13 @@ impl Building {
             .transmits_power
     }
 
+    /// Check if drones may route through this building's tile
+    pub fn carries_traffic(&self) -> bool {
+        data::game_data()
+            .building(self.building_type.id())
+            .carries_traffic
+    }
+
     /// Check if this building generates power
     pub fn generates_power(&self) -> bool {
         data::game_data()
