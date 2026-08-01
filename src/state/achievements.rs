@@ -173,6 +173,26 @@ mod tests {
         assert!(state.achievements.is_unlocked("seed_ship"));
     }
 
+    #[test]
+    fn what_the_swarm_is_told_outlives_the_toast_that_said_it() {
+        let mut state = state();
+        state.config.resources.base_mineral_cap = 100_000.0;
+        state.resources.minerals = 500.0;
+        state.update_achievements();
+
+        // Long enough that nothing is left on screen.
+        state.notifications.update(60.0);
+        assert!(state.notifications.get_notifications().is_empty());
+        assert!(
+            state
+                .notifications
+                .history()
+                .iter()
+                .any(|entry| entry.message.contains("Stockpile")),
+            "the announcement was the only copy and it is gone"
+        );
+    }
+
     fn record(state: &PlanetState, name: &str) -> AchievementRecord {
         state
             .achievement_records()

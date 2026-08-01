@@ -244,6 +244,9 @@ pub struct PlanetState {
     pub show_help: bool,
     #[serde(skip, default)]
     pub build_palette_scroll: ScrollArea,
+    /// Where the Records screen's log is scrolled to.
+    #[serde(skip, default)]
+    pub log_scroll: ScrollArea,
     /// Things worth telling the player about as they happen. Achievements,
     /// finished research and Seed Ship stages all used to land silently.
     #[serde(skip, default)]
@@ -363,6 +366,7 @@ impl PlanetState {
             camera_drag_anchor: None,
             show_help: false,
             build_palette_scroll: ScrollArea::new(),
+            log_scroll: ScrollArea::new(),
             notifications: NotificationManager::default(),
             particles: ParticleSystem::new(),
             particle_timer: 0.0,

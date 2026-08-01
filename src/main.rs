@@ -239,9 +239,12 @@ impl Game {
                 // The world keeps running while the player reads what it has
                 // done, the same as the map and the research tree.
                 self.advance_simulation();
-                let planet = self.campaign.current();
+                let planet = self.campaign.current_mut();
                 let records = planet.achievement_records();
-                if render_records_view(&planet.name, &records) == RecordsAction::Close {
+                let name = planet.name.clone();
+                let log = planet.notifications.history().to_vec();
+                let action = render_records_view(&name, &records, &log, &mut planet.log_scroll);
+                if action == RecordsAction::Close {
                     self.phase = GamePhase::Playing;
                 }
             }
@@ -343,9 +346,10 @@ impl Game {
         // entirely, which is exactly when a finished directive matters.
         match self.phase {
             // The ship screen fills the middle, so its toasts go in the corner.
-            // Both of these fill the middle of the screen, so their toasts go
-            // low where there is nothing to cover.
-            GamePhase::SeedShip | GamePhase::Records => {
+            // The ship screen fills the middle, so its toasts go in the corner.
+            // Records draws none at all: the log on it is every message the
+            // toasts would be repeating, and it does not fade.
+            GamePhase::SeedShip => {
                 let anchor = screens::menu_anchor_low(screen_height());
                 screens::draw_toasts(self.campaign.current(), anchor);
             }
