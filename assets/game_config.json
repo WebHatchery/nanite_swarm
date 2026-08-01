@@ -26,7 +26,9 @@
         "core_power_consumption": 5.0,
         "drill_output_rate": 5.0,
         "conduit_capacity": 2.0,
-    "congestion_route_penalty": 1.5
+    "congestion_route_penalty": 1.5,
+    "partial_load_min_route": 6.0,
+    "partial_load_min_share": 0.5
     },
   "collapse": {
     "negative_power_seconds": 60.0,

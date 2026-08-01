@@ -76,6 +76,11 @@ pub struct BuildingConfig {
     /// What each drone past that limit adds to the tile's routing cost, in
     /// tiles. Zero routes everything down the shortest run regardless.
     pub congestion_route_penalty: f32,
+    /// How long a run has to be, in tiles, before a producer will send a drone
+    /// out with less than a full load rather than make it wait.
+    pub partial_load_min_route: f32,
+    /// The least a partial load may be, as a share of a full one.
+    pub partial_load_min_share: f32,
 }
 
 impl Default for GameConfig {
@@ -111,6 +116,8 @@ impl Default for GameConfig {
                 drill_output_rate: 5.0,
                 conduit_capacity: 2.0,
                 congestion_route_penalty: 1.5,
+                partial_load_min_route: 6.0,
+                partial_load_min_share: 0.5,
             },
             collapse: CollapseConfig::default(),
         }

@@ -44,6 +44,17 @@ impl PlanetState {
         self.update_traffic();
     }
 
+    /// Whether a part-full pad is worth a trip.
+    ///
+    /// Only on a run long enough that the walk dominates, and only once the pad
+    /// holds a worthwhile share of a load — otherwise a crew would trickle out
+    /// single grains of ore.
+    fn worth_a_partial_load(&self, carried: f32, load: f32, route_len: usize) -> bool {
+        let config = &self.config.buildings;
+        route_len as f32 >= config.partial_load_min_route
+            && carried >= load * config.partial_load_min_share
+    }
+
     /// Number of drones currently stalled on a broken route.
     pub fn stalled_drone_count(&self) -> usize {
         self.drones.count_by_state(DroneState::Error)
@@ -338,7 +349,7 @@ impl PlanetState {
                 .get(&(producer.x, producer.y))
                 .copied()
                 .unwrap_or(0.0);
-            if waiting < load {
+            if waiting <= 0.0 {
                 continue;
             }
 
@@ -356,6 +367,15 @@ impl PlanetState {
                 continue;
             };
 
+            // On a long run a drone that waits for a full load stands still
+            // while ore piles up behind it, which is why a second drone used to
+            // be worth nothing except on the longest runs. On a short run
+            // waiting costs almost nothing, because it comes straight back.
+            let carried = waiting.min(load);
+            if carried < load && !self.worth_a_partial_load(carried, load, route.len()) {
+                continue;
+            }
+
             let idle_drone = self
                 .drones
                 .drones()
@@ -367,10 +387,10 @@ impl PlanetState {
                 continue;
             };
             if let Some(buffer) = self.output_buffers.get_mut(&(producer.x, producer.y)) {
-                *buffer -= load;
+                *buffer -= carried;
             }
             if let Some(drone) = self.drones.get_drone_mut(drone_id) {
-                drone.dispatch(destination, route, load, resource);
+                drone.dispatch(destination, route, carried, resource);
             }
         }
     }
@@ -518,6 +538,115 @@ mod tests {
     /// dispatch, travel out over the network, delivery, and the walk home. If
     /// the tick length, drone speed, drill cycle or route cost changes, this
     /// number moves.
+    #[test]
+    fn partial_loads_lift_what_a_long_run_actually_delivers() {
+        /// Ore banked over a fixed stretch, with partial dispatch on or off.
+        fn delivered(allow_partial: bool) -> f32 {
+            let (mut state, _, _) = state_with_run(10);
+            state.research.unlocked_techs.push("swarm_dispatch".into());
+            state.refresh_stats();
+            // Room to bank the lot: at the shipped cap the pool clamps and
+            // every arrangement looks identical.
+            state.config.resources.base_mineral_cap = 1_000_000.0;
+            if !allow_partial {
+                // A threshold no run can reach is how "never" is spelled.
+                state.config.buildings.partial_load_min_route = 10_000.0;
+            }
+            let before = state.resources.minerals;
+            for _ in 0..1_800 {
+                state.step(crate::state::TICK_SECONDS, false);
+            }
+            state.resources.minerals - before
+        }
+
+        let waiting = delivered(false);
+        let sending = delivered(true);
+        assert!(
+            sending > waiting,
+            "partial loads delivered {} against {} for waiting",
+            sending,
+            waiting
+        );
+    }
+
+    #[test]
+    fn a_long_run_sends_a_part_full_drone_rather_than_leave_it_standing() {
+        let (mut state, core, drill) = state_with_run(8);
+        let load = state.drones.drone_capacity;
+        // Two thirds of a load on the pad and a drone idle beside it.
+        state.output_buffers.insert((drill.x, drill.y), load * 0.67);
+
+        state.dispatch_producers(core);
+
+        let carrying: f32 = state
+            .drones
+            .drones()
+            .iter()
+            .filter(|drone| drone.state != DroneState::Idle)
+            .map(|drone| drone.carrying)
+            .sum();
+        assert!(
+            carrying > 0.0 && carrying < load,
+            "nothing left with a part load: {}",
+            carrying
+        );
+        // And the pad was debited exactly what left, not a whole load.
+        let left = state
+            .output_buffers
+            .get(&(drill.x, drill.y))
+            .copied()
+            .unwrap_or(0.0);
+        assert!(left.abs() < 0.001, "the pad still holds {}", left);
+    }
+
+    #[test]
+    fn a_short_run_still_waits_for_a_full_load() {
+        let (mut state, core, drill) = state_with_run(2);
+        let load = state.drones.drone_capacity;
+        state.output_buffers.insert((drill.x, drill.y), load * 0.67);
+
+        state.dispatch_producers(core);
+
+        assert!(
+            state
+                .drones
+                .drones()
+                .iter()
+                .all(|drone| drone.state == DroneState::Idle),
+            "a drone left on a run short enough to wait out"
+        );
+    }
+
+    #[test]
+    fn a_pad_with_barely_anything_on_it_is_not_worth_the_walk() {
+        let (mut state, core, drill) = state_with_run(8);
+        let load = state.drones.drone_capacity;
+        state.output_buffers.insert((drill.x, drill.y), load * 0.1);
+
+        state.dispatch_producers(core);
+
+        assert!(state
+            .drones
+            .drones()
+            .iter()
+            .all(|drone| drone.state == DroneState::Idle));
+    }
+
+    #[test]
+    fn a_full_load_goes_out_however_short_the_run() {
+        let (mut state, core, drill) = state_with_run(2);
+        let load = state.drones.drone_capacity;
+        state.output_buffers.insert((drill.x, drill.y), load);
+
+        state.dispatch_producers(core);
+
+        assert!(state
+            .drones
+            .drones()
+            .iter()
+            .any(|drone| drone.carrying >= load));
+    }
+
     #[test]
     fn an_unbroken_run_has_nothing_to_point_at() {
         let (state, _, _) = state_with_run(4);
