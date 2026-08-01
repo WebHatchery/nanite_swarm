@@ -421,6 +421,42 @@ impl Game {
                 planet.select_building(engine::BuildingType::ShieldGenerator);
                 planet.selected_tile = Some(shield);
             }
+            "smelting" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                let planet = self.campaign.current_mut();
+                planet.unlock_building(engine::BuildingType::Smelter);
+                let Some(core) = planet.grid.find_core() else {
+                    return;
+                };
+                // A smelter on the run, so the drill's ore is refined on the
+                // way in rather than reaching the pool.
+                let smelter = engine::GridPos::new(core.x + 1, core.y - 1);
+                if let Some(tile) = planet.grid.get_mut(smelter) {
+                    tile.terrain = engine::TerrainType::Empty;
+                    tile.building = None;
+                }
+                planet.select_building(engine::BuildingType::Smelter);
+                planet.try_place_building(smelter);
+
+                // A smelter costs more power than the Core makes on its own,
+                // so the base needs generation before it can refine anything.
+                planet.unlock_building(engine::BuildingType::WindTurbine);
+                for offset in [(-1, 0), (-1, -1)] {
+                    let pos = engine::GridPos::new(core.x + offset.0, core.y + offset.1);
+                    if let Some(tile) = planet.grid.get_mut(pos) {
+                        tile.terrain = engine::TerrainType::Empty;
+                        tile.building = None;
+                    }
+                    planet.select_building(engine::BuildingType::WindTurbine);
+                    planet.try_place_building(pos);
+                }
+                planet.grid.update_power_grid();
+                for _ in 0..600 {
+                    planet.step(0.1, false);
+                }
+                planet.selected_tile = Some(smelter);
+            }
             "congestion" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();
@@ -446,7 +482,7 @@ impl Game {
                     for _ in 0..3 {
                         let id = planet.drones.spawn_drone(drill);
                         if let Some(drone) = planet.drones.get_drone_mut(id) {
-                            drone.dispatch_to_core(core, route.clone(), 5.0);
+                            drone.dispatch(core, route.clone(), 5.0);
                         }
                     }
                 }

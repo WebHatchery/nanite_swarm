@@ -164,6 +164,9 @@ pub struct PlanetState {
     // Minerals a drill has cut but not yet handed to a drone
     #[serde(skip)]
     pub drill_buffers: std::collections::HashMap<(i32, i32), f32>,
+    // Ore delivered to a processing building and not yet consumed
+    #[serde(default)]
+    pub input_buffers: std::collections::HashMap<(i32, i32), f32>,
     // Drones currently crossing each network tile, rebuilt every tick
     #[serde(skip)]
     pub traffic: std::collections::HashMap<(i32, i32), u32>,
@@ -249,6 +252,7 @@ impl PlanetState {
             particle_timer: 0.0,
             placement_anims: Vec::new(),
             drill_buffers: std::collections::HashMap::new(),
+            input_buffers: std::collections::HashMap::new(),
             traffic: std::collections::HashMap::new(),
         };
         state.refresh_stats();

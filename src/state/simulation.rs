@@ -91,8 +91,14 @@ impl PlanetState {
             let mut delivered_total = 0.0;
             for event in events {
                 match event {
-                    crate::engine::DroneEvent::ReachedCore { amount, .. } => {
-                        delivered_total += amount;
+                    crate::engine::DroneEvent::Delivered { amount, at, .. } => {
+                        if Some(at) == self.grid.find_core() {
+                            delivered_total += amount;
+                        } else {
+                            // Ore dropped at a processing building waits there
+                            // until that building gets round to it.
+                            *self.input_buffers.entry((at.x, at.y)).or_insert(0.0) += amount;
+                        }
                     }
                     crate::engine::DroneEvent::ReachedDrill { drone_id } => {
                         if let Some(drone) = self.drones.get_drone_mut(drone_id) {
@@ -193,9 +199,17 @@ impl PlanetState {
                 continue;
             }
 
+            let delivered = self
+                .input_buffers
+                .get(&(pos.x, pos.y))
+                .copied()
+                .unwrap_or(0.0);
+
             let mut scale = building.dust_efficiency() * delta_time;
             if recipe.minerals_in > 0.0 {
-                scale = scale.min(self.resources.minerals / recipe.minerals_in);
+                // Ore has to have been carried here. A smelter with an empty
+                // hopper is idle however full the global pool is.
+                scale = scale.min(delivered / recipe.minerals_in);
             }
             if recipe.biomass_in > 0.0 {
                 scale = scale.min(self.resources.biomass / recipe.biomass_in);
@@ -204,7 +218,12 @@ impl PlanetState {
                 continue;
             }
 
-            self.resources.minerals -= recipe.minerals_in * scale;
+            if recipe.minerals_in > 0.0 {
+                let taken = recipe.minerals_in * scale;
+                if let Some(buffer) = self.input_buffers.get_mut(&(pos.x, pos.y)) {
+                    *buffer = (*buffer - taken).max(0.0);
+                }
+            }
             self.resources.biomass -= recipe.biomass_in * scale;
             self.resources.alloy += recipe.alloy_out * scale;
         }

@@ -60,9 +60,11 @@ Techs declare their effects as modifiers in `research.json` (`engine::modifiers`
 
 ## Content
 
-The first chain exists: a Smelter refines minerals into alloy while powered, driven by a `recipe` block on the building definition, and the Seed Ship's last two stages take nothing else instead.
+The first chain exists: drones carry ore to a Smelter, which refines it into alloy while powered, and the Seed Ship's last two stages take nothing else instead. A drill sends its load to the nearest processing building with room and only falls back to the Core, so where a Smelter sits is a logistics decision.
 
-- The chain runs on the global pool. A Smelter anywhere with power draws from the same numbers a drill on the far side of the map filled, so placing it is not a logistics decision. Drones should carry ore *to* it and alloy *away*, which is the real fix and a much larger one.
+- Alloy still teleports. A Smelter pushes its output straight into the global pool rather than a drone carrying it to the Core, so the second half of the round trip is missing and a Smelter parked at the far end of the map exports for free.
+- A Smelter has no drones of its own; it is fed entirely by drill crews, so a distant Smelter starves its own drill's throughput rather than the two being planned separately.
+- `biomass_in` still draws from the global pool, because no recipe uses it yet. The next recipe that does needs the hopper generalised past ore.
 - One recipe, one product. Deeper chains (alloy plus biomass into something) and more processing buildings are the content this unlocks.
 - `RecipeDef` is a fixed struct of named fields, so a third input needs a code change rather than a data change. It wants to be a map of resource id to amount once there are more than two.
 - Grow the building set beyond 12 across processing, logistics, and megastructure parts. Hazard counters exist now; nothing else on that list does.

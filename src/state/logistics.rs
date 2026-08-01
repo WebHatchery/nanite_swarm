@@ -16,6 +16,9 @@ use super::simulation::{HAZARD_COUNTER_RADIUS, HAZARD_COUNTER_STRENGTH};
 /// drone load. Past this the ore is simply not cut: a drill that outruns its
 /// logistics is the pressure, not free storage.
 const DRILL_BUFFER_LOADS: f32 = 3.0;
+/// How many drone loads a processing building will let pile up in its hopper
+/// before drones start taking ore elsewhere.
+const HOPPER_LOADS: f32 = 3.0;
 
 impl PlanetState {
     /// Run one logistics tick: re-check live routes, then dispatch drills.
@@ -173,6 +176,50 @@ impl PlanetState {
             .is_some_and(|load| *load as f32 > capacity)
     }
 
+    /// Where a load of ore from `from` should go, and how to get there.
+    ///
+    /// A processing building with room in its hopper takes priority over the
+    /// Core, nearest first, so a Smelter parked beside the drills is fed before
+    /// the ore ever reaches the pool. Placement is the decision; this only
+    /// reads it.
+    fn delivery_for(&self, from: GridPos, core: GridPos) -> Option<(GridPos, Vec<GridPos>)> {
+        let hopper_ceiling = self.drones.drone_capacity * HOPPER_LOADS;
+        let mut best: Option<(GridPos, Vec<GridPos>)> = None;
+
+        for pos in self.ore_consumers() {
+            let delivered = self
+                .input_buffers
+                .get(&(pos.x, pos.y))
+                .copied()
+                .unwrap_or(0.0);
+            if delivered + self.drones.drone_capacity > hopper_ceiling {
+                continue;
+            }
+            let Some(route) = route_over_network(&self.grid, from, pos) else {
+                continue;
+            };
+            if best
+                .as_ref()
+                .is_none_or(|(_, shortest)| route.len() < shortest.len())
+            {
+                best = Some((pos, route));
+            }
+        }
+
+        best.or_else(|| route_over_network(&self.grid, from, core).map(|route| (core, route)))
+    }
+
+    /// Powered buildings whose recipe eats ore.
+    fn ore_consumers(&self) -> Vec<GridPos> {
+        crate::data::game_data()
+            .buildings
+            .iter()
+            .filter(|def| def.recipe.minerals_in > 0.0)
+            .filter_map(|def| BuildingType::from_id(&def.id))
+            .flat_map(|kind| self.powered_positions(kind))
+            .collect()
+    }
+
     /// Cut ore into each drill's buffer, and send a drone the moment there is
     /// a full load waiting for it.
     fn update_drills(&mut self, delta_time: f32, core: GridPos) {
@@ -207,9 +254,11 @@ impl PlanetState {
                 continue;
             }
 
-            let Some(route) = route_over_network(&self.grid, drill_pos, core) else {
-                // Powered but no pipe to the Core: the ore piles up at the
-                // drill instead of teleporting into the pool.
+            // Ore goes to whatever wants it and is nearest on the network,
+            // and to the Core only when nothing does.
+            let Some((destination, route)) = self.delivery_for(drill_pos, core) else {
+                // Powered but no pipe anywhere: the ore piles up at the drill
+                // instead of teleporting into the pool.
                 continue;
             };
 
@@ -227,7 +276,7 @@ impl PlanetState {
                 *buffer -= load;
             }
             if let Some(drone) = self.drones.get_drone_mut(drone_id) {
-                drone.dispatch_to_core(core, route, load);
+                drone.dispatch(destination, route, load);
             }
         }
     }
@@ -240,7 +289,8 @@ impl PlanetState {
 fn repath(grid: &Grid, drone: &mut Drone, core: GridPos) -> bool {
     let carrying = drone.carrying;
     let destination = match drone.state {
-        DroneState::MovingToCore => core,
+        // Whatever it was sent to, which may be a processing building.
+        DroneState::MovingToCore => drone.target,
         DroneState::MovingToDrill => drone.home_drill,
         _ if carrying > 0.0 => core,
         _ => drone.home_drill,
@@ -256,7 +306,7 @@ fn repath(grid: &Grid, drone: &mut Drone, core: GridPos) -> bool {
     };
 
     if destination == core {
-        drone.dispatch_to_core(core, route, carrying);
+        drone.dispatch(destination, route, carrying);
     } else {
         drone.return_to_drill(route);
     }
@@ -354,7 +404,7 @@ mod tests {
         for _ in 0..count {
             let id = state.drones.spawn_drone(tile);
             let drone = state.drones.get_drone_mut(id).unwrap();
-            drone.dispatch_to_core(tile, vec![tile], 1.0);
+            drone.dispatch(tile, vec![tile], 1.0);
         }
         state.update_traffic();
     }

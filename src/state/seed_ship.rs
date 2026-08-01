@@ -207,14 +207,50 @@ mod tests {
         crate::data::game_data().seed_ship.intake_per_second
     }
 
-    /// The first production chain: a Smelter eats minerals and makes alloy,
-    /// and the Seed Ship's later stages will not take anything else instead.
-    #[test]
-    fn a_smelter_turns_minerals_into_alloy_while_it_has_power() {
+    /// A drill beside the Core and a Smelter on its other side, both powered.
+    fn state_with_smelter() -> (PlanetState, GridPos, GridPos) {
         let mut state = state();
         state.resources.alloy = 0.0;
         let core = state.grid.find_core().unwrap();
-        let pos = GridPos::new(core.x + 1, core.y);
+        let drill = GridPos::new(core.x + 1, core.y);
+        let smelter = GridPos::new(core.x, core.y + 1);
+        for pos in [drill, smelter] {
+            state.grid.get_mut(pos).unwrap().terrain = crate::engine::TerrainType::Empty;
+            state.grid.reveal_around(pos, 1);
+        }
+        state.unlock_building(BuildingType::Smelter);
+        state.select_building(BuildingType::Smelter);
+        assert!(state.try_place_building(smelter));
+        state.select_building(BuildingType::Drill);
+        assert!(state.try_place_building(drill));
+        state.grid.update_power_grid();
+        (state, drill, smelter)
+    }
+
+    /// The first production chain: ore is carried to a Smelter, refined into
+    /// alloy, and the Seed Ship's later stages take nothing else instead.
+    #[test]
+    fn a_smelter_refines_the_ore_that_is_carried_to_it() {
+        let (mut state, _drill, smelter) = state_with_smelter();
+
+        for _ in 0..100 {
+            state.step(0.1, false);
+        }
+
+        assert!(state.resources.alloy > 0.0, "the smelter made nothing");
+        assert!(state.alloy_rate() > 0.0);
+        // Ore reached the hopper rather than the global pool.
+        assert!(state.input_buffers.contains_key(&(smelter.x, smelter.y)));
+    }
+
+    #[test]
+    fn a_smelter_nobody_delivers_to_stays_idle_however_full_the_pool_is() {
+        let mut state = state();
+        state.resources.alloy = 0.0;
+        state.resources.minerals = 100_000.0;
+        // Powered, but with no drill anywhere to send it anything.
+        let core = state.grid.find_core().unwrap();
+        let pos = GridPos::new(core.x, core.y + 1);
         state.grid.get_mut(pos).unwrap().terrain = crate::engine::TerrainType::Empty;
         state.grid.reveal_around(pos, 1);
         state.unlock_building(BuildingType::Smelter);
@@ -222,17 +258,36 @@ mod tests {
         assert!(state.try_place_building(pos));
         state.grid.update_power_grid();
 
-        let minerals_before = state.resources.minerals;
         for _ in 0..100 {
             state.step(0.1, false);
         }
+        assert_eq!(state.resources.alloy, 0.0);
+    }
 
-        assert!(state.resources.alloy > 0.0, "the smelter made nothing");
+    #[test]
+    fn ore_goes_to_the_smelter_before_it_goes_to_the_pool() {
+        let (mut state, _drill, smelter) = state_with_smelter();
+        state.resources.minerals = 0.0;
+        state.config.resources.base_mineral_cap = 100_000.0;
+
+        // One delivery's worth of time.
+        for _ in 0..40 {
+            state.step(0.1, false);
+        }
+
+        let hopper = state
+            .input_buffers
+            .get(&(smelter.x, smelter.y))
+            .copied()
+            .unwrap_or(0.0);
         assert!(
-            state.resources.minerals < minerals_before,
-            "alloy appeared without costing minerals"
+            hopper > 0.0 || state.resources.alloy > 0.0,
+            "nothing reached the smelter"
         );
-        assert!(state.alloy_rate() > 0.0);
+        assert_eq!(
+            state.resources.minerals, 0.0,
+            "ore went to the pool while the smelter had room"
+        );
     }
 
     #[test]

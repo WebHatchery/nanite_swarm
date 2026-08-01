@@ -128,15 +128,27 @@ pub(super) fn draw(
             &format!("{:.0}% {}", tile_dust, dust_label),
             dust_color,
         );
-        let status_text = if tile_building.is_some() {
+        let mut status_text = if tile_building.is_some() {
             if tile_powered {
-                "Powered"
+                "Powered".to_string()
             } else {
-                "No power"
+                "No power".to_string()
             }
         } else {
-            "Blueprint"
+            "Blueprint".to_string()
         };
+        // A processing building's hopper is the difference between "idle" and
+        // "waiting on a drone", and the player cannot tell them apart otherwise.
+        if let Some(pos) = hovered_pos.or(state.selected_tile) {
+            let hopper = state
+                .input_buffers
+                .get(&(pos.x, pos.y))
+                .copied()
+                .unwrap_or(0.0);
+            if hopper > 0.0 {
+                status_text = format!("{} - {:.0} ore", status_text, hopper);
+            }
+        }
         let status_color = if tile_building.is_some() && !tile_powered {
             error
         } else {
@@ -148,7 +160,7 @@ pub(super) fn draw(
             row_base + 40.0,
             right_w - 32.0,
             "Status",
-            status_text,
+            &status_text,
             status_color,
         );
         if let Some(tile_pos) = tile_pos_with_building {
