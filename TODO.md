@@ -37,9 +37,9 @@ A network tile passes `conduit_capacity` drones at full speed; past that they sh
 
 `state::Campaign` owns all five worlds, the current index, and the directive; travel keeps every planet exactly as it was left, and the save carries the lot.
 
-- Left-behind worlds keep working: they run the same simulation in coarse one-second steps without visuals, and the solar map lists what each has stockpiled. Two seams remain. Their stat sheets are stale, because research only syncs to the world in front of the player (see the research hoist below), and nothing runs while the map or the menu is open, so time only passes on the surface.
+- Left-behind worlds keep working: they run the same simulation in coarse one-second steps without visuals, and the solar map lists what each has stockpiled. One seam remains — nothing runs while the map or the menu is open, so time only passes on the surface.
 - Turn Mass Drivers into gameplay: a building, export schedules, transit time, and receiving landing pads. The tech now gates Seed Ship launches, so it is no longer a flag that does nothing, but nothing is exported over it yet.
-- Hoist research to the campaign. Every `PlanetState` carries its own `research` copy and only the current planet's is authoritative, kept in step by `sync_research_to_planet` on travel — a left-behind world's stat sheet is stale, which will matter the moment background simulation lands.
+- Research belongs to the campaign, and every world adopts it — including one colonized after the fact. Each `PlanetState` still keeps a copy, because a world needs its own answer (it can refuse a building the swarm has researched), but the campaign is the only writer. What is *not* shared yet: `unlocked_buildings` is rebuilt per world from that research and never pruned, so a building unlocked and then somehow un-researched would stay unlocked.
 - Worlds are now defined in `assets/planets.json` (size, terrain weights, banned buildings, arrival line) and the map reads the same file, so identity lives in one place. What is still uniform: every world generates from one flat distribution with a cleared centre, so none of them have landmarks, regions, or a shape worth reading.
 
 ## Planet hazards

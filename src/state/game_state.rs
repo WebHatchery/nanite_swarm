@@ -299,6 +299,34 @@ impl PlanetState {
 }
 
 impl PlanetState {
+    /// Take the campaign's research and rebuild everything it drives here:
+    /// the stat sheet and which buildings this world will accept.
+    ///
+    /// Every world needs its own answer even when the research is shared,
+    /// because a world can refuse a building the swarm has researched.
+    pub fn adopt_research(&mut self, research: &ResearchProgress) {
+        self.research = research.clone();
+        self.refresh_stats();
+        self.refresh_building_unlocks();
+    }
+
+    /// Open up every building whose prerequisite research is done.
+    pub fn refresh_building_unlocks(&mut self) {
+        for def in &crate::data::game_data().buildings {
+            let Some(building_type) = BuildingType::from_id(&def.id) else {
+                continue;
+            };
+            let unlocked = def.start_unlocked
+                || def
+                    .unlocked_by
+                    .as_deref()
+                    .is_some_and(|tech| self.research.unlocked_techs.iter().any(|id| id == tech));
+            if unlocked {
+                self.unlock_building(building_type);
+            }
+        }
+    }
+
     /// Rebuild the stat sheet from what research has unlocked, and push the
     /// values that live outside it into place. Call this after anything that
     /// changes `research.unlocked_techs`.

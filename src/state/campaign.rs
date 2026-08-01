@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::data::GameConfig;
 use crate::directives::{pick_directive, Directive};
 
-use super::game_state::PlanetState;
+use super::game_state::{PlanetState, ResearchProgress};
 
 pub const PLANET_COUNT: usize = 5;
 /// Mars, per the GDD's Zone 1.
@@ -35,6 +35,11 @@ pub struct Campaign {
     current: usize,
     seed: u64,
     pub directive: Directive,
+    /// What the swarm knows. One copy for the whole campaign: research is the
+    /// swarm's, not a world's, and a world left behind was simulating with a
+    /// stale stat sheet while this lived on each planet separately.
+    #[serde(default)]
+    pub research: ResearchProgress,
     directive_timer: f32,
     directive_tier: i32,
     /// World time since the campaign was last written to disk.
@@ -53,6 +58,7 @@ impl Campaign {
             current: STARTING_PLANET,
             seed,
             directive: pick_directive(0),
+            research: ResearchProgress::default(),
             directive_timer: 0.0,
             directive_tier: 0,
             since_save: 0.0,
@@ -72,11 +78,34 @@ impl Campaign {
             current: STARTING_PLANET,
             seed,
             directive: pick_directive(0),
+            research: ResearchProgress::default(),
             directive_timer: 0.0,
             directive_tier: 0,
             since_save: 0.0,
             background_accumulator: 0.0,
         }
+    }
+
+    /// Push the campaign's research at every world it holds.
+    ///
+    /// All of them, not just the one in front of the player: the others are
+    /// being simulated, and a world running on research it does not know about
+    /// produces the wrong numbers quietly.
+    pub fn sync_research(&mut self) {
+        let research = self.research.clone();
+        for planet in self.planets.iter_mut().flatten() {
+            planet.adopt_research(&research);
+        }
+    }
+
+    /// Adopt whatever a world was saved with, for a save written before
+    /// research was campaign-wide.
+    pub fn adopt_planet_research(&mut self) {
+        if !self.research.unlocked_techs.is_empty() {
+            return;
+        }
+        self.research = self.current().research.clone();
+        self.sync_research();
     }
 
     /// Run every world the player is *not* standing on.
@@ -190,7 +219,12 @@ impl Campaign {
             return false;
         }
         let config = self.current().config.clone();
-        self.planets[index] = Some(self.generate(index, &config));
+        let mut planet = self.generate(index, &config);
+        // A world arrives knowing everything the swarm knows. Leaving this to
+        // the caller is how a freshly colonized world ends up simulating on
+        // starting-tier research.
+        planet.adopt_research(&self.research);
+        self.planets[index] = Some(planet);
         true
     }
 
@@ -823,6 +857,101 @@ mod tests {
         planet.grid.update_power_grid();
         planet.resources.minerals = 0.0;
         campaign.travel_to(here);
+    }
+
+    #[test]
+    fn a_newly_colonized_world_already_knows_what_the_swarm_knows() {
+        let mut campaign = campaign();
+        campaign
+            .research
+            .unlocked_techs
+            .push("efficient_drills".to_string());
+        campaign.sync_research();
+
+        assert!(campaign.colonize(0));
+        campaign.travel_to(0);
+        assert!(
+            campaign
+                .current()
+                .stats
+                .multiplier(crate::engine::StatId::DrillOutput)
+                > 1.0,
+            "the new world landed on starting-tier research"
+        );
+    }
+
+    #[test]
+    fn research_reaches_every_world_not_just_the_one_underfoot() {
+        let mut campaign = campaign();
+        campaign.colonize(0);
+        campaign.colonize(3);
+
+        campaign
+            .research
+            .unlocked_techs
+            .push("efficient_drills".to_string());
+        campaign.sync_research();
+
+        for index in [STARTING_PLANET, 0, 3] {
+            campaign.travel_to(index);
+            let planet = campaign.current();
+            assert!(
+                planet.stats.multiplier(crate::engine::StatId::DrillOutput) > 1.0,
+                "world {index} is still running on stale research"
+            );
+        }
+    }
+
+    #[test]
+    fn a_building_unlocked_by_research_is_unlocked_everywhere() {
+        let mut campaign = campaign();
+        campaign.colonize(0);
+        campaign
+            .research
+            .unlocked_techs
+            .push("wind_power".to_string());
+        campaign.sync_research();
+
+        campaign.travel_to(0);
+        assert!(campaign
+            .current()
+            .is_building_researched(BuildingType::WindTurbine));
+    }
+
+    #[test]
+    fn a_save_that_kept_research_on_the_planet_is_adopted_once() {
+        let mut campaign = campaign();
+        // What an older save looks like: the planet knows, the campaign does not.
+        campaign.research.unlocked_techs.clear();
+        campaign
+            .current_mut()
+            .research
+            .unlocked_techs
+            .push("efficient_drills".to_string());
+
+        campaign.adopt_planet_research();
+
+        assert!(campaign
+            .research
+            .unlocked_techs
+            .iter()
+            .any(|id| id == "efficient_drills"));
+        assert!(
+            campaign
+                .current()
+                .stats
+                .multiplier(crate::engine::StatId::DrillOutput)
+                > 1.0
+        );
+
+        // And it does not clobber research the campaign already has.
+        let mut newer = campaign;
+        newer.research.unlocked_techs = vec!["wind_power".to_string()];
+        newer.adopt_planet_research();
+        assert_eq!(
+            newer.research.unlocked_techs,
+            vec!["wind_power".to_string()]
+        );
     }
 
     #[test]

@@ -126,6 +126,9 @@ impl Game {
                 MenuAction::Load => {
                     if let Ok((campaign, source)) = load_from_file(SAVE_PATH) {
                         self.campaign = campaign;
+                        // A save written before research was campaign-wide
+                        // keeps it on the planet; take it from there once.
+                        self.campaign.adopt_planet_research();
                         self.sync_research_from_planet();
                         self.phase = GamePhase::Playing;
                         self.has_save = true;
@@ -380,50 +383,55 @@ impl Game {
             .success(format!("Research complete: {}", name));
     }
 
+    /// Take the campaign's research into the research screen's state.
     fn sync_research_from_planet(&mut self) {
-        self.research_state.unlocked = self.campaign.current().research.unlocked_techs.clone();
+        self.research_state.unlocked = self.campaign.research.unlocked_techs.clone();
         for tech in &data::game_data().research.starting_unlocked {
             if !self.research_state.unlocked.contains(tech) {
                 self.research_state.unlocked.push(tech.clone());
             }
         }
-        let planet = self.campaign.current();
-        self.research_state.current_research = planet.research.current_research.clone();
-        self.research_state.research_progress = planet.research.research_progress;
+        self.research_state.current_research = self.campaign.research.current_research.clone();
+        self.research_state.research_progress = self.campaign.research.research_progress;
     }
 
+    /// Write the research screen's state back to the campaign, and push it at
+    /// every world the campaign holds.
     fn sync_research_to_planet(&mut self) {
-        let unlocked = self.research_state.unlocked.clone();
-        let current_research = self.research_state.current_research.clone();
-        let progress = self.research_state.research_progress;
-        let planet = self.campaign.current_mut();
-        planet.research.unlocked_techs = unlocked;
-        planet.research.current_research = current_research;
-        planet.research.research_progress = progress;
-        // Unlocked techs just changed shape: rebuild what they do.
-        planet.refresh_stats();
+        self.campaign.research.unlocked_techs = self.research_state.unlocked.clone();
+        self.campaign.research.current_research = self.research_state.current_research.clone();
+        self.campaign.research.research_progress = self.research_state.research_progress;
+        self.campaign.sync_research();
     }
 
+    /// Announce anything that has just become available here.
+    ///
+    /// The unlocking itself is the campaign's job now, across every world;
+    /// this only notices what changed on the world the player is looking at,
+    /// because that is who the toast is for.
     fn sync_building_unlocks(&mut self) {
+        let before: Vec<engine::BuildingType> = data::game_data()
+            .buildings
+            .iter()
+            .filter_map(|def| engine::BuildingType::from_id(&def.id))
+            .filter(|kind| self.campaign.current().is_building_researched(*kind))
+            .collect();
+
+        self.campaign.sync_research();
+
         for def in &data::game_data().buildings {
             let Some(building_type) = engine::BuildingType::from_id(&def.id) else {
                 continue;
             };
-            let unlocked = def.start_unlocked
-                || def
-                    .unlocked_by
-                    .as_deref()
-                    .map(|tech| self.research_state.is_unlocked(tech))
-                    .unwrap_or(false);
-            if !unlocked {
+            if def.start_unlocked || before.contains(&building_type) {
                 continue;
             }
             let planet = self.campaign.current_mut();
             // Only the moment it opens up is worth a toast, not every frame it
-            // stays open, and not the ones a world refuses anyway.
-            let is_new = !planet.is_building_researched(building_type);
-            planet.unlock_building(building_type);
-            if is_new && !planet.is_building_banned(building_type) && !def.start_unlocked {
+            // stays open, and not the ones this world refuses anyway.
+            if planet.is_building_researched(building_type)
+                && !planet.is_building_banned(building_type)
+            {
                 let name = def.name.clone();
                 planet.notifications.info(format!("Available: {}", name));
             }
