@@ -2,10 +2,14 @@
 
 use crate::data::UiTheme;
 use crate::engine::GridPos;
+use crate::state::Camera;
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct HudMetrics {
+    /// Tile size on screen, i.e. the themed size scaled by the camera.
     pub(super) tile_size: f32,
+    pan_x: f32,
+    pan_y: f32,
     pub(super) top_bar_height: f32,
     pub(super) left_panel_width: f32,
     pub(super) right_panel_width: f32,
@@ -16,11 +20,18 @@ pub(super) struct HudMetrics {
 }
 
 impl HudMetrics {
-    pub(super) fn for_screen(theme: &UiTheme, screen_w: f32, screen_h: f32) -> Self {
+    pub(super) fn for_screen(
+        theme: &UiTheme,
+        screen_w: f32,
+        screen_h: f32,
+        camera: Camera,
+    ) -> Self {
         let compact_height = screen_h < 760.0;
         let compact_width = screen_w < 1260.0;
         Self {
-            tile_size: theme.layout.tile_size,
+            tile_size: theme.layout.tile_size * camera.zoom,
+            pan_x: camera.pan_x,
+            pan_y: camera.pan_y,
             top_bar_height: if compact_height {
                 76.0
             } else {
@@ -51,12 +62,30 @@ impl HudMetrics {
         }
     }
 
-    pub(super) fn grid_offset_x(&self) -> f32 {
+    /// Where the grid's top-left corner sits with the camera at rest. Zooming
+    /// is measured from here, so it has to stay free of the pan.
+    pub(super) fn base_offset_x(&self) -> f32 {
         self.left_panel_width + self.panel_gap * 2.0
     }
 
-    pub(super) fn grid_offset_y(&self) -> f32 {
+    pub(super) fn base_offset_y(&self) -> f32 {
         self.top_bar_height + self.panel_gap
+    }
+
+    pub(super) fn grid_offset_x(&self) -> f32 {
+        self.base_offset_x() + self.pan_x
+    }
+
+    pub(super) fn grid_offset_y(&self) -> f32 {
+        self.base_offset_y() + self.pan_y
+    }
+
+    /// The area the grid is drawn into, between the panels.
+    pub(super) fn viewport(&self, screen_w: f32, screen_h: f32) -> (f32, f32) {
+        (
+            (screen_w - self.right_panel_width - self.base_offset_x()).max(0.0),
+            (screen_h - self.bottom_bar_height - self.base_offset_y()).max(0.0),
+        )
     }
 }
 

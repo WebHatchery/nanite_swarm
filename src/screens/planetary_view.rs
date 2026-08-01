@@ -37,16 +37,23 @@ pub fn render_planetary_view(
 
     let screen_w = screen_width();
     let screen_h = screen_height();
-    let metrics = HudMetrics::for_screen(theme, screen_w, screen_h);
     let pulse = pulse01_at(state.time_played, 2.5);
     let global_pulse = lerp(0.8, 1.0, pulse01_at(state.time_played, 2.0));
     let time = state.time_played as f32;
 
+    // Move the camera first, then lay out the frame around where it ended up,
+    // so drawing and hit-testing agree about which tile is under the cursor.
     let (mouse_x, mouse_y) = mouse_position();
-    let hovered_pos = if is_cursor_over_ui(mouse_x, mouse_y, screen_w, screen_h, metrics) {
+    let layout = HudMetrics::for_screen(theme, screen_w, screen_h, state.camera);
+    let cursor_over_ui = is_cursor_over_ui(mouse_x, mouse_y, screen_w, screen_h, layout);
+    input::handle_camera(state, layout, cursor_over_ui, screen_w, screen_h);
+
+    let metrics = HudMetrics::for_screen(theme, screen_w, screen_h, state.camera);
+    let hovered_pos = if cursor_over_ui {
         None
     } else {
         screen_to_grid(mouse_x, mouse_y, metrics)
+            .filter(|pos| pos.in_bounds(state.grid.width, state.grid.height))
     };
 
     terrain_render::draw_planetary_background(screen_w, screen_h, time);

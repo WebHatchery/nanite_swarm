@@ -321,6 +321,15 @@ impl Game {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();
             }
+            "camera" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                // Framed as if the player had zoomed in and dragged the map.
+                let camera = &mut self.campaign.current_mut().camera;
+                camera.zoom = 1.8;
+                camera.pan_x = -420.0;
+                camera.pan_y = -180.0;
+            }
             "interplanetary" => {
                 self.phase = GamePhase::Interplanetary;
                 self.research_state.unlocked.push("mass_driver".to_string());

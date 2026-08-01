@@ -5,6 +5,7 @@
 #![allow(unused)]
 
 mod actions;
+mod camera;
 mod campaign;
 mod game_state;
 mod logistics;
@@ -13,6 +14,7 @@ mod persistence;
 mod progress;
 mod simulation;
 
+pub use camera::*;
 pub use campaign::*;
 pub use game_state::*;
 pub use persistence::*;

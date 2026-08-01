@@ -53,7 +53,7 @@ Techs declare their effects as modifiers in `research.json` (`engine::modifiers`
 - Add production chains: intermediate products, recipes, and processing buildings. A drill now buffers ore until a drone takes it, but everything still lands in one global mineral pool.
 - Grow the building set beyond 10 across processing, logistics, hazard counters, and megastructure parts.
 - Tier the resource set beyond Minerals/Energy/Data/Biomass to support chains and mass-driver strategy.
-- Larger and more varied maps with per-planet generators and landmark features (needs the camera work below).
+- Larger and more varied maps with per-planet generators and landmark features. The camera no longer caps this at 24x24, but terrain generation still draws every world from one distribution.
 - Replace the four `tier % 4` directives and four hardcoded achievements with a real objective/milestone system and a full achievement set. The Power Surplus directive still uses one number as both the power threshold and the seconds it must be held, so the two scale together by accident.
 - Write the GDD's "indifferent optimizer" tone into directives, research descriptions, and planet-arrival vignettes; it appears nowhere in game text today.
 
@@ -76,9 +76,8 @@ The sim runs on a fixed 1/30s timestep with an accumulator (`PlanetState::advanc
 
 ## UX and UI
 
-- Add camera pan and zoom; none exists at a fixed 28px grid, and it blocks any map larger than 24x24.
 - Add pause and game speed — the HUD advertises "PAUSE Space" and shows speed buttons whose return values are ignored.
-- Wire or remove the decorative controls: PAN, ZOOM, BOX SELECT, BUILD, DEMOLISH hints are unwired and the main-menu Quit button is a no-op.
+- Wire or remove the controls that are still decoration: BOX SELECT and the BUILD/DEMOLISH hints do nothing, and the main-menu Quit button is a no-op. (PAN and ZOOM now work: middle-drag and wheel, per-planet camera.)
 - Replace the six-condition text checklist with a real persisted tutorial with highlighting and interactive gating.
 - Add a notification/toast system; achievements currently unlock with no feedback beyond a counter.
 - Make settings work and persist — `ui_scale` is stored but never applied, audio sliders drive nothing, and the Settings struct is never saved.

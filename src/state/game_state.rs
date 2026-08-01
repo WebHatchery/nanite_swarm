@@ -1,5 +1,6 @@
 //! Current planetary state
 
+use super::camera::Camera;
 use crate::data::GameConfig;
 use crate::engine::{BuildingType, DroneManager, Grid, GridPos, Stats};
 use macroquad::miniquad;
@@ -117,6 +118,13 @@ pub struct PlanetState {
     pub drag_last_pos: Option<GridPos>,
     #[serde(skip, default)]
     pub selected_tile: Option<GridPos>,
+    /// Where the player is looking at this world from. Kept per planet, so a
+    /// world is framed as it was left.
+    #[serde(default)]
+    pub camera: Camera,
+    /// Cursor position the current middle-drag was last seen at.
+    #[serde(skip, default)]
+    pub camera_drag_anchor: Option<(f32, f32)>,
     #[serde(skip, default)]
     pub show_help: bool,
     #[serde(skip, default)]
@@ -190,6 +198,8 @@ impl PlanetState {
             offline_notice_timer: 0.0,
             drag_last_pos: None,
             selected_tile: None,
+            camera: Camera::default(),
+            camera_drag_anchor: None,
             show_help: false,
             build_palette_scroll: ScrollArea::new(),
             particles: ParticleSystem::new(),

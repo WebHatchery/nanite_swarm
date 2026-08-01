@@ -6,7 +6,50 @@ use crate::state::PlanetState;
 use macroquad::prelude::*;
 
 use super::format::keycode_from_hotkey;
+use super::metrics::HudMetrics;
 use super::PlanetaryAction;
+
+/// Drag the map with the middle mouse button, zoom with the wheel.
+///
+/// Runs before anything else reads the grid, so drawing and hit-testing both
+/// see where the player just moved the view to.
+pub(super) fn handle_camera(
+    state: &mut PlanetState,
+    metrics: HudMetrics,
+    cursor_over_ui: bool,
+    screen_w: f32,
+    screen_h: f32,
+) {
+    let (mouse_x, mouse_y) = mouse_position();
+
+    if is_mouse_button_down(MouseButton::Middle) {
+        if let Some((last_x, last_y)) = state.camera_drag_anchor {
+            state.camera.pan_by(mouse_x - last_x, mouse_y - last_y);
+        }
+        state.camera_drag_anchor = Some((mouse_x, mouse_y));
+    } else {
+        state.camera_drag_anchor = None;
+    }
+
+    let (_, wheel_y) = mouse_wheel();
+    if wheel_y != 0.0 && !cursor_over_ui {
+        // Wheel deltas are platform-flavoured; only the direction is reliable.
+        let notches = wheel_y.signum();
+        let cursor = (
+            mouse_x - metrics.base_offset_x(),
+            mouse_y - metrics.base_offset_y(),
+        );
+        state.camera.zoom_by(notches, cursor);
+    }
+
+    let grid_size = (
+        state.grid.width as f32 * metrics.tile_size,
+        state.grid.height as f32 * metrics.tile_size,
+    );
+    state
+        .camera
+        .clamp_to_viewport(metrics.viewport(screen_w, screen_h), grid_size);
+}
 
 /// Handle keyboard and mouse input
 pub(super) fn handle_input(
