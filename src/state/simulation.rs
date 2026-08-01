@@ -6,6 +6,8 @@ use macroquad_toolkit::math::lerp;
 use super::game_state::PlanetState;
 
 pub(super) const DUST_RATE: f32 = 0.12; // dust per second
+/// One point on the throughput graph is one second of world time.
+const THROUGHPUT_SAMPLE_SECONDS: f32 = 1.0;
 const SWEEPER_RATE: f32 = 0.6; // dust cleared per second
 const SWEEPER_RADIUS: i32 = 3;
 const FILTER_RADIUS: i32 = 3;
@@ -138,11 +140,14 @@ impl PlanetState {
             }
             if delivered_total > 0.0 {
                 self.resources.minerals += delivered_total;
+                self.delivered_since_sample += delivered_total;
                 if allow_visuals {
                     self.spawn_resource_burst();
                 }
             }
         }
+
+        self.sample_throughput(sim_delta);
 
         // Process drills and server banks
         if self.power_collapse_shutdown <= 0.0 {
@@ -439,6 +444,20 @@ impl PlanetState {
         self.biomass_power_bonus = power_bonus;
     }
 
+    /// Bank one second of deliveries into the graph.
+    ///
+    /// Sampled on world time rather than per tick, so the shape of the line
+    /// means the same thing at every game speed.
+    fn sample_throughput(&mut self, delta_time: f32) {
+        self.throughput_timer += delta_time;
+        while self.throughput_timer >= THROUGHPUT_SAMPLE_SECONDS {
+            self.throughput_timer -= THROUGHPUT_SAMPLE_SECONDS;
+            let rate = self.delivered_since_sample / THROUGHPUT_SAMPLE_SECONDS;
+            self.throughput.push(rate);
+            self.delivered_since_sample = 0.0;
+        }
+    }
+
     /// How far along the swarm is, for anything that should cost more the
     /// more there is of it. Zero for a base of nothing, one at full scale.
     pub fn collapse_scale(&self) -> f32 {
@@ -568,6 +587,48 @@ mod tests {
         );
         // And neither is wiped out: a collapse is a setback, never a death.
         assert!(large.resources.data > 0.0);
+    }
+
+    #[test]
+    fn the_throughput_graph_starts_with_nothing_to_say() {
+        let state = state();
+        assert!(state.throughput.buckets().is_empty());
+        assert_eq!(state.throughput.last(), None);
+    }
+
+    #[test]
+    fn a_second_of_deliveries_becomes_one_point_on_the_graph() {
+        let mut state = state();
+        state.delivered_since_sample = 12.0;
+        state.sample_throughput(1.0);
+
+        assert_eq!(state.throughput.len(), 1);
+        assert_eq!(state.throughput.last(), Some(12.0));
+        // And the accumulator starts over rather than double-counting.
+        assert_eq!(state.delivered_since_sample, 0.0);
+    }
+
+    #[test]
+    fn a_quiet_second_is_recorded_as_a_quiet_second_not_skipped() {
+        let mut state = state();
+        state.delivered_since_sample = 6.0;
+        state.sample_throughput(1.0);
+        state.sample_throughput(1.0);
+
+        assert_eq!(state.throughput.len(), 2);
+        assert_eq!(state.throughput.last(), Some(0.0));
+        // The spike is still the peak, which is the point of keeping ranges.
+        assert_eq!(state.throughput.max(), Some(6.0));
+    }
+
+    #[test]
+    fn a_long_stretch_of_world_time_lands_every_second_it_covers() {
+        let mut state = state();
+        state.delivered_since_sample = 5.0;
+        // Four seconds in one go: one second of deliveries and three quiet.
+        state.sample_throughput(4.0);
+        assert_eq!(state.throughput.len(), 4);
+        assert_eq!(state.throughput.max(), Some(5.0));
     }
 
     #[test]

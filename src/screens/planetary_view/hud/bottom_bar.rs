@@ -4,6 +4,7 @@ use crate::data::UiTheme;
 use crate::state::PlanetState;
 use crate::ui::{color_from_rgba, draw_hud_button, draw_hud_panel};
 use macroquad::prelude::*;
+use macroquad_toolkit::colors::with_alpha;
 use macroquad_toolkit::ui::draw_ui_text;
 
 use super::super::metrics::HudMetrics;
@@ -257,15 +258,12 @@ pub(super) fn draw(
         1.0,
         color_from_rgba(&theme.colors.border),
     );
-    for i in 1..24 {
-        let x0 = graph_x + (i - 1) as f32 * graph_w / 23.0;
-        let x1 = graph_x + i as f32 * graph_w / 23.0;
-        let y0 =
-            graph_y + graph_h * (0.55 + (state.time_played as f32 * 0.1 + i as f32).sin() * 0.18);
-        let y1 = graph_y
-            + graph_h * (0.55 + (state.time_played as f32 * 0.1 + i as f32 + 1.0).sin() * 0.18);
-        draw_line(x0, y0, x1, y1, 1.0, primary);
-    }
+    draw_throughput(
+        state,
+        Rect::new(graph_x, graph_y, graph_w, graph_h),
+        primary,
+        text,
+    );
 
     let mode_y = bottom_y + metrics.bottom_bar_height - 8.0;
     let (mode_label, mode_color) = if state.demolish_mode {
@@ -343,4 +341,52 @@ pub(super) fn draw(
     }
 
     clock
+}
+
+/// Ore banked at the Core per second, across the whole session.
+///
+/// This was a sine wave for a long time: an automation game with a decorative
+/// graph of nothing. Each bucket keeps the range it covers, so a spike stays
+/// visible however far back it happened.
+fn draw_throughput(state: &PlanetState, area: Rect, line: Color, text: Color) {
+    let buckets = state.throughput.buckets();
+    if buckets.is_empty() {
+        draw_ui_text(
+            "NO DELIVERIES YET",
+            area.x + 6.0,
+            area.y + area.h * 0.62,
+            9.0,
+            text,
+        );
+        return;
+    }
+
+    // Always measured against zero, so a flat line at the bottom reads as
+    // "nothing is arriving" rather than being stretched to fill the box.
+    let peak = state.throughput.max().unwrap_or(0.0).max(0.001);
+    let plot_h = area.h - 10.0;
+    let step = area.w / buckets.len().max(2) as f32;
+
+    for (index, bucket) in buckets.iter().enumerate() {
+        let x = area.x + index as f32 * step;
+        // The bucket's whole range, so a merged spike is still a spike.
+        let low = area.y + area.h - 2.0 - (bucket.min / peak).clamp(0.0, 1.0) * plot_h;
+        let high = area.y + area.h - 2.0 - (bucket.max / peak).clamp(0.0, 1.0) * plot_h;
+        draw_line(x, low, x, high, step.max(1.0), with_alpha(line, 0.35));
+        if index > 0 {
+            let previous = buckets[index - 1].last;
+            let y0 = area.y + area.h - 2.0 - (previous / peak).clamp(0.0, 1.0) * plot_h;
+            let y1 = area.y + area.h - 2.0 - (bucket.last / peak).clamp(0.0, 1.0) * plot_h;
+            draw_line(x - step, y0, x, y1, 1.0, line);
+        }
+    }
+
+    let latest = state.throughput.last().unwrap_or(0.0);
+    draw_ui_text(
+        &format!("{:.1} ORE/S  PEAK {:.1}", latest, peak),
+        area.x + 4.0,
+        area.y + 9.0,
+        9.0,
+        text,
+    );
 }

@@ -18,6 +18,13 @@ fn default_time_scale() -> f32 {
 }
 
 /// Saves written before worlds had identities were all the starting world.
+/// How many buckets the throughput graph keeps. The toolkit's series merges
+/// pairs when it fills, so a long session loses resolution but never loses a
+/// spike.
+fn default_throughput() -> macroquad_toolkit::series::Series {
+    macroquad_toolkit::series::Series::new(120)
+}
+
 fn default_planet_index() -> usize {
     2
 }
@@ -126,6 +133,15 @@ pub struct PlanetState {
     /// always rebuilt by [`PlanetState::refresh_stats`].
     #[serde(skip, default)]
     pub stats: Stats,
+    /// Ore banked at the Core per second, sampled once a second across the
+    /// whole session. Not saved: a graph of a session belongs to that session.
+    #[serde(skip, default = "default_throughput")]
+    pub throughput: macroquad_toolkit::series::Series,
+    /// Delivered since the last sample, and how long ago that was.
+    #[serde(skip, default)]
+    pub delivered_since_sample: f32,
+    #[serde(skip, default)]
+    pub throughput_timer: f32,
     #[serde(skip, default)]
     pub power_negative_seconds: f32,
     #[serde(skip, default)]
@@ -258,6 +274,9 @@ impl PlanetState {
             last_saved_unix: unix_seconds_now(),
             achievements: Achievements::from_definitions(achievement_definitions()),
             stats: Stats::default(),
+            throughput: default_throughput(),
+            delivered_since_sample: 0.0,
+            throughput_timer: 0.0,
             power_negative_seconds: 0.0,
             power_collapse_cooldown: 0.0,
             power_collapse_shutdown: 0.0,

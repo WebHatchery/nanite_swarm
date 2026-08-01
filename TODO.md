@@ -117,7 +117,7 @@ Settings load at startup, apply as they are changed, and are written to disk, so
 - The audio sliders still drive nothing; that waits on the audio system (see Audio).
 - Only display settings are applied live. There is no key remapping, and nothing in the settings screen explains what any of it does.
 - Add the rest of the genre-standard build tools: relocation, blueprint stamps, undo. Demolish mode and drag-demolish work (X or the palette button; drag tears down a run), but every demolition is final and refunds half.
-- Add production statistics — rates, consumption, and net-flow graphs; the bottom-bar graph is decorative.
+- The bottom-bar graph plots something real now: ore banked at the Core per second, sampled once per second of world time into the toolkit's `Series`, which keeps every spike as it decimates. It reads out the latest rate and the session peak. What is still missing is the rest of the picture — power, alloy and Data have no graph, nothing shows consumption against production, and the series is not saved, so a reloaded session starts its graph from nothing.
 
 ## Audio
 
