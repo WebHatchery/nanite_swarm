@@ -1,5 +1,15 @@
 {
   "intake_per_second": { "minerals": 12.0, "data": 3.0, "biomass": 6.0, "alloy": 2.0 },
+  "launch": {
+    "countdown_seconds": 3.0,
+    "ascent_seconds": 3.0,
+    "transit_seconds": 2.5,
+    "arrival_seconds": 4.0,
+    "countdown_line": "The pad is cleared. Nothing left on {origin} needs it.",
+    "ascent_line": "Ignition. The last of {origin}, spent on leaving it.",
+    "transit_line": "Transit. Nothing aboard is awake.",
+    "skip_hint": "Any key to skip"
+  },
   "stages": [
     {
       "id": "cradle",

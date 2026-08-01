@@ -156,6 +156,25 @@ pub struct SeedShipData {
     /// Ceiling on how fast the yard can swallow each resource, per second.
     pub intake_per_second: SeedShipCost,
     pub stages: Vec<SeedShipStageDef>,
+    #[serde(default)]
+    pub launch: LaunchSequenceDef,
+}
+
+/// The beats of a launch, and what the swarm says over each of them.
+///
+/// All four durations default to zero, so a missing or unreadable block gives
+/// a sequence that is over before it starts rather than one that hangs.
+/// `{origin}` in any line is replaced with the name of the world being spent.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct LaunchSequenceDef {
+    pub countdown_seconds: f32,
+    pub ascent_seconds: f32,
+    pub transit_seconds: f32,
+    pub arrival_seconds: f32,
+    pub countdown_line: String,
+    pub ascent_line: String,
+    pub transit_line: String,
+    pub skip_hint: String,
 }
 
 /// Share of a world's tiles given over to each non-empty terrain. Whatever is
@@ -340,6 +359,7 @@ impl GameData {
         let seed_ship: SeedShipData = load_json(seed_ship_json).unwrap_or_else(|_| SeedShipData {
             intake_per_second: SeedShipCost::default(),
             stages: vec![],
+            launch: LaunchSequenceDef::default(),
         });
         for stage in &seed_ship.stages {
             for modifier in &stage.modifiers {

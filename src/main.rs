@@ -21,12 +21,12 @@ use assets::GameTextures;
 use data::{load_game_config, load_game_data, load_ui_theme, set_game_data};
 use engine::{ResearchState, ResearchTree};
 use screens::{
-    render_campaign_complete_view, render_interplanetary_view, render_main_menu,
-    render_planetary_view, render_research_view, render_seed_ship_view, render_settings_menu,
-    CampaignCompleteAction, InterplanetaryAction, MenuAction, PlanetaryAction, ResearchAction,
-    SeedShipAction, SettingsAction,
+    render_campaign_complete_view, render_interplanetary_view, render_launch_view,
+    render_main_menu, render_planetary_view, render_research_view, render_seed_ship_view,
+    render_settings_menu, CampaignCompleteAction, InterplanetaryAction, LaunchAction, MenuAction,
+    PlanetaryAction, ResearchAction, SeedShipAction, SettingsAction,
 };
-use state::{load_from_file, save_to_file, Campaign, GAME_NAME};
+use state::{load_from_file, save_to_file, Campaign, LaunchSequence, GAME_NAME};
 
 /// Game phases/screens
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -37,6 +37,8 @@ pub enum GamePhase {
     SeedShip,
     Interplanetary,
     Settings,
+    /// A ship is on its way. The world is not being simulated while it plays.
+    Launch,
     /// The system is spent. Reachable once and then only by choice.
     CampaignComplete,
 }
@@ -52,6 +54,12 @@ pub struct Game {
     has_save: bool,
     /// The ending has been shown once; seeing it again is the player's choice.
     ending_seen: bool,
+    /// The launch being played out, if one is.
+    launch: Option<LaunchSequence>,
+    /// Staging a still frame for the screenshot harness. Anything that runs on
+    /// real time has to hold where the scene put it, or the frame that gets
+    /// written is wherever the capture's frame rate happened to carry it.
+    capture_still: bool,
     textures: GameTextures,
     config: data::GameConfig,
     ui_theme: data::UiTheme,
@@ -95,6 +103,8 @@ impl Game {
             debug_overlay: DebugOverlay::new(),
             has_save: false,
             ending_seen: false,
+            launch: None,
+            capture_still: false,
             textures: GameTextures::load().await,
             config,
             ui_theme,
@@ -253,14 +263,39 @@ impl Game {
                     }
                     InterplanetaryAction::LaunchSeedShip(index) => {
                         // The ship is spent carrying the swarm to a new world.
+                        let origin = self.campaign.current_index();
                         if self.has_mass_driver() && self.campaign.launch_seed_ship(index) {
                             self.sync_research_to_planet();
                             self.sync_building_unlocks();
                             self.save_campaign();
-                            self.phase = GamePhase::Playing;
+                            // The campaign has already moved; what follows is
+                            // only the telling of it. The vignette delivers the
+                            // arrival line itself, so the top-bar notice that
+                            // free travel uses would only repeat it.
+                            self.campaign.current_mut().arrival_notice_timer = 0.0;
+                            self.launch = Some(LaunchSequence::new(origin, index));
+                            self.phase = GamePhase::Launch;
                         }
                     }
                     InterplanetaryAction::None => {}
+                }
+            }
+            GamePhase::Launch => {
+                let arrival_line = self.campaign.current().arrival_line();
+                let Some(sequence) = self.launch.as_mut() else {
+                    self.phase = GamePhase::Playing;
+                    return;
+                };
+                if !self.capture_still {
+                    sequence.advance(get_frame_time());
+                }
+                let action = render_launch_view(sequence, arrival_line);
+                if action == LaunchAction::Skip {
+                    sequence.skip();
+                }
+                if sequence.is_finished() {
+                    self.launch = None;
+                    self.phase = GamePhase::Playing;
                 }
             }
         }
@@ -440,6 +475,7 @@ impl Game {
 
     /// Seed a specific scene for the screenshot harness.
     pub fn begin_capture_scene(&mut self, scene: &str) {
+        self.capture_still = true;
         match scene {
             "mainmenu" => self.phase = GamePhase::MainMenu,
             "research" => self.phase = GamePhase::Research,
@@ -460,6 +496,20 @@ impl Game {
                 for _ in 0..20 {
                     planet.update_seed_ship(1.0);
                 }
+            }
+            // The two beats of a launch worth looking at in a still frame: the
+            // ship clearing the world it was built on, and the one it reaches.
+            "launch" | "arrival" => {
+                self.campaign.colonize(1);
+                self.campaign.travel_to(1);
+                let mut sequence = LaunchSequence::new(0, 1);
+                sequence.advance(if scene == "launch" {
+                    LaunchSequence::beat_start(state::LaunchBeat::Ascent) + 1.2
+                } else {
+                    LaunchSequence::beat_start(state::LaunchBeat::Arrival) + 1.5
+                });
+                self.launch = Some(sequence);
+                self.phase = GamePhase::Launch;
             }
             "venus" => {
                 self.phase = GamePhase::Playing;
