@@ -25,7 +25,7 @@ use screens::{
     render_seed_ship_view, render_settings_menu, InterplanetaryAction, MenuAction, PlanetaryAction,
     ResearchAction, SeedShipAction, SettingsAction,
 };
-use state::{load_from_file, save_to_file, Campaign};
+use state::{load_from_file, save_to_file, Campaign, GAME_NAME};
 
 /// Game phases/screens
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -73,17 +73,20 @@ impl Game {
         let game_data = load_game_data().await;
 
         set_game_data(game_data);
+
+        // Settings survive between sessions and are applied before the first
+        // frame, so the player's text scale and fullscreen choice are already
+        // in effect rather than snapping in when they visit the menu.
+        let mut settings = GameSettings::load(GAME_NAME);
+        settings.sanitize();
+        apply_display_settings(&settings, None);
+
         Self {
             phase: GamePhase::MainMenu,
             campaign: Campaign::new(config.clone(), 42),
             research_tree: ResearchTree::default(),
             research_state: ResearchState::default(),
-            settings: GameSettings {
-                music_volume: 0.6,
-                sfx_volume: 0.7,
-                ui_text_scale: 1.0,
-                ..GameSettings::default()
-            },
+            settings,
             debug_overlay: DebugOverlay::new(),
             has_save: false,
             textures: GameTextures::load().await,
@@ -135,12 +138,21 @@ impl Game {
                 MenuAction::Quit => {}
                 MenuAction::None => {}
             },
-            GamePhase::Settings => match render_settings_menu(&mut self.settings) {
-                SettingsAction::Back => {
+            GamePhase::Settings => {
+                let before = self.settings.clone();
+                let action = render_settings_menu(&mut self.settings);
+                if self.settings != before {
+                    // Applied as it changes so the player can see what a text
+                    // scale actually does, and written down so it is still
+                    // true next session.
+                    self.settings.sanitize();
+                    apply_display_settings(&self.settings, Some(&before));
+                    let _ = self.settings.save(GAME_NAME);
+                }
+                if action == SettingsAction::Back {
                     self.phase = GamePhase::MainMenu;
                 }
-                SettingsAction::None => {}
-            },
+            }
             GamePhase::Playing => {
                 self.advance_simulation();
 
@@ -245,7 +257,10 @@ impl Game {
         let simulated = ticks as f32 * state::TICK_SECONDS;
         self.update_research(simulated);
         self.campaign.update_directive(simulated);
-        if self.campaign.due_for_autosave() {
+        if self
+            .campaign
+            .due_for_autosave(self.settings.autosave_interval)
+        {
             self.save_campaign();
         }
     }
@@ -655,6 +670,29 @@ impl Game {
         state.select_building(BuildingType::Drill);
         state.try_place_building(drill);
         state.grid.update_power_grid();
+    }
+}
+
+/// Push display settings at the window, touching only what actually changed.
+///
+/// `GameSettings::apply_display` sets fullscreen unconditionally, and asking
+/// miniquad for windowed mode when it is already windowed re-applies the window
+/// style: on Windows that shrinks the client area, which cost the bottom bar
+/// forty pixels the first time this was wired up.
+fn apply_display_settings(settings: &GameSettings, previous: Option<&GameSettings>) {
+    let scale_changed = previous.is_none_or(|old| old.ui_text_scale != settings.ui_text_scale);
+    if scale_changed {
+        macroquad_toolkit::ui::set_ui_text_scale(settings.ui_text_scale);
+    }
+
+    let fullscreen_changed = match previous {
+        Some(old) => old.fullscreen != settings.fullscreen,
+        // At startup there is nothing to undo, so only ask for fullscreen if
+        // that is what the player wants.
+        None => settings.fullscreen,
+    };
+    if fullscreen_changed {
+        set_fullscreen(settings.fullscreen);
     }
 }
 

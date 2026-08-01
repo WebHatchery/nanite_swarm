@@ -7,7 +7,8 @@ use macroquad_toolkit::persistence::{load_string_key, save_string_key};
 use serde::{Deserialize, Serialize};
 use std::io;
 
-const GAME_NAME: &str = "nanite_swarm";
+/// The key namespace every save and the settings file live under.
+pub const GAME_NAME: &str = "nanite_swarm";
 
 /// Bumped whenever the shape below changes. Version 0 is the unversioned save
 /// that held a single bare `PlanetState`.

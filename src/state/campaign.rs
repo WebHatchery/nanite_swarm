@@ -17,10 +17,6 @@ pub const PLANET_COUNT: usize = 5;
 pub const STARTING_PLANET: usize = 2;
 
 const DIRECTIVE_ROTATION_SECONDS: f32 = 600.0;
-/// How much simulated time may pass between autosaves. Measured in world time
-/// rather than wall clock, so a paused game does not keep writing to disk and
-/// a fast-forwarded one saves as often as the progress warrants.
-const AUTOSAVE_SECONDS: f32 = 60.0;
 /// How long a world's arrival line stays on screen.
 const ARRIVAL_NOTICE_SECONDS: f32 = 10.0;
 /// How long the saved marker stays on screen.
@@ -74,11 +70,12 @@ impl Campaign {
 
     /// Enough has happened that the campaign is worth writing down.
     ///
-    /// Losing an hour of an idle game to a closed window is the worst thing
-    /// this game could do to someone, and until now saving was something the
-    /// player had to remember.
-    pub fn due_for_autosave(&self) -> bool {
-        self.since_save >= AUTOSAVE_SECONDS
+    /// The interval comes from the player's settings rather than a constant,
+    /// because how much work someone is willing to risk is their call. Time is
+    /// counted in world seconds, so a paused game does not keep writing to
+    /// disk and a fast-forwarded one saves as often as the progress warrants.
+    pub fn due_for_autosave(&self, interval_seconds: f32) -> bool {
+        self.since_save >= interval_seconds.max(1.0)
     }
 
     /// Called after a successful write, whatever prompted it.
@@ -517,10 +514,13 @@ mod tests {
         );
     }
 
+    /// The default autosave cadence, as the settings ship it.
+    const AUTOSAVE: f32 = 60.0;
+
     #[test]
     fn a_fresh_campaign_is_not_immediately_due_for_a_save() {
         let campaign = campaign();
-        assert!(!campaign.due_for_autosave());
+        assert!(!campaign.due_for_autosave(AUTOSAVE));
     }
 
     #[test]
@@ -529,11 +529,32 @@ mod tests {
         for _ in 0..61 {
             campaign.update_directive(1.0);
         }
-        assert!(campaign.due_for_autosave());
+        assert!(campaign.due_for_autosave(AUTOSAVE));
 
         campaign.mark_saved();
-        assert!(!campaign.due_for_autosave());
+        assert!(!campaign.due_for_autosave(AUTOSAVE));
         assert!(campaign.current().save_notice_timer > 0.0);
+    }
+
+    #[test]
+    fn a_shorter_interval_from_settings_saves_sooner() {
+        let mut campaign = campaign();
+        for _ in 0..11 {
+            campaign.update_directive(1.0);
+        }
+        assert!(
+            !campaign.due_for_autosave(AUTOSAVE),
+            "saved far too eagerly"
+        );
+        assert!(campaign.due_for_autosave(10.0), "the setting was ignored");
+    }
+
+    #[test]
+    fn a_nonsense_interval_does_not_turn_into_a_save_every_tick() {
+        let mut campaign = campaign();
+        campaign.update_directive(0.5);
+        assert!(!campaign.due_for_autosave(0.0));
+        assert!(!campaign.due_for_autosave(-100.0));
     }
 
     #[test]
@@ -546,7 +567,7 @@ mod tests {
             let ticks = campaign.current_mut().advance(0.1, false);
             campaign.update_directive(ticks as f32 * crate::state::TICK_SECONDS);
         }
-        assert!(!campaign.due_for_autosave());
+        assert!(!campaign.due_for_autosave(AUTOSAVE));
     }
 
     #[test]

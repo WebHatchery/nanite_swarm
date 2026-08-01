@@ -110,7 +110,10 @@ Toasts (the toolkit's `NotificationManager`) announce achievements, finished res
 - There is no history: a toast missed while the player was on the research screen is gone. A scrollable log would also give the "indifferent optimizer" voice somewhere to accumulate.
 - The right-hand panel stack is full at 720p — a fifth panel overflows the four existing ones, which is why the Seed Ship got its own screen. Any new readout needs the stack's internal layouts made height-aware first.
 - Toasts are only drawn on the planetary view, so anything that fires while the research, ship or map screen is open is missed entirely.
-- Make settings work and persist — `ui_scale` is stored but never applied, audio sliders drive nothing, and the Settings struct is never saved.
+Settings load at startup, apply as they are changed, and are written to disk, so text scale, fullscreen and the FPS overlay survive a restart. The autosave cadence comes from `autosave_interval` rather than a constant.
+
+- The audio sliders still drive nothing; that waits on the audio system (see Audio).
+- Only display settings are applied live. There is no key remapping, and nothing in the settings screen explains what any of it does.
 - Add the rest of the genre-standard build tools: relocation, blueprint stamps, undo. Demolish mode and drag-demolish work (X or the palette button; drag tears down a run), but every demolition is final and refunds half.
 - Add production statistics — rates, consumption, and net-flow graphs; the bottom-bar graph is decorative.
 
