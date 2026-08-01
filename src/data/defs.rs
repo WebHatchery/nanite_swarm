@@ -264,6 +264,33 @@ pub struct TutorialDataFile {
     pub steps: Vec<TutorialStepDef>,
 }
 
+/// One kind of standing order the swarm can be given, and how it grows as the
+/// campaign goes on. `text` may use `{target}` and `{hold}`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct DirectiveDef {
+    pub id: String,
+    pub kind: String,
+    pub text: String,
+    pub base_target: f32,
+    #[serde(default)]
+    pub target_per_tier: f32,
+    /// Only read by directives that ask for something to be held: how long.
+    /// It used to double as the target, so raising the power threshold also
+    /// made the player hold it for longer.
+    #[serde(default)]
+    pub hold_seconds: f32,
+    pub base_reward: f32,
+    #[serde(default)]
+    pub reward_per_tier: f32,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct DirectiveDataFile {
+    /// How long a directive stands before the next one replaces it.
+    pub rotation_seconds: f32,
+    pub directives: Vec<DirectiveDef>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct PlanetDataFile {
     pub planets: Vec<PlanetDef>,
@@ -289,6 +316,7 @@ pub struct GameData {
     pub seed_ship: SeedShipData,
     pub planets: Vec<PlanetDef>,
     pub tutorial: Vec<TutorialStepDef>,
+    pub directives: DirectiveDataFile,
 }
 
 impl GameData {
@@ -306,6 +334,8 @@ impl GameData {
             .unwrap_or_else(|_| include_str!("../../assets/planets.json").to_string());
         let tutorial_json = fs::read_to_string("assets/tutorial.json")
             .unwrap_or_else(|_| include_str!("../../assets/tutorial.json").to_string());
+        let directives_json = fs::read_to_string("assets/directives.json")
+            .unwrap_or_else(|_| include_str!("../../assets/directives.json").to_string());
 
         Self::from_json_strings(
             &buildings_json,
@@ -314,6 +344,7 @@ impl GameData {
             &seed_ship_json,
             &planets_json,
             &tutorial_json,
+            &directives_json,
         )
     }
 
@@ -334,6 +365,9 @@ impl GameData {
         let planets_json = load_string("assets/planets.json")
             .await
             .unwrap_or_else(|_| include_str!("../../assets/planets.json").to_string());
+        let directives_json = load_string("assets/directives.json")
+            .await
+            .unwrap_or_else(|_| include_str!("../../assets/directives.json").to_string());
         let tutorial_json = load_string("assets/tutorial.json")
             .await
             .unwrap_or_else(|_| include_str!("../../assets/tutorial.json").to_string());
@@ -345,6 +379,7 @@ impl GameData {
             &seed_ship_json,
             &planets_json,
             &tutorial_json,
+            &directives_json,
         )
     }
 
@@ -355,6 +390,7 @@ impl GameData {
         seed_ship_json: &str,
         planets_json: &str,
         tutorial_json: &str,
+        directives_json: &str,
     ) -> Self {
         let building_file: BuildingDataFile =
             load_json(buildings_json).unwrap_or_else(|_| BuildingDataFile { buildings: vec![] });
@@ -421,6 +457,19 @@ impl GameData {
             }
         }
 
+        let directives: DirectiveDataFile =
+            load_json(directives_json).unwrap_or_else(|_| DirectiveDataFile {
+                rotation_seconds: 600.0,
+                directives: vec![],
+            });
+        // A directive nobody can evaluate would stand forever and never
+        // complete, which reads to a player as the game forgetting about them.
+        for def in &directives.directives {
+            if crate::directives::DirectiveKind::from_id(&def.kind).is_none() {
+                panic!("directive \"{}\": unknown kind \"{}\"", def.id, def.kind);
+            }
+        }
+
         let mut buildings_by_id = HashMap::new();
         for def in &building_file.buildings {
             buildings_by_id.insert(def.id.clone(), def.clone());
@@ -440,6 +489,7 @@ impl GameData {
             seed_ship,
             planets: planet_file.planets,
             tutorial: tutorial_file.steps,
+            directives,
         }
     }
 
@@ -491,6 +541,7 @@ mod tests {
         ]}"#;
         let planets_json = r#"{"planets": []}"#;
         let tutorial_json = r#"{"steps": []}"#;
+        let directives_json = r#"{"rotation_seconds": 600.0, "directives": []}"#;
         let seed_ship_json = r#"{"intake_per_second": {"minerals": 1.0, "data": 1.0, "biomass": 1.0}, "stages": []}"#;
         let research_json = r#"{"starting_unlocked": ["core"], "nodes": [
             {"id": "core", "name": "Core", "description": "d", "data_cost": 0.0, "prerequisites": [], "position": [0.0, 0.0]}
@@ -502,6 +553,7 @@ mod tests {
             seed_ship_json,
             planets_json,
             tutorial_json,
+            directives_json,
         )
     }
 
@@ -517,7 +569,7 @@ mod tests {
     #[test]
     fn from_json_strings_falls_back_to_empty_on_malformed_json() {
         let data = GameData::from_json_strings(
-            "not json", "not json", "not json", "not json", "not json", "not json",
+            "not json", "not json", "not json", "not json", "not json", "not json", "not json",
         );
         assert!(data.buildings.is_empty());
         assert!(data.terrain.is_empty());

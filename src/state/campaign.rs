@@ -16,7 +16,6 @@ pub const PLANET_COUNT: usize = 5;
 /// Mars, per the GDD's Zone 1.
 pub const STARTING_PLANET: usize = 2;
 
-const DIRECTIVE_ROTATION_SECONDS: f32 = 600.0;
 /// Step length for worlds the player is not looking at. Coarse on purpose: a
 /// left-behind world only has to keep producing, not animate.
 const BACKGROUND_TICK_SECONDS: f32 = 1.0;
@@ -299,7 +298,7 @@ impl Campaign {
     pub fn update_directive(&mut self, delta_time: f32) {
         self.since_save += delta_time;
         self.directive_timer += delta_time;
-        let expired = self.directive_timer >= DIRECTIVE_ROTATION_SECONDS
+        let expired = self.directive_timer >= crate::directives::rotation_seconds()
             || self.directive.duration <= 0.0
             || self.directive.completed;
 
@@ -1118,7 +1117,7 @@ mod tests {
         let mut campaign = campaign();
         let goal = campaign.directive.description.clone();
         // Push it past its window without ever meeting it.
-        campaign.update_directive(DIRECTIVE_ROTATION_SECONDS + 1.0);
+        campaign.update_directive(crate::directives::rotation_seconds() + 1.0);
 
         let announced = campaign.current().notifications.get_notifications();
         assert_eq!(announced.len(), 1);

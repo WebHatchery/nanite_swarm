@@ -72,8 +72,8 @@ The first chain runs end to end and nothing teleports: a drill piles ore on its 
 - Grow the building set beyond 12 across processing, logistics, and megastructure parts. Hazard counters exist now; nothing else on that list does.
 - Tier the resource set further. Alloy is the first refined product; mass-driver strategy still has nothing worth shipping between worlds.
 - Larger and more varied maps with landmark features. Sizes are per-world data now (20x20 to 26x26) and the camera does not cap them, but the generator has no notion of a feature.
-- Replace the four `tier % 4` directives and four hardcoded achievements with a real objective/milestone system and a full achievement set. The Power Surplus directive still uses one number as both the power threshold and the seconds it must be held, so the two scale together by accident.
-- Write the GDD's "indifferent optimizer" tone into directives. Arrival lines have it (`planets.json`), the Seed Ship stages do, and all 19 research descriptions now do — they stopped restating the numbers once the inspect panel started rendering them. The four `tier % 4` directives are what is left.
+- The directive set is data (`assets/directives.json`): seven standing orders with their own wording, targets, per-tier growth and rewards, cycling in declared order and asking for more on each lap. Power Surplus holds for its own `hold_seconds` rather than for however many watts it wants. A new directive that reuses an existing kind is a line of JSON; a new *kind* is still code, because the simulation has to know how to measure it. The four hardcoded achievements are untouched and still want a real milestone system.
+- The "indifferent optimizer" tone is in the arrival lines (`planets.json`), the Seed Ship stages, all 19 research descriptions and now the directive wording. What is left without a voice: achievement names, building descriptions, and the tutorial steps.
 
 ## Simulation architecture
 

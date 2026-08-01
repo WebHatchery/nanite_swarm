@@ -1,0 +1,69 @@
+{
+  "rotation_seconds": 600.0,
+  "directives": [
+    {
+      "id": "power_surplus",
+      "kind": "power_surplus",
+      "text": "Sustain +{target} power for {hold}s",
+      "base_target": 20.0,
+      "target_per_tier": 5.0,
+      "hold_seconds": 20.0,
+      "base_reward": 20.0,
+      "reward_per_tier": 5.0
+    },
+    {
+      "id": "drills",
+      "kind": "drill_count",
+      "text": "Cut ore from {target} drills at once",
+      "base_target": 3.0,
+      "target_per_tier": 1.0,
+      "base_reward": 15.0,
+      "reward_per_tier": 4.0
+    },
+    {
+      "id": "structures",
+      "kind": "structure_count",
+      "text": "Stand {target} structures on this world",
+      "base_target": 12.0,
+      "target_per_tier": 3.0,
+      "base_reward": 18.0,
+      "reward_per_tier": 4.0
+    },
+    {
+      "id": "server_banks",
+      "kind": "server_banks",
+      "text": "Set {target} server banks to thinking",
+      "base_target": 2.0,
+      "target_per_tier": 0.5,
+      "base_reward": 20.0,
+      "reward_per_tier": 5.0
+    },
+    {
+      "id": "stockpile",
+      "kind": "mineral_stock",
+      "text": "Hold {target} minerals at once",
+      "base_target": 60.0,
+      "target_per_tier": 25.0,
+      "base_reward": 16.0,
+      "reward_per_tier": 4.0
+    },
+    {
+      "id": "harvest_forest",
+      "kind": "harvest_forest",
+      "text": "Take {target} forests apart",
+      "base_target": 2.0,
+      "target_per_tier": 0.5,
+      "base_reward": 10.0,
+      "reward_per_tier": 3.0
+    },
+    {
+      "id": "knowledge",
+      "kind": "research_count",
+      "text": "Work out {target} technologies",
+      "base_target": 5.0,
+      "target_per_tier": 1.0,
+      "base_reward": 22.0,
+      "reward_per_tier": 6.0
+    }
+  ]
+}
