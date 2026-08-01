@@ -5,6 +5,7 @@ mod format;
 mod hud;
 mod input;
 mod metrics;
+mod seed_ship_render;
 mod terrain_render;
 mod upkeep_render;
 
@@ -63,6 +64,9 @@ pub fn render_planetary_view(
     upkeep_render::draw_wear(state, metrics, time);
     upkeep_render::draw_coverage(state, metrics, hovered_pos);
     entity_render::draw_congestion(state, metrics, time);
+    // Over the tiles and under the drones: the ship is the tallest thing on
+    // the world, but the swarm still crawls in front of it.
+    seed_ship_render::draw_seed_ship(state, metrics, time);
     entity_render::draw_drones(state, metrics, time);
     entity_render::draw_particles(state, metrics);
 

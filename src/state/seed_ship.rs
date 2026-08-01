@@ -110,6 +110,26 @@ impl SeedShip {
         (paid / required).clamp(0.0, 1.0)
     }
 
+    /// Whether the yard has broken ground: the swarm has committed to a ship,
+    /// or at least one stage of one already stands.
+    pub fn has_broken_ground(&self) -> bool {
+        self.committed || self.stage > 0
+    }
+
+    /// How much of the whole ship is paid for, 0..1 across every stage. The
+    /// skyline is drawn from this, so a stage part-paid has to count for part
+    /// of it rather than for nothing.
+    pub fn built_fraction(&self) -> f32 {
+        if self.is_complete() {
+            return 1.0;
+        }
+        let count = self.stage_count();
+        if count == 0 {
+            return 0.0;
+        }
+        (self.stage as f32 + self.stage_fraction()) / count as f32
+    }
+
     /// The research the current stage is waiting on, if it is waiting.
     pub fn blocked_by(&self, unlocked: &[String]) -> Option<&'static str> {
         let stage = self.stage()?;
@@ -460,6 +480,58 @@ mod tests {
             ship.absorb(&mut resources, intake(), 10_000.0);
         }
         assert!(ship.is_complete());
+    }
+
+    #[test]
+    fn the_skyline_grows_with_the_ship_and_not_before_it() {
+        let mut state = researched_state();
+        assert!(
+            !state.seed_ship.has_broken_ground(),
+            "a yard nobody has committed to is standing"
+        );
+        assert_eq!(state.seed_ship.built_fraction(), 0.0);
+
+        state.toggle_seed_ship_commitment();
+        assert!(state.seed_ship.has_broken_ground());
+
+        let mut last = 0.0;
+        for _ in 0..400 {
+            state.update_seed_ship(1.0);
+            let now = state.seed_ship.built_fraction();
+            assert!(now >= last, "the ship shrank: {} then {}", last, now);
+            assert!((0.0..=1.0).contains(&now), "out of range: {}", now);
+            last = now;
+        }
+        assert!(state.seed_ship.is_complete());
+        assert_eq!(state.seed_ship.built_fraction(), 1.0);
+    }
+
+    #[test]
+    fn a_stage_part_paid_counts_for_part_of_the_ship() {
+        let mut state = researched_state();
+        state.toggle_seed_ship_commitment();
+        // Part-way into the first stage, and no further.
+        state.update_seed_ship(1.0);
+        let fraction = state.seed_ship.built_fraction();
+        assert_eq!(state.seed_ship.stage_index(), 0);
+        assert!(
+            fraction > 0.0 && fraction < 1.0 / state.seed_ship.stage_count() as f32,
+            "a part-paid first stage counted as {}",
+            fraction
+        );
+    }
+
+    #[test]
+    fn a_launched_yard_is_bare_ground_again() {
+        let mut state = researched_state();
+        state.toggle_seed_ship_commitment();
+        for _ in 0..400 {
+            state.update_seed_ship(1.0);
+        }
+        assert_eq!(state.seed_ship.built_fraction(), 1.0);
+        state.seed_ship.mark_launched();
+        assert_eq!(state.seed_ship.built_fraction(), 0.0);
+        assert!(!state.seed_ship.has_broken_ground());
     }
 
     #[test]

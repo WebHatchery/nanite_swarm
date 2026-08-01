@@ -483,6 +483,27 @@ impl Game {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();
             }
+            // The same mid-build ship, seen from the ground it is eating.
+            "skyline" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                for stage in &data::game_data().seed_ship.stages {
+                    if let Some(tech) = stage.requires.as_deref() {
+                        self.research_state.unlocked.push(tech.to_string());
+                    }
+                }
+                self.sync_research_to_planet();
+                let planet = self.campaign.current_mut();
+                planet.config.resources.base_mineral_cap = 100_000.0;
+                planet.resources.minerals = 100_000.0;
+                planet.resources.data = 10_000.0;
+                planet.resources.biomass = 10_000.0;
+                planet.resources.alloy = 10_000.0;
+                planet.toggle_seed_ship_commitment();
+                for _ in 0..60 {
+                    planet.update_seed_ship(1.0);
+                }
+            }
             "seedship" => {
                 self.phase = GamePhase::SeedShip;
                 self.seed_logistics_scene();
