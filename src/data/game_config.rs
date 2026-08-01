@@ -24,6 +24,7 @@ pub struct ResourceConfig {
     pub starting_energy: f32,
     pub starting_minerals: f32,
     pub drone_carry_capacity: f32,
+    pub drones_per_drill: f32,
     pub drone_speed: f32,
     pub max_energy: f32,
     pub base_mineral_cap: f32,
@@ -57,6 +58,7 @@ impl Default for GameConfig {
                 starting_energy: 50.0,
                 starting_minerals: 50.0,
                 drone_carry_capacity: 10.0,
+                drones_per_drill: 1.0,
                 // Tiles per second. Keep in step with assets/game_config.json.
                 drone_speed: 8.0,
                 max_energy: 50.0,

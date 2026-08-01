@@ -124,6 +124,17 @@ impl PlanetState {
         }
     }
 
+    /// How many drones a drill keeps in service, after research.
+    pub fn drone_crew_size(&self) -> usize {
+        self.stats
+            .apply(
+                StatId::DronesPerDrill,
+                self.config.resources.drones_per_drill,
+            )
+            .round()
+            .max(1.0) as usize
+    }
+
     /// Tiles carrying more traffic than they can pass.
     pub fn congested_tiles(&self) -> usize {
         let capacity = self.config.buildings.conduit_capacity.max(1.0);
@@ -149,6 +160,7 @@ impl PlanetState {
             .apply(StatId::DrillOutput, self.config.buildings.drill_output_rate);
         let load = self.drones.drone_capacity;
         let ceiling = load * DRILL_BUFFER_LOADS;
+        let crew = self.drone_crew_size();
 
         for drill_pos in self.grid.find_buildings(BuildingType::Drill) {
             let Some(building) = self.grid.get(drill_pos).and_then(|t| t.building.as_ref()) else {
@@ -158,6 +170,12 @@ impl PlanetState {
                 continue;
             }
             let efficiency = building.dust_efficiency();
+
+            // Research can grow a drill's crew; the extra drones turn up at
+            // the next cycle rather than needing the drill rebuilt.
+            while self.drones.drones_at_drill(drill_pos).len() < crew {
+                self.drones.spawn_drone(drill_pos);
+            }
 
             let buffer = self
                 .drill_buffers
@@ -318,6 +336,50 @@ mod tests {
             drone.dispatch_to_core(tile, vec![tile], 1.0);
         }
         state.update_traffic();
+    }
+
+    #[test]
+    fn a_drill_works_alone_until_research_says_otherwise() {
+        let (mut state, _core, drill) = state_with_run(2);
+        assert_eq!(state.drone_crew_size(), 1);
+        state.step(FILL_SECONDS, false);
+        assert_eq!(state.drones.drones_at_drill(drill).len(), 1);
+    }
+
+    #[test]
+    fn swarm_dispatch_puts_a_second_drone_on_every_drill() {
+        let (mut state, _core, drill) = state_with_run(2);
+        state
+            .research
+            .unlocked_techs
+            .push("swarm_dispatch".to_string());
+        state.refresh_stats();
+        assert_eq!(state.drone_crew_size(), 2);
+
+        // The crew turns up without the drill being rebuilt.
+        state.step(FILL_SECONDS, false);
+        assert_eq!(state.drones.drones_at_drill(drill).len(), 2);
+    }
+
+    #[test]
+    fn a_second_drone_lifts_throughput_on_a_run_too_long_for_one() {
+        let alone = {
+            let (mut state, _, _) = state_with_run(9);
+            loads_delivered(&mut state, 60.0)
+        };
+        let crewed = {
+            let (mut state, _, _) = state_with_run(9);
+            state
+                .research
+                .unlocked_techs
+                .push("swarm_dispatch".to_string());
+            state.refresh_stats();
+            loads_delivered(&mut state, 60.0)
+        };
+        assert!(
+            crewed > alone,
+            "one drone delivered {alone}, two delivered {crewed}"
+        );
     }
 
     #[test]

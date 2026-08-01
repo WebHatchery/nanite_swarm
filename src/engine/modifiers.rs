@@ -15,6 +15,8 @@ pub enum StatId {
     DrillOutput,
     /// Load a single drone can carry.
     DroneCapacity,
+    /// Drones a single drill keeps in service.
+    DronesPerDrill,
     /// Data produced by the Core and Server Banks.
     DataGeneration,
     /// Dust settling on buildings per second.
@@ -28,9 +30,10 @@ pub enum StatId {
 }
 
 impl StatId {
-    pub const ALL: [StatId; 7] = [
+    pub const ALL: [StatId; 8] = [
         StatId::DrillOutput,
         StatId::DroneCapacity,
+        StatId::DronesPerDrill,
         StatId::DataGeneration,
         StatId::DustAccumulation,
         StatId::MineralCapacity,
@@ -42,6 +45,7 @@ impl StatId {
         match self {
             StatId::DrillOutput => "drill_output",
             StatId::DroneCapacity => "drone_capacity",
+            StatId::DronesPerDrill => "drones_per_drill",
             StatId::DataGeneration => "data_generation",
             StatId::DustAccumulation => "dust_accumulation",
             StatId::MineralCapacity => "mineral_capacity",

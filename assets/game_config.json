@@ -10,6 +10,7 @@
         "starting_energy": 50.0,
         "starting_minerals": 50.0,
         "drone_carry_capacity": 10.0,
+        "drones_per_drill": 1.0,
         "drone_speed": 8.0,
         "max_energy": 50.0,
         "base_mineral_cap": 100.0,

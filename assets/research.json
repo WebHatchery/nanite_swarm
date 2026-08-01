@@ -56,6 +56,17 @@
       ]
     },
     {
+      "id": "swarm_dispatch",
+      "name": "Swarm Dispatch",
+      "description": "+1 drone per drill",
+      "data_cost": 45.0,
+      "prerequisites": ["drone_capacity"],
+      "position": [-1.3, -3.0],
+      "modifiers": [
+        { "stat": "drones_per_drill", "op": "add", "value": 1.0 }
+      ]
+    },
+    {
       "id": "wind_power",
       "name": "Wind Power",
       "description": "Enables wind turbines",

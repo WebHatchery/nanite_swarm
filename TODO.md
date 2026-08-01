@@ -21,9 +21,9 @@ Pillar decided 2026-08-01: **drones route along the conduit network** (rationale
 in `gdd.md` §3). Drones now walk Conduit/Power Node/Core tiles only, stop and
 flag when a run is cut, and resume when it is repaired.
 
-A network tile passes `conduit_capacity` drones at full speed; past that they share it, so a shared trunk slows everything routed through it. Saturated tiles are outlined on the map and raise a bottom-bar alert.
+A network tile passes `conduit_capacity` drones at full speed; past that they share it, so a shared trunk slows everything routed through it. Saturated tiles are outlined on the map and raise a bottom-bar alert. A drill's crew size is a stat, so `swarm_dispatch` research puts a second drone on every drill.
 
-- Let a drill dispatch more than one drone, so a single base can saturate its own trunk. Today congestion needs three drills feeding one run, which is late-game scale for a mechanic that should bite earlier.
+- A drill still dispatches at most one drone per tick, and only when a whole load is waiting, so a crew of two only helps on runs longer than the drill's fill time. Dispatching a partial load when a drone is idle and the run is long would make the crew worth having everywhere.
 - Congestion slows drones but never queues them: they pass through each other on a full tile rather than waiting. A real queue would make a junction readable at a glance.
 - Route cost ignores traffic — `route_over_network` still picks the shortest path even when it is the saturated one. Weighting by load would let drones spread across parallel runs by themselves.
 - Re-validating every in-flight drone's remaining path each tick is O(drones x path length); add a network revision counter and re-check only when the grid changes if it shows up in profiling.
