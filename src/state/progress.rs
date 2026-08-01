@@ -1,4 +1,4 @@
-use crate::engine::{BuildingType, GridPos};
+use crate::engine::{BuildingType, GridPos, StatId};
 
 use super::game_state::PlanetState;
 
@@ -32,16 +32,28 @@ impl PlanetState {
 
     pub fn mineral_capacity(&self) -> f32 {
         let storage_count = self.grid.find_buildings(BuildingType::Storage).len() as f32;
-        let mut cap = self.config.resources.base_mineral_cap
+        let built = self.config.resources.base_mineral_cap
             + storage_count * self.config.resources.storage_bonus;
-        if self
-            .research
-            .unlocked_techs
-            .contains(&"storage_optimization".to_string())
-        {
-            cap += self.config.resources.storage_tech_bonus;
-        }
-        cap
+        self.stats.apply(StatId::MineralCapacity, built)
+    }
+
+    /// Power produced this tick, including whatever the biomass harvesters
+    /// burned. Generation and consumption are asked for separately because the
+    /// HUD shows both halves.
+    pub fn power_generation(&self) -> f32 {
+        self.grid.total_power_generation() + self.biomass_power_bonus
+    }
+
+    /// Power drawn this tick, after research efficiencies.
+    pub fn power_consumption(&self) -> f32 {
+        self.stats.apply(
+            StatId::PowerConsumption,
+            self.grid.total_power_consumption(),
+        )
+    }
+
+    pub fn net_power(&self) -> f32 {
+        self.power_generation() - self.power_consumption()
     }
 
     pub fn battery_time_left(&self) -> (i32, i32) {
@@ -169,6 +181,84 @@ mod tests {
                 .count(),
             1
         );
+    }
+
+    /// Every tech that claims a number in `research.json` has to move one here.
+    /// These are the five that shipped as no-ops.
+    #[test]
+    fn researching_storage_optimization_raises_the_mineral_cap() {
+        let mut state = PlanetState::default();
+        let before = state.mineral_capacity();
+        state
+            .research
+            .unlocked_techs
+            .push("storage_optimization".into());
+        state.refresh_stats();
+        assert_eq!(state.mineral_capacity(), before + 50.0);
+    }
+
+    #[test]
+    fn researching_power_efficiency_lowers_consumption() {
+        let mut state = PlanetState::default();
+        let core = state.grid.find_core().unwrap();
+        let pos = crate::engine::GridPos::new(core.x + 1, core.y);
+        state.grid.reveal_around(pos, 1);
+        state.select_building(BuildingType::Drill);
+        state.try_place_building(pos);
+
+        let before = state.power_consumption();
+        assert!(before > 0.0);
+        state
+            .research
+            .unlocked_techs
+            .push("power_efficiency".into());
+        state.refresh_stats();
+        assert!(approx_eq(state.power_consumption(), before * 0.75, 1e-4));
+    }
+
+    #[test]
+    fn researching_drone_capacity_grows_existing_drones_too() {
+        let mut state = PlanetState::default();
+        let core = state.grid.find_core().unwrap();
+        let pos = crate::engine::GridPos::new(core.x + 1, core.y);
+        state.grid.reveal_around(pos, 1);
+        state.select_building(BuildingType::Drill);
+        state.try_place_building(pos);
+        let before = state.drones.drone_capacity;
+
+        state.research.unlocked_techs.push("drone_capacity".into());
+        state.refresh_stats();
+
+        assert_eq!(state.drones.drone_capacity, before * 2.0);
+        assert_eq!(state.drones.drones()[0].capacity, before * 2.0);
+    }
+
+    #[test]
+    fn researching_efficient_drills_and_advanced_research_speeds_production() {
+        let mut plain = PlanetState::default();
+        let mut upgraded = PlanetState::default();
+        upgraded
+            .research
+            .unlocked_techs
+            .extend(["efficient_drills".into(), "advanced_research".into()]);
+        upgraded.refresh_stats();
+
+        for state in [&mut plain, &mut upgraded] {
+            let core = state.grid.find_core().unwrap();
+            let pos = crate::engine::GridPos::new(core.x + 1, core.y);
+            state.grid.reveal_around(pos, 1);
+            state.select_building(BuildingType::Drill);
+            state.try_place_building(pos);
+            state.resources.minerals = 0.0;
+            // Both runs would otherwise clamp at the storage cap.
+            state.config.resources.base_mineral_cap = 100_000.0;
+            for _ in 0..300 {
+                state.step(0.1, false);
+            }
+        }
+
+        assert!(upgraded.resources.minerals > plain.resources.minerals);
+        assert!(upgraded.resources.data > plain.resources.data);
     }
 
     #[test]

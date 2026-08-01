@@ -61,6 +61,15 @@ pub struct TerrainDef {
     pub color: [f32; 4],
 }
 
+/// One declared effect of a research node. Interpreted by
+/// [`crate::engine::parse_modifier`]; validated when the tree is loaded.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ModifierDef {
+    pub stat: String,
+    pub op: String,
+    pub value: f32,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct ResearchNodeDef {
     pub id: String,
@@ -69,6 +78,8 @@ pub struct ResearchNodeDef {
     pub data_cost: f32,
     pub prerequisites: Vec<String>,
     pub position: (f32, f32),
+    #[serde(default)]
+    pub modifiers: Vec<ModifierDef>,
 }
 
 impl ResearchNodeDef {
@@ -146,6 +157,16 @@ impl GameData {
             starting_unlocked: vec!["core".to_string(), "basic_mining".to_string()],
             nodes: vec![],
         });
+
+        // A typo in a modifier would otherwise be a tech that silently does
+        // nothing - the exact bug this system exists to stop.
+        for node in &research.nodes {
+            for modifier in &node.modifiers {
+                if let Err(problem) = crate::engine::parse_modifier(modifier) {
+                    panic!("research node \"{}\": {}", node.id, problem);
+                }
+            }
+        }
 
         let mut buildings_by_id = HashMap::new();
         for def in &building_file.buildings {

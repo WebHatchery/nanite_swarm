@@ -21,7 +21,7 @@ flag when a run is cut, and resume when it is repaired.
 - Let a drill dispatch more than one drone, and let drones queue on a segment, so throughput has something to push against — today it is one drone per drill with no interaction.
 - Re-validating every in-flight drone's remaining path each tick is O(drones x path length); add a network revision counter and re-check only when the grid changes if it shows up in profiling.
 - A stalled drone shows an error flag and a HUD counter, but nothing points at *where* the break is; highlight the severed run on the map.
-- Add ore deposits with richness and depletion — drills currently output a hardcoded 10 minerals/cycle from any tile, so placement is spatially meaningless.
+- Add ore deposits with richness and depletion — every drill cuts the same `drill_output_rate` from any tile, so placement is spatially meaningless.
 - Make Bridge tiles real; they are a bool flag that does not even transmit power.
 
 ## Interplanetary meta-layer
@@ -41,13 +41,15 @@ flag when a run is cut, and resume when it is repaired.
 
 ## Research
 
-- Fix five no-op techs — `efficient_drills`, `drone_capacity`, `power_efficiency`, `advanced_research`, `neural_expansion` are never read outside the tree UI.
-- Build a declared modifier/stat system driven from `research.json`, replacing the stringly-typed `unlocked_techs.contains(...)` pattern that caused the no-ops.
+Techs declare their effects as modifiers in `research.json` (`engine::modifiers`), validated at load; the stringly-typed `unlocked_techs.contains(...)` reads are gone.
+
 - Expand the tree well past 15 nodes, with per-planet branches and hazard counters as research.
+- The research view shows a node's prose description but not the stats it moves; render the declared modifiers so the tree explains itself.
+- Add stats for the values still fixed in Rust: drone speed, repeater range, collapse thresholds, harvest yields.
 
 ## Content
 
-- Add production chains: intermediate products, recipes, and processing buildings. Minerals currently teleport into one global pool, so there is nothing to optimise.
+- Add production chains: intermediate products, recipes, and processing buildings. A drill now buffers ore until a drone takes it, but everything still lands in one global mineral pool.
 - Grow the building set beyond 10 across processing, logistics, hazard counters, and megastructure parts.
 - Tier the resource set beyond Minerals/Energy/Data/Biomass to support chains and mass-driver strategy.
 - Larger and more varied maps with per-planet generators and landmark features (needs the camera work below).
@@ -61,8 +63,8 @@ The sim runs on a fixed 1/30s timestep with an accumulator (`PlanetState::advanc
 - Offline catch-up still steps at a coarser 1s, because four hours at the live tick rate is 432,000 steps on load. Unify it when the offline model becomes an earnings report (see Save system).
 - Pull simulation out of `screens/` so planetary, interplanetary, and background-planet simulation share one engine.
 - Extend the deterministic snapshot tests past harvest throughput: power failure, research unlocks, and collapse thresholds still have no pinned numbers.
-- Move hardcoded balance constants into validated JSON fixtures — drill output is `10.0/cycle` while the HUD shows the unused config value `2.0`, and `conduit_throughput` and `core_power_consumption` are dead config fields.
-- Validate data at load with real error messages; `game_data().building(id)` panics on a missing id.
+- Move the remaining hardcoded balance constants into JSON — dust rates, sweeper/filter radii, and collapse timings are Rust consts, and `conduit_throughput` and `core_power_consumption` are still dead config fields.
+- Validate the rest of the data at load the way research modifiers now are; `game_data().building(id)` still panics on a missing id with no context.
 
 ## Save system
 

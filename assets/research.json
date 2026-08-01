@@ -39,7 +39,10 @@
       "description": "+50% drill output",
       "data_cost": 25.0,
       "prerequisites": ["basic_mining"],
-      "position": [-2.0, -2.0]
+      "position": [-2.0, -2.0],
+      "modifiers": [
+        { "stat": "drill_output", "op": "percent", "value": 0.5 }
+      ]
     },
     {
       "id": "drone_capacity",
@@ -47,7 +50,10 @@
       "description": "+100% drone carry capacity",
       "data_cost": 30.0,
       "prerequisites": ["basic_mining"],
-      "position": [-1.0, -2.0]
+      "position": [-1.0, -2.0],
+      "modifiers": [
+        { "stat": "drone_capacity", "op": "percent", "value": 1.0 }
+      ]
     },
     {
       "id": "wind_power",
@@ -63,7 +69,10 @@
       "description": "-25% power consumption",
       "data_cost": 35.0,
       "prerequisites": ["power_grid"],
-      "position": [1.0, -2.0]
+      "position": [1.0, -2.0],
+      "modifiers": [
+        { "stat": "power_consumption", "op": "percent", "value": -0.25 }
+      ]
     },
     {
       "id": "self_cleaning_servos",
@@ -71,7 +80,10 @@
       "description": "-40% dust accumulation and unlocks Sweepers",
       "data_cost": 30.0,
       "prerequisites": ["data_processing"],
-      "position": [2.5, -2.0]
+      "position": [2.5, -2.0],
+      "modifiers": [
+        { "stat": "dust_accumulation", "op": "percent", "value": -0.4 }
+      ]
     },
     {
       "id": "storage_systems",
@@ -87,7 +99,10 @@
       "description": "+50 mineral capacity",
       "data_cost": 20.0,
       "prerequisites": ["storage_systems"],
-      "position": [-3.2, -1.5]
+      "position": [-3.2, -1.5],
+      "modifiers": [
+        { "stat": "mineral_capacity", "op": "add", "value": 50.0 }
+      ]
     },
     {
       "id": "biomass_fuel",
@@ -103,7 +118,10 @@
       "description": "+50% data generation",
       "data_cost": 40.0,
       "prerequisites": ["data_processing"],
-      "position": [0.0, -2.5]
+      "position": [0.0, -2.5],
+      "modifiers": [
+        { "stat": "data_generation", "op": "percent", "value": 0.5 }
+      ]
     },
     {
       "id": "mass_driver",
@@ -116,10 +134,14 @@
     {
       "id": "neural_expansion",
       "name": "Neural Expansion",
-      "description": "Unlocks advanced AI capabilities",
+      "description": "+50% research speed and +25% data generation",
       "data_cost": 150.0,
       "prerequisites": ["advanced_research", "mass_driver"],
-      "position": [0.0, -4.5]
+      "position": [0.0, -4.5],
+      "modifiers": [
+        { "stat": "research_rate", "op": "percent", "value": 0.5 },
+        { "stat": "data_generation", "op": "percent", "value": 0.25 }
+      ]
     }
   ]
 }

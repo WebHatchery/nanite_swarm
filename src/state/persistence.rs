@@ -23,6 +23,9 @@ pub fn load_from_json(json: &str) -> Result<PlanetState, serde_json::Error> {
     state
         .achievements
         .sync_definitions(super::game_state::achievement_definitions());
+    // The stat sheet is derived, not saved: rebuild it before the offline
+    // catch-up runs, or the save loads with every research effect switched off.
+    state.refresh_stats();
     let now = unix_seconds_now();
     if state.last_saved_unix > 0 && now > state.last_saved_unix {
         let offline_seconds = (now - state.last_saved_unix) as f32;

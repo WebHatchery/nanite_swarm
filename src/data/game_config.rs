@@ -28,8 +28,8 @@ pub struct ResourceConfig {
     pub max_energy: f32,
     pub base_mineral_cap: f32,
     pub storage_bonus: f32,
-    pub storage_tech_bonus: f32,
     pub core_data_rate: f32,
+    pub server_data_rate: f32,
     pub forest_biomass: f32,
     pub biomass_power_output: f32,
     pub biomass_consumption_rate: f32,
@@ -61,15 +61,16 @@ impl Default for GameConfig {
                 max_energy: 50.0,
                 base_mineral_cap: 100.0,
                 storage_bonus: 100.0,
-                storage_tech_bonus: 50.0,
                 core_data_rate: 0.25,
+                server_data_rate: 1.0,
                 forest_biomass: 60.0,
                 biomass_power_output: 8.0,
                 biomass_consumption_rate: 1.0,
             },
             buildings: BuildingConfig {
                 core_power_consumption: 5.0,
-                drill_output_rate: 2.0,
+                // Minerals cut per second by one drill.
+                drill_output_rate: 5.0,
                 conduit_throughput: 10.0,
             },
         }

@@ -1,7 +1,7 @@
 //! Current planetary state
 
 use crate::data::GameConfig;
-use crate::engine::{BuildingType, DroneManager, Grid, GridPos};
+use crate::engine::{BuildingType, DroneManager, Grid, GridPos, Stats};
 use macroquad::miniquad;
 use macroquad_toolkit::achievements::{Achievement, Achievements};
 use macroquad_toolkit::fx::ParticleSystem;
@@ -84,8 +84,11 @@ pub struct PlanetState {
     pub last_saved_unix: i64,
     pub achievements: Achievements,
     pub unlocked_buildings: Vec<BuildingType>,
+    /// Everything unlocked research does to the simulation, folded into one
+    /// sheet. Derived from `research.unlocked_techs` — never edited directly,
+    /// always rebuilt by [`PlanetState::refresh_stats`].
     #[serde(skip, default)]
-    pub self_cleaning_unlocked: bool,
+    pub stats: Stats,
     #[serde(skip, default)]
     pub power_negative_seconds: f32,
     #[serde(skip, default)]
@@ -124,12 +127,9 @@ pub struct PlanetState {
     pub particle_timer: f32,
     #[serde(skip, default)]
     pub placement_anims: Vec<PlacementAnim>,
-    // Drill production timers (drill position -> accumulated time)
+    // Minerals a drill has cut but not yet handed to a drone
     #[serde(skip)]
-    pub drill_timers: std::collections::HashMap<(i32, i32), f32>,
-    // Server bank data generation timers
-    #[serde(skip)]
-    pub server_timers: std::collections::HashMap<(i32, i32), f32>,
+    pub drill_buffers: std::collections::HashMap<(i32, i32), f32>,
 }
 
 impl PlanetState {
@@ -151,7 +151,7 @@ impl PlanetState {
             }
         }
 
-        Self {
+        let mut state = Self {
             name: name.to_string(),
             resources: Resources {
                 energy: config.resources.starting_energy,
@@ -174,7 +174,7 @@ impl PlanetState {
             battery_seconds: 4.0 * 60.0 * 60.0,
             last_saved_unix: unix_seconds_now(),
             achievements: Achievements::from_definitions(achievement_definitions()),
-            self_cleaning_unlocked: false,
+            stats: Stats::default(),
             power_negative_seconds: 0.0,
             power_collapse_cooldown: 0.0,
             power_collapse_shutdown: 0.0,
@@ -195,8 +195,27 @@ impl PlanetState {
             particles: ParticleSystem::new(),
             particle_timer: 0.0,
             placement_anims: Vec::new(),
-            drill_timers: std::collections::HashMap::new(),
-            server_timers: std::collections::HashMap::new(),
+            drill_buffers: std::collections::HashMap::new(),
+        };
+        state.refresh_stats();
+        state
+    }
+}
+
+impl PlanetState {
+    /// Rebuild the stat sheet from what research has unlocked, and push the
+    /// values that live outside it into place. Call this after anything that
+    /// changes `research.unlocked_techs`.
+    pub fn refresh_stats(&mut self) {
+        self.stats = Stats::from_unlocked(&self.research.unlocked_techs);
+
+        let capacity = self.stats.apply(
+            crate::engine::StatId::DroneCapacity,
+            self.config.resources.drone_carry_capacity,
+        );
+        self.drones.drone_capacity = capacity;
+        for drone in self.drones.drones_mut() {
+            drone.capacity = capacity;
         }
     }
 }

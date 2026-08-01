@@ -157,11 +157,6 @@ impl Grid {
             })
             .sum()
     }
-
-    /// Calculate net power (generation - consumption)
-    pub fn net_power(&self) -> f32 {
-        self.total_power_generation() - self.total_power_consumption()
-    }
 }
 
 #[cfg(test)]
@@ -267,16 +262,13 @@ mod tests {
     }
 
     #[test]
-    fn net_power_is_generation_minus_consumption() {
+    fn the_core_generates_and_a_connected_drill_consumes() {
         let (mut grid, core_pos) = grid_with_core(6, 6);
         let drill_pos = GridPos::new(core_pos.x + 1, core_pos.y);
         grid.place_building(drill_pos, BuildingType::Drill);
         grid.update_power_grid();
-        let generation = grid.total_power_generation();
-        let consumption = grid.total_power_consumption();
-        assert_eq!(grid.net_power(), generation - consumption);
         // Core generates power, drill consumes it once connected.
-        assert!(generation > 0.0);
-        assert!(consumption > 0.0);
+        assert!(grid.total_power_generation() > 0.0);
+        assert!(grid.total_power_consumption() > 0.0);
     }
 }

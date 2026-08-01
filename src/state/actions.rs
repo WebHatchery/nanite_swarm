@@ -24,12 +24,7 @@ impl PlanetState {
                 // Spawn initial drone for drills
                 if building_type == BuildingType::Drill {
                     self.drones.spawn_drone(pos);
-                    self.drill_timers.insert((pos.x, pos.y), 0.0);
-                }
-
-                // Track server banks
-                if building_type == BuildingType::ServerBank {
-                    self.server_timers.insert((pos.x, pos.y), 0.0);
+                    self.drill_buffers.insert((pos.x, pos.y), 0.0);
                 }
 
                 // Reveal area around new building
@@ -37,7 +32,7 @@ impl PlanetState {
 
                 // Update power grid
                 self.grid.update_power_grid();
-                self.power_balance = self.grid.net_power();
+                self.power_balance = self.net_power();
                 self.update_achievements();
 
                 self.placement_anims.push(PlacementAnim {
@@ -88,7 +83,7 @@ impl PlanetState {
 
         if placed_any {
             self.grid.update_power_grid();
-            self.power_balance = self.grid.net_power();
+            self.power_balance = self.net_power();
         }
 
         placed_any
@@ -110,22 +105,16 @@ impl PlanetState {
         let refund_ratio = 0.5;
 
         if let Some(removed) = self.grid.remove_building(pos) {
-            match removed.building_type {
-                BuildingType::Drill => {
-                    self.drill_timers.remove(&(pos.x, pos.y));
-                    self.drones.remove_drones_at_drill(pos);
-                }
-                BuildingType::ServerBank => {
-                    self.server_timers.remove(&(pos.x, pos.y));
-                }
-                _ => {}
+            if removed.building_type == BuildingType::Drill {
+                self.drill_buffers.remove(&(pos.x, pos.y));
+                self.drones.remove_drones_at_drill(pos);
             }
 
             self.resources.minerals += mineral_cost * refund_ratio;
             self.resources.energy += energy_cost * refund_ratio;
 
             self.grid.update_power_grid();
-            self.power_balance = self.grid.net_power();
+            self.power_balance = self.net_power();
             return true;
         }
 
@@ -219,7 +208,7 @@ mod tests {
         assert!(state.try_place_building(pos));
         assert!(state.resources.minerals < before_minerals);
         assert_eq!(state.drones.total_count(), 1);
-        assert!(state.drill_timers.contains_key(&(pos.x, pos.y)));
+        assert!(state.drill_buffers.contains_key(&(pos.x, pos.y)));
     }
 
     #[test]

@@ -6,10 +6,12 @@
 
 mod drone_engine;
 mod grid_engine;
+mod modifiers;
 mod research_engine;
 mod routing;
 
 pub use drone_engine::*;
 pub use grid_engine::*;
+pub use modifiers::*;
 pub use research_engine::*;
 pub use routing::*;

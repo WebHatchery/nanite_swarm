@@ -28,8 +28,8 @@ pub(super) fn draw(
     let ops_h = right.ops.h;
 
     draw_hud_panel(theme, right.power, Some("POWER GRID"));
-    let generation = state.grid.total_power_generation();
-    let consumption = state.grid.total_power_consumption();
+    let generation = state.power_generation();
+    let consumption = state.power_consumption();
     let power_content_y = power_y + if power_h < 130.0 { 48.0 } else { 54.0 };
     let power_row_gap = if power_h < 130.0 { 17.0 } else { 18.0 };
     draw_status_row(

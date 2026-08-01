@@ -253,8 +253,6 @@ impl Game {
 
     fn update_research(&mut self, delta_time: f32) {
         let Some(current_id) = self.research_state.current_research.clone() else {
-            self.planet_state.self_cleaning_unlocked =
-                self.research_state.is_unlocked("self_cleaning_servos");
             self.sync_building_unlocks();
             self.sync_research_to_planet();
             return;
@@ -272,8 +270,6 @@ impl Game {
         let remaining = (node.data_cost - self.research_state.research_progress).max(0.0);
         if remaining <= 0.0 {
             self.research_state.complete_research();
-            self.planet_state.self_cleaning_unlocked =
-                self.research_state.is_unlocked("self_cleaning_servos");
             self.sync_building_unlocks();
             self.sync_research_to_planet();
             return;
@@ -284,7 +280,11 @@ impl Game {
             return;
         }
 
-        let spend = (RESEARCH_RATE * delta_time).min(available).min(remaining);
+        let rate = self
+            .planet_state
+            .stats
+            .apply(engine::StatId::ResearchRate, RESEARCH_RATE);
+        let spend = (rate * delta_time).min(available).min(remaining);
         self.planet_state.resources.data -= spend;
         self.research_state.research_progress += spend;
 
@@ -292,8 +292,6 @@ impl Game {
             self.research_state.complete_research();
         }
 
-        self.planet_state.self_cleaning_unlocked =
-            self.research_state.is_unlocked("self_cleaning_servos");
         self.sync_building_unlocks();
         self.sync_research_to_planet();
     }
@@ -313,6 +311,8 @@ impl Game {
         self.planet_state.research.unlocked_techs = self.research_state.unlocked.clone();
         self.planet_state.research.current_research = self.research_state.current_research.clone();
         self.planet_state.research.research_progress = self.research_state.research_progress;
+        // Unlocked techs just changed shape: rebuild what they do.
+        self.planet_state.refresh_stats();
     }
 
     fn sync_building_unlocks(&mut self) {

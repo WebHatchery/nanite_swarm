@@ -1,6 +1,6 @@
 //! Per-tick simulation: drills, servers, dust, biomass, tutorial, power collapse
 
-use crate::engine::{BuildingType, DroneState, TerrainType};
+use crate::engine::{BuildingType, DroneState, StatId, TerrainType};
 
 use super::game_state::PlanetState;
 
@@ -114,8 +114,8 @@ impl PlanetState {
 
         // Power-based energy generation
         self.grid.update_power_grid();
-        let net_power = self.grid.net_power();
-        self.power_balance = net_power + self.biomass_power_bonus;
+        let net_power = self.net_power();
+        self.power_balance = net_power;
         self.resources.energy += self.power_balance * sim_delta;
 
         // Passive data trickle from Core to avoid research deadlock
@@ -123,9 +123,10 @@ impl PlanetState {
             if let Some(core_tile) = self.grid.get(core_pos) {
                 if let Some(core) = core_tile.building.as_ref() {
                     if core.powered && !core.is_dust_stalled() {
-                        self.resources.data += self.config.resources.core_data_rate
-                            * sim_delta
-                            * core.dust_efficiency();
+                        let rate = self
+                            .stats
+                            .apply(StatId::DataGeneration, self.config.resources.core_data_rate);
+                        self.resources.data += rate * sim_delta * core.dust_efficiency();
                     }
                 }
             }
@@ -166,36 +167,24 @@ impl PlanetState {
 
     /// Update server bank data generation
     fn update_servers(&mut self, delta_time: f32) {
-        let server_positions = self.grid.find_buildings(BuildingType::ServerBank);
+        let rate = self.stats.apply(
+            StatId::DataGeneration,
+            self.config.resources.server_data_rate,
+        );
 
-        for server_pos in server_positions {
-            // Check if server is powered
+        for server_pos in self.grid.find_buildings(BuildingType::ServerBank) {
             let Some(building) = self.grid.get(server_pos).and_then(|t| t.building.as_ref()) else {
                 continue;
             };
-            let is_powered = building.powered;
-            if building.is_dust_stalled() {
+            if !building.powered || building.is_dust_stalled() {
                 continue;
             }
-            let efficiency = building.dust_efficiency();
-
-            if !is_powered {
-                continue;
-            }
-
-            let key = (server_pos.x, server_pos.y);
-            let timer = self.server_timers.entry(key).or_insert(0.0);
-            *timer += delta_time;
-
-            // Generate 1 data per second when powered
-            if *timer >= 1.0 {
-                *timer = 0.0;
-                self.resources.data += 1.0 * efficiency;
-            }
+            self.resources.data += rate * building.dust_efficiency() * delta_time;
         }
     }
 
     fn update_dust(&mut self, delta_time: f32) {
+        let dust_rate = self.stats.apply(StatId::DustAccumulation, DUST_RATE);
         let sweeper_positions = self.grid.find_buildings(BuildingType::Sweeper);
         let powered_sweepers: Vec<_> = sweeper_positions
             .into_iter()
@@ -222,11 +211,7 @@ impl PlanetState {
             let Some(building) = tile.building.as_mut() else {
                 continue;
             };
-            let mut rate = DUST_RATE;
-
-            if self.self_cleaning_unlocked {
-                rate *= 0.6;
-            }
+            let mut rate = dust_rate;
 
             if filter_positions
                 .iter()
@@ -465,7 +450,7 @@ mod tests {
         state.select_building(BuildingType::ServerBank);
         assert!(state.try_place_building(pos));
 
-        assert!(state.grid.net_power() < 0.0);
+        assert!(state.net_power() < 0.0);
 
         for _ in 0..70 {
             state.step(1.0, false);

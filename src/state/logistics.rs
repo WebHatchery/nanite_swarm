@@ -6,13 +6,15 @@
 
 use crate::engine::{
     route_over_network, tile_carries_traffic, BuildingType, Drone, DroneEvent, DroneState, Grid,
-    GridPos,
+    GridPos, StatId,
 };
 
 use super::game_state::PlanetState;
 
-const DRILL_CYCLE_SECONDS: f32 = 2.0;
-const DRILL_OUTPUT_PER_CYCLE: f32 = 10.0;
+/// How much a drill may stockpile while its drone is away, as a multiple of a
+/// drone load. Past this the ore is simply not cut: a drill that outruns its
+/// logistics is the pressure, not free storage.
+const DRILL_BUFFER_LOADS: f32 = 3.0;
 
 impl PlanetState {
     /// Run one logistics tick: re-check live routes, then dispatch drills.
@@ -80,8 +82,15 @@ impl PlanetState {
         events
     }
 
-    /// Update drill production and drone dispatching
+    /// Cut ore into each drill's buffer, and send a drone the moment there is
+    /// a full load waiting for it.
     fn update_drills(&mut self, delta_time: f32, core: GridPos) {
+        let rate = self
+            .stats
+            .apply(StatId::DrillOutput, self.config.buildings.drill_output_rate);
+        let load = self.drones.drone_capacity;
+        let ceiling = load * DRILL_BUFFER_LOADS;
+
         for drill_pos in self.grid.find_buildings(BuildingType::Drill) {
             let Some(building) = self.grid.get(drill_pos).and_then(|t| t.building.as_ref()) else {
                 continue;
@@ -91,18 +100,18 @@ impl PlanetState {
             }
             let efficiency = building.dust_efficiency();
 
-            let timer = self
-                .drill_timers
+            let buffer = self
+                .drill_buffers
                 .entry((drill_pos.x, drill_pos.y))
                 .or_insert(0.0);
-            *timer += delta_time;
-            if *timer < DRILL_CYCLE_SECONDS {
+            *buffer = (*buffer + rate * efficiency * delta_time).min(ceiling);
+            if *buffer < load {
                 continue;
             }
 
             let Some(route) = route_over_network(&self.grid, drill_pos, core) else {
-                // The drill has power but no pipe to the Core: hold the cycle
-                // rather than silently banking the output.
+                // Powered but no pipe to the Core: the ore piles up at the
+                // drill instead of teleporting into the pool.
                 continue;
             };
 
@@ -113,13 +122,14 @@ impl PlanetState {
                 .find(|d| d.home_drill == drill_pos && d.state == DroneState::Idle)
                 .map(|d| d.id);
 
-            if let Some(drone_id) = idle_drone {
-                if let Some(timer) = self.drill_timers.get_mut(&(drill_pos.x, drill_pos.y)) {
-                    *timer = 0.0;
-                }
-                if let Some(drone) = self.drones.get_drone_mut(drone_id) {
-                    drone.dispatch_to_core(core, route, DRILL_OUTPUT_PER_CYCLE * efficiency);
-                }
+            let Some(drone_id) = idle_drone else {
+                continue;
+            };
+            if let Some(buffer) = self.drill_buffers.get_mut(&(drill_pos.x, drill_pos.y)) {
+                *buffer -= load;
+            }
+            if let Some(drone) = self.drones.get_drone_mut(drone_id) {
+                drone.dispatch_to_core(core, route, load);
             }
         }
     }
@@ -170,6 +180,9 @@ mod tests {
     use super::*;
     use crate::data::GameConfig;
 
+    /// One full drone load at the shipped drill rate: 10 minerals at 5/s.
+    const FILL_SECONDS: f32 = 2.0;
+
     /// A Core with a conduit run east and a drill at the far end of it.
     fn state_with_run(length: i32) -> (PlanetState, GridPos, GridPos) {
         let mut state = PlanetState::new("Test", 24, 24, 42, GameConfig::default());
@@ -215,7 +228,7 @@ mod tests {
             state.step(crate::state::TICK_SECONDS, false);
         }
 
-        (state.resources.minerals / DRILL_OUTPUT_PER_CYCLE).round() as u32
+        (state.resources.minerals / state.drones.drone_capacity).round() as u32
     }
 
     /// Snapshot of the whole harvest loop at the fixed timestep: drill cycle,
@@ -240,7 +253,7 @@ mod tests {
     #[test]
     fn drills_dispatch_along_the_conduit_run() {
         let (mut state, core, drill) = state_with_run(3);
-        state.update_logistics(DRILL_CYCLE_SECONDS, false);
+        state.update_logistics(FILL_SECONDS, false);
 
         let drone = &state.drones.drones()[0];
         assert_eq!(drone.state, DroneState::MovingToCore);
@@ -258,14 +271,14 @@ mod tests {
             .remove_building(GridPos::new(drill.x - 1, drill.y));
         state.grid.update_power_grid();
 
-        state.update_logistics(DRILL_CYCLE_SECONDS * 4.0, false);
+        state.update_logistics(FILL_SECONDS * 4.0, false);
         assert_eq!(state.drones.drones()[0].state, DroneState::Idle);
     }
 
     #[test]
     fn cutting_the_run_stops_a_drone_in_flight_without_losing_its_cargo() {
         let (mut state, _core, drill) = state_with_run(4);
-        state.update_logistics(DRILL_CYCLE_SECONDS, false);
+        state.update_logistics(FILL_SECONDS, false);
         assert_eq!(state.drones.drones()[0].state, DroneState::MovingToCore);
 
         state
@@ -291,7 +304,7 @@ mod tests {
             assert!(state.try_place_building(pos));
         }
         state.grid.update_power_grid();
-        state.update_logistics(DRILL_CYCLE_SECONDS, false);
+        state.update_logistics(FILL_SECONDS, false);
         assert_eq!(state.drones.drones()[0].state, DroneState::MovingToCore);
 
         state
@@ -309,7 +322,7 @@ mod tests {
     #[test]
     fn repairing_the_run_sends_a_stalled_drone_on_its_way_again() {
         let (mut state, core, drill) = state_with_run(4);
-        state.update_logistics(DRILL_CYCLE_SECONDS, false);
+        state.update_logistics(FILL_SECONDS, false);
         let cut = GridPos::new(drill.x - 3, drill.y);
         state.grid.remove_building(cut);
         state.grid.update_power_grid();
@@ -329,7 +342,7 @@ mod tests {
     #[test]
     fn drones_stranded_by_a_power_collapse_recover_once_it_passes() {
         let (mut state, _core, _drill) = state_with_run(3);
-        state.update_logistics(DRILL_CYCLE_SECONDS, false);
+        state.update_logistics(FILL_SECONDS, false);
         state.trigger_power_collapse();
         assert_eq!(state.drones.drones()[0].state, DroneState::Error);
         assert_eq!(state.drones.drones()[0].carrying, 0.0);
@@ -347,8 +360,8 @@ mod tests {
     fn a_longer_run_takes_a_longer_route_than_a_direct_one() {
         let (mut short_run, _, _) = state_with_run(1);
         let (mut long_run, _, _) = state_with_run(6);
-        short_run.update_logistics(DRILL_CYCLE_SECONDS, false);
-        long_run.update_logistics(DRILL_CYCLE_SECONDS, false);
+        short_run.update_logistics(FILL_SECONDS, false);
+        long_run.update_logistics(FILL_SECONDS, false);
 
         assert!(long_run.drones.drones()[0].path.len() > short_run.drones.drones()[0].path.len());
     }
