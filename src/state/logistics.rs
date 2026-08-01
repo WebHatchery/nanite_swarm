@@ -49,6 +49,50 @@ impl PlanetState {
         self.drones.count_by_state(DroneState::Error)
     }
 
+    /// Every piece of network with no unbroken run back to the Core, plus the
+    /// pieces that have stopped carrying traffic and caused it.
+    ///
+    /// The HUD could say a drone was stalled but never where the break was, so
+    /// finding it meant walking the run by eye. Worth asking only while
+    /// something is actually stalled: a run being laid outward from a drill is
+    /// disconnected on purpose.
+    pub fn severed_network(&self) -> Vec<GridPos> {
+        let Some(core) = self.grid.find_core() else {
+            return Vec::new();
+        };
+
+        // A piece of network regardless of whether it is working right now,
+        // because a piece that has stopped working is exactly the answer.
+        let is_piece = |pos: GridPos| {
+            self.grid
+                .get(pos)
+                .and_then(|tile| tile.building.as_ref())
+                .is_some_and(|building| building.carries_traffic())
+        };
+
+        let mut reached = std::collections::HashSet::new();
+        let mut frontier = vec![core];
+        reached.insert((core.x, core.y));
+        while let Some(pos) = frontier.pop() {
+            for next in pos.neighbors() {
+                if !next.in_bounds(self.grid.width, self.grid.height)
+                    || reached.contains(&(next.x, next.y))
+                    || !tile_carries_traffic(&self.grid, next)
+                {
+                    continue;
+                }
+                reached.insert((next.x, next.y));
+                frontier.push(next);
+            }
+        }
+
+        self.grid
+            .iter_tiles()
+            .map(|(pos, _)| pos)
+            .filter(|pos| is_piece(*pos) && !reached.contains(&(pos.x, pos.y)))
+            .collect()
+    }
+
     fn drone_position(&self, drone_id: u32) -> Option<GridPos> {
         self.drones
             .drones()
@@ -474,6 +518,58 @@ mod tests {
     /// dispatch, travel out over the network, delivery, and the walk home. If
     /// the tick length, drone speed, drill cycle or route cost changes, this
     /// number moves.
+    #[test]
+    fn an_unbroken_run_has_nothing_to_point_at() {
+        let (state, _, _) = state_with_run(4);
+        assert!(state.severed_network().is_empty());
+    }
+
+    #[test]
+    fn cutting_a_run_points_at_everything_past_the_cut() {
+        let (mut state, core, _) = state_with_run(5);
+        let cut = GridPos::new(core.x + 3, core.y);
+        state.grid.remove_building(cut);
+        state.grid.update_power_grid();
+
+        let severed = state.severed_network();
+        // The two pieces beyond the cut, and nothing on the Core's side.
+        assert!(severed.contains(&GridPos::new(core.x + 4, core.y)));
+        assert!(severed.contains(&GridPos::new(core.x + 5, core.y)));
+        assert!(!severed.contains(&GridPos::new(core.x + 1, core.y)));
+        assert!(!severed.contains(&GridPos::new(core.x + 2, core.y)));
+        assert!(!severed.contains(&core), "the Core cut itself off");
+    }
+
+    #[test]
+    fn a_conduit_choked_with_dust_is_named_as_the_break_itself() {
+        let (mut state, core, _) = state_with_run(4);
+        let choked = GridPos::new(core.x + 2, core.y);
+        if let Some(building) = state
+            .grid
+            .get_mut(choked)
+            .and_then(|tile| tile.building.as_mut())
+        {
+            building.dust = 100.0;
+        }
+        assert!(state
+            .grid
+            .get(choked)
+            .unwrap()
+            .building
+            .as_ref()
+            .unwrap()
+            .is_dust_stalled());
+
+        let severed = state.severed_network();
+        assert!(
+            severed.contains(&choked),
+            "the choked tile was not pointed at: {:?}",
+            severed
+        );
+        assert!(severed.contains(&GridPos::new(core.x + 3, core.y)));
+        assert!(!severed.contains(&GridPos::new(core.x + 1, core.y)));
+    }
+
     #[test]
     fn a_second_run_takes_the_load_the_first_one_cannot() {
         // A short run and a longer parallel one, both reaching the drill.

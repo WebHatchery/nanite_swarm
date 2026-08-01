@@ -502,6 +502,26 @@ impl Game {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();
             }
+            // A run cut in the middle, with drones stalled beyond the break.
+            "severed" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                let planet = self.campaign.current_mut();
+                // Long enough for a drill to fill a load and put a drone out
+                // on the run; cutting it before that strands nobody.
+                for _ in 0..300 {
+                    planet.step(state::TICK_SECONDS, false);
+                }
+                // ...then take a piece of it away.
+                if let Some(core) = planet.grid.find_core() {
+                    let cut = engine::GridPos::new(core.x + 3, core.y);
+                    planet.grid.remove_building(cut);
+                    planet.grid.update_power_grid();
+                }
+                for _ in 0..10 {
+                    planet.step(state::TICK_SECONDS, false);
+                }
+            }
             // The same mid-build ship, seen from the ground it is eating.
             "skyline" => {
                 self.phase = GamePhase::Playing;

@@ -13,6 +13,42 @@ use super::metrics::{grid_to_screen, HudMetrics};
 /// Below this a building is merely grubby and not worth shouting about.
 const WEAR_VISIBLE_AT: f32 = 20.0;
 
+/// Outline the part of the network that has lost its way home.
+///
+/// Only while something is actually stalled: a run half-laid out towards a new
+/// drill is disconnected on purpose, and outlining that every time the player
+/// places a conduit would be noise. When drones do stall, this is the answer
+/// to the question the stalled counter raises and never answered — where.
+pub(super) fn draw_severed_network(state: &PlanetState, metrics: HudMetrics, time: f32) {
+    if state.stalled_drone_count() == 0 {
+        return;
+    }
+
+    let pulse = (time * 3.0).sin() * 0.5 + 0.5;
+    for pos in state.severed_network() {
+        if !state.grid.get(pos).is_some_and(|tile| tile.revealed) {
+            continue;
+        }
+        let (x, y) = grid_to_screen(pos, metrics);
+        let size = metrics.tile_size;
+        draw_rectangle(
+            x,
+            y,
+            size,
+            size,
+            with_alpha(Colors::ERROR, 0.10 + pulse * 0.12),
+        );
+        draw_rectangle_lines(
+            x + 1.0,
+            y + 1.0,
+            size - 2.0,
+            size - 2.0,
+            2.0,
+            with_alpha(Colors::ERROR, 0.55 + pulse * 0.35),
+        );
+    }
+}
+
 /// Tint buildings by how much dust and corrosion they are carrying.
 ///
 /// Wear was a number in the inspector for one hovered tile, which is no use

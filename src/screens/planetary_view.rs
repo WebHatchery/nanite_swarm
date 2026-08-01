@@ -63,6 +63,7 @@ pub fn render_planetary_view(
     terrain_render::draw_grid_tiles(state, textures, metrics, hovered_pos, pulse, global_pulse);
     upkeep_render::draw_wear(state, metrics, time);
     upkeep_render::draw_coverage(state, metrics, hovered_pos);
+    upkeep_render::draw_severed_network(state, metrics, time);
     entity_render::draw_congestion(state, metrics, time);
     // Over the tiles and under the drones: the ship is the tallest thing on
     // the world, but the swarm still crawls in front of it.
