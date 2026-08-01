@@ -76,6 +76,20 @@ fn draw_build_row(
         );
     }
 
+    // The tutorial points at what it is asking for, so the instruction can be
+    // followed without being read twice.
+    if unlocked && state.tutorial_highlight() == Some(building_type) {
+        let glow = 0.4 + macroquad_toolkit::math::pulse01(1.6) * 0.5;
+        draw_rectangle_lines(
+            x - 3.0,
+            y - 3.0,
+            width + 6.0,
+            height + 6.0,
+            2.0,
+            with_alpha(color_from_rgba(&theme.colors.success), glow),
+        );
+    }
+
     let icon_size = 46.0;
     let icon_x = x + 10.0;
     let icon_y = y + (height - icon_size) * 0.5;

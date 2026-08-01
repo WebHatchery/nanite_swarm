@@ -100,7 +100,10 @@ Space pauses, the bottom bar's speed buttons work, and both ride the fixed times
 - Speed and pause are per-planet runtime state and reset on load, which is right for pause and arguably wrong for a preferred speed.
 - There is no fast-forward past four times, and no way to skip to the next interesting moment — an idle game eventually wants both.
 - Wire or remove what is still decoration: BOX SELECT (Shift+Drag) and BUILD MENU (B) do nothing, and the main-menu Quit button is a no-op. PAN, ZOOM, PAUSE and DEMOLISH all work now.
-- Replace the six-condition text checklist with a real persisted tutorial with highlighting and interactive gating.
+The tutorial is five steps in `assets/tutorial.json`, each with a goal the simulation checks (build a thing, research a thing, connect a thing). It persists across saves, says what to do rather than which step you are on, highlights the building it is asking for in the palette, and toasts each step as it lands. The panel is the tutorial while it runs and the directive after.
+
+- No gating: the tutorial suggests, it never blocks. That is probably right for this game, but it means a player who ignores it entirely gets no more help than one who follows it.
+- Nothing points at the *map*. A step that wants a conduit run drawn between two tiles can highlight the Conduit card but not the tiles.
 Toasts (the toolkit's `NotificationManager`) announce achievements, finished research, newly available buildings, and each Seed Ship stage. They fade in real time, so they keep fading while the world is paused.
 
 - Directives still complete silently, and the tutorial advances without saying so — both predate the toast stack and should use it.

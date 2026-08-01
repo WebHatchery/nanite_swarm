@@ -436,43 +436,6 @@ impl PlanetState {
         self.biomass_power_bonus = power_bonus;
     }
 
-    fn update_tutorial(&mut self) {
-        if self.tutorial_done {
-            return;
-        }
-
-        let has_drill = !self.grid.find_buildings(BuildingType::Drill).is_empty();
-        let drill_connected = self.grid.iter_tiles().any(|(_, tile)| {
-            tile.building
-                .as_ref()
-                .map(|b| b.building_type == BuildingType::Drill && b.connected_to_core)
-                .unwrap_or(false)
-        });
-        let conduits_unlocked = self.is_building_unlocked(BuildingType::Conduit);
-        let server_unlocked = self.is_building_unlocked(BuildingType::ServerBank);
-        let wind_unlocked = self.is_building_unlocked(BuildingType::WindTurbine);
-        let has_wind_turbine = !self
-            .grid
-            .find_buildings(BuildingType::WindTurbine)
-            .is_empty();
-        let has_server_bank = !self
-            .grid
-            .find_buildings(BuildingType::ServerBank)
-            .is_empty();
-
-        match self.tutorial_step {
-            0 if has_drill => self.tutorial_step = 1,
-            1 if conduits_unlocked => self.tutorial_step = 2,
-            2 if drill_connected => self.tutorial_step = 3,
-            3 if server_unlocked && has_server_bank => self.tutorial_step = 4,
-            4 if wind_unlocked && has_wind_turbine => {
-                self.tutorial_step = 5;
-                self.tutorial_done = true;
-            }
-            _ => {}
-        }
-    }
-
     pub(super) fn trigger_power_collapse(&mut self) {
         self.power_negative_seconds = 0.0;
         self.power_collapse_cooldown = 120.0;

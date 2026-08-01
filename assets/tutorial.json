@@ -1,0 +1,34 @@
+{
+  "steps": [
+    {
+      "id": "first_drill",
+      "title": "Break ground",
+      "instruction": "Place a Drill on the ground beside the Core.",
+      "goal": { "kind": "build", "target": "drill" }
+    },
+    {
+      "id": "power_grid",
+      "title": "Lay pipe",
+      "instruction": "Research Power Grid. Ore only moves along conduits.",
+      "goal": { "kind": "research", "target": "power_grid" }
+    },
+    {
+      "id": "connect",
+      "title": "Connect the drill",
+      "instruction": "Run conduits from the Core to the Drill so drones can reach it.",
+      "goal": { "kind": "connect", "target": "drill" }
+    },
+    {
+      "id": "server_bank",
+      "title": "Think faster",
+      "instruction": "Build a Server Bank. Data is what research is made of.",
+      "goal": { "kind": "build", "target": "server_bank" }
+    },
+    {
+      "id": "wind_turbine",
+      "title": "Stop borrowing power",
+      "instruction": "Build a Wind Turbine. Mountains give it more to work with.",
+      "goal": { "kind": "build", "target": "wind_turbine" }
+    }
+  ]
+}

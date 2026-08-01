@@ -14,6 +14,7 @@ mod persistence;
 mod progress;
 mod seed_ship;
 mod simulation;
+mod tutorial;
 
 pub use camera::*;
 pub use campaign::*;
@@ -21,3 +22,4 @@ pub use game_state::*;
 pub use persistence::*;
 pub use seed_ship::*;
 pub use simulation::{TICK_SECONDS, TIME_SCALES};
+pub use tutorial::TutorialGoal;

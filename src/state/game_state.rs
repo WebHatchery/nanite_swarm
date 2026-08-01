@@ -150,11 +150,13 @@ pub struct PlanetState {
     pub restored_from_backup: bool,
     #[serde(skip, default)]
     pub forest_harvested_count: i32,
-    #[serde(skip, default)]
+    /// Persisted: a tutorial that restarts every time the game is loaded is
+    /// worse than none.
+    #[serde(default)]
     pub tutorial_step: u8,
     #[serde(skip, default)]
     pub tutorial_hidden: bool,
-    #[serde(skip, default)]
+    #[serde(default)]
     pub tutorial_done: bool,
     #[serde(skip, default)]
     pub last_offline_seconds: f32,

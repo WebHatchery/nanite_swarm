@@ -195,6 +195,27 @@ pub struct PlanetDef {
     pub arrival: String,
 }
 
+/// What finishes a tutorial step. `kind` is checked at load, so a typo is a
+/// startup failure rather than a step nobody can ever complete.
+#[derive(Debug, Clone, Deserialize)]
+pub struct TutorialGoalDef {
+    pub kind: String,
+    pub target: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct TutorialStepDef {
+    pub id: String,
+    pub title: String,
+    pub instruction: String,
+    pub goal: TutorialGoalDef,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct TutorialDataFile {
+    pub steps: Vec<TutorialStepDef>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct PlanetDataFile {
     pub planets: Vec<PlanetDef>,
@@ -219,6 +240,7 @@ pub struct GameData {
     pub research: ResearchData,
     pub seed_ship: SeedShipData,
     pub planets: Vec<PlanetDef>,
+    pub tutorial: Vec<TutorialStepDef>,
 }
 
 impl GameData {
@@ -234,6 +256,8 @@ impl GameData {
             .unwrap_or_else(|_| include_str!("../../assets/seed_ship.json").to_string());
         let planets_json = fs::read_to_string("assets/planets.json")
             .unwrap_or_else(|_| include_str!("../../assets/planets.json").to_string());
+        let tutorial_json = fs::read_to_string("assets/tutorial.json")
+            .unwrap_or_else(|_| include_str!("../../assets/tutorial.json").to_string());
 
         Self::from_json_strings(
             &buildings_json,
@@ -241,6 +265,7 @@ impl GameData {
             &research_json,
             &seed_ship_json,
             &planets_json,
+            &tutorial_json,
         )
     }
 
@@ -261,6 +286,9 @@ impl GameData {
         let planets_json = load_string("assets/planets.json")
             .await
             .unwrap_or_else(|_| include_str!("../../assets/planets.json").to_string());
+        let tutorial_json = load_string("assets/tutorial.json")
+            .await
+            .unwrap_or_else(|_| include_str!("../../assets/tutorial.json").to_string());
 
         Self::from_json_strings(
             &buildings_json,
@@ -268,6 +296,7 @@ impl GameData {
             &research_json,
             &seed_ship_json,
             &planets_json,
+            &tutorial_json,
         )
     }
 
@@ -277,6 +306,7 @@ impl GameData {
         research_json: &str,
         seed_ship_json: &str,
         planets_json: &str,
+        tutorial_json: &str,
     ) -> Self {
         let building_file: BuildingDataFile =
             load_json(buildings_json).unwrap_or_else(|_| BuildingDataFile { buildings: vec![] });
@@ -305,6 +335,19 @@ impl GameData {
         let planet_file: PlanetDataFile =
             load_json(planets_json).unwrap_or_else(|_| PlanetDataFile { planets: vec![] });
 
+        let tutorial_file: TutorialDataFile =
+            load_json(tutorial_json).unwrap_or_else(|_| TutorialDataFile { steps: vec![] });
+        // A step whose goal cannot be read is a step nobody can finish, which
+        // would strand the player rather than merely doing nothing.
+        for step in &tutorial_file.steps {
+            if crate::state::TutorialGoal::parse(&step.goal).is_none() {
+                panic!(
+                    "tutorial step \"{}\": unknown goal kind \"{}\"",
+                    step.id, step.goal.kind
+                );
+            }
+        }
+
         let mut buildings_by_id = HashMap::new();
         for def in &building_file.buildings {
             buildings_by_id.insert(def.id.clone(), def.clone());
@@ -323,6 +366,7 @@ impl GameData {
             research,
             seed_ship,
             planets: planet_file.planets,
+            tutorial: tutorial_file.steps,
         }
     }
 
@@ -373,6 +417,7 @@ mod tests {
              "preservation_bonus": null, "texture": "t", "color": [0.1, 0.1, 0.1, 1.0]}
         ]}"#;
         let planets_json = r#"{"planets": []}"#;
+        let tutorial_json = r#"{"steps": []}"#;
         let seed_ship_json = r#"{"intake_per_second": {"minerals": 1.0, "data": 1.0, "biomass": 1.0}, "stages": []}"#;
         let research_json = r#"{"starting_unlocked": ["core"], "nodes": [
             {"id": "core", "name": "Core", "description": "d", "data_cost": 0.0, "prerequisites": [], "position": [0.0, 0.0]}
@@ -383,6 +428,7 @@ mod tests {
             research_json,
             seed_ship_json,
             planets_json,
+            tutorial_json,
         )
     }
 
@@ -397,8 +443,9 @@ mod tests {
 
     #[test]
     fn from_json_strings_falls_back_to_empty_on_malformed_json() {
-        let data =
-            GameData::from_json_strings("not json", "not json", "not json", "not json", "not json");
+        let data = GameData::from_json_strings(
+            "not json", "not json", "not json", "not json", "not json", "not json",
+        );
         assert!(data.buildings.is_empty());
         assert!(data.terrain.is_empty());
         // Research falls back to a minimal starting set rather than an empty tree.
