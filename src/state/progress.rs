@@ -208,25 +208,6 @@ impl PlanetState {
         1.0 + (bounce_phase.sin() * 0.12)
     }
 
-    pub(super) fn update_achievements(&mut self) {
-        let has_drill = !self.grid.find_buildings(BuildingType::Drill).is_empty();
-        if has_drill {
-            self.announce_achievement("first_drill");
-        }
-
-        if self.power_balance > 0.0 {
-            self.announce_achievement("power_surplus");
-        }
-
-        if self.resources.data >= 25.0 {
-            self.announce_achievement("data_miner");
-        }
-
-        if self.grid.total_buildings() >= 10 {
-            self.announce_achievement("builder");
-        }
-    }
-
     /// Unlock an achievement, and say so if it had not already fired.
     ///
     /// `unlock` returns whether this was the moment it happened, which is the

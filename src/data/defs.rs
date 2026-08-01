@@ -284,6 +284,33 @@ pub struct DirectiveDef {
     pub reward_per_tier: f32,
 }
 
+/// What has to be true for an achievement, in the same declared shape the
+/// directives use: something the simulation knows how to measure, and how much
+/// of it. `manual` is for the ones code announces at the moment they happen.
+#[derive(Debug, Clone, Deserialize)]
+pub struct AchievementConditionDef {
+    pub kind: String,
+    #[serde(default = "one")]
+    pub target: f32,
+}
+
+fn one() -> f32 {
+    1.0
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct AchievementDef {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub condition: AchievementConditionDef,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct AchievementDataFile {
+    pub achievements: Vec<AchievementDef>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct DirectiveDataFile {
     /// How long a directive stands before the next one replaces it.
@@ -317,6 +344,7 @@ pub struct GameData {
     pub planets: Vec<PlanetDef>,
     pub tutorial: Vec<TutorialStepDef>,
     pub directives: DirectiveDataFile,
+    pub achievements: Vec<AchievementDef>,
 }
 
 impl GameData {
@@ -336,6 +364,8 @@ impl GameData {
             .unwrap_or_else(|_| include_str!("../../assets/tutorial.json").to_string());
         let directives_json = fs::read_to_string("assets/directives.json")
             .unwrap_or_else(|_| include_str!("../../assets/directives.json").to_string());
+        let achievements_json = fs::read_to_string("assets/achievements.json")
+            .unwrap_or_else(|_| include_str!("../../assets/achievements.json").to_string());
 
         Self::from_json_strings(
             &buildings_json,
@@ -345,6 +375,7 @@ impl GameData {
             &planets_json,
             &tutorial_json,
             &directives_json,
+            &achievements_json,
         )
     }
 
@@ -368,6 +399,9 @@ impl GameData {
         let directives_json = load_string("assets/directives.json")
             .await
             .unwrap_or_else(|_| include_str!("../../assets/directives.json").to_string());
+        let achievements_json = load_string("assets/achievements.json")
+            .await
+            .unwrap_or_else(|_| include_str!("../../assets/achievements.json").to_string());
         let tutorial_json = load_string("assets/tutorial.json")
             .await
             .unwrap_or_else(|_| include_str!("../../assets/tutorial.json").to_string());
@@ -380,6 +414,7 @@ impl GameData {
             &planets_json,
             &tutorial_json,
             &directives_json,
+            &achievements_json,
         )
     }
 
@@ -391,6 +426,7 @@ impl GameData {
         planets_json: &str,
         tutorial_json: &str,
         directives_json: &str,
+        achievements_json: &str,
     ) -> Self {
         let building_file: BuildingDataFile =
             load_json(buildings_json).unwrap_or_else(|_| BuildingDataFile { buildings: vec![] });
@@ -470,6 +506,21 @@ impl GameData {
             }
         }
 
+        let achievement_file: AchievementDataFile =
+            load_json(achievements_json).unwrap_or_else(|_| AchievementDataFile {
+                achievements: vec![],
+            });
+        // An achievement whose condition cannot be read would never fire, and
+        // would sit in the count forever making the set look unfinished.
+        for def in &achievement_file.achievements {
+            if crate::state::AchievementCondition::from_id(&def.condition.kind).is_none() {
+                panic!(
+                    "achievement \"{}\": unknown condition \"{}\"",
+                    def.id, def.condition.kind
+                );
+            }
+        }
+
         let mut buildings_by_id = HashMap::new();
         for def in &building_file.buildings {
             buildings_by_id.insert(def.id.clone(), def.clone());
@@ -490,6 +541,7 @@ impl GameData {
             planets: planet_file.planets,
             tutorial: tutorial_file.steps,
             directives,
+            achievements: achievement_file.achievements,
         }
     }
 
@@ -542,6 +594,7 @@ mod tests {
         let planets_json = r#"{"planets": []}"#;
         let tutorial_json = r#"{"steps": []}"#;
         let directives_json = r#"{"rotation_seconds": 600.0, "directives": []}"#;
+        let achievements_json = r#"{"achievements": []}"#;
         let seed_ship_json = r#"{"intake_per_second": {"minerals": 1.0, "data": 1.0, "biomass": 1.0}, "stages": []}"#;
         let research_json = r#"{"starting_unlocked": ["core"], "nodes": [
             {"id": "core", "name": "Core", "description": "d", "data_cost": 0.0, "prerequisites": [], "position": [0.0, 0.0]}
@@ -554,6 +607,7 @@ mod tests {
             planets_json,
             tutorial_json,
             directives_json,
+            achievements_json,
         )
     }
 
@@ -570,6 +624,7 @@ mod tests {
     fn from_json_strings_falls_back_to_empty_on_malformed_json() {
         let data = GameData::from_json_strings(
             "not json", "not json", "not json", "not json", "not json", "not json", "not json",
+            "not json",
         );
         assert!(data.buildings.is_empty());
         assert!(data.terrain.is_empty());

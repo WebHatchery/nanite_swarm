@@ -4,6 +4,7 @@
 
 #![allow(unused)]
 
+mod achievements;
 mod actions;
 mod camera;
 mod campaign;
@@ -18,6 +19,7 @@ mod simulation;
 mod stat_sheet;
 mod tutorial;
 
+pub use achievements::*;
 pub use camera::*;
 pub use campaign::*;
 pub use game_state::*;

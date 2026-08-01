@@ -1,0 +1,88 @@
+{
+  "achievements": [
+    {
+      "id": "first_drill",
+      "name": "First Drill",
+      "description": "Open the crust.",
+      "condition": { "kind": "drills", "target": 1 }
+    },
+    {
+      "id": "power_surplus",
+      "name": "Power Surplus",
+      "description": "Generate more than the swarm draws.",
+      "condition": { "kind": "power_surplus", "target": 1 }
+    },
+    {
+      "id": "data_miner",
+      "name": "Data Miner",
+      "description": "Hold 25 Data at once.",
+      "condition": { "kind": "data_held", "target": 25 }
+    },
+    {
+      "id": "builder",
+      "name": "Builder",
+      "description": "Stand ten structures on one world.",
+      "condition": { "kind": "structures", "target": 10 }
+    },
+    {
+      "id": "network",
+      "name": "Arterial",
+      "description": "Lay twenty tiles of network.",
+      "condition": { "kind": "network_tiles", "target": 20 }
+    },
+    {
+      "id": "swarm",
+      "name": "Swarm",
+      "description": "Keep eight drones in service at once.",
+      "condition": { "kind": "drones", "target": 8 }
+    },
+    {
+      "id": "refinery",
+      "name": "Refinery",
+      "description": "Hold 50 alloy at once.",
+      "condition": { "kind": "alloy_held", "target": 50 }
+    },
+    {
+      "id": "stockpile",
+      "name": "Stockpile",
+      "description": "Hold 500 minerals at once.",
+      "condition": { "kind": "minerals_held", "target": 500 }
+    },
+    {
+      "id": "thinking",
+      "name": "Thinking",
+      "description": "Run four server banks at once.",
+      "condition": { "kind": "server_banks", "target": 4 }
+    },
+    {
+      "id": "well_read",
+      "name": "Well Read",
+      "description": "Work out ten technologies.",
+      "condition": { "kind": "technologies", "target": 10 }
+    },
+    {
+      "id": "clear_cut",
+      "name": "Clear Cut",
+      "description": "Take five forests apart.",
+      "condition": { "kind": "forests_harvested", "target": 5 }
+    },
+    {
+      "id": "keel_laid",
+      "name": "Keel Laid",
+      "description": "Stand the first stage of a Seed Ship.",
+      "condition": { "kind": "seed_ship_stages", "target": 1 }
+    },
+    {
+      "id": "seed_ship",
+      "name": "Seed Ship",
+      "description": "Finish a Seed Ship and leave a world spent.",
+      "condition": { "kind": "manual" }
+    },
+    {
+      "id": "system_consumed",
+      "name": "System Consumed",
+      "description": "Process every world in the system.",
+      "condition": { "kind": "manual" }
+    }
+  ]
+}

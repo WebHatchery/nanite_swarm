@@ -380,27 +380,14 @@ impl Default for PlanetState {
     }
 }
 
-/// Canonical achievement definitions. Used both to seed a new [`PlanetState`]
-/// and to reconcile loaded saves via [`Achievements::sync_definitions`].
+/// The achievement set, from `assets/achievements.json`. Used both to seed a
+/// new [`PlanetState`] and to reconcile loaded saves via
+/// [`Achievements::sync_definitions`], so a save written before an achievement
+/// existed picks it up locked rather than losing the rest.
 pub(crate) fn achievement_definitions() -> Vec<Achievement> {
-    vec![
-        Achievement::new("first_drill", "First Drill", "Place your first drill."),
-        Achievement::new(
-            "power_surplus",
-            "Power Surplus",
-            "Reach positive net power.",
-        ),
-        Achievement::new("data_miner", "Data Miner", "Accumulate 25 data."),
-        Achievement::new("builder", "Builder", "Place 10 buildings."),
-        Achievement::new(
-            "seed_ship",
-            "Seed Ship",
-            "Finish a Seed Ship and leave a world spent.",
-        ),
-        Achievement::new(
-            "system_consumed",
-            "System Consumed",
-            "Process every world in the system.",
-        ),
-    ]
+    crate::data::game_data()
+        .achievements
+        .iter()
+        .map(|def| Achievement::new(&def.id, &def.name, &def.description))
+        .collect()
 }
