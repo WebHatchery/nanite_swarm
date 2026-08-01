@@ -26,11 +26,12 @@ flag when a run is cut, and resume when it is repaired.
 
 ## Interplanetary meta-layer
 
-- Persist planet state across travel — `main.rs` discards the current planet and generates a fresh random one, inverting the GDD's "Planet 1 does not disappear".
-- Simulate colonized planets in the background (scheduled tick or summary) so left-behind worlds keep producing.
+`state::Campaign` owns all five worlds, the current index, and the directive; travel keeps every planet exactly as it was left, and the save carries the lot.
+
+- Simulate colonized planets in the background (scheduled tick or summary) so left-behind worlds keep producing. `Campaign` holds them all, so the missing piece is a cheap off-screen model, not the plumbing.
 - Turn Mass Drivers into gameplay: a building, export schedules, transit time, and receiving landing pads, instead of a tech flag plus 100 minerals.
-- Persist `colonized_planets`, `current_planet_index`, and the active directive; they live on `Game` and are lost on reload.
-- Give each planet its own generation rules; all five call the same `PlanetState::new(24, 24, seed)` with difficulty as flavour text.
+- Hoist research to the campaign. Every `PlanetState` carries its own `research` copy and only the current planet's is authoritative, kept in step by `sync_research_to_planet` on travel — a left-behind world's stat sheet is stale, which will matter the moment background simulation lands.
+- Give each planet its own generation rules; all five are `PlanetState::new(24, 24, derived_seed)` with difficulty as flavour text. Planet identity is also split between `Campaign::PLANET_NAMES` and the view's `get_planets()`; put it in one data file.
 
 ## Planet hazards
 
@@ -61,7 +62,6 @@ Techs declare their effects as modifiers in `research.json` (`engine::modifiers`
 The sim runs on a fixed 1/30s timestep with an accumulator (`PlanetState::advance`), capped at 6 catch-up steps; research and directives advance on exactly the time the planet simulated.
 
 - Offline catch-up still steps at a coarser 1s, because four hours at the live tick rate is 432,000 steps on load. Unify it when the offline model becomes an earnings report (see Save system).
-- Pull simulation out of `screens/` so planetary, interplanetary, and background-planet simulation share one engine.
 - Extend the deterministic snapshot tests past harvest throughput: power failure, research unlocks, and collapse thresholds still have no pinned numbers.
 - Move the remaining hardcoded balance constants into JSON — dust rates, sweeper/filter radii, and collapse timings are Rust consts, and `conduit_throughput` and `core_power_consumption` are still dead config fields.
 - Validate the rest of the data at load the way research modifiers now are; `game_data().building(id)` still panics on a missing id with no context.
@@ -69,9 +69,9 @@ The sim runs on a fixed 1/30s timestep with an accumulator (`PlanetState::advanc
 ## Save system
 
 - Add autosave on interval, on quit, and on travel; today saving is manual or on entering the menu.
-- Add a save schema version and migration path before the first balance patch mangles old saves.
+- The save is versioned (`SaveGame`, version 1) and reads the old unversioned single-planet save, but there is no migration *framework* — the next shape change needs a real per-version upgrade path rather than a second fallback branch.
 - Add multiple slots and corruption recovery with backup rotation.
-- Persist meta-state: colonized planets, current planet, directive, settings, and tutorial progress.
+- Persist the meta-state the campaign does not hold: settings and tutorial progress are still lost on reload.
 - Harden offline progress with a clock-tamper guard and hard caps, and turn the offline banner into an earnings report.
 
 ## UX and UI

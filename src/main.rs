@@ -19,14 +19,13 @@ mod ui;
 
 use assets::GameTextures;
 use data::{load_game_config, load_game_data, load_ui_theme, set_game_data};
-use directives::{pick_directive, Directive};
 use engine::{ResearchState, ResearchTree};
 use screens::{
     render_interplanetary_view, render_main_menu, render_planetary_view, render_research_view,
     render_settings_menu, InterplanetaryAction, MenuAction, PlanetaryAction, ResearchAction,
     SettingsAction,
 };
-use state::{load_from_file, save_to_file, PlanetState};
+use state::{load_from_file, save_to_file, Campaign};
 
 /// Game phases/screens
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -41,23 +40,19 @@ pub enum GamePhase {
 /// Main game state container
 pub struct Game {
     phase: GamePhase,
-    planet_state: PlanetState,
+    campaign: Campaign,
     research_tree: ResearchTree,
     research_state: ResearchState,
     settings: GameSettings,
     debug_overlay: DebugOverlay,
     has_save: bool,
-    current_planet_index: usize,
-    colonized_planets: [bool; 5],
     textures: GameTextures,
-    directive: Directive,
-    directive_timer: f32,
-    directive_tier: i32,
     config: data::GameConfig,
     ui_theme: data::UiTheme,
 }
 
 const SAVE_PATH: &str = "save.json";
+const COLONIZE_COST: f32 = 100.0;
 const RESEARCH_RATE: f32 = 5.0; // data per second
 
 impl Game {
@@ -78,10 +73,9 @@ impl Game {
         let game_data = load_game_data().await;
 
         set_game_data(game_data);
-        let directive = pick_directive(0);
         Self {
             phase: GamePhase::MainMenu,
-            planet_state: PlanetState::new("Mars", 24, 24, 42, config.clone()),
+            campaign: Campaign::new(config.clone(), 42),
             research_tree: ResearchTree::default(),
             research_state: ResearchState::default(),
             settings: GameSettings {
@@ -92,12 +86,7 @@ impl Game {
             },
             debug_overlay: DebugOverlay::new(),
             has_save: false,
-            current_planet_index: 2, // Mars is starting planet
-            colonized_planets: [false, false, true, false, false], // Mars colonized
             textures: GameTextures::load().await,
-            directive,
-            directive_timer: 0.0,
-            directive_tier: 0,
             config,
             ui_theme,
         }
@@ -115,13 +104,8 @@ impl Game {
         match self.phase {
             GamePhase::MainMenu => match render_main_menu(self.has_save) {
                 MenuAction::NewGame => {
-                    self.planet_state = PlanetState::new(
-                        "Mars",
-                        24,
-                        24,
-                        macroquad_toolkit::rng::random_u64(),
-                        self.config.clone(),
-                    );
+                    self.campaign =
+                        Campaign::new(self.config.clone(), macroquad_toolkit::rng::random_u64());
                     self.research_state = ResearchState::default();
                     self.sync_research_to_planet();
                     self.sync_building_unlocks();
@@ -131,8 +115,8 @@ impl Game {
                     self.phase = GamePhase::Playing;
                 }
                 MenuAction::Load => {
-                    if let Ok(state) = load_from_file(SAVE_PATH) {
-                        self.planet_state = state;
+                    if let Ok(campaign) = load_from_file(SAVE_PATH) {
+                        self.campaign = campaign;
                         self.sync_research_from_planet();
                         self.phase = GamePhase::Playing;
                         self.has_save = true;
@@ -140,7 +124,7 @@ impl Game {
                     }
                 }
                 MenuAction::Save => {
-                    let _ = save_to_file(&mut self.planet_state, SAVE_PATH);
+                    let _ = save_to_file(&mut self.campaign, SAVE_PATH);
                     self.has_save = true;
                 }
                 MenuAction::Settings => {
@@ -158,12 +142,8 @@ impl Game {
             GamePhase::Playing => {
                 self.advance_simulation();
 
-                match render_planetary_view(
-                    &mut self.planet_state,
-                    &self.textures,
-                    &self.directive,
-                    &self.ui_theme,
-                ) {
+                let (planet, directive) = self.campaign.current_and_directive();
+                match render_planetary_view(planet, &self.textures, directive, &self.ui_theme) {
                     PlanetaryAction::OpenResearch => {
                         self.phase = GamePhase::Research;
                     }
@@ -182,8 +162,8 @@ impl Game {
                 match render_research_view(
                     &self.research_state,
                     &self.research_tree,
-                    self.planet_state.resources.data,
-                    self.planet_state.research_lock_timer > 0.0,
+                    self.campaign.current().resources.data,
+                    self.campaign.current().research_lock_timer > 0.0,
                 ) {
                     ResearchAction::Close => {
                         self.phase = GamePhase::Playing;
@@ -192,7 +172,7 @@ impl Game {
                         let _ = self.research_state.start_research(
                             &tech_id,
                             &self.research_tree,
-                            self.planet_state.resources.data,
+                            self.campaign.current().resources.data,
                         );
                     }
                     ResearchAction::None => {}
@@ -200,34 +180,28 @@ impl Game {
             }
             GamePhase::Interplanetary => {
                 match render_interplanetary_view(
-                    self.current_planet_index,
+                    self.campaign.current_index(),
                     self.has_mass_driver(),
-                    &self.colonized_planets,
+                    &self.campaign.colonized_flags(),
                 ) {
                     InterplanetaryAction::Close => {
                         self.phase = GamePhase::Playing;
                     }
                     InterplanetaryAction::SelectPlanet(index) => {
-                        // Travel to colonized planet
-                        if self.colonized_planets[index] {
-                            self.current_planet_index = index;
-                            // Load planet state here (for now, create new)
-                            let planet_names = ["Mercury", "Venus", "Mars", "Jupiter", "Saturn"];
-                            self.planet_state = PlanetState::new(
-                                planet_names[index],
-                                24,
-                                24,
-                                macroquad_toolkit::rng::random_u64(),
-                                self.config.clone(),
-                            );
+                        // The world being left keeps everything it had.
+                        if self.campaign.travel_to(index) {
+                            // The arriving world needs the campaign's research.
+                            self.sync_research_to_planet();
+                            self.sync_building_unlocks();
                             self.phase = GamePhase::Playing;
                         }
                     }
                     InterplanetaryAction::LaunchMassDriver(index) => {
                         // Launch colonization probe (costs resources)
-                        if self.planet_state.resources.minerals >= 100.0 {
-                            self.planet_state.resources.minerals -= 100.0;
-                            self.colonized_planets[index] = true;
+                        if self.campaign.current().resources.minerals >= COLONIZE_COST
+                            && self.campaign.colonize(index)
+                        {
+                            self.campaign.current_mut().resources.minerals -= COLONIZE_COST;
                         }
                     }
                     InterplanetaryAction::None => {}
@@ -242,13 +216,13 @@ impl Game {
     /// on exactly the time the planet simulated, so nothing drifts apart when
     /// the frame rate moves or a catch-up backlog is dropped.
     fn advance_simulation(&mut self) {
-        let ticks = self.planet_state.advance(get_frame_time(), true);
+        let ticks = self.campaign.current_mut().advance(get_frame_time(), true);
         if ticks == 0 {
             return;
         }
         let simulated = ticks as f32 * state::TICK_SECONDS;
         self.update_research(simulated);
-        self.update_directives(simulated);
+        self.campaign.update_directive(simulated);
     }
 
     fn update_research(&mut self, delta_time: f32) {
@@ -257,7 +231,7 @@ impl Game {
             self.sync_research_to_planet();
             return;
         };
-        if self.planet_state.research_lock_timer > 0.0 {
+        if self.campaign.current().research_lock_timer > 0.0 {
             return;
         }
         let Some(node) = self.research_tree.get_node(&current_id) else {
@@ -275,17 +249,18 @@ impl Game {
             return;
         }
 
-        let available = self.planet_state.resources.data;
+        let available = self.campaign.current().resources.data;
         if available <= 0.0 {
             return;
         }
 
         let rate = self
-            .planet_state
+            .campaign
+            .current()
             .stats
             .apply(engine::StatId::ResearchRate, RESEARCH_RATE);
         let spend = (rate * delta_time).min(available).min(remaining);
-        self.planet_state.resources.data -= spend;
+        self.campaign.current_mut().resources.data -= spend;
         self.research_state.research_progress += spend;
 
         if self.research_state.research_progress >= node.data_cost {
@@ -297,22 +272,27 @@ impl Game {
     }
 
     fn sync_research_from_planet(&mut self) {
-        self.research_state.unlocked = self.planet_state.research.unlocked_techs.clone();
+        self.research_state.unlocked = self.campaign.current().research.unlocked_techs.clone();
         for tech in &data::game_data().research.starting_unlocked {
             if !self.research_state.unlocked.contains(tech) {
                 self.research_state.unlocked.push(tech.clone());
             }
         }
-        self.research_state.current_research = self.planet_state.research.current_research.clone();
-        self.research_state.research_progress = self.planet_state.research.research_progress;
+        let planet = self.campaign.current();
+        self.research_state.current_research = planet.research.current_research.clone();
+        self.research_state.research_progress = planet.research.research_progress;
     }
 
     fn sync_research_to_planet(&mut self) {
-        self.planet_state.research.unlocked_techs = self.research_state.unlocked.clone();
-        self.planet_state.research.current_research = self.research_state.current_research.clone();
-        self.planet_state.research.research_progress = self.research_state.research_progress;
+        let unlocked = self.research_state.unlocked.clone();
+        let current_research = self.research_state.current_research.clone();
+        let progress = self.research_state.research_progress;
+        let planet = self.campaign.current_mut();
+        planet.research.unlocked_techs = unlocked;
+        planet.research.current_research = current_research;
+        planet.research.research_progress = progress;
         // Unlocked techs just changed shape: rebuild what they do.
-        self.planet_state.refresh_stats();
+        planet.refresh_stats();
     }
 
     fn sync_building_unlocks(&mut self) {
@@ -327,7 +307,7 @@ impl Game {
                     .map(|tech| self.research_state.is_unlocked(tech))
                     .unwrap_or(false);
             if unlocked {
-                self.planet_state.unlock_building(building_type);
+                self.campaign.current_mut().unlock_building(building_type);
             }
         }
     }
@@ -341,6 +321,11 @@ impl Game {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();
             }
+            "interplanetary" => {
+                self.phase = GamePhase::Interplanetary;
+                self.research_state.unlocked.push("mass_driver".to_string());
+                self.campaign.colonize(4);
+            }
             _ => {
                 // Default: jump straight into gameplay on the starting planet.
                 self.phase = GamePhase::Playing;
@@ -353,7 +338,7 @@ impl Game {
     fn seed_logistics_scene(&mut self) {
         use engine::{BuildingType, GridPos};
 
-        let state = &mut self.planet_state;
+        let state = self.campaign.current_mut();
         let Some(core) = state.grid.find_core() else {
             return;
         };
@@ -390,22 +375,6 @@ impl Game {
         state.select_building(BuildingType::Drill);
         state.try_place_building(drill);
         state.grid.update_power_grid();
-    }
-
-    fn update_directives(&mut self, delta_time: f32) {
-        self.directive_timer += delta_time;
-        if self.directive_timer >= 600.0
-            || self.directive.duration <= 0.0
-            || self.directive.completed
-        {
-            if self.directive.completed {
-                self.planet_state.resources.data += self.directive.reward_data;
-            }
-            self.directive_timer = 0.0;
-            self.directive_tier += 1;
-            self.directive = pick_directive(self.directive_tier);
-        }
-        self.directive.update(&self.planet_state, delta_time);
     }
 }
 

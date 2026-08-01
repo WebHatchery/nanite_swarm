@@ -5,6 +5,7 @@
 #![allow(unused)]
 
 mod actions;
+mod campaign;
 mod game_state;
 mod logistics;
 mod particles;
@@ -12,6 +13,7 @@ mod persistence;
 mod progress;
 mod simulation;
 
+pub use campaign::*;
 pub use game_state::*;
 pub use persistence::*;
 pub use simulation::TICK_SECONDS;
