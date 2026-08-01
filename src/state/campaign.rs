@@ -30,7 +30,7 @@ const SAVE_NOTICE_SECONDS: f32 = 3.0;
 /// Every planet the swarm holds, plus which one it is currently standing on.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Campaign {
-    planets: [Option<PlanetState>; PLANET_COUNT],
+    pub(super) planets: [Option<PlanetState>; PLANET_COUNT],
     current: usize,
     seed: u64,
     pub directive: Directive,
@@ -47,6 +47,9 @@ pub struct Campaign {
     /// Unspent time owed to the worlds nobody is watching.
     #[serde(skip, default)]
     background_accumulator: f32,
+    /// Everything a Mass Driver has thrown and nothing has caught yet.
+    #[serde(default)]
+    pub(super) shipments: Vec<super::shipping::Shipment>,
 }
 
 impl Campaign {
@@ -62,6 +65,7 @@ impl Campaign {
             directive_tier: 0,
             since_save: 0.0,
             background_accumulator: 0.0,
+            shipments: Vec::new(),
         };
         campaign.planets[STARTING_PLANET] = Some(campaign.generate(STARTING_PLANET, &config));
         campaign
@@ -82,6 +86,7 @@ impl Campaign {
             directive_tier: 0,
             since_save: 0.0,
             background_accumulator: 0.0,
+            shipments: Vec::new(),
         }
     }
 
@@ -202,6 +207,16 @@ impl Campaign {
             .as_mut()
             .expect("the current planet is always colonized");
         (planet, &self.directive)
+    }
+
+    /// A world by slot, for anything that has to reach past the one in front
+    /// of the player - a pod landing on a world nobody is watching.
+    pub fn planet(&self, index: usize) -> Option<&PlanetState> {
+        self.planets.get(index).and_then(Option::as_ref)
+    }
+
+    pub fn planet_mut(&mut self, index: usize) -> Option<&mut PlanetState> {
+        self.planets.get_mut(index).and_then(Option::as_mut)
     }
 
     pub fn is_colonized(&self, index: usize) -> bool {

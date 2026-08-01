@@ -152,6 +152,16 @@ pub struct PlanetState {
     /// The megastructure this world is being converted into.
     #[serde(default)]
     pub seed_ship: SeedShip,
+    /// What this world's Mass Drivers load, and where they throw it. Kept when
+    /// the swarm leaves: a world left behind keeps feeding the one it left for.
+    #[serde(default)]
+    pub export: Option<super::shipping::ExportOrder>,
+    /// How much each driver has loaded into the pod it is filling.
+    #[serde(default)]
+    pub pod_loads: std::collections::HashMap<(i32, i32), f32>,
+    /// Pods thrown this step, waiting for the campaign to put them in flight.
+    #[serde(default)]
+    pub launched_pods: Vec<super::shipping::Shipment>,
     /// Everything unlocked research does to the simulation, folded into one
     /// sheet. Derived from `research.unlocked_techs` — never edited directly,
     /// always rebuilt by [`PlanetState::refresh_stats`].
@@ -335,6 +345,9 @@ impl PlanetState {
                 .collect(),
             hazards: def.hazards,
             seed_ship: SeedShip::default(),
+            export: None,
+            pod_loads: std::collections::HashMap::new(),
+            launched_pods: Vec::new(),
             last_offline_seconds: 0.0,
             last_offline_simulated: 0.0,
             offline_notice_timer: 0.0,

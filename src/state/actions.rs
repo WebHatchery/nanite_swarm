@@ -106,9 +106,14 @@ impl PlanetState {
 
         if let Some(removed) = self.grid.remove_building(pos) {
             if removed.building_type == BuildingType::Drill {
-                self.output_buffers.remove(&(pos.x, pos.y));
                 self.drones.remove_drones_at(pos);
             }
+            // Whatever was on the pad, in the hopper or half-loaded into a pod
+            // goes down with the building. Leaving it behind means the next
+            // thing built here inherits a stranger's cargo.
+            self.output_buffers.remove(&(pos.x, pos.y));
+            self.input_buffers.remove(&(pos.x, pos.y));
+            self.pod_loads.remove(&(pos.x, pos.y));
 
             self.resources.minerals += mineral_cost * refund_ratio;
             self.resources.energy += energy_cost * refund_ratio;

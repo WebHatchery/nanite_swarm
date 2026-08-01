@@ -74,6 +74,7 @@ pub fn generate_tiles() {
     save_building_with_icon("building_heater_node", create_heater_node());
     save_building_with_icon("building_shield_generator", create_shield_generator());
     save_building_with_icon("building_smelter", create_smelter());
+    save_building_with_icon("building_mass_driver", create_mass_driver());
 }
 
 fn create_ground() -> RgbaImage {
@@ -565,6 +566,27 @@ fn create_smelter() -> RgbaImage {
     draw_circle(&mut img, 21, 4, 2, Rgba([120, 115, 110, 200]));
     // Poured ingot
     draw_rect(&mut img, 8, 26, 7, 3, Rgba([210, 150, 80, 255]));
+    add_edge_darkening(&mut img, 2, 8);
+    img
+}
+
+fn create_mass_driver() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([34, 38, 46, 255]));
+    add_noise(&mut img, 6, 2424);
+    // Rail, climbing away to the north-east so the tile reads as a launcher
+    // rather than another box.
+    draw_line(&mut img, 5, 26, 27, 8, Rgba([150, 158, 172, 255]));
+    draw_line(&mut img, 6, 28, 28, 10, Rgba([110, 118, 132, 255]));
+    // Accelerator coils along the rail
+    for (x, y) in [(9, 23), (14, 19), (19, 15), (24, 11)] {
+        draw_circle(&mut img, x, y, 2, Rgba([70, 150, 200, 255]));
+    }
+    // Muzzle glow at the top of the run
+    draw_circle(&mut img, 27, 8, 3, Rgba([120, 220, 255, 220]));
+    draw_circle(&mut img, 27, 8, 1, Rgba([235, 250, 255, 255]));
+    // Breech and its footing
+    draw_rect(&mut img, 3, 22, 8, 8, Rgba([72, 78, 92, 255]));
+    draw_rect(&mut img, 5, 24, 4, 4, Rgba([200, 140, 60, 255]));
     add_edge_darkening(&mut img, 2, 8);
     img
 }

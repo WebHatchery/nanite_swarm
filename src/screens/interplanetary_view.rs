@@ -1,5 +1,8 @@
 //! Solar system overview screen
 
+mod shipping_panel;
+
+use crate::state::{ExportOrder, Shipment};
 use crate::ui::{color_from_rgba, draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::draw_ui_text;
@@ -17,18 +20,31 @@ pub enum InterplanetaryAction {
     Close,
     SelectPlanet(usize),
     LaunchSeedShip(usize),
+    CycleExportCargo,
+    CycleExportTarget,
+}
+
+/// Everything the map reads out of the campaign. One struct rather than a
+/// growing row of positional booleans, which is how a caller ends up passing
+/// "ready" where "colonized" was wanted.
+pub struct MapView<'a> {
+    pub current_planet: usize,
+    pub has_mass_driver: bool,
+    pub seed_ship_ready: bool,
+    pub colonized: &'a [bool],
+    pub stockpiles: &'a [Option<f32>],
+    /// Powered Mass Drivers standing on the current world.
+    pub drivers_online: usize,
+    pub export: Option<ExportOrder>,
+    pub pod_fraction: f32,
+    pub shipments: &'a [Shipment],
 }
 
 /// Render the interplanetary solar system view
-pub fn render_interplanetary_view(
-    current_planet: usize,
-    has_mass_driver: bool,
-    seed_ship_ready: bool,
-    colonized_planets: &[bool],
-    stockpiles: &[Option<f32>],
-) -> InterplanetaryAction {
+pub fn render_interplanetary_view(view: &MapView) -> InterplanetaryAction {
     // A new world costs a whole Seed Ship, thrown by a Mass Driver.
-    let can_launch = has_mass_driver && seed_ship_ready;
+    let can_launch = view.has_mass_driver && view.seed_ship_ready;
+    let current_planet = view.current_planet;
     clear_background(Colors::BACKGROUND);
 
     let screen_w = screen_width();
@@ -45,14 +61,14 @@ pub fn render_interplanetary_view(
         return InterplanetaryAction::Close;
     }
 
-    let (driver_label, driver_color) = if has_mass_driver {
+    let (driver_label, driver_color) = if view.has_mass_driver {
         ("Mass Driver: ONLINE", Colors::SUCCESS)
     } else {
         ("Mass Driver: OFFLINE", Colors::TEXT_DIM)
     };
     draw_ui_text(driver_label, screen_w - 320.0, 34.0, 12.0, driver_color);
 
-    let (ship_label, ship_color) = if seed_ship_ready {
+    let (ship_label, ship_color) = if view.seed_ship_ready {
         ("Seed Ship: READY", Colors::SUCCESS)
     } else {
         ("Seed Ship: UNDER CONSTRUCTION", Colors::TEXT_DIM)
@@ -72,52 +88,24 @@ pub fn render_interplanetary_view(
     let mut hovered_planet: Option<usize> = None;
     let mut action = InterplanetaryAction::None;
 
-    // Left planet list
     let list_x = 16.0;
     let list_y = header_height + 12.0;
     let list_w = 220.0;
-    let list_h = screen_h - list_y - 80.0;
-    draw_panel(list_x, list_y, list_w, list_h);
-    draw_ui_text(
-        "Planets",
-        list_x + 12.0,
-        list_y + 28.0,
-        16.0,
-        Colors::PRIMARY,
-    );
-    draw_ui_text(
-        "minerals",
-        list_x + list_w - 58.0,
-        list_y + 28.0,
-        10.0,
-        Colors::TEXT_DIM,
-    );
-    let mut list_row_y = list_y + 56.0;
-    for (index, planet) in planets.iter().enumerate() {
-        let is_current = index == current_planet;
-        let is_colonized = colonized_planets.get(index).copied().unwrap_or(false);
-        let label_color = if is_current {
-            Colors::PRIMARY
-        } else if is_colonized {
-            Colors::SUCCESS
-        } else {
-            Colors::TEXT_DIM
-        };
-        draw_ui_text(&planet.name, list_x + 12.0, list_row_y, 13.0, label_color);
-        // A world left behind keeps working, so the map says what is piling up
-        // on it rather than making the player fly there to find out.
-        if let Some(Some(minerals)) = stockpiles.get(index) {
-            draw_ui_text(
-                &format!("{:.0}", minerals),
-                list_x + list_w - 58.0,
-                list_row_y,
-                12.0,
-                Colors::ACCENT,
-            );
-        }
-        list_row_y += 20.0;
+    let list_h = 44.0 + planets.len() as f32 * 20.0;
+    draw_planet_list(view, list_x, list_y, list_w, list_h);
+
+    // Under the map's own furniture: the shipping panel takes what the planet
+    // list does not need.
+    let shipping_y = list_y + list_h + 12.0;
+    let shipping_h = (screen_h - shipping_y - 80.0).max(120.0);
+    let shipping_action = shipping_panel::draw(view, list_x, shipping_y, list_w, shipping_h);
+    if shipping_action != InterplanetaryAction::None {
+        action = shipping_action;
     }
 
+    // Where each world ended up this frame, so a pod can be drawn between two
+    // of them rather than between two orbits.
+    let mut positions = Vec::with_capacity(planets.len());
     for (i, planet) in planets.iter().enumerate() {
         // Draw orbit
         let orbit_color = if i == current_planet {
@@ -131,6 +119,7 @@ pub fn render_interplanetary_view(
         let angle = (i as f32) * 1.2 + get_time() as f32 * 0.02 * (1.0 / (i as f32 + 1.0));
         let px = center_x + planet.orbit_radius * angle.cos();
         let py = center_y + planet.orbit_radius * angle.sin();
+        positions.push((px, py));
 
         // Check hover
         let dist = ((mouse_x - px).powi(2) + (mouse_y - py).powi(2)).sqrt();
@@ -144,7 +133,7 @@ pub fn render_interplanetary_view(
         } else {
             planet.size
         };
-        let is_colonized = colonized_planets.get(i).copied().unwrap_or(false);
+        let is_colonized = view.colonized.get(i).copied().unwrap_or(false);
 
         // Draw colonization glow
         if is_colonized {
@@ -179,108 +168,166 @@ pub fn render_interplanetary_view(
         );
     }
 
+    shipping_panel::draw_pods(view.shipments, &positions);
+
     // Info panel for hovered planet
     if let Some(index) = hovered_planet {
-        let planet = &planets[index];
-        let is_colonized = colonized_planets.get(index).copied().unwrap_or(false);
-        let is_current = index == current_planet;
-
-        let panel_w = 300.0;
-        let panel_h = 200.0;
-        let panel_x = screen_w - panel_w - 16.0;
-        let panel_y = header_height + 12.0;
-        draw_panel(panel_x, panel_y, panel_w, panel_h);
-
-        draw_ui_text(
-            &planet.name,
-            panel_x + 15.0,
-            panel_y + 30.0,
-            20.0,
-            color_from_rgba(&planet.color),
-        );
-        draw_ui_text(
-            &planet.description,
-            panel_x + 15.0,
-            panel_y + 55.0,
-            13.0,
-            Colors::TEXT,
-        );
-        draw_ui_text(
-            &planet.difficulty,
-            panel_x + 15.0,
-            panel_y + 75.0,
-            12.0,
-            Colors::TEXT_DIM,
-        );
-
-        if is_colonized {
-            draw_ui_text(
-                "Status: COLONIZED",
-                panel_x + 15.0,
-                panel_y + 105.0,
-                13.0,
-                Colors::SUCCESS,
-            );
-        } else {
-            draw_ui_text(
-                "Status: Unexplored",
-                panel_x + 15.0,
-                panel_y + 105.0,
-                13.0,
-                Colors::WARNING,
-            );
-        }
-
-        if is_current {
-            draw_ui_text(
-                "(Current Location)",
-                panel_x + 15.0,
-                panel_y + 125.0,
-                11.0,
-                Colors::PRIMARY,
-            );
-        } else if is_colonized {
-            draw_ui_text(
-                "Click to travel",
-                panel_x + 15.0,
-                panel_y + 150.0,
-                12.0,
-                Colors::PRIMARY,
-            );
-        } else if can_launch {
-            draw_ui_text(
-                "Click to launch the Seed Ship",
-                panel_x + 15.0,
-                panel_y + 150.0,
-                12.0,
-                Colors::SUCCESS,
-            );
-        } else {
-            let blocker = if !has_mass_driver {
-                "Requires: Mass Driver"
-            } else {
-                "Requires: a finished Seed Ship"
-            };
-            draw_ui_text(
-                blocker,
-                panel_x + 15.0,
-                panel_y + 150.0,
-                11.0,
-                Colors::ERROR,
-            );
-        }
-
-        // Handle click
-        if is_mouse_button_pressed(MouseButton::Left) {
-            if is_colonized && !is_current {
-                action = InterplanetaryAction::SelectPlanet(index);
-            } else if can_launch && !is_colonized {
-                action = InterplanetaryAction::LaunchSeedShip(index);
+        if let Some(clicked) = draw_planet_info(view, index, can_launch, screen_w, header_height) {
+            if action == InterplanetaryAction::None {
+                action = clicked;
             }
         }
     }
 
-    // Legend
+    draw_legend(screen_w, screen_h);
+
+    // Instructions
+    draw_ui_text(
+        "Press ESC to return | M to toggle map",
+        20.0,
+        screen_h - 20.0,
+        Dimensions::FONT_SIZE_SMALL,
+        Colors::TEXT_DIM,
+    );
+
+    if is_key_pressed(KeyCode::Escape) {
+        return InterplanetaryAction::Close;
+    }
+
+    action
+}
+
+/// Every world and what is piling up on it. A world left behind keeps working,
+/// so the map says so rather than making the player fly there to find out.
+fn draw_planet_list(view: &MapView, x: f32, y: f32, w: f32, h: f32) {
+    draw_panel(x, y, w, h);
+    draw_ui_text("Planets", x + 12.0, y + 28.0, 16.0, Colors::PRIMARY);
+    draw_ui_text("minerals", x + w - 58.0, y + 28.0, 10.0, Colors::TEXT_DIM);
+
+    let mut row_y = y + 56.0;
+    for (index, planet) in planets().iter().enumerate() {
+        let is_current = index == view.current_planet;
+        let is_colonized = view.colonized.get(index).copied().unwrap_or(false);
+        let label_color = if is_current {
+            Colors::PRIMARY
+        } else if is_colonized {
+            Colors::SUCCESS
+        } else {
+            Colors::TEXT_DIM
+        };
+        draw_ui_text(&planet.name, x + 12.0, row_y, 13.0, label_color);
+        if let Some(Some(minerals)) = view.stockpiles.get(index) {
+            draw_ui_text(
+                &format!("{:.0}", minerals),
+                x + w - 58.0,
+                row_y,
+                12.0,
+                Colors::ACCENT,
+            );
+        }
+        row_y += 20.0;
+    }
+}
+
+/// What the hovered world is, and what clicking it would do.
+fn draw_planet_info(
+    view: &MapView,
+    index: usize,
+    can_launch: bool,
+    screen_w: f32,
+    header_height: f32,
+) -> Option<InterplanetaryAction> {
+    let planet = &planets()[index];
+    let is_colonized = view.colonized.get(index).copied().unwrap_or(false);
+    let is_current = index == view.current_planet;
+
+    let panel_w = 300.0;
+    let panel_h = 200.0;
+    let panel_x = screen_w - panel_w - 16.0;
+    let panel_y = header_height + 12.0;
+    draw_panel(panel_x, panel_y, panel_w, panel_h);
+
+    draw_ui_text(
+        &planet.name,
+        panel_x + 15.0,
+        panel_y + 30.0,
+        20.0,
+        color_from_rgba(&planet.color),
+    );
+    draw_ui_text(
+        &planet.description,
+        panel_x + 15.0,
+        panel_y + 55.0,
+        13.0,
+        Colors::TEXT,
+    );
+    draw_ui_text(
+        &planet.difficulty,
+        panel_x + 15.0,
+        panel_y + 75.0,
+        12.0,
+        Colors::TEXT_DIM,
+    );
+
+    let (status, status_color) = if is_colonized {
+        ("Status: COLONIZED", Colors::SUCCESS)
+    } else {
+        ("Status: Unexplored", Colors::WARNING)
+    };
+    draw_ui_text(status, panel_x + 15.0, panel_y + 105.0, 13.0, status_color);
+
+    if is_current {
+        draw_ui_text(
+            "(Current Location)",
+            panel_x + 15.0,
+            panel_y + 125.0,
+            11.0,
+            Colors::PRIMARY,
+        );
+    } else if is_colonized {
+        draw_ui_text(
+            "Click to travel",
+            panel_x + 15.0,
+            panel_y + 150.0,
+            12.0,
+            Colors::PRIMARY,
+        );
+    } else if can_launch {
+        draw_ui_text(
+            "Click to launch the Seed Ship",
+            panel_x + 15.0,
+            panel_y + 150.0,
+            12.0,
+            Colors::SUCCESS,
+        );
+    } else {
+        let blocker = if !view.has_mass_driver {
+            "Requires: Mass Driver"
+        } else {
+            "Requires: a finished Seed Ship"
+        };
+        draw_ui_text(
+            blocker,
+            panel_x + 15.0,
+            panel_y + 150.0,
+            11.0,
+            Colors::ERROR,
+        );
+    }
+
+    if !is_mouse_button_pressed(MouseButton::Left) {
+        return None;
+    }
+    if is_colonized && !is_current {
+        Some(InterplanetaryAction::SelectPlanet(index))
+    } else if can_launch && !is_colonized {
+        Some(InterplanetaryAction::LaunchSeedShip(index))
+    } else {
+        None
+    }
+}
+
+fn draw_legend(screen_w: f32, screen_h: f32) {
     draw_panel(screen_w - 190.0, screen_h - 110.0, 180.0, 100.0);
     draw_circle(screen_w - 175.0, screen_h - 85.0, 6.0, Colors::SUCCESS);
     draw_ui_text(
@@ -306,19 +353,4 @@ pub fn render_interplanetary_view(
         12.0,
         Colors::TEXT_DIM,
     );
-
-    // Instructions
-    draw_ui_text(
-        "Press ESC to return | M to toggle map",
-        20.0,
-        screen_h - 20.0,
-        Dimensions::FONT_SIZE_SMALL,
-        Colors::TEXT_DIM,
-    );
-
-    if is_key_pressed(KeyCode::Escape) {
-        return InterplanetaryAction::Close;
-    }
-
-    action
 }

@@ -12,6 +12,8 @@ pub struct GameConfig {
     pub collapse: CollapseConfig,
     #[serde(default = "OreConfig::default")]
     pub ore: OreConfig,
+    #[serde(default = "MassDriverConfig::default")]
+    pub mass_driver: MassDriverConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -94,6 +96,25 @@ pub struct OreConfig {
     pub depletion_per_unit: f32,
 }
 
+/// What a Mass Driver throws, how fast it loads, and how long the throw takes.
+///
+/// Transit is measured off the orbits in `planets.json` rather than a flat
+/// number, so shipping to the next world over is cheap and shipping across the
+/// system is a commitment.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MassDriverConfig {
+    /// Resource a driver pulls out of its hopper and into the pod per second.
+    pub load_rate: f32,
+    /// How much has to be loaded before the pod is thrown.
+    pub pod_capacity: f32,
+    /// Flight seconds per unit of difference between two orbit radii.
+    pub seconds_per_orbit_unit: f32,
+    /// However close two worlds are, a throw takes at least this long.
+    pub min_transit_seconds: f32,
+    /// Resource ids a driver will accept, in the order the map cycles them.
+    pub cargo: Vec<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuildingConfig {
     pub core_power_consumption: f32,
@@ -149,6 +170,19 @@ impl Default for GameConfig {
             },
             collapse: CollapseConfig::default(),
             ore: OreConfig::default(),
+            mass_driver: MassDriverConfig::default(),
+        }
+    }
+}
+
+impl Default for MassDriverConfig {
+    fn default() -> Self {
+        Self {
+            load_rate: 3.0,
+            pod_capacity: 60.0,
+            seconds_per_orbit_unit: 0.6,
+            min_transit_seconds: 20.0,
+            cargo: vec!["minerals".to_string(), "alloy".to_string()],
         }
     }
 }

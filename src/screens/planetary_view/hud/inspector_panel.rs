@@ -168,6 +168,13 @@ pub(super) fn draw(
                 status_text = format!("{} - {:.0} out", status_text, waiting_out);
             }
         }
+        // A driver's route matters more than the word "Powered" does, and the
+        // Power row above is already saying that.
+        if building_type == BuildingType::MassDriver {
+            if let Some(tile_pos) = tile_pos_with_building {
+                status_text = state.export_summary(tile_pos);
+            }
+        }
         let status_color = if tile_building.is_some() && !tile_powered {
             error
         } else {

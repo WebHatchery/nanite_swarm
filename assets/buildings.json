@@ -251,6 +251,26 @@
       "uses_efficiency": false
     },
     {
+      "id": "mass_driver",
+      "name": "Mass Driver",
+      "description": "Throws cargo off the world at another one. Route it on the solar map.",
+      "cost": { "minerals": 70.0, "energy": 40.0 },
+      "power_generation": 0.0,
+      "power_consumption": 6.0,
+      "hotkey": null,
+      "texture": "assets/tiles/buildings/building_mass_driver.png",
+      "icon": "assets/ui/buildings/ui_building_mass_driver.png",
+      "build_menu_order": 12,
+      "show_in_build_menu": true,
+      "start_unlocked": false,
+      "unlocked_by": "mass_driver",
+      "transmits_power": false,
+      "carries_traffic": false,
+      "generates_power": false,
+      "consumes_power": true,
+      "uses_efficiency": false
+    },
+    {
       "id": "biomass_harvester",
       "name": "Biomass Harvester",
       "description": "Harvests forest biomass as fuel and generates power.",

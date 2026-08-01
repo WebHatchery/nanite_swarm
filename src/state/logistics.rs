@@ -303,7 +303,7 @@ impl PlanetState {
     /// A drone looks for one of these before falling back to the Core, which
     /// is what makes a Smelter parked beside the drills get fed first.
     fn consumers_of(&self, resource: ResourceType) -> Vec<GridPos> {
-        crate::data::game_data()
+        let mut consumers: Vec<GridPos> = crate::data::game_data()
             .buildings
             .iter()
             .filter(|def| {
@@ -312,7 +312,20 @@ impl PlanetState {
             })
             .filter_map(|def| BuildingType::from_id(&def.id))
             .flat_map(|kind| self.powered_positions(kind))
-            .collect()
+            .collect();
+
+        // A Mass Driver wants whatever this world's standing order says it is
+        // throwing, and nothing at all while there is nowhere to throw it. It
+        // is fed over the network like any other consumer: an export is a
+        // logistics run that happens to end in orbit.
+        if self
+            .export
+            .is_some_and(|order| order.cargo == resource && order.target != self.planet_index)
+        {
+            consumers.extend(self.powered_positions(BuildingType::MassDriver));
+        }
+
+        consumers
     }
 
     /// Cut ore into each drill's buffer.
