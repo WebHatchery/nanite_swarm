@@ -17,8 +17,14 @@ pub const PLANET_COUNT: usize = 5;
 pub const STARTING_PLANET: usize = 2;
 
 const DIRECTIVE_ROTATION_SECONDS: f32 = 600.0;
+/// How much simulated time may pass between autosaves. Measured in world time
+/// rather than wall clock, so a paused game does not keep writing to disk and
+/// a fast-forwarded one saves as often as the progress warrants.
+const AUTOSAVE_SECONDS: f32 = 60.0;
 /// How long a world's arrival line stays on screen.
 const ARRIVAL_NOTICE_SECONDS: f32 = 10.0;
+/// How long the saved marker stays on screen.
+const SAVE_NOTICE_SECONDS: f32 = 3.0;
 
 /// Every planet the swarm holds, plus which one it is currently standing on.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -29,6 +35,9 @@ pub struct Campaign {
     pub directive: Directive,
     directive_timer: f32,
     directive_tier: i32,
+    /// World time since the campaign was last written to disk.
+    #[serde(skip, default)]
+    since_save: f32,
 }
 
 impl Campaign {
@@ -41,6 +50,7 @@ impl Campaign {
             directive: pick_directive(0),
             directive_timer: 0.0,
             directive_tier: 0,
+            since_save: 0.0,
         };
         campaign.planets[STARTING_PLANET] = Some(campaign.generate(STARTING_PLANET, &config));
         campaign
@@ -58,7 +68,23 @@ impl Campaign {
             directive: pick_directive(0),
             directive_timer: 0.0,
             directive_tier: 0,
+            since_save: 0.0,
         }
+    }
+
+    /// Enough has happened that the campaign is worth writing down.
+    ///
+    /// Losing an hour of an idle game to a closed window is the worst thing
+    /// this game could do to someone, and until now saving was something the
+    /// player had to remember.
+    pub fn due_for_autosave(&self) -> bool {
+        self.since_save >= AUTOSAVE_SECONDS
+    }
+
+    /// Called after a successful write, whatever prompted it.
+    pub fn mark_saved(&mut self) {
+        self.since_save = 0.0;
+        self.current_mut().save_notice_timer = SAVE_NOTICE_SECONDS;
     }
 
     fn generate(&self, index: usize, config: &GameConfig) -> PlanetState {
@@ -143,6 +169,7 @@ impl Campaign {
     /// Tick the active directive against the current planet, rotating to the
     /// next one when it is done or its window has run out.
     pub fn update_directive(&mut self, delta_time: f32) {
+        self.since_save += delta_time;
         self.directive_timer += delta_time;
         let expired = self.directive_timer >= DIRECTIVE_ROTATION_SECONDS
             || self.directive.duration <= 0.0
@@ -488,6 +515,38 @@ mod tests {
             frozen < temperate,
             "frozen drones moved at {frozen}, temperate at {temperate}"
         );
+    }
+
+    #[test]
+    fn a_fresh_campaign_is_not_immediately_due_for_a_save() {
+        let campaign = campaign();
+        assert!(!campaign.due_for_autosave());
+    }
+
+    #[test]
+    fn enough_world_time_makes_a_save_due() {
+        let mut campaign = campaign();
+        for _ in 0..61 {
+            campaign.update_directive(1.0);
+        }
+        assert!(campaign.due_for_autosave());
+
+        campaign.mark_saved();
+        assert!(!campaign.due_for_autosave());
+        assert!(campaign.current().save_notice_timer > 0.0);
+    }
+
+    #[test]
+    fn a_paused_campaign_never_becomes_due() {
+        let mut campaign = campaign();
+        campaign.current_mut().toggle_pause();
+        // `advance` returns no ticks while paused, so nothing calls the
+        // directive tick and the save clock never moves.
+        for _ in 0..600 {
+            let ticks = campaign.current_mut().advance(0.1, false);
+            campaign.update_directive(ticks as f32 * crate::state::TICK_SECONDS);
+        }
+        assert!(!campaign.due_for_autosave());
     }
 
     #[test]

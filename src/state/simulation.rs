@@ -91,6 +91,9 @@ impl PlanetState {
         if self.arrival_notice_timer > 0.0 {
             self.arrival_notice_timer = (self.arrival_notice_timer - delta_time).max(0.0);
         }
+        if self.save_notice_timer > 0.0 {
+            self.save_notice_timer = (self.save_notice_timer - delta_time).max(0.0);
+        }
 
         // Update drones
         if self.power_collapse_shutdown <= 0.0 {

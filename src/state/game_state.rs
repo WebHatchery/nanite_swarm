@@ -138,6 +138,12 @@ pub struct PlanetState {
     /// Counts down while the arrival line for this world is on screen.
     #[serde(skip, default)]
     pub arrival_notice_timer: f32,
+    /// Counts down while the saved marker is on screen.
+    #[serde(skip, default)]
+    pub save_notice_timer: f32,
+    /// The last write to disk failed, and the player should know.
+    #[serde(skip, default)]
+    pub save_failed: bool,
     #[serde(skip, default)]
     pub forest_harvested_count: i32,
     #[serde(skip, default)]
@@ -241,6 +247,8 @@ impl PlanetState {
             research_lock_timer: 0.0,
             collapse_notice_timer: 0.0,
             arrival_notice_timer: 0.0,
+            save_notice_timer: 0.0,
+            save_failed: false,
             forest_harvested_count: 0,
             tutorial_step: 0,
             tutorial_hidden: false,

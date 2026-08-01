@@ -124,8 +124,7 @@ impl Game {
                     }
                 }
                 MenuAction::Save => {
-                    let _ = save_to_file(&mut self.campaign, SAVE_PATH);
-                    self.has_save = true;
+                    self.save_campaign();
                 }
                 MenuAction::Settings => {
                     self.phase = GamePhase::Settings;
@@ -154,8 +153,10 @@ impl Game {
                         self.phase = GamePhase::Interplanetary;
                     }
                     PlanetaryAction::OpenMenu => {
+                        // Leaving the world is a good moment to write it down,
+                        // and the menu used to only *claim* a save existed.
+                        self.save_campaign();
                         self.phase = GamePhase::MainMenu;
-                        self.has_save = true;
                     }
                     PlanetaryAction::None => {}
                 }
@@ -209,6 +210,7 @@ impl Game {
                             // The arriving world needs the campaign's research.
                             self.sync_research_to_planet();
                             self.sync_building_unlocks();
+                            self.save_campaign();
                             self.phase = GamePhase::Playing;
                         }
                     }
@@ -217,6 +219,7 @@ impl Game {
                         if self.has_mass_driver() && self.campaign.launch_seed_ship(index) {
                             self.sync_research_to_planet();
                             self.sync_building_unlocks();
+                            self.save_campaign();
                             self.phase = GamePhase::Playing;
                         }
                     }
@@ -239,6 +242,26 @@ impl Game {
         let simulated = ticks as f32 * state::TICK_SECONDS;
         self.update_research(simulated);
         self.campaign.update_directive(simulated);
+        if self.campaign.due_for_autosave() {
+            self.save_campaign();
+        }
+    }
+
+    /// Write the campaign down, and say so on screen either way.
+    ///
+    /// A silent failed save is worse than no autosave at all: the player would
+    /// carry on believing their world was safe.
+    fn save_campaign(&mut self) {
+        match save_to_file(&mut self.campaign, SAVE_PATH) {
+            Ok(()) => {
+                self.has_save = true;
+                self.campaign.mark_saved();
+                self.campaign.current_mut().save_failed = false;
+            }
+            Err(_) => {
+                self.campaign.current_mut().save_failed = true;
+            }
+        }
     }
 
     fn update_research(&mut self, delta_time: f32) {
@@ -466,6 +489,16 @@ impl Game {
                 }
                 planet.change_speed(true);
                 planet.toggle_pause();
+            }
+            "saved" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                // Long enough to have earned an autosave, then take it.
+                for _ in 0..70 {
+                    self.campaign.current_mut().step(1.0, false);
+                    self.campaign.update_directive(1.0);
+                }
+                self.campaign.mark_saved();
             }
             "congestion" => {
                 self.phase = GamePhase::Playing;

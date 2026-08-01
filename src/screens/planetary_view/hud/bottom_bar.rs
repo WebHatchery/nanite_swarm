@@ -59,7 +59,8 @@ pub(super) fn draw(
         None,
     );
     let congested = state.congested_tiles();
-    let alert_count = i32::from(state.power_balance < 0.0)
+    let alert_count = i32::from(state.save_failed)
+        + i32::from(state.power_balance < 0.0)
         + i32::from(state.battery_seconds <= 0.0)
         + i32::from(state.power_collapse_shutdown > 0.0)
         + i32::from(congested > 0)
@@ -76,7 +77,9 @@ pub(super) fn draw(
         },
         warning,
     );
-    let alert_text = if state.power_collapse_shutdown > 0.0 {
+    let alert_text = if state.save_failed {
+        "SAVE FAILED"
+    } else if state.power_collapse_shutdown > 0.0 {
         "POWER COLLAPSE"
     } else if state.battery_seconds <= 0.0 {
         "LOW BATTERY"
@@ -169,7 +172,19 @@ pub(super) fn draw(
     let time_h = time_seconds / 3600;
     let time_m = (time_seconds % 3600) / 60;
     let time_s = time_seconds % 60;
-    draw_ui_text("MISSION TIME", status_x + 22.0, bottom_y + 27.0, 9.0, dim);
+    // The saved marker borrows the mission-time slot for a few seconds; it is
+    // the one label the player is not reading second to second.
+    if state.save_notice_timer > 0.0 {
+        draw_ui_text(
+            "SAVED",
+            status_x + 22.0,
+            bottom_y + 27.0,
+            9.0,
+            colors.success,
+        );
+    } else {
+        draw_ui_text("MISSION TIME", status_x + 22.0, bottom_y + 27.0, 9.0, dim);
+    }
     draw_ui_text(
         &format!("{:02}:{:02}:{:02}", time_h, time_m, time_s),
         status_x + 22.0,
