@@ -82,7 +82,6 @@ impl Grid {
                 terrain,
                 building: None,
                 revealed,
-                bridge: false,
                 filter: false,
                 mountain_harvested: false,
                 forest_cleared: false,
@@ -126,20 +125,16 @@ impl Grid {
                 return false;
             }
             if tile.building.is_some() {
-                if building_type == BuildingType::Bridge {
-                    if let Some(ref building) = tile.building {
-                        return building.building_type == BuildingType::Conduit && !tile.bridge;
-                    }
-                }
                 return false;
             }
             // Conduits cannot overlap any existing building and must be on buildable terrain
             if building_type == BuildingType::Conduit {
-                return tile.terrain.is_buildable() || tile.bridge;
+                return tile.terrain.is_buildable();
             }
+            // A Bridge is the network's answer to ground that will not hold
+            // anything: it goes where nothing else can, and nowhere else.
             if building_type == BuildingType::Bridge {
-                return matches!(tile.terrain, TerrainType::Water | TerrainType::Void)
-                    && !tile.bridge;
+                return matches!(tile.terrain, TerrainType::Water | TerrainType::Void);
             }
             if building_type == BuildingType::BiomassHarvester {
                 return tile.terrain == TerrainType::Forest && !tile.filter;
@@ -161,10 +156,6 @@ impl Grid {
         }
 
         if let Some(tile) = self.get_mut(pos) {
-            if building_type == BuildingType::Bridge {
-                tile.bridge = true;
-                return true;
-            }
             let mut building = Building::new(building_type, pos);
 
             // Wind turbines on mountains get efficiency bonus
@@ -182,7 +173,6 @@ impl Grid {
     /// Remove a building at position
     pub fn remove_building(&mut self, pos: GridPos) -> Option<Building> {
         if let Some(tile) = self.get_mut(pos) {
-            tile.bridge = false;
             tile.building.take()
         } else {
             None
@@ -268,12 +258,22 @@ impl Grid {
                 if tile.filter {
                     return false;
                 }
-                if !tile.terrain.is_buildable() && !tile.bridge {
+                // Void and water are crossable only where a Bridge already
+                // stands; the run is planned through what is there, not
+                // through what could be built there.
+                let bridged = tile
+                    .building
+                    .as_ref()
+                    .is_some_and(|building| building.building_type == BuildingType::Bridge);
+                if !tile.terrain.is_buildable() && !bridged {
                     return false;
                 }
                 match tile.building.as_ref() {
                     None => true,
-                    Some(building) => building.building_type == BuildingType::Conduit,
+                    Some(building) => matches!(
+                        building.building_type,
+                        BuildingType::Conduit | BuildingType::Bridge
+                    ),
                 }
             } else {
                 false
@@ -364,41 +364,49 @@ mod tests {
     }
 
     #[test]
-    fn bridge_requires_water_or_void_terrain() {
+    fn a_bridge_goes_where_nothing_else_can_and_nowhere_else() {
         let mut grid = Grid::new(4, 4);
-        let pos = GridPos::new(1, 1);
-        grid.get_mut(pos).unwrap().terrain = TerrainType::Water;
-        grid.reveal_around(pos, 1);
-        assert!(grid.can_place_building(pos, BuildingType::Bridge));
-        assert!(grid.place_building(pos, BuildingType::Bridge));
-        assert!(grid.get(pos).unwrap().bridge);
-        // Placing a second bridge on the same tile is rejected.
-        assert!(!grid.can_place_building(pos, BuildingType::Bridge));
+        let void = GridPos::new(1, 1);
+        let water = GridPos::new(2, 1);
+        let ground = GridPos::new(3, 1);
+        grid.get_mut(void).unwrap().terrain = TerrainType::Void;
+        grid.get_mut(water).unwrap().terrain = TerrainType::Water;
+        grid.reveal_around(GridPos::new(2, 1), 4);
+
+        assert!(grid.place_building(void, BuildingType::Bridge));
+        assert!(grid.place_building(water, BuildingType::Bridge));
+        // Open ground does not need bridging and will not take one.
+        assert!(!grid.can_place_building(ground, BuildingType::Bridge));
+        // And the tile is taken now, the same as any other building.
+        assert!(!grid.can_place_building(void, BuildingType::Bridge));
+        assert!(!grid.can_place_building(void, BuildingType::Conduit));
     }
 
     #[test]
-    fn bridge_allows_conduit_crossing_on_same_tile() {
+    fn a_bridge_is_a_piece_of_the_network_rather_than_a_permission_slip() {
         let mut grid = Grid::new(4, 4);
         let pos = GridPos::new(1, 1);
-        grid.reveal_around(pos, 1);
-        assert!(grid.place_building(pos, BuildingType::Conduit));
-        // A bridge can be added over an existing conduit...
-        assert!(grid.can_place_building(pos, BuildingType::Bridge));
+        grid.get_mut(pos).unwrap().terrain = TerrainType::Void;
+        grid.reveal_around(pos, 2);
         assert!(grid.place_building(pos, BuildingType::Bridge));
-        // ...but not twice.
-        assert!(!grid.can_place_building(pos, BuildingType::Bridge));
+
+        let building = grid.get(pos).unwrap().building.as_ref().unwrap();
+        assert_eq!(building.building_type, BuildingType::Bridge);
+        assert!(building.transmits_power(), "a bridge carries no power");
+        assert!(building.carries_traffic(), "no drone can cross a bridge");
     }
 
     #[test]
-    fn remove_building_clears_bridge_flag_too() {
+    fn tearing_down_a_bridge_leaves_the_gap_it_spanned() {
         let mut grid = Grid::new(4, 4);
         let pos = GridPos::new(1, 1);
-        grid.get_mut(pos).unwrap().terrain = TerrainType::Water;
-        grid.reveal_around(pos, 1);
+        grid.get_mut(pos).unwrap().terrain = TerrainType::Void;
+        grid.reveal_around(pos, 2);
         grid.place_building(pos, BuildingType::Bridge);
-        assert!(grid.get(pos).unwrap().bridge);
-        grid.remove_building(pos);
-        assert!(!grid.get(pos).unwrap().bridge);
+        assert!(grid.remove_building(pos).is_some());
+        assert!(grid.get(pos).unwrap().building.is_none());
+        assert!(!grid.can_place_building(pos, BuildingType::Conduit));
+        assert!(grid.can_place_building(pos, BuildingType::Bridge));
     }
 
     #[test]

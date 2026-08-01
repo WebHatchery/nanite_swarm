@@ -128,6 +128,31 @@ mod tests {
     }
 
     #[test]
+    fn a_void_gap_is_crossed_by_a_bridge_and_by_nothing_else() {
+        // Core, two conduits, a gap of void, then the drill.
+        let mut grid = Grid::new(7, 3);
+        grid.reveal_around(GridPos::new(3, 0), 32);
+        let core = GridPos::new(0, 0);
+        let gap = GridPos::new(3, 0);
+        let drill = GridPos::new(5, 0);
+        grid.get_mut(gap).unwrap().terrain = crate::engine::TerrainType::Void;
+        grid.place_building(core, BuildingType::Core);
+        for x in [1, 2, 4] {
+            assert!(grid.place_building(GridPos::new(x, 0), BuildingType::Conduit));
+        }
+        grid.place_building(drill, BuildingType::Drill);
+
+        // Nothing can be laid across the void, so there is no route.
+        assert!(!grid.can_place_building(gap, BuildingType::Conduit));
+        assert!(route_over_network(&grid, drill, core).is_none());
+
+        // A bridge is the crossing, not a licence to build one.
+        assert!(grid.place_building(gap, BuildingType::Bridge));
+        let route = route_over_network(&grid, drill, core).expect("bridged run");
+        assert!(route.contains(&gap), "the route skipped the bridge");
+    }
+
+    #[test]
     fn a_tile_under_its_limit_costs_one_step_and_a_crowded_one_costs_more() {
         assert_eq!(traffic_cost(0, 2.0, 1.5), 1.0);
         assert_eq!(

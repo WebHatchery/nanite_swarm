@@ -31,7 +31,7 @@ A network tile passes `conduit_capacity` drones at full speed; past that they sh
 - Re-validating every in-flight drone's remaining path each tick is O(drones x path length), and routing is now A* over the network rather than a plain BFS; add a network revision counter and re-check only when the grid changes if either shows up in profiling.
 - A stalled drone shows an error flag and a HUD counter, but nothing points at *where* the break is; highlight the severed run on the map.
 - Add ore deposits with richness and depletion — every drill cuts the same `drill_output_rate` from any tile, so placement is spatially meaningless.
-- Make Bridge tiles real; they are a bool flag that does not even transmit power.
+- Bridges are real network pieces: a building that stands on void or water and nowhere else, transmitting power and carrying drones like a conduit, instead of a tile flag that gave a conduit permission to exist. The GDD's Venus gaps are now a routing problem. Two things remain — a bridge on a void tile reads as barely more than the void it spans, and nothing hints that a gap *can* be bridged.
 
 ## Interplanetary meta-layer
 

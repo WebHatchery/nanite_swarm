@@ -11,8 +11,6 @@ pub struct Tile {
     pub building: Option<Building>,
     pub revealed: bool, // For fog of war / expansion
     #[serde(default)]
-    pub bridge: bool,
-    #[serde(default)]
     pub filter: bool, // Forest filter tile for dust reduction
     #[serde(default)]
     pub mountain_harvested: bool, // Permanent scar for turbine bonuses
@@ -28,7 +26,6 @@ impl Default for Tile {
             terrain: TerrainType::Empty,
             building: None,
             revealed: false,
-            bridge: false,
             filter: false,
             mountain_harvested: false,
             forest_cleared: false,

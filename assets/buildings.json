@@ -123,8 +123,8 @@
     {
       "id": "bridge",
       "name": "Bridge",
-      "description": "Allows conduit crossings on the same tile.",
-      "cost": { "minerals": 15.0, "energy": 5.0 },
+      "description": "Carries the network across ground that will not hold anything.",
+      "cost": { "minerals": 25.0, "energy": 10.0 },
       "power_generation": 0.0,
       "power_consumption": 0.0,
       "hotkey": "6",
@@ -134,8 +134,8 @@
       "show_in_build_menu": true,
       "start_unlocked": false,
       "unlocked_by": "power_grid",
-      "transmits_power": false,
-      "carries_traffic": false,
+      "transmits_power": true,
+      "carries_traffic": true,
       "generates_power": false,
       "consumes_power": false,
       "uses_efficiency": false

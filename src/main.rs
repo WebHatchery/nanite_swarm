@@ -571,6 +571,22 @@ impl Game {
                 }
                 if let Some(core) = planet.grid.find_core() {
                     planet.grid.reveal_around(core, 12);
+                    // Venus is the world of gaps, so bridge one: it is the
+                    // only piece of network that can stand on void.
+                    let void: Vec<engine::GridPos> = planet
+                        .grid
+                        .iter_tiles()
+                        .filter(|(_, tile)| tile.terrain == engine::TerrainType::Void)
+                        .map(|(pos, _)| pos)
+                        .filter(|pos| (pos.x - core.x).abs() + (pos.y - core.y).abs() < 6)
+                        .take(3)
+                        .collect();
+                    for pos in void {
+                        planet
+                            .grid
+                            .place_building(pos, engine::BuildingType::Bridge);
+                    }
+                    planet.grid.update_power_grid();
                 }
             }
             "upkeep" => {

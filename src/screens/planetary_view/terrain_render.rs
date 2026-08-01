@@ -398,20 +398,6 @@ pub(super) fn draw_grid_tiles(
                 }
             }
 
-            if tile.bridge {
-                let texture = building_texture(BuildingType::Bridge, textures);
-                draw_texture_ex(
-                    texture,
-                    px,
-                    py,
-                    WHITE,
-                    DrawTextureParams {
-                        dest_size: Some(vec2(metrics.tile_size - 1.0, metrics.tile_size - 1.0)),
-                        ..Default::default()
-                    },
-                );
-            }
-
             // Draw hover highlight
             if let Some(hover) = hovered_pos {
                 if hover == pos && tile.revealed {
