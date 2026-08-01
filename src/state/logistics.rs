@@ -226,9 +226,7 @@ impl PlanetState {
     /// Everything a drill produces goes on its pad; getting it anywhere is
     /// [`Self::dispatch_producers`]'s problem, the same as for a Smelter.
     fn update_drills(&mut self, delta_time: f32) {
-        let rate = self
-            .stats
-            .apply(StatId::DrillOutput, self.config.buildings.drill_output_rate);
+        let rate = self.drill_output_rate();
         let ceiling = self.drones.drone_capacity * PAD_LOADS;
 
         for drill_pos in self.grid.find_buildings(BuildingType::Drill) {

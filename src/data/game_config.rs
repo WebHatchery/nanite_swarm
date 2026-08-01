@@ -31,6 +31,8 @@ pub struct ResourceConfig {
     pub storage_bonus: f32,
     pub core_data_rate: f32,
     pub server_data_rate: f32,
+    /// Data spent per second on whatever is being researched.
+    pub research_rate: f32,
     pub forest_biomass: f32,
     pub biomass_power_output: f32,
     pub biomass_consumption_rate: f32,
@@ -66,6 +68,7 @@ impl Default for GameConfig {
                 storage_bonus: 100.0,
                 core_data_rate: 0.25,
                 server_data_rate: 1.0,
+                research_rate: 5.0,
                 forest_biomass: 60.0,
                 biomass_power_output: 8.0,
                 biomass_consumption_rate: 1.0,

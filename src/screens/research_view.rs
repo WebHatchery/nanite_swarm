@@ -1,6 +1,7 @@
 //! Neural network research interface
 
 use crate::engine::{describe_modifier, ResearchState, ResearchTree};
+use crate::state::{StatReading, StatUnit};
 use crate::ui::{draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::math::pulse01;
@@ -24,6 +25,7 @@ pub fn render_research_view(
     research_tree: &ResearchTree,
     data_available: f32,
     research_locked: bool,
+    sheet: &[StatReading],
 ) -> ResearchAction {
     clear_background(Colors::BACKGROUND);
 
@@ -462,6 +464,8 @@ pub fn render_research_view(
         Colors::SECONDARY,
     );
 
+    draw_swarm_sheet(sheet, right_panel_x, right_panel_y + 232.0, right_panel_w);
+
     // Instructions
     draw_ui_text(
         "Press ESC to return",
@@ -521,4 +525,35 @@ fn node_effects(node_id: &str) -> Vec<(String, Color)> {
         lines.push(("No direct effect".to_string(), Colors::TEXT_DIM));
     }
     lines
+}
+
+/// The swarm's stat sheet: what every stat is actually worth on this world,
+/// and what it started at where something has moved it.
+///
+/// This is the other half of the node panel. That says what a tech would add;
+/// this says what the additions have come to.
+fn draw_swarm_sheet(sheet: &[StatReading], panel_x: f32, panel_y: f32, panel_w: f32) {
+    draw_ui_text("Swarm", panel_x + 12.0, panel_y, 14.0, Colors::PRIMARY);
+    let mut y = panel_y + 24.0;
+    for reading in sheet {
+        let unit = StatUnit::of(reading.stat);
+        let color = if !reading.is_changed() {
+            Colors::TEXT_DIM
+        } else if reading.is_gain() {
+            Colors::SUCCESS
+        } else {
+            Colors::WARNING
+        };
+        draw_ui_text(
+            reading.stat.label(),
+            panel_x + 12.0,
+            y,
+            11.0,
+            Colors::TEXT_DIM,
+        );
+        let value = unit.format(reading.value);
+        let width = measure_ui_text(&value, None, 11, 1.0).width;
+        draw_ui_text(&value, panel_x + panel_w - 12.0 - width, y, 11.0, color);
+        y += 17.0;
+    }
 }

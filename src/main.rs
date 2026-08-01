@@ -66,7 +66,6 @@ pub struct Game {
 }
 
 const SAVE_PATH: &str = "save.json";
-const RESEARCH_RATE: f32 = 5.0; // data per second
 
 impl Game {
     pub async fn new() -> Self {
@@ -197,11 +196,13 @@ impl Game {
             }
             GamePhase::Research => {
                 self.advance_simulation();
+                let sheet = self.campaign.current().stat_sheet();
                 match render_research_view(
                     &self.research_state,
                     &self.research_tree,
                     self.campaign.current().resources.data,
                     self.campaign.current().research_lock_timer > 0.0,
+                    &sheet,
                 ) {
                     ResearchAction::Close => {
                         self.phase = GamePhase::Playing;
@@ -390,11 +391,11 @@ impl Game {
             return;
         }
 
-        let rate = self
-            .campaign
-            .current()
-            .stats
-            .apply(engine::StatId::ResearchRate, RESEARCH_RATE);
+        let planet = self.campaign.current();
+        let rate = planet.stats.apply(
+            engine::StatId::ResearchRate,
+            planet.config.resources.research_rate,
+        );
         let spend = (rate * delta_time).min(available).min(remaining);
         self.campaign.current_mut().resources.data -= spend;
         self.research_state.research_progress += spend;
@@ -486,6 +487,14 @@ impl Game {
                 self.research_state
                     .unlocked
                     .push("data_processing".to_string());
+                // Two techs that actually move numbers, so the swarm sheet
+                // shows changed lines and not only untouched ones.
+                self.research_state
+                    .unlocked
+                    .push("efficient_drills".to_string());
+                self.research_state
+                    .unlocked
+                    .push("drone_capacity".to_string());
                 self.research_state.current_research = Some("self_cleaning_servos".to_string());
                 self.sync_research_to_planet();
             }

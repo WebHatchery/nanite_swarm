@@ -4,7 +4,7 @@ use crate::engine::{BuildingType, DroneState, StatId, TerrainType};
 
 use super::game_state::PlanetState;
 
-const DUST_RATE: f32 = 0.12; // dust per second
+pub(super) const DUST_RATE: f32 = 0.12; // dust per second
 const SWEEPER_RATE: f32 = 0.6; // dust cleared per second
 const SWEEPER_RADIUS: i32 = 3;
 const FILTER_RADIUS: i32 = 3;

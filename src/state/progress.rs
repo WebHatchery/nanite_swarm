@@ -54,10 +54,15 @@ impl PlanetState {
     }
 
     pub fn mineral_capacity(&self) -> f32 {
+        self.stats
+            .apply(StatId::MineralCapacity, self.built_mineral_capacity())
+    }
+
+    /// Storage before research touches it: the base plus whatever has been
+    /// built for it. The stat sheet needs the two halves separately.
+    pub fn built_mineral_capacity(&self) -> f32 {
         let storage_count = self.grid.find_buildings(BuildingType::Storage).len() as f32;
-        let built = self.config.resources.base_mineral_cap
-            + storage_count * self.config.resources.storage_bonus;
-        self.stats.apply(StatId::MineralCapacity, built)
+        self.config.resources.base_mineral_cap + storage_count * self.config.resources.storage_bonus
     }
 
     /// Power produced this tick, including whatever the biomass harvesters

@@ -126,6 +126,10 @@ pub struct StatLabelDef {
     /// much of a hazard still gets through.
     #[serde(default)]
     pub lower_is_better: bool,
+    /// How the value reads on a stat sheet: `per_second`, `count`, `share`,
+    /// or anything else for a plain number.
+    #[serde(default)]
+    pub unit: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]

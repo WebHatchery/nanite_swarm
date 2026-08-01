@@ -1,16 +1,16 @@
 {
   "starting_unlocked": ["core", "basic_mining"],
   "stats": [
-    { "id": "drill_output", "label": "Drill output" },
-    { "id": "drone_capacity", "label": "Drone load" },
-    { "id": "drones_per_drill", "label": "Drones per drill" },
-    { "id": "data_generation", "label": "Data output" },
-    { "id": "dust_accumulation", "label": "Dust build-up", "lower_is_better": true },
-    { "id": "mineral_capacity", "label": "Mineral storage" },
-    { "id": "power_consumption", "label": "Power draw", "lower_is_better": true },
-    { "id": "research_rate", "label": "Research speed" },
-    { "id": "acid_resistance", "label": "Acid reaching the network", "lower_is_better": true },
-    { "id": "freeze_resistance", "label": "Cold reaching the drones", "lower_is_better": true }
+    { "id": "drill_output", "label": "Drill output", "unit": "per_second" },
+    { "id": "drone_capacity", "label": "Drone load", "unit": "flat" },
+    { "id": "drones_per_drill", "label": "Drones per drill", "unit": "count" },
+    { "id": "data_generation", "label": "Data output", "unit": "per_second" },
+    { "id": "dust_accumulation", "label": "Dust build-up", "lower_is_better": true, "unit": "per_second" },
+    { "id": "mineral_capacity", "label": "Mineral storage", "unit": "flat" },
+    { "id": "power_consumption", "label": "Power draw", "lower_is_better": true, "unit": "per_second" },
+    { "id": "research_rate", "label": "Research speed", "unit": "per_second" },
+    { "id": "acid_resistance", "label": "Acid reaching the network", "lower_is_better": true, "unit": "share" },
+    { "id": "freeze_resistance", "label": "Cold reaching the drones", "lower_is_better": true, "unit": "share" }
   ],
   "nodes": [
     {
