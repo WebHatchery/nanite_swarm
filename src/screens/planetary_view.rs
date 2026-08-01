@@ -5,6 +5,7 @@ mod format;
 mod hud;
 mod input;
 mod metrics;
+mod ore_render;
 mod seed_ship_render;
 mod terrain_render;
 mod upkeep_render;
@@ -61,6 +62,8 @@ pub fn render_planetary_view(
 
     terrain_render::draw_planetary_background(screen_w, screen_h, time);
     terrain_render::draw_grid_tiles(state, textures, metrics, hovered_pos, pulse, global_pulse);
+    // Under the wear tint and the drones: it is a property of the ground.
+    ore_render::draw_ore(state, metrics);
     upkeep_render::draw_wear(state, metrics, time);
     upkeep_render::draw_coverage(state, metrics, hovered_pos);
     upkeep_render::draw_severed_network(state, metrics, time);

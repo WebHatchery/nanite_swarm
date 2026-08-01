@@ -531,6 +531,16 @@ impl Game {
                     .find_buildings(engine::BuildingType::Drill)
                     .pop();
                 planet.selected_tile = drill;
+                // Nothing in hand: the quiet state of the ore overlay.
+                planet.selected_building = None;
+            }
+            // The same world with a Drill in hand, which brings the ground up.
+            "prospect" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                self.campaign
+                    .current_mut()
+                    .select_building(engine::BuildingType::Drill);
             }
             // A Core that has grown past its landing pod.
             "core_stage" => {
