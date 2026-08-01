@@ -268,17 +268,14 @@ pub(super) fn draw(
     }
 
     let mode_y = bottom_y + metrics.bottom_bar_height - 8.0;
-    draw_ui_text(
-        if state.selected_building.is_some() {
-            "BUILD MODE"
-        } else {
-            "SELECT MODE"
-        },
-        controls_x + 12.0,
-        mode_y,
-        9.0,
-        primary_soft,
-    );
+    let (mode_label, mode_color) = if state.demolish_mode {
+        ("DEMOLISH MODE", colors.error)
+    } else if state.selected_building.is_some() {
+        ("BUILD MODE", primary_soft)
+    } else {
+        ("SELECT MODE", primary_soft)
+    };
+    draw_ui_text(mode_label, controls_x + 12.0, mode_y, 9.0, mode_color);
     if let Some(selected) = state.selected_building {
         draw_ui_text(selected.name(), controls_x + 86.0, mode_y, 9.0, text);
     }

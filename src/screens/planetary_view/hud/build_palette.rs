@@ -305,9 +305,13 @@ pub(super) fn draw(
             sidebar_w - metrics.panel_padding * 2.0,
             30.0,
         ),
-        "DEMOLISH MODE",
+        if state.demolish_mode {
+            "DEMOLISH MODE  [ON]"
+        } else {
+            "DEMOLISH MODE"
+        },
     ) {
-        state.clear_selection();
+        state.toggle_demolish_mode();
     }
     draw_ui_text(
         "[H] Harvest terrain  [F] Forest filter",

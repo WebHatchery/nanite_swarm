@@ -503,6 +503,12 @@ impl Game {
                 }
                 self.campaign.mark_saved();
             }
+            "demolish" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                let planet = self.campaign.current_mut();
+                planet.toggle_demolish_mode();
+            }
             "congestion" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();

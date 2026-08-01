@@ -225,6 +225,47 @@ mod tests {
     }
 
     #[test]
+    fn demolish_mode_and_a_build_cursor_cannot_both_be_armed() {
+        let mut state = state();
+        state.select_building(BuildingType::Drill);
+        assert_eq!(state.selected_building, Some(BuildingType::Drill));
+
+        state.toggle_demolish_mode();
+        assert!(state.demolish_mode);
+        assert_eq!(state.selected_building, None, "still holding a building");
+
+        // Picking a building back up puts the wrecking ball down.
+        state.select_building(BuildingType::Drill);
+        assert!(!state.demolish_mode);
+    }
+
+    #[test]
+    fn demolishing_a_run_of_conduits_refunds_each_of_them() {
+        let mut state = state();
+        let core = state.grid.find_core().unwrap();
+        state.grid.reveal_around(core, 8);
+        state.unlock_building(BuildingType::Conduit);
+        state.select_building(BuildingType::Conduit);
+
+        let run: Vec<GridPos> = (1..=3).map(|x| GridPos::new(core.x + x, core.y)).collect();
+        for pos in &run {
+            state.grid.get_mut(*pos).unwrap().terrain = TerrainType::Empty;
+            assert!(state.try_place_building(*pos));
+        }
+        let after_building = state.resources.minerals;
+
+        state.toggle_demolish_mode();
+        for pos in &run {
+            assert!(state.try_sell_building(*pos));
+        }
+
+        assert!(state.resources.minerals > after_building);
+        for pos in &run {
+            assert!(state.grid.get(*pos).unwrap().building.is_none());
+        }
+    }
+
+    #[test]
     fn try_sell_building_refunds_half_cost_and_cannot_sell_core() {
         let mut state = state();
         let core = state.grid.find_core().unwrap();

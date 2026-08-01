@@ -99,12 +99,12 @@ Space pauses, the bottom bar's speed buttons work, and both ride the fixed times
 
 - Speed and pause are per-planet runtime state and reset on load, which is right for pause and arguably wrong for a preferred speed.
 - There is no fast-forward past four times, and no way to skip to the next interesting moment — an idle game eventually wants both.
-- Wire or remove the controls that are still decoration: BOX SELECT and the BUILD/DEMOLISH hints do nothing, and the main-menu Quit button is a no-op. (PAN and ZOOM now work: middle-drag and wheel, per-planet camera.)
+- Wire or remove what is still decoration: BOX SELECT (Shift+Drag) and BUILD MENU (B) do nothing, and the main-menu Quit button is a no-op. PAN, ZOOM, PAUSE and DEMOLISH all work now.
 - Replace the six-condition text checklist with a real persisted tutorial with highlighting and interactive gating.
 - Add a notification/toast system; achievements currently unlock with no feedback beyond a counter, and finishing a Seed Ship stage passes silently.
 - The right-hand panel stack is full at 720p — a fifth panel overflows the four existing ones, which is why the Seed Ship got its own screen. Any new readout needs the stack's internal layouts made height-aware first.
 - Make settings work and persist — `ui_scale` is stored but never applied, audio sliders drive nothing, and the Settings struct is never saved.
-- Add genre-standard build tools: demolish mode, drag-demolish, relocation, blueprint stamps, undo.
+- Add the rest of the genre-standard build tools: relocation, blueprint stamps, undo. Demolish mode and drag-demolish work (X or the palette button; drag tears down a run), but every demolition is final and refunds half.
 - Add production statistics — rates, consumption, and net-flow graphs; the bottom-bar graph is decorative.
 
 ## Audio

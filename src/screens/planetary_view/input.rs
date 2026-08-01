@@ -78,6 +78,9 @@ pub(super) fn handle_input(
     if is_key_pressed(KeyCode::Space) {
         state.toggle_pause();
     }
+    if is_key_pressed(KeyCode::X) {
+        state.toggle_demolish_mode();
+    }
     if is_key_pressed(KeyCode::F1) {
         state.show_help = !state.show_help;
     }
@@ -97,6 +100,34 @@ pub(super) fn handle_input(
         if let Some(pos) = hovered_pos {
             state.try_convert_forest_to_filter(pos);
         }
+    }
+
+    // Demolition takes the same clicks as building, so it comes first and
+    // returns rather than falling through into placement.
+    if state.demolish_mode {
+        if is_mouse_button_pressed(MouseButton::Left)
+            || (is_mouse_button_down(MouseButton::Left) && state.drag_last_pos != hovered_pos)
+        {
+            if let Some(pos) = hovered_pos {
+                state.try_sell_building(pos);
+                state.drag_last_pos = Some(pos);
+            }
+        }
+        if is_mouse_button_released(MouseButton::Left) {
+            state.drag_last_pos = None;
+        }
+        // Right click or Escape puts the wrecking ball down.
+        if is_mouse_button_pressed(MouseButton::Right) || is_key_pressed(KeyCode::Escape) {
+            state.demolish_mode = false;
+            return PlanetaryAction::None;
+        }
+        if is_key_pressed(KeyCode::R) {
+            return PlanetaryAction::OpenResearch;
+        }
+        if is_key_pressed(KeyCode::M) {
+            return PlanetaryAction::OpenInterplanetary;
+        }
+        return PlanetaryAction::None;
     }
 
     // Place building on click

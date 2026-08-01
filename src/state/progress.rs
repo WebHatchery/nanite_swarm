@@ -11,6 +11,17 @@ impl PlanetState {
     pub fn select_building(&mut self, building_type: BuildingType) {
         if self.is_building_unlocked(building_type) {
             self.selected_building = Some(building_type);
+            // Building and demolishing are the same click, so they cannot both
+            // be armed.
+            self.demolish_mode = false;
+        }
+    }
+
+    /// Arm or disarm demolition. Picking it up puts the build cursor down.
+    pub fn toggle_demolish_mode(&mut self) {
+        self.demolish_mode = !self.demolish_mode;
+        if self.demolish_mode {
+            self.selected_building = None;
         }
     }
 

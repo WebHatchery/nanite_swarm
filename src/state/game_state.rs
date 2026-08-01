@@ -165,6 +165,9 @@ pub struct PlanetState {
     pub drag_last_pos: Option<GridPos>,
     #[serde(skip, default)]
     pub selected_tile: Option<GridPos>,
+    /// Clicking tears buildings down instead of putting them up.
+    #[serde(skip, default)]
+    pub demolish_mode: bool,
     /// Where the player is looking at this world from. Kept per planet, so a
     /// world is framed as it was left.
     #[serde(default)]
@@ -270,6 +273,7 @@ impl PlanetState {
             offline_notice_timer: 0.0,
             drag_last_pos: None,
             selected_tile: None,
+            demolish_mode: false,
             camera: Camera::default(),
             camera_drag_anchor: None,
             show_help: false,

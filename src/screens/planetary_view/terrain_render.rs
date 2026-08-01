@@ -416,14 +416,30 @@ pub(super) fn draw_grid_tiles(
             if let Some(hover) = hovered_pos {
                 if hover == pos && tile.revealed {
                     let line_thickness = 1.5 + pulse * 1.5;
+                    // The cursor has to say what the click will do: red over
+                    // something a click would tear down.
+                    let doomed = state.demolish_mode && tile.building.is_some();
                     draw_rectangle_lines(
                         px,
                         py,
                         metrics.tile_size - 1.0,
                         metrics.tile_size - 1.0,
                         line_thickness,
-                        Colors::PRIMARY,
+                        if doomed {
+                            Colors::ERROR
+                        } else {
+                            Colors::PRIMARY
+                        },
                     );
+                    if doomed {
+                        draw_rectangle(
+                            px,
+                            py,
+                            metrics.tile_size - 1.0,
+                            metrics.tile_size - 1.0,
+                            Color::new(1.0, 0.2, 0.2, 0.18 + pulse * 0.12),
+                        );
+                    }
 
                     // Show placement preview
                     if let Some(building_type) = state.selected_building {
