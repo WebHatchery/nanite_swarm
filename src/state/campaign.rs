@@ -782,7 +782,19 @@ mod tests {
     }
 
     /// Finish the current world's Seed Ship the slow way, through the sim.
+    ///
+    /// The later stages are gated on research, so the fixture has to have done
+    /// that research the same as a player would.
     fn build_seed_ship(campaign: &mut Campaign) {
+        for stage in &crate::data::game_data().seed_ship.stages {
+            if let Some(tech) = stage.requires.as_deref() {
+                if !campaign.research.unlocked_techs.iter().any(|id| id == tech) {
+                    campaign.research.unlocked_techs.push(tech.to_string());
+                }
+            }
+        }
+        campaign.sync_research();
+
         let planet = campaign.current_mut();
         planet.config.resources.base_mineral_cap = 1_000_000.0;
         planet.resources.minerals = 100_000.0;

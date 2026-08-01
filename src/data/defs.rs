@@ -138,6 +138,10 @@ pub struct SeedShipStageDef {
     pub name: String,
     pub description: String,
     pub cost: SeedShipCost,
+    /// Research that has to be done before this stage can be worked on. The
+    /// tree and the megastructure have to meet somewhere.
+    #[serde(default)]
+    pub requires: Option<String>,
     /// One line on what standing this stage up does for the world it is being
     /// built on. Empty on the last stage, which does nothing but leave.
     #[serde(default)]

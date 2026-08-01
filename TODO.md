@@ -10,7 +10,7 @@ The Seed Ship exists: four stages declared in `assets/seed_ship.json`, its own s
 
 - The launch is instant and silent. Give it the sequence the GDD asks for: a countdown, the ship leaving, an arrival vignette on the new world.
 - Each standing stage now works for the world it stands on — the Cradle feeds the drills, the Spine adds a drone per drill, the Payload sharpens data — declared as modifiers in `seed_ship.json` and lost when the ship launches with them. What is still missing is the skyline: nothing on the map shows a ship being built, so the whole megastructure exists only on its own screen.
-- Tie the ship to research: every stage is buildable from turn one, so the tree and the megastructure never meet.
+- Every stage past the first is now gated on research declared in `seed_ship.json` — the Spine on Efficient Drills, the Payload on Advanced Research, the Ignition Charge on the Mass Driver — and a blocked yard sits idle rather than banking resources against a stage nobody can build yet. The ship screen says which tech it is waiting on. What the screen still will not say is what the *sealed* stages further down need, so the tree gives no advance warning of what to research next.
 The campaign ends: every world taken and a finished ship with nowhere to send it shows SYSTEM CONSUMED with what the run consumed, once, and the player can carry on in the finished system. There is deliberately no failure state (rationale in `gdd.md` §5b).
 
 - Nothing after the ending changes. A finished campaign plays exactly like an unfinished one, so there is no reason to keep the save. New-game-plus, a harder second system, or a score to beat would all give it one.

@@ -612,6 +612,15 @@ impl Game {
                 // Play the campaign out the way it is actually played: every
                 // world reached by building a ship and riding it there, so the
                 // numbers on the ending screen are real.
+                // The later stages are gated on research, so the scene has to
+                // have done it, the same as a player would.
+                for stage in &data::game_data().seed_ship.stages {
+                    if let Some(tech) = stage.requires.as_deref() {
+                        self.research_state.unlocked.push(tech.to_string());
+                    }
+                }
+                self.sync_research_to_planet();
+
                 let build_ship = |campaign: &mut Campaign| {
                     let planet = campaign.current_mut();
                     planet.config.resources.base_mineral_cap = 1_000_000.0;

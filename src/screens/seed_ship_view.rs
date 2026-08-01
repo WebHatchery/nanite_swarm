@@ -82,7 +82,9 @@ pub fn render_seed_ship_view(state: &PlanetState) -> SeedShipAction {
         if draw_button_sized(panel_x, footer_y, panel_w, Dimensions::BUTTON_HEIGHT, label) {
             action = SeedShipAction::ToggleCommitment;
         }
-        let note = if ship.committed {
+        let note = if state.seed_ship_blocked_by().is_some() {
+            "The yard is waiting on research before it can go on."
+        } else if ship.committed {
             "Harvest is being poured into the hull as it arrives."
         } else {
             "The yard is idle. Everything harvested stays in the pool."
@@ -169,15 +171,23 @@ fn draw_stage(
         );
     }
 
-    let status = if built {
-        "BUILT".to_string()
-    } else if active {
-        cost_summary(state, stage)
+    let waiting_on = if active {
+        state.seed_ship_blocked_by()
     } else {
-        "SEALED".to_string()
+        None
+    };
+    let status = match (built, active, waiting_on) {
+        (true, _, _) => "BUILT".to_string(),
+        // A stage nobody knows how to build yet says so rather than showing a
+        // cost the player cannot pay towards.
+        (_, true, Some(tech)) => format!("NEEDS RESEARCH: {}", tech),
+        (_, true, None) => cost_summary(state, stage),
+        _ => "SEALED".to_string(),
     };
     let status_color = if built {
         Colors::SUCCESS
+    } else if waiting_on.is_some() {
+        Colors::ERROR
     } else if active {
         Colors::ACCENT
     } else {
@@ -185,7 +195,7 @@ fn draw_stage(
     };
     draw_ui_text(&status, x + 14.0, y + 84.0, 12.0, status_color);
 
-    if active {
+    if active && waiting_on.is_none() {
         let bar_w = width - 28.0;
         let fraction = state.seed_ship.stage_fraction();
         draw_rectangle(

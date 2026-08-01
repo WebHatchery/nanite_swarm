@@ -110,6 +110,16 @@ impl SeedShip {
         (paid / required).clamp(0.0, 1.0)
     }
 
+    /// The research the current stage is waiting on, if it is waiting.
+    pub fn blocked_by(&self, unlocked: &[String]) -> Option<&'static str> {
+        let stage = self.stage()?;
+        let required = stage.requires.as_deref()?;
+        if unlocked.iter().any(|id| id == required) {
+            return None;
+        }
+        Some(required)
+    }
+
     /// Take up to `delta_time` seconds of intake out of `resources`, and
     /// advance a stage when it is fully paid. Returns true if a stage was
     /// finished by this call.
@@ -178,6 +188,16 @@ impl PlanetState {
         if !self.seed_ship.committed || self.seed_ship.is_complete() {
             return;
         }
+        // A stage nobody has worked out how to build yet takes nothing: the
+        // yard sits idle rather than quietly banking resources against it.
+        if self
+            .seed_ship
+            .blocked_by(&self.research.unlocked_techs)
+            .is_some()
+        {
+            return;
+        }
+
         let intake = crate::data::game_data().seed_ship.intake_per_second;
         let finished_stage = self
             .seed_ship
@@ -213,6 +233,18 @@ impl PlanetState {
         }
     }
 
+    /// The research the yard is waiting on, and what it is called, for the
+    /// ship screen to say so.
+    pub fn seed_ship_blocked_by(&self) -> Option<&'static str> {
+        let id = self.seed_ship.blocked_by(&self.research.unlocked_techs)?;
+        crate::data::game_data()
+            .research
+            .nodes
+            .iter()
+            .find(|node| node.id == id)
+            .map(|node| node.name.as_str())
+    }
+
     /// Stop or start diverting production into the yard.
     pub fn toggle_seed_ship_commitment(&mut self) {
         if self.seed_ship.is_complete() {
@@ -235,6 +267,18 @@ mod tests {
         state.resources.data = 10_000.0;
         state.resources.biomass = 10_000.0;
         state.resources.alloy = 10_000.0;
+        state
+    }
+
+    /// The same world, with the research the later stages are gated on.
+    fn researched_state() -> PlanetState {
+        let mut state = state();
+        for stage in &crate::data::game_data().seed_ship.stages {
+            if let Some(tech) = stage.requires.as_deref() {
+                state.research.unlocked_techs.push(tech.to_string());
+            }
+        }
+        state.refresh_stats();
         state
     }
 
@@ -419,6 +463,64 @@ mod tests {
     }
 
     #[test]
+    fn the_ship_cannot_be_finished_on_minerals_alone() {
+        let mut state = state();
+        // Every resource in the world, and no research past the start.
+        state.toggle_seed_ship_commitment();
+        for _ in 0..2_000 {
+            state.update_seed_ship(1.0);
+        }
+
+        assert!(
+            !state.seed_ship.is_complete(),
+            "the tech tree can be skipped entirely"
+        );
+        assert!(state.seed_ship_blocked_by().is_some());
+    }
+
+    #[test]
+    fn a_blocked_yard_takes_nothing_rather_than_banking_it() {
+        let mut state = state();
+        state.toggle_seed_ship_commitment();
+        // Clear the first stage, which needs no research.
+        while state.seed_ship.stage_index() == 0 {
+            state.update_seed_ship(1.0);
+        }
+        assert!(state.seed_ship_blocked_by().is_some(), "stage two is gated");
+
+        let minerals = state.resources.minerals;
+        for _ in 0..100 {
+            state.update_seed_ship(1.0);
+        }
+        assert_eq!(
+            state.resources.minerals, minerals,
+            "the yard ate resources it could not use"
+        );
+        assert_eq!(state.seed_ship.stage_fraction(), 0.0);
+    }
+
+    #[test]
+    fn the_research_that_unblocks_a_stage_gets_it_moving() {
+        let mut state = state();
+        state.toggle_seed_ship_commitment();
+        while state.seed_ship.stage_index() == 0 {
+            state.update_seed_ship(1.0);
+        }
+
+        let required = state
+            .seed_ship
+            .blocked_by(&state.research.unlocked_techs)
+            .expect("stage two is gated")
+            .to_string();
+        state.research.unlocked_techs.push(required);
+        state.refresh_stats();
+
+        assert!(state.seed_ship_blocked_by().is_none());
+        state.update_seed_ship(1.0);
+        assert!(state.seed_ship.stage_fraction() > 0.0);
+    }
+
+    #[test]
     fn the_shipped_stages_declare_only_modifiers_the_game_can_read() {
         let stages = &crate::data::game_data().seed_ship.stages;
         let with_boons = stages.iter().filter(|s| !s.modifiers.is_empty()).count();
@@ -457,7 +559,7 @@ mod tests {
 
     #[test]
     fn the_yards_advantages_leave_with_the_ship() {
-        let mut state = state();
+        let mut state = researched_state();
         state.toggle_seed_ship_commitment();
         for _ in 0..2_000 {
             state.update_seed_ship(1.0);
@@ -556,7 +658,7 @@ mod tests {
 
     #[test]
     fn a_committed_swarm_eventually_finishes_the_whole_ship() {
-        let mut state = state();
+        let mut state = researched_state();
         state.toggle_seed_ship_commitment();
         assert!(state.seed_ship.committed);
 
@@ -573,7 +675,7 @@ mod tests {
 
     #[test]
     fn finishing_the_ship_unlocks_the_achievement() {
-        let mut state = state();
+        let mut state = researched_state();
         state.toggle_seed_ship_commitment();
         for _ in 0..2_000 {
             state.update_seed_ship(1.0);

@@ -14,6 +14,7 @@
     {
       "id": "spine",
       "name": "Ion Spine",
+      "requires": "efficient_drills",
       "description": "Drive assembly. Consumes the crust it was mined from at a favourable ratio.",
       "cost": { "minerals": 250.0, "data": 40.0, "biomass": 0.0 },
       "boon": "Spare drive parts become spare drones.",
@@ -24,6 +25,7 @@
     {
       "id": "payload",
       "name": "Nanite Payload",
+      "requires": "advanced_research",
       "description": "A compressed copy of this swarm, folded small enough to survive transit.",
       "cost": { "minerals": 400.0, "data": 80.0, "biomass": 60.0, "alloy": 60.0 },
       "boon": "Folding a swarm small teaches the swarm to think.",
@@ -34,6 +36,7 @@
     {
       "id": "ignition",
       "name": "Ignition Charge",
+      "requires": "mass_driver",
       "description": "The last of this world, spent on leaving it.",
       "cost": { "minerals": 600.0, "data": 150.0, "biomass": 0.0, "alloy": 140.0 }
     }
