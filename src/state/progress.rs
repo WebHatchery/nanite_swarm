@@ -68,6 +68,30 @@ impl PlanetState {
         self.power_generation() - self.power_consumption()
     }
 
+    /// Acid still reaching the network after research counters it.
+    pub fn acid_strength(&self) -> f32 {
+        (self.hazards.acid_rain * self.stats.multiplier(StatId::AcidResistance)).max(0.0)
+    }
+
+    /// Share of drone speed the cold still takes, after research. Capped so a
+    /// world can slow the swarm to a crawl but never stop it dead.
+    pub fn freeze_strength(&self) -> f32 {
+        (self.hazards.freeze * self.stats.multiplier(StatId::FreezeResistance)).clamp(0.0, 0.9)
+    }
+
+    /// A short label for whatever this world is doing to the machinery, for
+    /// the HUD. Empty when the world is merely somewhere to build.
+    pub fn hazard_label(&self) -> String {
+        let mut parts = Vec::new();
+        if self.acid_strength() > 0.0 {
+            parts.push("ACID RAIN");
+        }
+        if self.freeze_strength() > 0.0 {
+            parts.push("DEEP FREEZE");
+        }
+        parts.join(" / ")
+    }
+
     /// What this world has to say for itself, shown on arrival.
     pub fn arrival_line(&self) -> &'static str {
         crate::data::game_data()

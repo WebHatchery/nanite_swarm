@@ -277,6 +277,113 @@ mod tests {
         assert_ne!(planet.selected_building, Some(BuildingType::WindTurbine));
     }
 
+    /// The world at `index`, generated and travelled to.
+    fn world(index: usize) -> PlanetState {
+        let mut campaign = campaign();
+        campaign.colonize(index);
+        campaign.travel_to(index);
+        campaign.current().clone()
+    }
+
+    #[test]
+    fn a_calm_world_reports_no_hazards() {
+        let mars = world(STARTING_PLANET);
+        assert_eq!(mars.acid_strength(), 0.0);
+        assert_eq!(mars.freeze_strength(), 0.0);
+        assert!(mars.hazard_label().is_empty());
+    }
+
+    #[test]
+    fn venus_corrodes_the_network_and_leaves_everything_else_alone() {
+        let mut venus = world(1);
+        assert!(venus.acid_strength() > 0.0);
+        assert!(venus.hazard_label().contains("ACID"));
+
+        let core = venus.grid.find_core().unwrap();
+        let conduit = GridPos::new(core.x + 1, core.y);
+        let drill = GridPos::new(core.x, core.y + 1);
+        for pos in [conduit, drill] {
+            venus.grid.get_mut(pos).unwrap().terrain = crate::engine::TerrainType::Empty;
+            venus.grid.reveal_around(pos, 1);
+        }
+        venus.unlock_building(BuildingType::Conduit);
+        venus.select_building(BuildingType::Conduit);
+        assert!(venus.try_place_building(conduit));
+        venus.select_building(BuildingType::Drill);
+        assert!(venus.try_place_building(drill));
+
+        for _ in 0..60 {
+            venus.step(1.0, false);
+        }
+
+        let dust_at = |state: &PlanetState, pos: GridPos| {
+            state.grid.get(pos).unwrap().building.as_ref().unwrap().dust
+        };
+        // The conduit carries the network, so the acid goes for it.
+        assert!(dust_at(&venus, conduit) > dust_at(&venus, drill));
+    }
+
+    #[test]
+    fn ceramic_plating_holds_the_acid_off() {
+        let bare = world(1);
+        let mut plated = world(1);
+        plated
+            .research
+            .unlocked_techs
+            .push("ceramic_plating".to_string());
+        plated.refresh_stats();
+
+        assert!(plated.acid_strength() < bare.acid_strength());
+        assert!(plated.acid_strength() > 0.0, "plating is not immunity");
+    }
+
+    #[test]
+    fn the_cold_slows_drones_and_heaters_warm_them_back_up() {
+        let saturn = world(4);
+        assert!(saturn.freeze_strength() > 0.0);
+        assert!(saturn.hazard_label().contains("FREEZE"));
+
+        let mut heated = world(4);
+        heated
+            .research
+            .unlocked_techs
+            .push("heater_nodes".to_string());
+        heated.refresh_stats();
+        assert!(heated.freeze_strength() < saturn.freeze_strength());
+    }
+
+    #[test]
+    fn drones_move_slower_on_a_frozen_world_than_a_temperate_one() {
+        // Same base, same drill, different world.
+        let drone_speed = |index: usize| {
+            let mut campaign = campaign();
+            campaign.colonize(index);
+            campaign.travel_to(index);
+            let state = campaign.current_mut();
+
+            let core = state.grid.find_core().unwrap();
+            let drill = GridPos::new(core.x + 1, core.y);
+            state.grid.get_mut(drill).unwrap().terrain = crate::engine::TerrainType::Empty;
+            state.grid.reveal_around(drill, 1);
+            state.select_building(BuildingType::Drill);
+            assert!(state.try_place_building(drill));
+            state.grid.update_power_grid();
+
+            // Long enough for the drill to fill and dispatch.
+            for _ in 0..30 {
+                state.step(0.1, false);
+            }
+            state.drones.drones()[0].speed
+        };
+
+        let temperate = drone_speed(STARTING_PLANET);
+        let frozen = drone_speed(4);
+        assert!(
+            frozen < temperate,
+            "frozen drones moved at {frozen}, temperate at {temperate}"
+        );
+    }
+
     #[test]
     fn arriving_somewhere_says_what_the_world_is() {
         let mut campaign = campaign();

@@ -27,10 +27,14 @@ pub enum StatId {
     PowerConsumption,
     /// Data spent on the current research per second.
     ResearchRate,
+    /// How much of a world's acid rain still reaches the network.
+    AcidResistance,
+    /// How much of a world's cold still reaches the drones.
+    FreezeResistance,
 }
 
 impl StatId {
-    pub const ALL: [StatId; 8] = [
+    pub const ALL: [StatId; 10] = [
         StatId::DrillOutput,
         StatId::DroneCapacity,
         StatId::DronesPerDrill,
@@ -39,6 +43,8 @@ impl StatId {
         StatId::MineralCapacity,
         StatId::PowerConsumption,
         StatId::ResearchRate,
+        StatId::AcidResistance,
+        StatId::FreezeResistance,
     ];
 
     pub fn id(self) -> &'static str {
@@ -51,6 +57,8 @@ impl StatId {
             StatId::MineralCapacity => "mineral_capacity",
             StatId::PowerConsumption => "power_consumption",
             StatId::ResearchRate => "research_rate",
+            StatId::AcidResistance => "acid_resistance",
+            StatId::FreezeResistance => "freeze_resistance",
         }
     }
 

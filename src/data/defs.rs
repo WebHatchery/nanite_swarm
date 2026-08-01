@@ -134,6 +134,23 @@ pub struct TerrainWeights {
     pub void: f32,
 }
 
+/// What a world does to the machinery left standing on it. Each is a strength
+/// from 0 (absent) upward; research counters scale them back down.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Deserialize, serde::Serialize)]
+pub struct PlanetHazards {
+    /// Corrodes anything carrying the network, on top of ordinary dust.
+    pub acid_rain: f32,
+    /// Share of drone speed the cold takes away.
+    pub freeze: f32,
+}
+
+impl PlanetHazards {
+    /// Whether this world is hostile at all.
+    pub fn any(&self) -> bool {
+        self.acid_rain > 0.0 || self.freeze > 0.0
+    }
+}
+
 /// One world in the solar campaign: how it generates, how it looks on the map,
 /// and what it refuses to let the swarm build.
 #[derive(Debug, Clone, Deserialize)]
@@ -148,6 +165,8 @@ pub struct PlanetDef {
     pub size: f32,
     pub color: [f32; 4],
     pub terrain: TerrainWeights,
+    #[serde(default)]
+    pub hazards: PlanetHazards,
     #[serde(default)]
     pub banned_buildings: Vec<String>,
     pub arrival: String,

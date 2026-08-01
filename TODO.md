@@ -42,9 +42,12 @@ A network tile passes `conduit_capacity` drones at full speed; past that they sh
 
 ## Planet hazards
 
-- Zone 2 (Venus): acid rain degrading standard conduits, Ceramic Plating and Shield Generator counters, void-heavy volcanic terrain.
-- Zone 3 (Cryo): freeze slowing drones 50%, Heater Nodes along the network, no solar or wind.
-- Per-planet constraints so far are only a ban list — no wind on Venus or Saturn, no harvesters where nothing grows. The positive half is missing: infinite geothermal, fusion-only worlds, generators that only exist somewhere.
+Hazards are per-world data (`planets.json`). Acid rain corrodes anything carrying the network, riding the existing dust-to-stall chain so a neglected Venus run eventually breaks; the cold takes a share of drone speed. Ceramic Plating and Heater Nodes research each hold 70% of one back.
+
+- Both counters are research, so they are bought once and apply everywhere. The GDD wants Heater Nodes *placed along the network* and Shield Generators as buildings, which would make the counter a spatial problem rather than a purchase.
+- A hazard is uniform across a world. Acid squalls that move, or cold that bites hardest far from the Core, would give the map a shape to plan around.
+- No hazard has a visual: a corroding conduit looks exactly like a dusty one, and a frozen drone just looks slow.
+- Per-planet constraints are still only a ban list plus hazards. The positive half is missing: infinite geothermal, fusion-only worlds, generators that exist on one world and nowhere else.
 - Add the Heat mechanic the GDD gives Server Banks; water tiles carry a "may provide cooling" comment with no logic behind it.
 
 ## Research

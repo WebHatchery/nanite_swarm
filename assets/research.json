@@ -97,6 +97,28 @@
       ]
     },
     {
+      "id": "ceramic_plating",
+      "name": "Ceramic Plating",
+      "description": "-70% acid corrosion on the network",
+      "data_cost": 40.0,
+      "prerequisites": ["power_grid"],
+      "position": [2.2, -3.0],
+      "modifiers": [
+        { "stat": "acid_resistance", "op": "percent", "value": -0.7 }
+      ]
+    },
+    {
+      "id": "heater_nodes",
+      "name": "Heater Nodes",
+      "description": "-70% of the cold's drag on drones",
+      "data_cost": 40.0,
+      "prerequisites": ["power_grid"],
+      "position": [1.4, -3.4],
+      "modifiers": [
+        { "stat": "freeze_resistance", "op": "percent", "value": -0.7 }
+      ]
+    },
+    {
       "id": "storage_systems",
       "name": "Storage Systems",
       "description": "Unlocks Mineral Storage buildings",

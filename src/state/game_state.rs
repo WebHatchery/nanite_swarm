@@ -2,7 +2,7 @@
 
 use super::camera::Camera;
 use super::seed_ship::SeedShip;
-use crate::data::GameConfig;
+use crate::data::{GameConfig, PlanetHazards};
 use crate::engine::{BuildingType, DroneManager, Grid, GridPos, Stats};
 use macroquad::miniquad;
 use macroquad_toolkit::achievements::{Achievement, Achievements};
@@ -98,6 +98,9 @@ pub struct PlanetState {
     /// there is no wind, no harvesters where nothing grows.
     #[serde(default)]
     pub banned_buildings: Vec<BuildingType>,
+    /// What this world does to the machinery standing on it.
+    #[serde(default)]
+    pub hazards: PlanetHazards,
     /// The megastructure this world is being converted into.
     #[serde(default)]
     pub seed_ship: SeedShip,
@@ -226,6 +229,7 @@ impl PlanetState {
                 .iter()
                 .filter_map(|id| BuildingType::from_id(id))
                 .collect(),
+            hazards: def.hazards,
             seed_ship: SeedShip::default(),
             last_offline_seconds: 0.0,
             last_offline_simulated: 0.0,

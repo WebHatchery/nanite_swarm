@@ -105,7 +105,7 @@ impl PlanetState {
         }
 
         let capacity = self.config.buildings.conduit_capacity.max(1.0);
-        let base_speed = self.drones.drone_speed;
+        let base_speed = self.drones.drone_speed * (1.0 - self.freeze_strength());
         let grid = &self.grid;
         let traffic = &self.traffic;
 

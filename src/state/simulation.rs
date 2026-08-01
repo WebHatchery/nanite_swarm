@@ -11,6 +11,9 @@ const FILTER_RADIUS: i32 = 3;
 const FILTER_RATE_MULTIPLIER: f32 = 0.6;
 const POLLUTION_RADIUS: i32 = 3;
 const POLLUTION_RATE_MULTIPLIER: f32 = 1.3;
+/// Acid at full strength corrodes the network this many times faster than dust
+/// settles on it.
+const ACID_RAIN_MULTIPLIER: f32 = 4.0;
 // Config-driven values are loaded from assets/game_config.json.
 
 /// The simulation advances in whole steps of this length and nothing else.
@@ -189,6 +192,10 @@ impl PlanetState {
 
     fn update_dust(&mut self, delta_time: f32) {
         let dust_rate = self.stats.apply(StatId::DustAccumulation, DUST_RATE);
+        // Acid eats the network specifically: a corroded conduit stalls, and a
+        // stalled conduit stops carrying traffic, which is how a Venus run
+        // fails rather than merely slowing.
+        let acid_rate = DUST_RATE * self.acid_strength() * ACID_RAIN_MULTIPLIER;
         let sweeper_positions = self.grid.find_buildings(BuildingType::Sweeper);
         let powered_sweepers: Vec<_> = sweeper_positions
             .into_iter()
@@ -216,6 +223,9 @@ impl PlanetState {
                 continue;
             };
             let mut rate = dust_rate;
+            if acid_rate > 0.0 && building.transmits_power() {
+                rate += acid_rate;
+            }
 
             if filter_positions
                 .iter()

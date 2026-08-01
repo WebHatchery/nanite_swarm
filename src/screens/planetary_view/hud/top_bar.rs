@@ -41,8 +41,14 @@ pub(super) fn draw(
     };
     let brand_w = (screen_w * 0.18).clamp(188.0, 318.0);
     draw_ui_text("NANITE SWARM", 66.0, 31.0, title_size, primary);
+    let hazard = state.hazard_label();
+    let subtitle = if hazard.is_empty() {
+        format!("{} SECTOR 7-B", state.name.to_uppercase())
+    } else {
+        format!("{} SECTOR 7-B - {}", state.name.to_uppercase(), hazard)
+    };
     draw_ui_text(
-        &format!("{} SECTOR 7-B", state.name.to_uppercase()),
+        &subtitle,
         66.0,
         55.0,
         if compact_top {
@@ -50,7 +56,7 @@ pub(super) fn draw(
         } else {
             theme.typography.body
         },
-        dim,
+        if hazard.is_empty() { dim } else { warning },
     );
     draw_line(24.0, 24.0, 36.0, 14.0, 1.5, primary);
     draw_line(24.0, 24.0, 36.0, 34.0, 1.5, primary);
