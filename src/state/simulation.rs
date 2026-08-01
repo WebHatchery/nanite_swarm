@@ -114,6 +114,7 @@ impl PlanetState {
         if self.power_collapse_shutdown <= 0.0 {
             self.update_logistics(sim_delta, allow_visuals);
             self.update_servers(sim_delta);
+            self.update_recipes(sim_delta);
             self.update_seed_ship(sim_delta);
         }
 
@@ -163,6 +164,7 @@ impl PlanetState {
         self.resources.minerals = self.resources.minerals.min(self.mineral_capacity());
         self.resources.data = self.resources.data.min(1000.0);
         self.resources.biomass = self.resources.biomass.min(1000.0);
+        self.resources.alloy = self.resources.alloy.min(1000.0);
 
         self.update_achievements();
 
@@ -174,6 +176,54 @@ impl PlanetState {
             anim.timer = (anim.timer - delta_time).max(0.0);
         }
         self.placement_anims.retain(|anim| anim.timer > 0.0);
+    }
+
+    /// Run every processing building's recipe.
+    ///
+    /// A recipe only runs as far as its inputs allow, so a smelter starved of
+    /// minerals produces proportionally less rather than stopping dead - the
+    /// same shape as the drill buffer, and it keeps the numbers continuous for
+    /// the fixed timestep.
+    fn update_recipes(&mut self, delta_time: f32) {
+        for (pos, recipe) in self.recipe_buildings() {
+            let Some(building) = self.grid.get(pos).and_then(|tile| tile.building.as_ref()) else {
+                continue;
+            };
+            if !building.powered || building.is_dust_stalled() {
+                continue;
+            }
+
+            let mut scale = building.dust_efficiency() * delta_time;
+            if recipe.minerals_in > 0.0 {
+                scale = scale.min(self.resources.minerals / recipe.minerals_in);
+            }
+            if recipe.biomass_in > 0.0 {
+                scale = scale.min(self.resources.biomass / recipe.biomass_in);
+            }
+            if scale <= 0.0 {
+                continue;
+            }
+
+            self.resources.minerals -= recipe.minerals_in * scale;
+            self.resources.biomass -= recipe.biomass_in * scale;
+            self.resources.alloy += recipe.alloy_out * scale;
+        }
+    }
+
+    /// Every placed building that has a recipe, with it.
+    fn recipe_buildings(&self) -> Vec<(crate::engine::GridPos, crate::data::RecipeDef)> {
+        crate::data::game_data()
+            .buildings
+            .iter()
+            .filter(|def| !def.recipe.is_empty())
+            .filter_map(|def| BuildingType::from_id(&def.id).map(|kind| (kind, def.recipe)))
+            .flat_map(|(kind, recipe)| {
+                self.grid
+                    .find_buildings(kind)
+                    .into_iter()
+                    .map(move |pos| (pos, recipe))
+            })
+            .collect()
     }
 
     /// Update server bank data generation

@@ -200,6 +200,24 @@ fn draw_metric_icon(kind: &str, rect: Rect, color: Color) {
             draw_line(cx - node * 1.2, cy - node * 1.4, cx, cy + node, 1.2, color);
             draw_line(cx + node * 1.7, cy - node * 1.4, cx, cy + node, 1.2, color);
         }
+        "alloy" => {
+            // A poured ingot: trapezoid over a shadow line.
+            let w = rect.w * 0.30;
+            let h = rect.h * 0.16;
+            draw_triangle(
+                vec2(cx - w, cy + h),
+                vec2(cx + w, cy + h),
+                vec2(cx + w * 0.66, cy - h),
+                color,
+            );
+            draw_triangle(
+                vec2(cx - w, cy + h),
+                vec2(cx + w * 0.66, cy - h),
+                vec2(cx - w * 0.66, cy - h),
+                color,
+            );
+            draw_line(cx - w, cy + h + 2.0, cx + w, cy + h + 2.0, 1.2, WHITE);
+        }
         "biomass" => {
             draw_ellipse(
                 cx - 5.0,

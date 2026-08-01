@@ -19,6 +19,8 @@ pub struct StageProgress {
     pub minerals: f32,
     pub data: f32,
     pub biomass: f32,
+    #[serde(default)]
+    pub alloy: f32,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -87,11 +89,14 @@ impl SeedShip {
             return 1.0;
         };
         let cost = stage.cost;
-        let required = cost.minerals + cost.data + cost.biomass;
+        let required = cost.minerals + cost.data + cost.biomass + cost.alloy;
         if required <= 0.0 {
             return 1.0;
         }
-        let paid = self.progress.minerals + self.progress.data + self.progress.biomass;
+        let paid = self.progress.minerals
+            + self.progress.data
+            + self.progress.biomass
+            + self.progress.alloy;
         (paid / required).clamp(0.0, 1.0)
     }
 
@@ -134,10 +139,17 @@ impl SeedShip {
             cost.biomass,
             intake.biomass,
         );
+        take(
+            &mut resources.alloy,
+            &mut self.progress.alloy,
+            cost.alloy,
+            intake.alloy,
+        );
 
         let paid = self.progress.minerals >= cost.minerals
             && self.progress.data >= cost.data
-            && self.progress.biomass >= cost.biomass;
+            && self.progress.biomass >= cost.biomass
+            && self.progress.alloy >= cost.alloy;
         if paid {
             self.stage += 1;
             self.progress = StageProgress::default();
@@ -179,6 +191,7 @@ impl PlanetState {
 mod tests {
     use super::*;
     use crate::data::GameConfig;
+    use crate::engine::{BuildingType, GridPos};
 
     fn state() -> PlanetState {
         let mut state = PlanetState::new(2, 42, GameConfig::default());
@@ -186,11 +199,111 @@ mod tests {
         state.resources.minerals = 10_000.0;
         state.resources.data = 10_000.0;
         state.resources.biomass = 10_000.0;
+        state.resources.alloy = 10_000.0;
         state
     }
 
     fn intake() -> SeedShipCost {
         crate::data::game_data().seed_ship.intake_per_second
+    }
+
+    /// The first production chain: a Smelter eats minerals and makes alloy,
+    /// and the Seed Ship's later stages will not take anything else instead.
+    #[test]
+    fn a_smelter_turns_minerals_into_alloy_while_it_has_power() {
+        let mut state = state();
+        state.resources.alloy = 0.0;
+        let core = state.grid.find_core().unwrap();
+        let pos = GridPos::new(core.x + 1, core.y);
+        state.grid.get_mut(pos).unwrap().terrain = crate::engine::TerrainType::Empty;
+        state.grid.reveal_around(pos, 1);
+        state.unlock_building(BuildingType::Smelter);
+        state.select_building(BuildingType::Smelter);
+        assert!(state.try_place_building(pos));
+        state.grid.update_power_grid();
+
+        let minerals_before = state.resources.minerals;
+        for _ in 0..100 {
+            state.step(0.1, false);
+        }
+
+        assert!(state.resources.alloy > 0.0, "the smelter made nothing");
+        assert!(
+            state.resources.minerals < minerals_before,
+            "alloy appeared without costing minerals"
+        );
+        assert!(state.alloy_rate() > 0.0);
+    }
+
+    #[test]
+    fn an_unpowered_smelter_refines_nothing() {
+        let mut state = state();
+        state.resources.alloy = 0.0;
+        // Far from the Core, so it never gets power.
+        let core = state.grid.find_core().unwrap();
+        let pos = GridPos::new(core.x + 6, core.y + 6);
+        state.grid.get_mut(pos).unwrap().terrain = crate::engine::TerrainType::Empty;
+        state.grid.reveal_around(pos, 1);
+        state.unlock_building(BuildingType::Smelter);
+        state.select_building(BuildingType::Smelter);
+        assert!(state.try_place_building(pos));
+        state.grid.update_power_grid();
+
+        for _ in 0..100 {
+            state.step(0.1, false);
+        }
+        assert_eq!(state.resources.alloy, 0.0);
+        assert_eq!(state.alloy_rate(), 0.0);
+    }
+
+    #[test]
+    fn a_smelter_with_no_minerals_left_simply_slows_down() {
+        let mut state = state();
+        let core = state.grid.find_core().unwrap();
+        let pos = GridPos::new(core.x + 1, core.y);
+        state.grid.get_mut(pos).unwrap().terrain = crate::engine::TerrainType::Empty;
+        state.grid.reveal_around(pos, 1);
+        state.unlock_building(BuildingType::Smelter);
+        state.select_building(BuildingType::Smelter);
+        assert!(state.try_place_building(pos));
+        state.grid.update_power_grid();
+
+        state.resources.minerals = 0.0;
+        state.resources.alloy = 0.0;
+        for _ in 0..100 {
+            state.step(0.1, false);
+        }
+
+        assert_eq!(state.resources.alloy, 0.0);
+        assert!(state.resources.minerals >= 0.0, "minerals went negative");
+    }
+
+    #[test]
+    fn the_last_stages_of_the_ship_cannot_be_paid_without_alloy() {
+        let stages = &crate::data::game_data().seed_ship.stages;
+        let alloy_stages = stages.iter().filter(|s| s.cost.alloy > 0.0).count();
+        assert!(alloy_stages >= 2, "the chain has no sink");
+
+        let mut ship = SeedShip::default();
+        let mut resources = Resources {
+            minerals: 100_000.0,
+            data: 100_000.0,
+            biomass: 100_000.0,
+            energy: 0.0,
+            alloy: 0.0,
+        };
+        for _ in 0..stages.len() {
+            ship.absorb(&mut resources, intake(), 10_000.0);
+        }
+        // Everything else is paid, so the ship stalls on the first alloy stage.
+        assert!(!ship.is_complete());
+        assert!(ship.stage().unwrap().cost.alloy > 0.0);
+
+        resources.alloy = 100_000.0;
+        for _ in 0..stages.len() {
+            ship.absorb(&mut resources, intake(), 10_000.0);
+        }
+        assert!(ship.is_complete());
     }
 
     #[test]
@@ -236,6 +349,7 @@ mod tests {
             data: 0.0,
             biomass: 0.0,
             energy: 0.0,
+            alloy: 0.0,
         };
 
         // One very long step: intake is capped by what the stage still needs.

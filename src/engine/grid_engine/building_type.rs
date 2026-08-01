@@ -16,6 +16,7 @@ pub enum BuildingType {
     Sweeper,          // Cleans dust buildup in nearby buildings
     Storage,          // Increases mineral storage capacity
     BiomassHarvester, // Consumes forest biomass for power
+    Smelter,          // Refines minerals into alloy
     HeaterNode,       // Thaws the network nearby on frozen worlds
     ShieldGenerator,  // Holds acid off everything nearby
 }
@@ -33,6 +34,7 @@ impl BuildingType {
             BuildingType::Sweeper => "sweeper",
             BuildingType::Storage => "storage",
             BuildingType::BiomassHarvester => "biomass_harvester",
+            BuildingType::Smelter => "smelter",
             BuildingType::HeaterNode => "heater_node",
             BuildingType::ShieldGenerator => "shield_generator",
         }
@@ -50,6 +52,7 @@ impl BuildingType {
             "sweeper" => Some(BuildingType::Sweeper),
             "storage" => Some(BuildingType::Storage),
             "biomass_harvester" => Some(BuildingType::BiomassHarvester),
+            "smelter" => Some(BuildingType::Smelter),
             "heater_node" => Some(BuildingType::HeaterNode),
             "shield_generator" => Some(BuildingType::ShieldGenerator),
             _ => None,
@@ -95,7 +98,7 @@ impl BuildingType {
 mod tests {
     use super::BuildingType;
 
-    const ALL: [BuildingType; 12] = [
+    const ALL: [BuildingType; 13] = [
         BuildingType::Core,
         BuildingType::Drill,
         BuildingType::Conduit,
@@ -106,6 +109,7 @@ mod tests {
         BuildingType::Sweeper,
         BuildingType::Storage,
         BuildingType::BiomassHarvester,
+        BuildingType::Smelter,
         BuildingType::HeaterNode,
         BuildingType::ShieldGenerator,
     ];

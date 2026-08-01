@@ -577,6 +577,7 @@ mod tests {
         planet.resources.minerals = 100_000.0;
         planet.resources.data = 100_000.0;
         planet.resources.biomass = 100_000.0;
+        planet.resources.alloy = 100_000.0;
         planet.toggle_seed_ship_commitment();
         for _ in 0..2_000 {
             planet.update_seed_ship(1.0);

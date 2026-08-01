@@ -73,6 +73,7 @@ pub fn generate_tiles() {
     save_building_with_icon("building_biomass_harvester", create_biomass_harvester());
     save_building_with_icon("building_heater_node", create_heater_node());
     save_building_with_icon("building_shield_generator", create_shield_generator());
+    save_building_with_icon("building_smelter", create_smelter());
 }
 
 fn create_ground() -> RgbaImage {
@@ -547,6 +548,23 @@ fn create_shield_generator() -> RgbaImage {
     draw_circle(&mut img, 16, 15, 2, Rgba([220, 250, 255, 255]));
     // Mast
     draw_rect(&mut img, 15, 4, 2, 5, Rgba([180, 190, 200, 255]));
+    add_edge_darkening(&mut img, 2, 8);
+    img
+}
+
+fn create_smelter() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([44, 38, 34, 255]));
+    add_noise(&mut img, 6, 2323);
+    // Furnace body
+    draw_rect(&mut img, 7, 12, 18, 14, Rgba([76, 68, 62, 255]));
+    // Mouth, with the melt showing through
+    draw_rect(&mut img, 11, 18, 10, 6, Rgba([200, 90, 30, 255]));
+    draw_rect(&mut img, 13, 20, 6, 3, Rgba([255, 200, 120, 255]));
+    // Chimney and its plume
+    draw_rect(&mut img, 19, 5, 5, 8, Rgba([90, 82, 76, 255]));
+    draw_circle(&mut img, 21, 4, 2, Rgba([120, 115, 110, 200]));
+    // Poured ingot
+    draw_rect(&mut img, 8, 26, 7, 3, Rgba([210, 150, 80, 255]));
     add_edge_darkening(&mut img, 2, 8);
     img
 }

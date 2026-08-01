@@ -181,6 +181,27 @@
       "uses_efficiency": false
     },
     {
+      "id": "smelter",
+      "name": "Smelter",
+      "description": "Cooks minerals down into alloy while it has power.",
+      "cost": { "minerals": 45.0, "energy": 20.0 },
+      "power_generation": 0.0,
+      "power_consumption": 4.0,
+      "hotkey": null,
+      "texture": "assets/tiles/buildings/building_smelter.png",
+      "icon": "assets/ui/buildings/ui_building_smelter.png",
+      "build_menu_order": 9,
+      "show_in_build_menu": true,
+      "start_unlocked": false,
+      "unlocked_by": "smelting",
+      "transmits_power": false,
+      "carries_traffic": false,
+      "generates_power": false,
+      "consumes_power": true,
+      "uses_efficiency": false,
+      "recipe": { "minerals_in": 6.0, "alloy_out": 1.0 }
+    },
+    {
       "id": "heater_node",
       "name": "Heater Node",
       "description": "Keeps drones moving at full speed through the cold nearby.",

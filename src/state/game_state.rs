@@ -32,6 +32,10 @@ pub struct Resources {
     pub minerals: f32,
     pub data: f32,
     pub biomass: f32,
+    /// Refined from minerals by processing buildings. The first product the
+    /// swarm cannot dig straight out of the ground.
+    #[serde(default)]
+    pub alloy: f32,
 }
 
 impl Resources {
@@ -196,6 +200,7 @@ impl PlanetState {
                 minerals: config.resources.starting_minerals,
                 data: 0.0,
                 biomass: 0.0,
+                alloy: 0.0,
             },
             grid,
             drones: DroneManager::new(

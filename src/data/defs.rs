@@ -16,6 +16,23 @@ pub struct Cost {
     pub energy: f32,
 }
 
+/// What a processing building turns into what, per second, while powered.
+#[derive(Debug, Clone, Copy, Default, Deserialize)]
+pub struct RecipeDef {
+    #[serde(default)]
+    pub minerals_in: f32,
+    #[serde(default)]
+    pub biomass_in: f32,
+    #[serde(default)]
+    pub alloy_out: f32,
+}
+
+impl RecipeDef {
+    pub fn is_empty(&self) -> bool {
+        self.minerals_in <= 0.0 && self.biomass_in <= 0.0 && self.alloy_out <= 0.0
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct BuildingDef {
     pub id: String,
@@ -40,6 +57,10 @@ pub struct BuildingDef {
     pub generates_power: bool,
     pub consumes_power: bool,
     pub uses_efficiency: bool,
+    /// Present on processing buildings; absent means the building makes
+    /// nothing out of anything.
+    #[serde(default)]
+    pub recipe: RecipeDef,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -107,6 +128,8 @@ pub struct SeedShipCost {
     pub minerals: f32,
     pub data: f32,
     pub biomass: f32,
+    #[serde(default)]
+    pub alloy: f32,
 }
 
 #[derive(Debug, Clone, Deserialize)]

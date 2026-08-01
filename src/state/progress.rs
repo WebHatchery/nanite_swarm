@@ -79,6 +79,27 @@ impl PlanetState {
         (self.hazards.freeze * self.stats.multiplier(StatId::FreezeResistance)).clamp(0.0, 0.9)
     }
 
+    /// Alloy the working smelters would produce per second, for the readout.
+    pub fn alloy_rate(&self) -> f32 {
+        crate::data::game_data()
+            .buildings
+            .iter()
+            .filter(|def| def.recipe.alloy_out > 0.0)
+            .filter_map(|def| {
+                BuildingType::from_id(&def.id).map(|kind| (kind, def.recipe.alloy_out))
+            })
+            .map(|(kind, out)| {
+                self.grid
+                    .find_buildings(kind)
+                    .into_iter()
+                    .filter_map(|pos| self.grid.get(pos).and_then(|tile| tile.building.as_ref()))
+                    .filter(|building| building.powered && !building.is_dust_stalled())
+                    .map(|building| out * building.dust_efficiency())
+                    .sum::<f32>()
+            })
+            .sum()
+    }
+
     /// A short label for whatever this world is doing to the machinery, for
     /// the HUD. Empty when the world is merely somewhere to build.
     pub fn hazard_label(&self) -> String {

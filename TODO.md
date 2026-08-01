@@ -60,9 +60,13 @@ Techs declare their effects as modifiers in `research.json` (`engine::modifiers`
 
 ## Content
 
-- Add production chains: intermediate products, recipes, and processing buildings. A drill now buffers ore until a drone takes it, but everything still lands in one global mineral pool.
+The first chain exists: a Smelter refines minerals into alloy while powered, driven by a `recipe` block on the building definition, and the Seed Ship's last two stages take nothing else instead.
+
+- The chain runs on the global pool. A Smelter anywhere with power draws from the same numbers a drill on the far side of the map filled, so placing it is not a logistics decision. Drones should carry ore *to* it and alloy *away*, which is the real fix and a much larger one.
+- One recipe, one product. Deeper chains (alloy plus biomass into something) and more processing buildings are the content this unlocks.
+- `RecipeDef` is a fixed struct of named fields, so a third input needs a code change rather than a data change. It wants to be a map of resource id to amount once there are more than two.
 - Grow the building set beyond 12 across processing, logistics, and megastructure parts. Hazard counters exist now; nothing else on that list does.
-- Tier the resource set beyond Minerals/Energy/Data/Biomass to support chains and mass-driver strategy.
+- Tier the resource set further. Alloy is the first refined product; mass-driver strategy still has nothing worth shipping between worlds.
 - Larger and more varied maps with landmark features. Sizes are per-world data now (20x20 to 26x26) and the camera does not cap them, but the generator has no notion of a feature.
 - Replace the four `tier % 4` directives and four hardcoded achievements with a real objective/milestone system and a full achievement set. The Power Surplus directive still uses one number as both the power threshold and the seconds it must be held, so the two scale together by accident.
 - Write the GDD's "indifferent optimizer" tone into directives and research descriptions. Arrival lines have it (`planets.json`), and the Seed Ship stages do; everything else still reads like a spreadsheet.

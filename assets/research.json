@@ -116,6 +116,14 @@
       "position": [1.4, -3.4]
     },
     {
+      "id": "smelting",
+      "name": "Smelting",
+      "description": "Unlocks Smelters, which refine minerals into alloy",
+      "data_cost": 35.0,
+      "prerequisites": ["efficient_drills"],
+      "position": [-2.8, -2.8]
+    },
+    {
       "id": "storage_systems",
       "name": "Storage Systems",
       "description": "Unlocks Mineral Storage buildings",

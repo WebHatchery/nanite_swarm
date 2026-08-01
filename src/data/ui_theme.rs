@@ -2,6 +2,11 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Themes written before alloy existed still need a colour for it.
+fn default_alloy_color() -> [f32; 4] {
+    [0.85, 0.58, 0.30, 1.0]
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiTheme {
     pub colors: UiColors,
@@ -28,6 +33,8 @@ pub struct UiColors {
     pub minerals: [f32; 4],
     pub data: [f32; 4],
     pub biomass: [f32; 4],
+    #[serde(default = "default_alloy_color")]
+    pub alloy: [f32; 4],
     pub shadow: [f32; 4],
 }
 
@@ -73,6 +80,7 @@ impl Default for UiTheme {
                 minerals: [0.14, 0.7, 1.0, 1.0],
                 data: [0.18, 0.78, 1.0, 1.0],
                 biomass: [0.47, 0.92, 0.32, 1.0],
+                alloy: default_alloy_color(),
                 shadow: [0.0, 0.0, 0.0, 0.45],
             },
             layout: UiLayout {

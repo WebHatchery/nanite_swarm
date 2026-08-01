@@ -70,7 +70,7 @@ pub(super) fn draw(
     let actions_w = (screen_w * 0.25).clamp(304.0, 448.0);
     let action_x = screen_w - actions_w - 8.0;
     let card_area_w = (action_x - cards_x - metrics.panel_gap).max(0.0);
-    let card_w = ((card_area_w - card_gap * 3.0) / 4.0).max(56.0);
+    let card_w = ((card_area_w - card_gap * 4.0) / 5.0).max(56.0);
     let card_h = if compact_top { 62.0 } else { 68.0 };
     let energy_value = format!("{:.0}", state.resources.energy);
     let energy_rate = format_power_delta(state.power_balance);
@@ -81,6 +81,8 @@ pub(super) fn draw(
     let data_rate = format!("+{:.2}/s", state.config.resources.core_data_rate);
     let biomass_value = format!("{:.0}", state.resources.biomass);
     let biomass_rate = format!("+{:.1}/s", state.biomass_power_bonus.max(0.0));
+    let alloy_value = format!("{:.0}", state.resources.alloy);
+    let alloy_rate = format!("+{:.1}/s", state.alloy_rate());
 
     draw_metric_card(
         theme,
@@ -121,6 +123,16 @@ pub(super) fn draw(
         &biomass_rate,
         Some("/ 1000"),
         color_from_rgba(&theme.colors.biomass),
+    );
+    draw_metric_card(
+        theme,
+        Rect::new(cards_x + 4.0 * (card_w + card_gap), cards_y, card_w, card_h),
+        "alloy",
+        "ALLOY",
+        &alloy_value,
+        &alloy_rate,
+        Some("/ 1000"),
+        color_from_rgba(&theme.colors.alloy),
     );
 
     let button_y = 10.0;

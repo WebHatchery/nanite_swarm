@@ -198,6 +198,7 @@ fn cost_summary(state: &PlanetState, stage: &crate::data::SeedShipStageDef) -> S
         ("Minerals", paid.minerals, cost.minerals),
         ("Data", paid.data, cost.data),
         ("Biomass", paid.biomass, cost.biomass),
+        ("Alloy", paid.alloy, cost.alloy),
     ]
     .iter()
     .filter(|(_, _, needed)| *needed > 0.0)

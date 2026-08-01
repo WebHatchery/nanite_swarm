@@ -1,5 +1,5 @@
 {
-  "intake_per_second": { "minerals": 12.0, "data": 3.0, "biomass": 6.0 },
+  "intake_per_second": { "minerals": 12.0, "data": 3.0, "biomass": 6.0, "alloy": 2.0 },
   "stages": [
     {
       "id": "cradle",
@@ -17,13 +17,13 @@
       "id": "payload",
       "name": "Nanite Payload",
       "description": "A compressed copy of this swarm, folded small enough to survive transit.",
-      "cost": { "minerals": 400.0, "data": 80.0, "biomass": 60.0 }
+      "cost": { "minerals": 400.0, "data": 80.0, "biomass": 60.0, "alloy": 60.0 }
     },
     {
       "id": "ignition",
       "name": "Ignition Charge",
       "description": "The last of this world, spent on leaving it.",
-      "cost": { "minerals": 600.0, "data": 150.0, "biomass": 0.0 }
+      "cost": { "minerals": 600.0, "data": 150.0, "biomass": 0.0, "alloy": 140.0 }
     }
   ]
 }
