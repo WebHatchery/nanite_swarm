@@ -21,6 +21,15 @@ pub struct GridConfig {
     pub tile_size: f32,
     pub max_width: u32,
     pub max_height: u32,
+    /// The least share of a world that has to be buildable ground connected to
+    /// the landing site. Terrain is laid in regions now, so without a floor a
+    /// chasm can wall the Core in before the swarm can research Bridges.
+    #[serde(default = "default_min_start_region")]
+    pub min_start_region: f32,
+}
+
+fn default_min_start_region() -> f32 {
+    0.3
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -110,6 +119,7 @@ impl Default for GameConfig {
                 tile_size: 32.0,
                 max_width: 64,
                 max_height: 64,
+                min_start_region: default_min_start_region(),
             },
             resources: ResourceConfig {
                 starting_energy: 50.0,

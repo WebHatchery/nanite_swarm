@@ -4,7 +4,8 @@
         "initial_height": 16,
         "tile_size": 32.0,
         "max_width": 64,
-        "max_height": 64
+        "max_height": 64,
+    "min_start_region": 0.3
     },
     "resources": {
         "starting_energy": 50.0,

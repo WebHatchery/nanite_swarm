@@ -44,7 +44,7 @@ impl Grid {
     /// over is open ground, which is what makes one world a forest and another
     /// a field of holes.
     pub fn new_with_terrain(width: u32, height: u32, seed: u64, weights: &TerrainWeights) -> Self {
-        Self::generate(width, height, seed, weights, &OreConfig::default())
+        Self::generate(width, height, seed, weights, &OreConfig::default(), 0.3)
     }
 
     /// The same, with the ore spread declared rather than assumed.
@@ -54,6 +54,7 @@ impl Grid {
         seed: u64,
         weights: &TerrainWeights,
         ore: &OreConfig,
+        min_start_region: f32,
     ) -> Self {
         let size = (width * height) as usize;
         let center = GridPos::new(width as i32 / 2, height as i32 / 2);
@@ -150,10 +151,90 @@ impl Grid {
             });
         }
 
-        Self {
+        let mut grid = Self {
             width,
             height,
             tiles,
+        };
+        grid.open_a_landing_site(center, min_start_region);
+        grid
+    }
+
+    /// Buildable ground reachable on foot from `from`, including it.
+    ///
+    /// Not the same question as whether a drone can get somewhere: this is
+    /// about where the swarm can put anything at all.
+    pub fn buildable_region(&self, from: GridPos) -> Vec<GridPos> {
+        let mut seen = vec![false; self.tiles.len()];
+        let mut region = Vec::new();
+        let mut frontier = vec![from];
+        if let Some(index) = self.index_of(from) {
+            seen[index] = true;
+        }
+        while let Some(pos) = frontier.pop() {
+            region.push(pos);
+            for next in pos.neighbors() {
+                let Some(index) = self.index_of(next) else {
+                    continue;
+                };
+                if seen[index] {
+                    continue;
+                }
+                if !self.tiles[index].terrain.is_buildable() {
+                    continue;
+                }
+                seen[index] = true;
+                frontier.push(next);
+            }
+        }
+        region
+    }
+
+    fn index_of(&self, pos: GridPos) -> Option<usize> {
+        pos.in_bounds(self.width, self.height)
+            .then(|| (pos.y as u32 * self.width + pos.x as u32) as usize)
+    }
+
+    /// Clear a way out of the landing site until there is enough ground to
+    /// build on.
+    ///
+    /// Regions made void a chasm rather than a scattering of holes, which is
+    /// the point — but a chasm can also ring the Core, and a world the swarm
+    /// cannot leave the first tile of is not a hard world, it is a broken one.
+    /// Only the least is cleared: the barrier tile nearest the Core, one at a
+    /// time, so the rest of the world keeps its shape.
+    fn open_a_landing_site(&mut self, center: GridPos, min_share: f32) {
+        let target = (self.tiles.len() as f32 * min_share.clamp(0.0, 1.0)).round() as usize;
+        for _ in 0..self.tiles.len() {
+            let region = self.buildable_region(center);
+            if region.len() >= target {
+                return;
+            }
+            // Barriers touching the region, nearest the Core first, and by
+            // index to break ties the same way every run.
+            let mut barriers: Vec<GridPos> = Vec::new();
+            for pos in &region {
+                for next in pos.neighbors() {
+                    let Some(index) = self.index_of(next) else {
+                        continue;
+                    };
+                    if !self.tiles[index].terrain.is_buildable() && !barriers.contains(&next) {
+                        barriers.push(next);
+                    }
+                }
+            }
+            barriers.sort_by_key(|pos| {
+                (
+                    pos.distance(center),
+                    self.index_of(*pos).unwrap_or(usize::MAX),
+                )
+            });
+            let Some(barrier) = barriers.first().copied() else {
+                return;
+            };
+            if let Some(tile) = self.get_mut(barrier) {
+                tile.terrain = TerrainType::Empty;
+            }
         }
     }
 
@@ -405,6 +486,62 @@ mod tests {
             }
         }
         same / total
+    }
+
+    #[test]
+    fn every_shipped_world_gives_the_swarm_somewhere_to_build() {
+        // Regions turned void into a chasm, which can ring the Core. Across
+        // every world the game ships and a spread of seeds, the landing site
+        // has to be worth landing on.
+        let config = crate::data::GameConfig::default();
+        for def in &crate::data::game_data().planets {
+            for seed in 0..25u64 {
+                let grid = Grid::generate(
+                    def.width,
+                    def.height,
+                    seed,
+                    &def.terrain,
+                    &config.ore,
+                    config.grid.min_start_region,
+                );
+                let center = GridPos::new(def.width as i32 / 2, def.height as i32 / 2);
+                let region = grid.buildable_region(center);
+                let share = region.len() as f32 / (def.width * def.height) as f32;
+                assert!(
+                    share >= config.grid.min_start_region - 0.001,
+                    "{} on seed {} left only {:.0}% of the world reachable",
+                    def.id,
+                    seed,
+                    share * 100.0
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_world_that_is_already_open_is_left_exactly_as_it_was() {
+        // Nothing but ground: the safety net must not touch a world that does
+        // not need it.
+        let open = weights(0.0, 0.0, 0.0, 0.0);
+        let before = Grid::generate(20, 20, 3, &open, &OreConfig::default(), 0.0);
+        let after = Grid::generate(20, 20, 3, &open, &OreConfig::default(), 0.9);
+        for (a, b) in before.tiles.iter().zip(after.tiles.iter()) {
+            assert_eq!(a.terrain, b.terrain);
+        }
+    }
+
+    #[test]
+    fn a_core_ringed_by_void_is_dug_out_rather_than_left_walled_in() {
+        // A world that is nearly all chasm still has to be playable.
+        let walled = weights(0.0, 0.0, 0.0, 0.85);
+        let grid = Grid::generate(20, 20, 12, &walled, &OreConfig::default(), 0.3);
+        let center = GridPos::new(10, 10);
+        let region = grid.buildable_region(center);
+        assert!(
+            region.len() as f32 / 400.0 >= 0.3,
+            "only {} tiles of 400 were reachable",
+            region.len()
+        );
     }
 
     #[test]

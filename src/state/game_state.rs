@@ -257,7 +257,14 @@ impl PlanetState {
     pub fn new(planet_index: usize, seed: u64, config: GameConfig) -> Self {
         let def = crate::data::game_data().planet(planet_index);
         let (name, width, height) = (def.name.as_str(), def.width, def.height);
-        let mut grid = Grid::generate(width, height, seed, &def.terrain, &config.ore);
+        let mut grid = Grid::generate(
+            width,
+            height,
+            seed,
+            &def.terrain,
+            &config.ore,
+            config.grid.min_start_region,
+        );
         grid.initialize_forest_biomass(config.resources.forest_biomass);
 
         // Place Core at center
