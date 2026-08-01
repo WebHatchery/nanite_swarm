@@ -240,6 +240,8 @@ impl Game {
                 CampaignCompleteAction::None => {}
             },
             GamePhase::Interplanetary => {
+                // The map is a view of a running system, not a pause button.
+                self.advance_simulation();
                 let stockpiles: [Option<f32>; state::PLANET_COUNT] =
                     std::array::from_fn(|index| self.campaign.stockpile(index));
                 match render_interplanetary_view(
@@ -299,6 +301,22 @@ impl Game {
                     self.phase = GamePhase::Playing;
                 }
             }
+        }
+
+        // Toasts follow the player between screens. Anything that landed
+        // while they were reading the tree or the map used to be missed
+        // entirely, which is exactly when a finished directive matters.
+        match self.phase {
+            // The ship screen fills the middle, so its toasts go in the corner.
+            GamePhase::SeedShip => {
+                let anchor = screens::menu_anchor_low(screen_height());
+                screens::draw_toasts(self.campaign.current(), anchor);
+            }
+            GamePhase::Research | GamePhase::Interplanetary => {
+                let anchor = screens::menu_anchor(screen_width());
+                screens::draw_toasts(self.campaign.current(), anchor);
+            }
+            _ => {}
         }
 
         self.debug_overlay.draw(&[]);
@@ -497,6 +515,10 @@ impl Game {
                     .push("drone_capacity".to_string());
                 self.research_state.current_research = Some("self_cleaning_servos".to_string());
                 self.sync_research_to_planet();
+                // Meet the standing directive for real, so the toast on this
+                // screen is one the game actually raised.
+                self.campaign.directive.completed = true;
+                self.campaign.update_directive(0.1);
             }
             "logistics" => {
                 self.phase = GamePhase::Playing;

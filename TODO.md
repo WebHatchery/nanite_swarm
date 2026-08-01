@@ -37,7 +37,7 @@ A network tile passes `conduit_capacity` drones at full speed; past that they sh
 
 `state::Campaign` owns all five worlds, the current index, and the directive; travel keeps every planet exactly as it was left, and the save carries the lot.
 
-- Left-behind worlds keep working: they run the same simulation in coarse one-second steps without visuals, and the solar map lists what each has stockpiled. One seam remains — nothing runs while the map, the menu, or the launch sequence is open, so time only passes on the surface.
+- Left-behind worlds keep working: they run the same simulation in coarse one-second steps without visuals, and the solar map lists what each has stockpiled. The map is now a view of a running system rather than a pause button. Time still stops on the main menu and during a launch, both deliberately.
 - Turn Mass Drivers into gameplay: a building, export schedules, transit time, and receiving landing pads. The tech now gates Seed Ship launches, so it is no longer a flag that does nothing, but nothing is exported over it yet.
 - Research belongs to the campaign, and every world adopts it — including one colonized after the fact. Each `PlanetState` still keeps a copy, because a world needs its own answer (it can refuse a building the swarm has researched), but the campaign is the only writer. What is *not* shared yet: `unlocked_buildings` is rebuilt per world from that research and never pruned, so a building unlocked and then somehow un-researched would stay unlocked.
 - Worlds are now defined in `assets/planets.json` (size, terrain weights, banned buildings, arrival line) and the map reads the same file, so identity lives in one place. What is still uniform: every world generates from one flat distribution with a cleared centre, so none of them have landmarks, regions, or a shape worth reading.
@@ -108,10 +108,10 @@ The tutorial is five steps in `assets/tutorial.json`, each with a goal the simul
 - Nothing points at the *map*. A step that wants a conduit run drawn between two tiles can highlight the Conduit card but not the tiles.
 Toasts (the toolkit's `NotificationManager`) announce achievements, finished research, newly available buildings, and each Seed Ship stage. They fade in real time, so they keep fading while the world is paused.
 
-- Directives still complete silently, and the tutorial advances without saying so — both predate the toast stack and should use it.
+- A directive that is met says so and names its reward; one that runs out of time says that too. (The tutorial already toasted each step.)
 - There is no history: a toast missed while the player was on the research screen is gone. A scrollable log would also give the "indifferent optimizer" voice somewhere to accumulate.
 - The right-hand panel stack is full at 720p — a fifth panel overflows the four existing ones, which is why the Seed Ship got its own screen. Any new readout needs the stack's internal layouts made height-aware first.
-- Toasts are only drawn on the planetary view, so anything that fires while the research, ship or map screen is open is missed entirely.
+- Toasts follow the player onto the research, ship and map screens, anchored where each of those screens actually has room. The main menu and the launch sequence still do not draw them, which is deliberate — neither is looking at a world.
 Settings load at startup, apply as they are changed, and are written to disk, so text scale, fullscreen and the FPS overlay survive a restart. The autosave cadence comes from `autosave_interval` rather than a constant.
 
 - The audio sliders still drive nothing; that waits on the audio system (see Audio).

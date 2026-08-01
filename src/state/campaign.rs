@@ -309,6 +309,27 @@ impl Campaign {
             } else {
                 0.0
             };
+            // A directive used to pay out and rotate without a word, so the
+            // only evidence was the panel quietly saying something else.
+            let announcement = if self.directive.completed {
+                Some(format!(
+                    "Directive met: {} (+{:.0} Data)",
+                    self.directive.description, reward
+                ))
+            } else if self.directive.duration > 0.0 {
+                Some(format!("Directive lapsed: {}", self.directive.description))
+            } else {
+                None
+            };
+            let completed = self.directive.completed;
+            if let Some(message) = announcement {
+                let planet = self.current_mut();
+                if completed {
+                    planet.notifications.success(message);
+                } else {
+                    planet.notifications.warning(message);
+                }
+            }
             if reward > 0.0 {
                 self.current_mut().resources.data += reward;
             }
@@ -1071,5 +1092,37 @@ mod tests {
         assert_eq!(campaign.current().resources.data, before + 25.0);
         assert!(!campaign.directive.completed);
         assert_eq!(campaign.directive_tier, 1);
+    }
+
+    #[test]
+    fn a_directive_that_is_met_says_so_instead_of_rotating_in_silence() {
+        let mut campaign = campaign();
+        campaign.directive.completed = true;
+        campaign.directive.reward_data = 25.0;
+        let goal = campaign.directive.description.clone();
+
+        campaign.update_directive(0.1);
+
+        let announced = campaign.current().notifications.get_notifications();
+        assert_eq!(announced.len(), 1, "the directive rotated in silence");
+        assert!(
+            announced[0].message.contains(&goal),
+            "the toast did not say which directive: {}",
+            announced[0].message
+        );
+        assert!(announced[0].message.contains("25"), "no reward mentioned");
+    }
+
+    #[test]
+    fn a_directive_that_runs_out_of_time_is_reported_as_a_loss() {
+        let mut campaign = campaign();
+        let goal = campaign.directive.description.clone();
+        // Push it past its window without ever meeting it.
+        campaign.update_directive(DIRECTIVE_ROTATION_SECONDS + 1.0);
+
+        let announced = campaign.current().notifications.get_notifications();
+        assert_eq!(announced.len(), 1);
+        assert!(announced[0].message.contains("lapsed"));
+        assert!(announced[0].message.contains(&goal));
     }
 }

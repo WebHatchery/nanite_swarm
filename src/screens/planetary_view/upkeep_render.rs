@@ -6,7 +6,6 @@ use crate::state::PlanetState;
 use crate::ui::Colors;
 use macroquad::prelude::*;
 use macroquad_toolkit::colors::with_alpha;
-use macroquad_toolkit::notifications::{draw_notification, NotificationRenderConfig};
 
 use super::metrics::{grid_to_screen, HudMetrics};
 
@@ -178,19 +177,11 @@ fn draw_coverage_area(center: GridPos, radius: i32, emphasised: bool, metrics: H
 /// already a panel, so the placement is done by hand and only the drawing is
 /// borrowed.
 pub(super) fn draw_notifications(state: &PlanetState, metrics: HudMetrics, screen_w: f32) {
-    let config = NotificationRenderConfig {
-        width: 260.0,
-        row_height: 30.0,
-        spacing: 6.0,
-        font_size: 13.0,
-        ..NotificationRenderConfig::default()
+    // Clear of the right-hand panel stack, which the full-screen menus do not
+    // have and so anchor differently.
+    let anchor = crate::screens::ToastAnchor {
+        x: (screen_w - metrics.right_panel_width - 260.0 - 24.0).max(metrics.base_offset_x() + 8.0),
+        y: metrics.top_bar_height + 96.0,
     };
-    let x = (screen_w - metrics.right_panel_width - config.width - 24.0)
-        .max(metrics.base_offset_x() + 8.0);
-    let mut y = metrics.top_bar_height + 96.0;
-
-    for notification in state.notifications.get_notifications() {
-        draw_notification(notification, x, y, &config);
-        y += config.row_height + config.spacing;
-    }
+    crate::screens::draw_toasts(state, anchor);
 }
