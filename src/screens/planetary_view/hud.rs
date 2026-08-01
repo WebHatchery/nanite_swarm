@@ -119,7 +119,12 @@ pub(super) fn draw_ui_panels(
     power_ops_panel::draw(state, theme, &colors, &right);
     directive_panel::draw(state, directive, theme, &colors, &right);
 
-    bottom_bar::draw(state, screen_w, screen_h, theme, metrics, &colors);
+    match bottom_bar::draw(state, screen_w, screen_h, theme, metrics, &colors) {
+        bottom_bar::ClockAction::TogglePause => state.toggle_pause(),
+        bottom_bar::ClockAction::Faster => state.change_speed(true),
+        bottom_bar::ClockAction::Slower => state.change_speed(false),
+        bottom_bar::ClockAction::None => {}
+    }
 
     ui_action
 }

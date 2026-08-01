@@ -75,6 +75,9 @@ pub(super) fn handle_input(
         }
     }
 
+    if is_key_pressed(KeyCode::Space) {
+        state.toggle_pause();
+    }
     if is_key_pressed(KeyCode::F1) {
         state.show_help = !state.show_help;
     }

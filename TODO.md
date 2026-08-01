@@ -92,7 +92,10 @@ The sim runs on a fixed 1/30s timestep with an accumulator (`PlanetState::advanc
 
 ## UX and UI
 
-- Add pause and game speed — the HUD advertises "PAUSE Space" and shows speed buttons whose return values are ignored.
+Space pauses, the bottom bar's speed buttons work, and both ride the fixed timestep: speed scales how much world time a second of real time buys, never how long a step is.
+
+- Speed and pause are per-planet runtime state and reset on load, which is right for pause and arguably wrong for a preferred speed.
+- There is no fast-forward past four times, and no way to skip to the next interesting moment — an idle game eventually wants both.
 - Wire or remove the controls that are still decoration: BOX SELECT and the BUILD/DEMOLISH hints do nothing, and the main-menu Quit button is a no-op. (PAN and ZOOM now work: middle-drag and wheel, per-planet camera.)
 - Replace the six-condition text checklist with a real persisted tutorial with highlighting and interactive gating.
 - Add a notification/toast system; achievements currently unlock with no feedback beyond a counter, and finishing a Seed Ship stage passes silently.

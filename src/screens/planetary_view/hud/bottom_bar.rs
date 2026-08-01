@@ -9,6 +9,17 @@ use macroquad_toolkit::ui::draw_ui_text;
 use super::super::metrics::HudMetrics;
 use super::PanelColors;
 
+/// What the player asked the clock to do. The bar reads state and returns
+/// intent; the caller applies it.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(super) enum ClockAction {
+    None,
+    TogglePause,
+    Faster,
+    Slower,
+}
+
+#[must_use]
 pub(super) fn draw(
     state: &PlanetState,
     screen_w: f32,
@@ -16,7 +27,7 @@ pub(super) fn draw(
     theme: &UiTheme,
     metrics: HudMetrics,
     colors: &PanelColors,
-) {
+) -> ClockAction {
     let text = colors.text;
     let dim = colors.dim;
     let primary = colors.primary;
@@ -166,19 +177,44 @@ pub(super) fn draw(
         16.0,
         text,
     );
+    let mut clock = ClockAction::None;
     let speed_x = status_x + status_w * 0.36;
     draw_ui_text("GAME SPEED", speed_x, bottom_y + 27.0, 9.0, dim);
-    draw_ui_text("1.0x", speed_x + 10.0, bottom_y + 52.0, 16.0, text);
-    draw_hud_button(
+    // The readout sits between the two buttons, so a long word has to come
+    // down in size rather than run over them.
+    let (speed_label, speed_color, speed_size) = if state.paused {
+        ("PAUSED".to_string(), colors.warning, 12.0)
+    } else {
+        (format!("{:.1}x", state.time_scale), text, 16.0)
+    };
+    draw_ui_text(
+        &speed_label,
+        speed_x + 10.0,
+        bottom_y + 52.0,
+        speed_size,
+        speed_color,
+    );
+    if draw_hud_button(
         theme,
         Rect::new(speed_x - 30.0, bottom_y + 34.0, 24.0, 24.0),
         "-",
-    );
-    draw_hud_button(
+    ) {
+        clock = ClockAction::Slower;
+    }
+    if draw_hud_button(
         theme,
         Rect::new(speed_x + 58.0, bottom_y + 34.0, 24.0, 24.0),
         "+",
-    );
+    ) {
+        clock = ClockAction::Faster;
+    }
+    if draw_hud_button(
+        theme,
+        Rect::new(speed_x + 86.0, bottom_y + 34.0, 24.0, 24.0),
+        if state.paused { ">" } else { "II" },
+    ) {
+        clock = ClockAction::TogglePause;
+    }
 
     let graph_x = status_x + status_w * 0.66;
     let graph_y = bottom_y + 22.0;
@@ -282,6 +318,14 @@ pub(super) fn draw(
             14.0,
             text,
         );
-        draw_ui_text("F1: Toggle help", help_x + 16.0, help_y + 175.0, 14.0, dim);
+        draw_ui_text(
+            "Space: Pause  |  F1: Toggle help",
+            help_x + 16.0,
+            help_y + 175.0,
+            14.0,
+            dim,
+        );
     }
+
+    clock
 }

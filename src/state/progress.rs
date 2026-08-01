@@ -100,6 +100,28 @@ impl PlanetState {
             .sum()
     }
 
+    /// Stop and start the world.
+    pub fn toggle_pause(&mut self) {
+        self.paused = !self.paused;
+        // Drop the part-finished step: resuming should not owe time.
+        self.sim_accumulator = 0.0;
+    }
+
+    /// Step to the next speed up or down the ladder, clamped at both ends.
+    pub fn change_speed(&mut self, faster: bool) {
+        let scales = crate::state::TIME_SCALES;
+        let current = scales
+            .iter()
+            .position(|scale| (*scale - self.time_scale).abs() < 1e-3)
+            .unwrap_or(1);
+        let next = if faster {
+            (current + 1).min(scales.len() - 1)
+        } else {
+            current.saturating_sub(1)
+        };
+        self.time_scale = scales[next];
+    }
+
     /// A short label for whatever this world is doing to the machinery, for
     /// the HUD. Empty when the world is merely somewhere to build.
     pub fn hazard_label(&self) -> String {

@@ -457,6 +457,16 @@ impl Game {
                 }
                 planet.selected_tile = Some(smelter);
             }
+            "paused" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                let planet = self.campaign.current_mut();
+                for _ in 0..200 {
+                    planet.step(state::TICK_SECONDS, false);
+                }
+                planet.change_speed(true);
+                planet.toggle_pause();
+            }
             "congestion" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();

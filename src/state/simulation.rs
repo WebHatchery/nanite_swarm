@@ -26,19 +26,26 @@ pub(super) const HAZARD_COUNTER_STRENGTH: f32 = 0.9;
 pub const TICK_SECONDS: f32 = 1.0 / 30.0;
 
 /// Ceiling on catch-up steps per call. A long stall (a load, a dragged window)
-/// drops the excess rather than spending minutes replaying it.
-const MAX_CATCHUP_TICKS: u32 = 6;
+/// drops the excess rather than spending minutes replaying it. Fast-forward
+/// needs headroom here too: four times speed at thirty frames a second is four
+/// steps a frame.
+const MAX_CATCHUP_TICKS: u32 = 12;
+
+/// The speeds the player can pick between, slowest first.
+pub const TIME_SCALES: [f32; 4] = [0.5, 1.0, 2.0, 4.0];
 
 impl PlanetState {
     /// Advance the world by real elapsed time, running whole [`TICK_SECONDS`]
     /// steps and banking the remainder. Returns how many steps ran, so callers
     /// that keep their own timers can advance by the same amount.
     pub fn advance(&mut self, real_delta: f32, allow_visuals: bool) -> u32 {
-        if !real_delta.is_finite() || real_delta <= 0.0 {
+        if self.paused || !real_delta.is_finite() || real_delta <= 0.0 {
             return 0;
         }
 
-        self.sim_accumulator += real_delta;
+        // Speed scales how much world time a second of real time buys, not how
+        // long a step is: the step is the one thing that never changes.
+        self.sim_accumulator += real_delta * self.time_scale.max(0.0);
         let mut ticks = 0;
         while self.sim_accumulator >= TICK_SECONDS && ticks < MAX_CATCHUP_TICKS {
             self.sim_accumulator -= TICK_SECONDS;
@@ -513,6 +520,69 @@ mod tests {
 
         // The banked half tick means the next one needs only half a tick more.
         assert_eq!(state.advance(TICK_SECONDS * 0.6, false), 1);
+    }
+
+    #[test]
+    fn a_paused_world_does_not_move() {
+        let mut state = state();
+        state.toggle_pause();
+        assert!(state.paused);
+
+        assert_eq!(state.advance(10.0, false), 0);
+        assert_eq!(state.time_played, 0.0);
+        assert_eq!(state.sim_accumulator, 0.0);
+
+        // And starts again exactly where it stopped.
+        state.toggle_pause();
+        assert!(state.advance(TICK_SECONDS, false) > 0);
+        assert!(state.time_played > 0.0);
+    }
+
+    #[test]
+    fn speed_buys_more_world_time_for_the_same_real_time() {
+        let mut normal = state();
+        let mut fast = state();
+        fast.change_speed(true);
+        assert_eq!(fast.time_scale, 2.0);
+
+        // One second of wall clock each, in frames.
+        for _ in 0..60 {
+            normal.advance(1.0 / 60.0, false);
+            fast.advance(1.0 / 60.0, false);
+        }
+
+        let ratio = fast.time_played / normal.time_played;
+        assert!(
+            (ratio - 2.0).abs() < 0.1,
+            "double speed simulated {ratio} times as much"
+        );
+    }
+
+    #[test]
+    fn the_speed_ladder_stops_at_both_ends() {
+        let mut state = state();
+        for _ in 0..10 {
+            state.change_speed(false);
+        }
+        assert_eq!(state.time_scale, TIME_SCALES[0]);
+        for _ in 0..10 {
+            state.change_speed(true);
+        }
+        assert_eq!(state.time_scale, TIME_SCALES[TIME_SCALES.len() - 1]);
+    }
+
+    #[test]
+    fn the_fastest_speed_is_not_capped_away_by_the_catch_up_limit() {
+        let mut state = state();
+        for _ in 0..3 {
+            state.change_speed(true);
+        }
+        assert_eq!(state.time_scale, 4.0);
+
+        // A slow frame at top speed still buys everything it should.
+        let ticks = state.advance(1.0 / 30.0, false);
+        let expected = (4.0 / 30.0 / TICK_SECONDS).floor() as u32;
+        assert_eq!(ticks, expected, "fast-forward lost time to the tick cap");
     }
 
     #[test]

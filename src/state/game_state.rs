@@ -10,6 +10,12 @@ use macroquad_toolkit::fx::ParticleSystem;
 use macroquad_toolkit::ui::ScrollArea;
 use serde::{Deserialize, Serialize};
 
+/// Real time and world time run at the same rate until the player says
+/// otherwise.
+fn default_time_scale() -> f32 {
+    1.0
+}
+
 /// Saves written before worlds had identities were all the starting world.
 fn default_planet_index() -> usize {
     2
@@ -94,6 +100,12 @@ pub struct PlanetState {
     /// Unspent real time between fixed simulation steps.
     #[serde(skip, default)]
     pub sim_accumulator: f32,
+    /// Nothing advances while this is set.
+    #[serde(skip, default)]
+    pub paused: bool,
+    /// How much world time passes per second of real time.
+    #[serde(skip, default = "default_time_scale")]
+    pub time_scale: f32,
     pub battery_seconds: f32,
     pub last_saved_unix: i64,
     pub achievements: Achievements,
@@ -217,6 +229,8 @@ impl PlanetState {
             power_balance: 10.0,
             biomass_power_bonus: 0.0,
             sim_accumulator: 0.0,
+            paused: false,
+            time_scale: default_time_scale(),
             battery_seconds: 4.0 * 60.0 * 60.0,
             last_saved_unix: unix_seconds_now(),
             achievements: Achievements::from_definitions(achievement_definitions()),
