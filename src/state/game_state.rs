@@ -132,6 +132,10 @@ pub struct PlanetState {
     pub power_collapse_cooldown: f32,
     #[serde(skip, default)]
     pub power_collapse_shutdown: f32,
+    /// How long the collapse in progress was going to last, so a readout can
+    /// show how far through it is without assuming a fixed length.
+    #[serde(skip, default)]
+    pub power_collapse_length: f32,
     #[serde(skip, default)]
     pub research_lock_timer: f32,
     #[serde(skip, default)]
@@ -257,6 +261,7 @@ impl PlanetState {
             power_negative_seconds: 0.0,
             power_collapse_cooldown: 0.0,
             power_collapse_shutdown: 0.0,
+            power_collapse_length: 0.0,
             research_lock_timer: 0.0,
             collapse_notice_timer: 0.0,
             arrival_notice_timer: 0.0,

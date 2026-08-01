@@ -14,7 +14,7 @@ The Seed Ship exists: four stages declared in `assets/seed_ship.json`, its own s
 The campaign ends: every world taken and a finished ship with nowhere to send it shows SYSTEM CONSUMED with what the run consumed, once, and the player can carry on in the finished system. There is deliberately no failure state (rationale in `gdd.md` §5b).
 
 - Nothing after the ending changes. A finished campaign plays exactly like an unfinished one, so there is no reason to keep the save. New-game-plus, a harder second system, or a score to beat would all give it one.
-- Collapse stays a setback, never a death (decided 2026-08-01). It is still a flat 20-second shutdown and a data penalty on every world at every stage, so it stings hardest exactly when the player can least afford it and barely registers later; it wants scaling with the size of what collapsed.
+- Collapse stays a setback, never a death (decided 2026-08-01), and now scales with the size of what collapsed: shutdown, research lock and the share of Data lost all interpolate between a small-swarm figure and a full-scale one, declared in `game_config.json` under `collapse`. The banner counts down the shutdown rather than implying a fixed length. What it still does not do is distinguish *what* collapsed — losing the grid to one overdrawn Server Bank costs the same as losing it across a whole continent of drills.
 - Make the five core stages mechanical, not just visual: tie Crash-Lander/Fortress/Space Elevator/Planetary Ring (GDD §5) to research and throughput milestones with new capabilities each.
 
 ## The logistics puzzle
@@ -81,7 +81,7 @@ The sim runs on a fixed 1/30s timestep with an accumulator (`PlanetState::advanc
 
 - Offline catch-up still steps at a coarser 1s, because four hours at the live tick rate is 432,000 steps on load. Unify it when the offline model becomes an earnings report (see Save system).
 - Extend the deterministic snapshot tests past harvest throughput: power failure, research unlocks, and collapse thresholds still have no pinned numbers.
-- Move the remaining hardcoded balance constants into JSON — dust rates, sweeper/filter radii, and collapse timings are Rust consts (the research rate is no longer one), and `conduit_throughput` and `core_power_consumption` are still dead config fields.
+- Move the remaining hardcoded balance constants into JSON — dust rates and sweeper/filter radii are Rust consts (the research rate and the collapse timings are no longer), and `conduit_throughput` and `core_power_consumption` are still dead config fields.
 - Validate the rest of the data at load the way research modifiers now are; `game_data().building(id)` still panics on a missing id with no context.
 
 ## Save system

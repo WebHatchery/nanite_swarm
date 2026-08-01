@@ -27,5 +27,16 @@
         "drill_output_rate": 5.0,
         "conduit_capacity": 2.0,
     "congestion_route_penalty": 1.5
-    }
+    },
+  "collapse": {
+    "negative_power_seconds": 60.0,
+    "cooldown_seconds": 120.0,
+    "full_scale_structures": 60.0,
+    "min_shutdown_seconds": 6.0,
+    "max_shutdown_seconds": 45.0,
+    "research_lock_ratio": 1.5,
+    "min_data_loss": 0.1,
+    "max_data_loss": 0.35,
+    "notice_seconds": 10.0
+  }
 }

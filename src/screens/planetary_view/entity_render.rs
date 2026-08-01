@@ -108,7 +108,8 @@ pub(super) fn draw_drones(state: &PlanetState, metrics: HudMetrics, time: f32) {
 
         if state.power_collapse_shutdown > 0.0 {
             // Power collapse: drones sag/fall
-            let fall = (1.0 - (state.power_collapse_shutdown / 20.0)).clamp(0.0, 1.0);
+            let length = state.power_collapse_length.max(0.001);
+            let fall = (1.0 - (state.power_collapse_shutdown / length)).clamp(0.0, 1.0);
             draw_circle(drone_x, drone_y + fall * 6.0, 2.0, Colors::ERROR);
         }
     }

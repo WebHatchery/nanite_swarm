@@ -8,6 +8,8 @@ pub struct GameConfig {
     pub grid: GridConfig,
     pub resources: ResourceConfig,
     pub buildings: BuildingConfig,
+    #[serde(default = "CollapseConfig::default")]
+    pub collapse: CollapseConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,6 +38,33 @@ pub struct ResourceConfig {
     pub forest_biomass: f32,
     pub biomass_power_output: f32,
     pub biomass_consumption_rate: f32,
+}
+
+/// What a power collapse costs, and how that grows with the size of the swarm
+/// that collapsed.
+///
+/// A flat penalty is wrong at both ends: twenty seconds off a base of four
+/// buildings is brutal, and the same twenty seconds off a base of sixty is a
+/// pause. Everything here is interpolated between the small-swarm figure and
+/// the full-scale one.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CollapseConfig {
+    /// Seconds of negative power before the grid gives out.
+    pub negative_power_seconds: f32,
+    /// Seconds before another collapse can happen at all.
+    pub cooldown_seconds: f32,
+    /// Structures standing at which the penalty is at its worst.
+    pub full_scale_structures: f32,
+    /// Shutdown for the smallest swarm, and for one at full scale.
+    pub min_shutdown_seconds: f32,
+    pub max_shutdown_seconds: f32,
+    /// Research stays locked this many times as long as the shutdown.
+    pub research_lock_ratio: f32,
+    /// Share of stored Data and research progress lost, at each end.
+    pub min_data_loss: f32,
+    pub max_data_loss: f32,
+    /// How long the banner stays up.
+    pub notice_seconds: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -83,6 +112,23 @@ impl Default for GameConfig {
                 conduit_capacity: 2.0,
                 congestion_route_penalty: 1.5,
             },
+            collapse: CollapseConfig::default(),
+        }
+    }
+}
+
+impl Default for CollapseConfig {
+    fn default() -> Self {
+        Self {
+            negative_power_seconds: 60.0,
+            cooldown_seconds: 120.0,
+            full_scale_structures: 60.0,
+            min_shutdown_seconds: 6.0,
+            max_shutdown_seconds: 45.0,
+            research_lock_ratio: 1.5,
+            min_data_loss: 0.1,
+            max_data_loss: 0.35,
+            notice_seconds: 10.0,
         }
     }
 }

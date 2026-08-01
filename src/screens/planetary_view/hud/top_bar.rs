@@ -248,13 +248,17 @@ pub(super) fn draw(
             Rect::new(banner_x, banner_y, banner_w, banner_h),
             None,
         );
-        draw_ui_text(
-            "POWER COLLAPSE: drones offline, data corrupted, research locked",
-            banner_x + 16.0,
-            banner_y + 24.0,
-            13.0,
-            error,
-        );
+        // The shutdown scales with the size of what collapsed, so the banner
+        // has to say how long rather than leave the player guessing.
+        let notice = if state.power_collapse_shutdown > 0.0 {
+            format!(
+                "POWER COLLAPSE: drones offline for {:.0}s, data corrupted, research locked",
+                state.power_collapse_shutdown
+            )
+        } else {
+            "POWER COLLAPSE: data corrupted, research locked".to_string()
+        };
+        draw_ui_text(&notice, banner_x + 16.0, banner_y + 24.0, 13.0, error);
     }
 
     ui_action

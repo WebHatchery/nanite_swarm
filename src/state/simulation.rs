@@ -1,6 +1,7 @@
 //! Per-tick simulation: drills, servers, dust, biomass, tutorial, power collapse
 
 use crate::engine::{BuildingType, DroneState, StatId, TerrainType};
+use macroquad_toolkit::math::lerp;
 
 use super::game_state::PlanetState;
 
@@ -179,7 +180,9 @@ impl PlanetState {
 
         if net_power < 0.0 {
             self.power_negative_seconds += delta_time;
-            if self.power_negative_seconds >= 60.0 && self.power_collapse_cooldown <= 0.0 {
+            if self.power_negative_seconds >= self.config.collapse.negative_power_seconds
+                && self.power_collapse_cooldown <= 0.0
+            {
                 self.trigger_power_collapse();
             }
         } else {
@@ -436,12 +439,35 @@ impl PlanetState {
         self.biomass_power_bonus = power_bonus;
     }
 
-    pub(super) fn trigger_power_collapse(&mut self) {
+    /// How far along the swarm is, for anything that should cost more the
+    /// more there is of it. Zero for a base of nothing, one at full scale.
+    pub fn collapse_scale(&self) -> f32 {
+        let full = self.config.collapse.full_scale_structures.max(1.0);
+        (self.grid.total_buildings() as f32 / full).clamp(0.0, 1.0)
+    }
+
+    /// Bring the grid down. Public because the screenshot harness stages one;
+    /// the simulation reaches it through sustained negative power.
+    pub fn trigger_power_collapse(&mut self) {
+        let collapse = self.config.collapse.clone();
+        // A bigger swarm takes longer to bring back up and loses more of what
+        // it was holding. Twenty flat seconds stung hardest exactly when the
+        // player could least afford it and stopped registering later.
+        let scale = self.collapse_scale();
+        let shutdown = lerp(
+            collapse.min_shutdown_seconds,
+            collapse.max_shutdown_seconds,
+            scale,
+        );
+        let loss = lerp(collapse.min_data_loss, collapse.max_data_loss, scale).clamp(0.0, 1.0);
+
         self.power_negative_seconds = 0.0;
-        self.power_collapse_cooldown = 120.0;
-        self.power_collapse_shutdown = 20.0;
-        self.research_lock_timer = 30.0;
-        self.collapse_notice_timer = 10.0;
+        self.power_collapse_cooldown = collapse.cooldown_seconds;
+        self.power_collapse_shutdown = shutdown;
+        // Kept so the drones can sag over exactly as long as this one lasts.
+        self.power_collapse_length = shutdown;
+        self.research_lock_timer = shutdown * collapse.research_lock_ratio.max(0.0);
+        self.collapse_notice_timer = collapse.notice_seconds;
 
         // Drones drop cargo and shut down
         for drone in self.drones.drones_mut() {
@@ -454,8 +480,8 @@ impl PlanetState {
         }
 
         // Corrupt data and research progress
-        self.resources.data *= 0.7;
-        self.research.research_progress *= 0.75;
+        self.resources.data *= 1.0 - loss;
+        self.research.research_progress *= 1.0 - loss;
     }
 }
 
@@ -467,6 +493,81 @@ mod tests {
 
     fn state() -> PlanetState {
         PlanetState::new(2, 42, GameConfig::default())
+    }
+
+    /// A world with `count` conduits standing beside the Core, for the
+    /// collapse to have something to be the size of.
+    fn state_with_structures(count: i32) -> PlanetState {
+        let mut state = state();
+        let core = state.grid.find_core().unwrap();
+        state.grid.reveal_around(core, 32);
+        for step in 1..=count {
+            let pos = GridPos::new(core.x + step % 8, core.y + 1 + step / 8);
+            if let Some(tile) = state.grid.get_mut(pos) {
+                tile.terrain = TerrainType::Empty;
+            }
+            state.grid.place_building(pos, BuildingType::Conduit);
+        }
+        state
+    }
+
+    #[test]
+    fn a_small_swarm_is_knocked_down_for_less_time_than_a_large_one() {
+        let mut small = state_with_structures(2);
+        let mut large = state_with_structures(80);
+        assert!(small.collapse_scale() < large.collapse_scale());
+
+        small.trigger_power_collapse();
+        large.trigger_power_collapse();
+
+        assert!(
+            small.power_collapse_shutdown < large.power_collapse_shutdown,
+            "small was down {}s and large {}s",
+            small.power_collapse_shutdown,
+            large.power_collapse_shutdown
+        );
+        assert!(small.research_lock_timer < large.research_lock_timer);
+    }
+
+    #[test]
+    fn the_shutdown_stays_between_the_two_ends_it_was_given() {
+        let config = GameConfig::default();
+        let (min, max) = (
+            config.collapse.min_shutdown_seconds,
+            config.collapse.max_shutdown_seconds,
+        );
+        for count in [0, 1, 30, 80, 400] {
+            let mut state = state_with_structures(count);
+            state.trigger_power_collapse();
+            let down = state.power_collapse_shutdown;
+            assert!(
+                (min..=max).contains(&down),
+                "{} structures went down for {}s",
+                count,
+                down
+            );
+            assert_eq!(state.power_collapse_length, down);
+        }
+    }
+
+    #[test]
+    fn a_bigger_swarm_loses_a_bigger_share_of_what_it_was_holding() {
+        let mut small = state_with_structures(2);
+        let mut large = state_with_structures(80);
+        small.resources.data = 1_000.0;
+        large.resources.data = 1_000.0;
+
+        small.trigger_power_collapse();
+        large.trigger_power_collapse();
+
+        assert!(
+            small.resources.data > large.resources.data,
+            "small kept {} and large kept {}",
+            small.resources.data,
+            large.resources.data
+        );
+        // And neither is wiped out: a collapse is a setback, never a death.
+        assert!(large.resources.data > 0.0);
     }
 
     #[test]
@@ -615,7 +716,9 @@ mod tests {
 
         assert!(state.net_power() < 0.0);
 
-        for _ in 0..70 {
+        // Just past the trigger: the shutdown is short for a base this small,
+        // so running well past it would only prove it had already lifted.
+        for _ in 0..61 {
             state.step(1.0, false);
         }
 
@@ -639,9 +742,18 @@ mod tests {
 
         assert_eq!(state.drones.drones()[0].carrying, 0.0);
         assert_eq!(state.drones.drones()[0].state, DroneState::Error);
-        assert_eq!(state.resources.data, 70.0);
-        assert_eq!(state.research.research_progress, 75.0);
-        assert_eq!(state.power_collapse_cooldown, 120.0);
+        // How much is lost scales with the size of the base, so this pins the
+        // ends rather than one number that moves with the balance.
+        let collapse = &GameConfig::default().collapse;
+        let kept = state.resources.data;
+        assert!(
+            kept < 100.0 * (1.0 - collapse.min_data_loss) + 0.001
+                && kept > 100.0 * (1.0 - collapse.max_data_loss),
+            "a two-building base kept {} of 100 Data",
+            kept
+        );
+        assert_eq!(state.research.research_progress, kept);
+        assert_eq!(state.power_collapse_cooldown, collapse.cooldown_seconds);
     }
 
     #[test]

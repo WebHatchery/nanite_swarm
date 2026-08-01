@@ -740,6 +740,15 @@ impl Game {
                     }
                 }
             }
+            // The banner reports a shutdown that scales with the base, so it
+            // has to be looked at on a base that has some size to it.
+            "collapse" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                let planet = self.campaign.current_mut();
+                planet.resources.data = 400.0;
+                planet.trigger_power_collapse();
+            }
             "congestion" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();
