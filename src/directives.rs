@@ -133,7 +133,7 @@ mod tests {
     #[test]
     fn power_surplus_directive_progresses_only_while_target_is_met() {
         let mut directive = Directive::new(DirectiveKind::PowerSurplus, 5, 100.0, 10.0);
-        let mut state = PlanetState::new("Test", 8, 8, 1, GameConfig::default());
+        let mut state = PlanetState::new(2, 1, GameConfig::default());
         state.power_balance = 10.0;
 
         directive.update(&state, 1.0);
@@ -147,7 +147,7 @@ mod tests {
     #[test]
     fn drill_count_directive_tracks_placed_drills_and_completes() {
         let mut directive = Directive::new(DirectiveKind::DrillCount, 1, 100.0, 10.0);
-        let mut state = PlanetState::new("Test", 8, 8, 1, GameConfig::default());
+        let mut state = PlanetState::new(2, 1, GameConfig::default());
         let core = state.grid.find_core().unwrap();
         let pos = GridPos::new(core.x + 1, core.y);
         state.grid.reveal_around(pos, 1);
@@ -164,7 +164,7 @@ mod tests {
         let mut directive = Directive::new(DirectiveKind::PowerSurplus, 1, 100.0, 10.0);
         directive.completed = true;
         directive.progress = 1;
-        let mut state = PlanetState::new("Test", 8, 8, 1, GameConfig::default());
+        let mut state = PlanetState::new(2, 1, GameConfig::default());
         state.power_balance = -50.0;
 
         directive.update(&state, 1.0);
@@ -175,7 +175,7 @@ mod tests {
     #[test]
     fn duration_counts_down_but_never_below_zero() {
         let mut directive = Directive::new(DirectiveKind::HarvestForest, 5, 2.0, 10.0);
-        let state = PlanetState::new("Test", 8, 8, 1, GameConfig::default());
+        let state = PlanetState::new(2, 1, GameConfig::default());
         directive.update(&state, 1.5);
         assert_eq!(directive.duration, 0.5);
         directive.update(&state, 5.0);

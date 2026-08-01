@@ -350,6 +350,22 @@ impl Game {
                     planet.update_seed_ship(1.0);
                 }
             }
+            "venus" => {
+                self.phase = GamePhase::Playing;
+                self.campaign.colonize(1);
+                self.campaign.travel_to(1);
+                let planet = self.campaign.current_mut();
+                // Everything researched, so the palette shows what this world
+                // refuses rather than what the swarm has not reached yet.
+                for def in &data::game_data().buildings {
+                    if let Some(building_type) = engine::BuildingType::from_id(&def.id) {
+                        planet.unlock_building(building_type);
+                    }
+                }
+                if let Some(core) = planet.grid.find_core() {
+                    planet.grid.reveal_around(core, 12);
+                }
+            }
             "congestion" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();

@@ -38,13 +38,13 @@ A network tile passes `conduit_capacity` drones at full speed; past that they sh
 - Simulate colonized planets in the background (scheduled tick or summary) so left-behind worlds keep producing. `Campaign` holds them all, so the missing piece is a cheap off-screen model, not the plumbing.
 - Turn Mass Drivers into gameplay: a building, export schedules, transit time, and receiving landing pads. The tech now gates Seed Ship launches, so it is no longer a flag that does nothing, but nothing is exported over it yet.
 - Hoist research to the campaign. Every `PlanetState` carries its own `research` copy and only the current planet's is authoritative, kept in step by `sync_research_to_planet` on travel — a left-behind world's stat sheet is stale, which will matter the moment background simulation lands.
-- Give each planet its own generation rules; all five are `PlanetState::new(24, 24, derived_seed)` with difficulty as flavour text. Planet identity is also split between `Campaign::PLANET_NAMES` and the view's `get_planets()`; put it in one data file.
+- Worlds are now defined in `assets/planets.json` (size, terrain weights, banned buildings, arrival line) and the map reads the same file, so identity lives in one place. What is still uniform: every world generates from one flat distribution with a cleared centre, so none of them have landmarks, regions, or a shape worth reading.
 
 ## Planet hazards
 
 - Zone 2 (Venus): acid rain degrading standard conduits, Ceramic Plating and Shield Generator counters, void-heavy volcanic terrain.
 - Zone 3 (Cryo): freeze slowing drones 50%, Heater Nodes along the network, no solar or wind.
-- Add per-planet power constraints (no solar on Venus, infinite geothermal, fusion-only cryo worlds) — this is what makes each planet a distinct puzzle.
+- Per-planet constraints so far are only a ban list — no wind on Venus or Saturn, no harvesters where nothing grows. The positive half is missing: infinite geothermal, fusion-only worlds, generators that only exist somewhere.
 - Add the Heat mechanic the GDD gives Server Banks; water tiles carry a "may provide cooling" comment with no logic behind it.
 
 ## Research
@@ -60,9 +60,9 @@ Techs declare their effects as modifiers in `research.json` (`engine::modifiers`
 - Add production chains: intermediate products, recipes, and processing buildings. A drill now buffers ore until a drone takes it, but everything still lands in one global mineral pool.
 - Grow the building set beyond 10 across processing, logistics, hazard counters, and megastructure parts.
 - Tier the resource set beyond Minerals/Energy/Data/Biomass to support chains and mass-driver strategy.
-- Larger and more varied maps with per-planet generators and landmark features. The camera no longer caps this at 24x24, but terrain generation still draws every world from one distribution.
+- Larger and more varied maps with landmark features. Sizes are per-world data now (20x20 to 26x26) and the camera does not cap them, but the generator has no notion of a feature.
 - Replace the four `tier % 4` directives and four hardcoded achievements with a real objective/milestone system and a full achievement set. The Power Surplus directive still uses one number as both the power threshold and the seconds it must be held, so the two scale together by accident.
-- Write the GDD's "indifferent optimizer" tone into directives, research descriptions, and planet-arrival vignettes; it appears nowhere in game text today.
+- Write the GDD's "indifferent optimizer" tone into directives and research descriptions. Arrival lines have it (`planets.json`), and the Seed Ship stages do; everything else still reads like a spreadsheet.
 
 ## Simulation architecture
 

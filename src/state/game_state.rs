@@ -10,6 +10,11 @@ use macroquad_toolkit::fx::ParticleSystem;
 use macroquad_toolkit::ui::ScrollArea;
 use serde::{Deserialize, Serialize};
 
+/// Saves written before worlds had identities were all the starting world.
+fn default_planet_index() -> usize {
+    2
+}
+
 fn unix_seconds_now() -> i64 {
     (miniquad::date::now() as i64).max(0)
 }
@@ -69,6 +74,9 @@ impl Default for ResearchProgress {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlanetState {
     pub name: String,
+    /// Which campaign slot this world is, so it can find its own definition.
+    #[serde(default = "default_planet_index")]
+    pub planet_index: usize,
     pub resources: Resources,
     pub grid: Grid,
     pub drones: DroneManager,
@@ -86,6 +94,10 @@ pub struct PlanetState {
     pub last_saved_unix: i64,
     pub achievements: Achievements,
     pub unlocked_buildings: Vec<BuildingType>,
+    /// What this world will not let the swarm build at all: no wind where
+    /// there is no wind, no harvesters where nothing grows.
+    #[serde(default)]
+    pub banned_buildings: Vec<BuildingType>,
     /// The megastructure this world is being converted into.
     #[serde(default)]
     pub seed_ship: SeedShip,
@@ -104,6 +116,9 @@ pub struct PlanetState {
     pub research_lock_timer: f32,
     #[serde(skip, default)]
     pub collapse_notice_timer: f32,
+    /// Counts down while the arrival line for this world is on screen.
+    #[serde(skip, default)]
+    pub arrival_notice_timer: f32,
     #[serde(skip, default)]
     pub forest_harvested_count: i32,
     #[serde(skip, default)]
@@ -148,8 +163,12 @@ pub struct PlanetState {
 }
 
 impl PlanetState {
-    pub fn new(name: &str, width: u32, height: u32, seed: u64, config: GameConfig) -> Self {
-        let mut grid = Grid::new_with_terrain(width, height, seed);
+    /// Build the world at campaign slot `planet_index`, from its entry in
+    /// `assets/planets.json`.
+    pub fn new(planet_index: usize, seed: u64, config: GameConfig) -> Self {
+        let def = crate::data::game_data().planet(planet_index);
+        let (name, width, height) = (def.name.as_str(), def.width, def.height);
+        let mut grid = Grid::new_with_terrain(width, height, seed, &def.terrain);
         grid.initialize_forest_biomass(config.resources.forest_biomass);
 
         // Place Core at center
@@ -168,6 +187,7 @@ impl PlanetState {
 
         let mut state = Self {
             name: name.to_string(),
+            planet_index,
             resources: Resources {
                 energy: config.resources.starting_energy,
                 minerals: config.resources.starting_minerals,
@@ -195,11 +215,17 @@ impl PlanetState {
             power_collapse_shutdown: 0.0,
             research_lock_timer: 0.0,
             collapse_notice_timer: 0.0,
+            arrival_notice_timer: 0.0,
             forest_harvested_count: 0,
             tutorial_step: 0,
             tutorial_hidden: false,
             tutorial_done: false,
             unlocked_buildings,
+            banned_buildings: def
+                .banned_buildings
+                .iter()
+                .filter_map(|id| BuildingType::from_id(id))
+                .collect(),
             seed_ship: SeedShip::default(),
             last_offline_seconds: 0.0,
             last_offline_simulated: 0.0,
@@ -241,7 +267,7 @@ impl PlanetState {
 
 impl Default for PlanetState {
     fn default() -> Self {
-        Self::new("Mars", 24, 24, 42, GameConfig::default())
+        Self::new(2, 42, GameConfig::default())
     }
 }
 

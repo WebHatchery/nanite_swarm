@@ -148,7 +148,7 @@ mod tests {
     #[test]
     fn an_unversioned_single_planet_save_still_loads() {
         // Exactly what version 0 wrote: a bare PlanetState.
-        let planet = PlanetState::new("Mars", 8, 8, 3, GameConfig::default());
+        let planet = PlanetState::new(2, 3, GameConfig::default());
         let json = serde_json::to_string(&planet).unwrap();
 
         let loaded = load_from_json(&json).unwrap();

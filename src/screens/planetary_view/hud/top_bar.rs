@@ -201,6 +201,25 @@ pub(super) fn draw(
         );
     }
 
+    if state.arrival_notice_timer > 0.0 {
+        let banner_w = 620.0;
+        let banner_h = 36.0;
+        let banner_x = (screen_w - banner_w) * 0.5;
+        let banner_y = metrics.top_bar_height + 6.0;
+        draw_hud_panel(
+            theme,
+            Rect::new(banner_x, banner_y, banner_w, banner_h),
+            None,
+        );
+        draw_ui_text(
+            state.arrival_line(),
+            banner_x + 16.0,
+            banner_y + 24.0,
+            13.0,
+            primary_soft,
+        );
+    }
+
     if state.collapse_notice_timer > 0.0 {
         let banner_w = 520.0;
         let banner_h = 36.0;

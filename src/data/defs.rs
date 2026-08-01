@@ -124,6 +124,40 @@ pub struct SeedShipData {
     pub stages: Vec<SeedShipStageDef>,
 }
 
+/// Share of a world's tiles given over to each non-empty terrain. Whatever is
+/// left over is open ground.
+#[derive(Debug, Clone, Copy, Default, Deserialize)]
+pub struct TerrainWeights {
+    pub mountain: f32,
+    pub forest: f32,
+    pub water: f32,
+    pub void: f32,
+}
+
+/// One world in the solar campaign: how it generates, how it looks on the map,
+/// and what it refuses to let the swarm build.
+#[derive(Debug, Clone, Deserialize)]
+pub struct PlanetDef {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub difficulty: String,
+    pub width: u32,
+    pub height: u32,
+    pub orbit_radius: f32,
+    pub size: f32,
+    pub color: [f32; 4],
+    pub terrain: TerrainWeights,
+    #[serde(default)]
+    pub banned_buildings: Vec<String>,
+    pub arrival: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct PlanetDataFile {
+    pub planets: Vec<PlanetDef>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct BuildingDataFile {
     pub buildings: Vec<BuildingDef>,
@@ -142,6 +176,7 @@ pub struct GameData {
     pub terrain_by_id: HashMap<String, TerrainDef>,
     pub research: ResearchData,
     pub seed_ship: SeedShipData,
+    pub planets: Vec<PlanetDef>,
 }
 
 impl GameData {
@@ -155,12 +190,15 @@ impl GameData {
             .unwrap_or_else(|_| include_str!("../../assets/research.json").to_string());
         let seed_ship_json = fs::read_to_string("assets/seed_ship.json")
             .unwrap_or_else(|_| include_str!("../../assets/seed_ship.json").to_string());
+        let planets_json = fs::read_to_string("assets/planets.json")
+            .unwrap_or_else(|_| include_str!("../../assets/planets.json").to_string());
 
         Self::from_json_strings(
             &buildings_json,
             &terrain_json,
             &research_json,
             &seed_ship_json,
+            &planets_json,
         )
     }
 
@@ -178,12 +216,16 @@ impl GameData {
         let seed_ship_json = load_string("assets/seed_ship.json")
             .await
             .unwrap_or_else(|_| include_str!("../../assets/seed_ship.json").to_string());
+        let planets_json = load_string("assets/planets.json")
+            .await
+            .unwrap_or_else(|_| include_str!("../../assets/planets.json").to_string());
 
         Self::from_json_strings(
             &buildings_json,
             &terrain_json,
             &research_json,
             &seed_ship_json,
+            &planets_json,
         )
     }
 
@@ -192,6 +234,7 @@ impl GameData {
         terrain_json: &str,
         research_json: &str,
         seed_ship_json: &str,
+        planets_json: &str,
     ) -> Self {
         let building_file: BuildingDataFile =
             load_json(buildings_json).unwrap_or_else(|_| BuildingDataFile { buildings: vec![] });
@@ -217,6 +260,9 @@ impl GameData {
             stages: vec![],
         });
 
+        let planet_file: PlanetDataFile =
+            load_json(planets_json).unwrap_or_else(|_| PlanetDataFile { planets: vec![] });
+
         let mut buildings_by_id = HashMap::new();
         for def in &building_file.buildings {
             buildings_by_id.insert(def.id.clone(), def.clone());
@@ -234,6 +280,7 @@ impl GameData {
             terrain_by_id,
             research,
             seed_ship,
+            planets: planet_file.planets,
         }
     }
 
@@ -241,6 +288,13 @@ impl GameData {
         self.buildings_by_id
             .get(id)
             .unwrap_or_else(|| panic!("Missing building def for id: {}", id))
+    }
+
+    /// The world at this campaign slot.
+    pub fn planet(&self, index: usize) -> &PlanetDef {
+        self.planets
+            .get(index)
+            .unwrap_or_else(|| panic!("Missing planet def for index: {}", index))
     }
 
     pub fn terrain(&self, id: &str) -> &TerrainDef {
@@ -276,11 +330,18 @@ mod tests {
              "harvest_rewards": {"minerals": 0.0, "biomass": 0.0}, "harvested_to": "empty",
              "preservation_bonus": null, "texture": "t", "color": [0.1, 0.1, 0.1, 1.0]}
         ]}"#;
+        let planets_json = r#"{"planets": []}"#;
         let seed_ship_json = r#"{"intake_per_second": {"minerals": 1.0, "data": 1.0, "biomass": 1.0}, "stages": []}"#;
         let research_json = r#"{"starting_unlocked": ["core"], "nodes": [
             {"id": "core", "name": "Core", "description": "d", "data_cost": 0.0, "prerequisites": [], "position": [0.0, 0.0]}
         ]}"#;
-        GameData::from_json_strings(buildings_json, terrain_json, research_json, seed_ship_json)
+        GameData::from_json_strings(
+            buildings_json,
+            terrain_json,
+            research_json,
+            seed_ship_json,
+            planets_json,
+        )
     }
 
     #[test]
@@ -294,7 +355,8 @@ mod tests {
 
     #[test]
     fn from_json_strings_falls_back_to_empty_on_malformed_json() {
-        let data = GameData::from_json_strings("not json", "not json", "not json", "not json");
+        let data =
+            GameData::from_json_strings("not json", "not json", "not json", "not json", "not json");
         assert!(data.buildings.is_empty());
         assert!(data.terrain.is_empty());
         // Research falls back to a minimal starting set rather than an empty tree.

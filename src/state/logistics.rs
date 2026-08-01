@@ -262,7 +262,7 @@ mod tests {
 
     /// A Core with a conduit run east and a drill at the far end of it.
     fn state_with_run(length: i32) -> (PlanetState, GridPos, GridPos) {
-        let mut state = PlanetState::new("Test", 24, 24, 42, GameConfig::default());
+        let mut state = PlanetState::new(2, 42, GameConfig::default());
         let core = state.grid.find_core().unwrap();
         state.grid.reveal_around(core, 24);
         state.resources.minerals = 10_000.0;

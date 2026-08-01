@@ -1,5 +1,6 @@
 //! The game grid: construction, placement, and spatial queries
 
+use crate::data::TerrainWeights;
 use macroquad_toolkit::grid::bfs_path as toolkit_bfs_path;
 use macroquad_toolkit::rng::SeededRng;
 use serde::{Deserialize, Serialize};
@@ -33,14 +34,24 @@ impl Grid {
         }
     }
 
-    /// Create a grid with procedural terrain
-    pub fn new_with_terrain(width: u32, height: u32, seed: u64) -> Self {
+    /// Create a grid with procedural terrain from a world's terrain weights.
+    ///
+    /// Each weight is the share of tiles that terrain takes; whatever is left
+    /// over is open ground, which is what makes one world a forest and another
+    /// a field of holes.
+    pub fn new_with_terrain(width: u32, height: u32, seed: u64, weights: &TerrainWeights) -> Self {
         let mut rng = TerrainRng::new(seed);
         let size = (width * height) as usize;
         let mut tiles = Vec::with_capacity(size);
 
         let center_x = width as i32 / 2;
         let center_y = height as i32 / 2;
+
+        // Cumulative thresholds, so a roll lands in exactly one band.
+        let mountain = weights.mountain.max(0.0);
+        let forest = mountain + weights.forest.max(0.0);
+        let water = forest + weights.water.max(0.0);
+        let void = water + weights.void.max(0.0);
 
         for i in 0..size {
             let pos = GridPos::from_index(i, width);
@@ -51,16 +62,16 @@ impl Grid {
                 TerrainType::Empty // Clear area around Core
             } else {
                 let roll: f32 = rng.next_f32();
-                if roll < 0.6 {
-                    TerrainType::Empty
-                } else if roll < 0.75 {
+                if roll < mountain {
                     TerrainType::Mountain
-                } else if roll < 0.9 {
+                } else if roll < forest {
                     TerrainType::Forest
-                } else if roll < 0.95 {
+                } else if roll < water {
                     TerrainType::Water
-                } else {
+                } else if roll < void {
                     TerrainType::Void
+                } else {
+                    TerrainType::Empty
                 }
             };
 
@@ -308,9 +319,18 @@ mod tests {
         assert!(grid.get(GridPos::new(4, 0)).is_none());
     }
 
+    fn weights(mountain: f32, forest: f32, water: f32, void: f32) -> TerrainWeights {
+        TerrainWeights {
+            mountain,
+            forest,
+            water,
+            void,
+        }
+    }
+
     #[test]
     fn new_with_terrain_clears_and_reveals_around_center() {
-        let grid = Grid::new_with_terrain(20, 20, 42);
+        let grid = Grid::new_with_terrain(20, 20, 42, &weights(0.15, 0.15, 0.05, 0.05));
         let center = GridPos::new(10, 10);
         let tile = grid.get(center).unwrap();
         assert_eq!(tile.terrain, TerrainType::Empty);

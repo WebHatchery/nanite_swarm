@@ -156,41 +156,48 @@ fn draw_build_row(
         color_from_rgba(&theme.colors.error)
     };
 
-    draw_ui_text(
-        &minerals_text,
-        name_x,
-        cost_y,
-        theme.typography.small,
-        mineral_value_color,
-    );
-    let minerals_width =
-        measure_ui_text(&minerals_text, None, theme.typography.small as u16, 1.0).width;
-    draw_ui_text(
-        &energy_text,
-        name_x + minerals_width + 12.0,
-        cost_y,
-        theme.typography.small,
-        energy_value_color,
-    );
-
-    let power_text = format!("P {}", format_power_delta(building_type.power_delta()));
-    let power_width = measure_ui_text(&power_text, None, theme.typography.small as u16, 1.0).width;
-    draw_ui_text(
-        &power_text,
-        x + width - power_width - 8.0,
-        cost_y,
-        theme.typography.small,
-        accent,
-    );
-
-    if !unlocked {
+    if unlocked {
         draw_ui_text(
-            "LOCKED",
+            &minerals_text,
             name_x,
-            y + height - 8.0,
+            cost_y,
             theme.typography.small,
-            color_from_rgba(&theme.colors.warning),
+            mineral_value_color,
         );
+        let minerals_width =
+            measure_ui_text(&minerals_text, None, theme.typography.small as u16, 1.0).width;
+        draw_ui_text(
+            &energy_text,
+            name_x + minerals_width + 12.0,
+            cost_y,
+            theme.typography.small,
+            energy_value_color,
+        );
+
+        let power_text = format!("P {}", format_power_delta(building_type.power_delta()));
+        let power_width =
+            measure_ui_text(&power_text, None, theme.typography.small as u16, 1.0).width;
+        draw_ui_text(
+            &power_text,
+            x + width - power_width - 8.0,
+            cost_y,
+            theme.typography.small,
+            accent,
+        );
+    } else {
+        // The cost is beside the point when the building cannot be placed at
+        // all; say why instead. A world that refuses a building is a different
+        // problem from one the swarm has not researched yet, and the player can
+        // only fix one of them.
+        let (label, label_color) = if state.is_building_banned(building_type) {
+            (
+                "UNAVAILABLE ON THIS WORLD",
+                color_from_rgba(&theme.colors.error),
+            )
+        } else {
+            ("LOCKED", color_from_rgba(&theme.colors.warning))
+        };
+        draw_ui_text(label, name_x, cost_y, theme.typography.small, label_color);
     }
 
     if unlocked && hovered && is_mouse_button_pressed(MouseButton::Left) {
@@ -248,7 +255,9 @@ pub(super) fn draw(
         let Some(building) = BuildingType::from_id(&def.id) else {
             continue;
         };
-        if !state.is_building_unlocked(building) {
+        // Banned buildings stay on the list once researched, greyed out: the
+        // constraint is the puzzle, so hiding it hides the puzzle.
+        if !state.is_building_researched(building) {
             continue;
         }
         visible_buildings.push(building);

@@ -13,12 +13,12 @@ use crate::directives::{pick_directive, Directive};
 use super::game_state::PlanetState;
 
 pub const PLANET_COUNT: usize = 5;
-pub const PLANET_NAMES: [&str; PLANET_COUNT] = ["Mercury", "Venus", "Mars", "Jupiter", "Saturn"];
 /// Mars, per the GDD's Zone 1.
 pub const STARTING_PLANET: usize = 2;
 
-const PLANET_SIZE: u32 = 24;
 const DIRECTIVE_ROTATION_SECONDS: f32 = 600.0;
+/// How long a world's arrival line stays on screen.
+const ARRIVAL_NOTICE_SECONDS: f32 = 10.0;
 
 /// Every planet the swarm holds, plus which one it is currently standing on.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,13 +64,7 @@ impl Campaign {
     fn generate(&self, index: usize, config: &GameConfig) -> PlanetState {
         // Derived from the campaign seed so a campaign replays identically.
         let planet_seed = self.seed ^ (index as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
-        PlanetState::new(
-            PLANET_NAMES[index],
-            PLANET_SIZE,
-            PLANET_SIZE,
-            planet_seed,
-            config.clone(),
-        )
+        PlanetState::new(index, planet_seed, config.clone())
     }
 
     pub fn current_index(&self) -> usize {
@@ -131,6 +125,7 @@ impl Campaign {
         }
         self.current_mut().seed_ship.mark_launched();
         self.current = target;
+        self.current_mut().arrival_notice_timer = ARRIVAL_NOTICE_SECONDS;
         true
     }
 
@@ -141,6 +136,7 @@ impl Campaign {
             return false;
         }
         self.current = index;
+        self.current_mut().arrival_notice_timer = ARRIVAL_NOTICE_SECONDS;
         true
     }
 
@@ -243,6 +239,82 @@ mod tests {
         assert!(!campaign.colonize(4));
         campaign.travel_to(4);
         assert_eq!(campaign.current().resources.minerals, 77.0);
+    }
+
+    #[test]
+    fn every_world_is_built_from_its_own_entry_in_the_data() {
+        let mut campaign = campaign();
+        for index in 0..PLANET_COUNT {
+            campaign.colonize(index);
+        }
+        for index in 0..PLANET_COUNT {
+            campaign.travel_to(index);
+            let def = crate::data::game_data().planet(index);
+            let planet = campaign.current();
+            assert_eq!(planet.name, def.name);
+            assert_eq!(planet.grid.width, def.width);
+            assert_eq!(planet.grid.height, def.height);
+        }
+    }
+
+    #[test]
+    fn a_world_can_refuse_a_building_research_has_already_unlocked() {
+        let mut campaign = campaign();
+        campaign.colonize(1); // Venus: no wind, nothing to burn.
+        campaign.travel_to(1);
+
+        let planet = campaign.current_mut();
+        planet.unlock_building(BuildingType::WindTurbine);
+        planet.unlock_building(BuildingType::Drill);
+
+        assert!(planet.is_building_banned(BuildingType::WindTurbine));
+        assert!(!planet.is_building_unlocked(BuildingType::WindTurbine));
+        // Everything else it has researched still works.
+        assert!(planet.is_building_unlocked(BuildingType::Drill));
+
+        // And it cannot be selected, let alone built.
+        planet.select_building(BuildingType::WindTurbine);
+        assert_ne!(planet.selected_building, Some(BuildingType::WindTurbine));
+    }
+
+    #[test]
+    fn arriving_somewhere_says_what_the_world_is() {
+        let mut campaign = campaign();
+        assert_eq!(campaign.current().arrival_notice_timer, 0.0);
+
+        campaign.colonize(0);
+        assert!(campaign.travel_to(0));
+
+        let planet = campaign.current();
+        assert!(planet.arrival_notice_timer > 0.0);
+        assert_eq!(
+            planet.arrival_line(),
+            crate::data::game_data().planet(0).arrival
+        );
+        assert!(!planet.arrival_line().is_empty());
+    }
+
+    #[test]
+    fn worlds_differ_in_what_they_are_made_of() {
+        let mut campaign = campaign();
+        campaign.colonize(0);
+
+        let count_forest = |campaign: &Campaign| {
+            campaign
+                .current()
+                .grid
+                .iter_tiles()
+                .filter(|(_, tile)| tile.terrain == crate::engine::TerrainType::Forest)
+                .count()
+        };
+
+        // Mars has forests in its weights; Mercury has none at all.
+        let mars = count_forest(&campaign);
+        campaign.travel_to(0);
+        let mercury = count_forest(&campaign);
+
+        assert!(mars > 0, "Mars generated no forest");
+        assert_eq!(mercury, 0, "Mercury generated forest it has no weight for");
     }
 
     #[test]

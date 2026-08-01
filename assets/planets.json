@@ -1,0 +1,74 @@
+{
+  "planets": [
+    {
+      "id": "mercury",
+      "name": "Mercury",
+      "description": "Scorched world rich in metals",
+      "difficulty": "Hard - Extreme temperatures",
+      "width": 20,
+      "height": 20,
+      "orbit_radius": 80.0,
+      "size": 8.0,
+      "color": [0.6, 0.6, 0.6, 1.0],
+      "terrain": { "mountain": 0.30, "forest": 0.0, "water": 0.0, "void": 0.10 },
+      "banned_buildings": ["biomass_harvester"],
+      "arrival": "No water, no growth, no argument. The crust is ore that has not been collected yet."
+    },
+    {
+      "id": "venus",
+      "name": "Venus",
+      "description": "Thick atmosphere, volcanic",
+      "difficulty": "Hard - Corrosive atmosphere",
+      "width": 22,
+      "height": 22,
+      "orbit_radius": 120.0,
+      "size": 11.0,
+      "color": [0.9, 0.7, 0.3, 1.0],
+      "terrain": { "mountain": 0.10, "forest": 0.0, "water": 0.0, "void": 0.28 },
+      "banned_buildings": ["wind_turbine", "biomass_harvester"],
+      "arrival": "The sky is opaque and the ground is broken. Neither is a problem worth solving, only routing around."
+    },
+    {
+      "id": "mars",
+      "name": "Mars",
+      "description": "Red planet with polar ice caps",
+      "difficulty": "Normal - Starting world",
+      "width": 24,
+      "height": 24,
+      "orbit_radius": 170.0,
+      "size": 10.0,
+      "color": [0.8, 0.4, 0.3, 1.0],
+      "terrain": { "mountain": 0.15, "forest": 0.15, "water": 0.05, "void": 0.05 },
+      "banned_buildings": [],
+      "arrival": "Iron oxide, thin wind, and nothing that objects. A reasonable place to start."
+    },
+    {
+      "id": "jupiter",
+      "name": "Jupiter",
+      "description": "Gas giant with many moons",
+      "difficulty": "Medium - Moon colonization",
+      "width": 26,
+      "height": 26,
+      "orbit_radius": 240.0,
+      "size": 18.0,
+      "color": [0.8, 0.6, 0.4, 1.0],
+      "terrain": { "mountain": 0.08, "forest": 0.05, "water": 0.20, "void": 0.15 },
+      "banned_buildings": [],
+      "arrival": "A moon, strictly. The distinction matters to astronomers and to nobody here."
+    },
+    {
+      "id": "saturn",
+      "name": "Saturn",
+      "description": "Ringed giant, resource-rich moons",
+      "difficulty": "Medium - Distant orbit",
+      "width": 26,
+      "height": 26,
+      "orbit_radius": 310.0,
+      "size": 16.0,
+      "color": [0.9, 0.8, 0.5, 1.0],
+      "terrain": { "mountain": 0.10, "forest": 0.20, "water": 0.15, "void": 0.10 },
+      "banned_buildings": ["wind_turbine"],
+      "arrival": "Cold enough that the machinery complains. The complaints are logged and ignored."
+    }
+  ]
+}

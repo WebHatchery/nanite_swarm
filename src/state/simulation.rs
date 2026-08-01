@@ -74,6 +74,9 @@ impl PlanetState {
         if self.collapse_notice_timer > 0.0 {
             self.collapse_notice_timer = (self.collapse_notice_timer - delta_time).max(0.0);
         }
+        if self.arrival_notice_timer > 0.0 {
+            self.arrival_notice_timer = (self.arrival_notice_timer - delta_time).max(0.0);
+        }
 
         // Update drones
         if self.power_collapse_shutdown <= 0.0 {
@@ -354,7 +357,7 @@ mod tests {
     use crate::engine::GridPos;
 
     fn state() -> PlanetState {
-        PlanetState::new("Test", 24, 24, 42, GameConfig::default())
+        PlanetState::new(2, 42, GameConfig::default())
     }
 
     #[test]

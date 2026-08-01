@@ -1,84 +1,13 @@
 //! Solar system overview screen
 
-use crate::ui::{draw_button_sized, draw_panel, Colors, Dimensions};
+use crate::ui::{color_from_rgba, draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::draw_ui_text;
 
-/// Planet data for the solar system
-#[derive(Debug, Clone)]
-pub struct PlanetInfo {
-    pub name: &'static str,
-    pub orbit_radius: f32,
-    pub color: Color,
-    pub size: f32,
-    pub description: &'static str,
-    pub difficulty: &'static str,
-}
-
-impl PlanetInfo {
-    const fn new(
-        name: &'static str,
-        orbit_radius: f32,
-        color: Color,
-        size: f32,
-        description: &'static str,
-        difficulty: &'static str,
-    ) -> Self {
-        Self {
-            name,
-            orbit_radius,
-            color,
-            size,
-            description,
-            difficulty,
-        }
-    }
-}
-
-/// Get the default planet data
-pub fn get_planets() -> [PlanetInfo; 5] {
-    [
-        PlanetInfo::new(
-            "Mercury",
-            80.0,
-            Color::new(0.6, 0.6, 0.6, 1.0),
-            8.0,
-            "Scorched world rich in metals",
-            "Hard - Extreme temperatures",
-        ),
-        PlanetInfo::new(
-            "Venus",
-            120.0,
-            Color::new(0.9, 0.7, 0.3, 1.0),
-            11.0,
-            "Thick atmosphere, volcanic",
-            "Hard - Corrosive atmosphere",
-        ),
-        PlanetInfo::new(
-            "Mars",
-            170.0,
-            Color::new(0.8, 0.4, 0.3, 1.0),
-            10.0,
-            "Red planet with polar ice caps",
-            "Normal - Starting world",
-        ),
-        PlanetInfo::new(
-            "Jupiter",
-            240.0,
-            Color::new(0.8, 0.6, 0.4, 1.0),
-            18.0,
-            "Gas giant with many moons",
-            "Medium - Moon colonization",
-        ),
-        PlanetInfo::new(
-            "Saturn",
-            310.0,
-            Color::new(0.9, 0.8, 0.5, 1.0),
-            16.0,
-            "Ringed giant, resource-rich moons",
-            "Medium - Distant orbit",
-        ),
-    ]
+/// Planet identity comes from `assets/planets.json`, so the map and the world
+/// the swarm lands on can never drift apart.
+fn planets() -> &'static [crate::data::PlanetDef] {
+    &crate::data::game_data().planets
 }
 
 /// Actions from the interplanetary view
@@ -138,7 +67,7 @@ pub fn render_interplanetary_view(
     draw_circle(center_x, center_y, 45.0, Color::new(1.0, 0.7, 0.1, 0.3));
     draw_circle(center_x, center_y, 40.0, Colors::WARNING);
 
-    let planets = get_planets();
+    let planets = planets();
     let mut hovered_planet: Option<usize> = None;
     let mut action = InterplanetaryAction::None;
 
@@ -166,7 +95,7 @@ pub fn render_interplanetary_view(
         } else {
             Colors::TEXT_DIM
         };
-        draw_ui_text(planet.name, list_x + 12.0, list_row_y, 13.0, label_color);
+        draw_ui_text(&planet.name, list_x + 12.0, list_row_y, 13.0, label_color);
         list_row_y += 20.0;
     }
 
@@ -204,7 +133,7 @@ pub fn render_interplanetary_view(
         }
 
         // Draw planet
-        draw_circle(px, py, planet_size, planet.color);
+        draw_circle(px, py, planet_size, color_from_rgba(&planet.color));
 
         // Hover highlight
         if is_hovered {
@@ -223,7 +152,7 @@ pub fn render_interplanetary_view(
             Colors::TEXT_DIM
         };
         draw_ui_text(
-            planet.name,
+            &planet.name,
             px - 20.0,
             py + planet_size + 15.0,
             12.0,
@@ -244,21 +173,21 @@ pub fn render_interplanetary_view(
         draw_panel(panel_x, panel_y, panel_w, panel_h);
 
         draw_ui_text(
-            planet.name,
+            &planet.name,
             panel_x + 15.0,
             panel_y + 30.0,
             20.0,
-            planet.color,
+            color_from_rgba(&planet.color),
         );
         draw_ui_text(
-            planet.description,
+            &planet.description,
             panel_x + 15.0,
             panel_y + 55.0,
             13.0,
             Colors::TEXT,
         );
         draw_ui_text(
-            planet.difficulty,
+            &planet.difficulty,
             panel_x + 15.0,
             panel_y + 75.0,
             12.0,

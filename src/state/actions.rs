@@ -193,7 +193,7 @@ mod tests {
     use crate::data::GameConfig;
 
     fn state() -> PlanetState {
-        PlanetState::new("Test", 24, 24, 42, GameConfig::default())
+        PlanetState::new(2, 42, GameConfig::default())
     }
 
     #[test]

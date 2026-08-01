@@ -20,8 +20,20 @@ impl PlanetState {
     }
 
     pub fn is_building_unlocked(&self, building_type: BuildingType) -> bool {
+        self.is_building_researched(building_type) && !self.is_building_banned(building_type)
+    }
+
+    /// Research has opened this building up, whether or not this particular
+    /// world will accept it.
+    pub fn is_building_researched(&self, building_type: BuildingType) -> bool {
         matches!(building_type, BuildingType::Core)
             || self.unlocked_buildings.contains(&building_type)
+    }
+
+    /// This world refuses the building outright, however much research the
+    /// swarm has done.
+    pub fn is_building_banned(&self, building_type: BuildingType) -> bool {
+        self.banned_buildings.contains(&building_type)
     }
 
     pub fn unlock_building(&mut self, building_type: BuildingType) {
@@ -54,6 +66,14 @@ impl PlanetState {
 
     pub fn net_power(&self) -> f32 {
         self.power_generation() - self.power_consumption()
+    }
+
+    /// What this world has to say for itself, shown on arrival.
+    pub fn arrival_line(&self) -> &'static str {
+        crate::data::game_data()
+            .planet(self.planet_index)
+            .arrival
+            .as_str()
     }
 
     pub fn battery_time_left(&self) -> (i32, i32) {

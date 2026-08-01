@@ -181,7 +181,7 @@ mod tests {
     use crate::data::GameConfig;
 
     fn state() -> PlanetState {
-        let mut state = PlanetState::new("Test", 24, 24, 42, GameConfig::default());
+        let mut state = PlanetState::new(2, 42, GameConfig::default());
         state.config.resources.base_mineral_cap = 100_000.0;
         state.resources.minerals = 10_000.0;
         state.resources.data = 10_000.0;
