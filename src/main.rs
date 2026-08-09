@@ -571,12 +571,14 @@ async fn main() {
     // simulate deterministic frames, write a PNG, and exit. Each render_*
     // screen function clears its own background, so there is nothing extra
     // to move into the closure.
-    if let Some(config) = capture::CaptureConfig::from_env("NANITE_SWARM") {
-        game.begin_capture_scene(&config.scene);
-        capture::run_capture(&config, |_dt| {
-            game.update();
-        })
-        .await;
+    if let Some(configs) = capture::CaptureConfig::all_from_env("NANITE_SWARM") {
+        for config in configs {
+            game.begin_capture_scene(&config.scene);
+            capture::run_capture_once(&config, |_dt| {
+                game.update();
+            })
+            .await;
+        }
         return;
     }
 
