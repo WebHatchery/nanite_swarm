@@ -385,24 +385,34 @@ pub struct GameData {
 impl GameData {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn load() -> Self {
-        let buildings_json = fs::read_to_string("assets/buildings.json")
-            .unwrap_or_else(|_| include_str!("../../assets/buildings.json").to_string());
-        let terrain_json = fs::read_to_string("assets/terrain.json")
-            .unwrap_or_else(|_| include_str!("../../assets/terrain.json").to_string());
-        let research_json = fs::read_to_string("assets/research.json")
-            .unwrap_or_else(|_| include_str!("../../assets/research.json").to_string());
-        let seed_ship_json = fs::read_to_string("assets/seed_ship.json")
-            .unwrap_or_else(|_| include_str!("../../assets/seed_ship.json").to_string());
-        let planets_json = fs::read_to_string("assets/planets.json")
-            .unwrap_or_else(|_| include_str!("../../assets/planets.json").to_string());
-        let tutorial_json = fs::read_to_string("assets/tutorial.json")
-            .unwrap_or_else(|_| include_str!("../../assets/tutorial.json").to_string());
-        let directives_json = fs::read_to_string("assets/directives.json")
-            .unwrap_or_else(|_| include_str!("../../assets/directives.json").to_string());
-        let achievements_json = fs::read_to_string("assets/achievements.json")
-            .unwrap_or_else(|_| include_str!("../../assets/achievements.json").to_string());
-        let core_stages_json = fs::read_to_string("assets/core_stages.json")
-            .unwrap_or_else(|_| include_str!("../../assets/core_stages.json").to_string());
+        let buildings_json = fs::read_to_string("assets/buildings.json").unwrap_or_else(|_| {
+            macroquad_toolkit::include_json_str!("../../assets/buildings.json").to_string()
+        });
+        let terrain_json = fs::read_to_string("assets/terrain.json").unwrap_or_else(|_| {
+            macroquad_toolkit::include_json_str!("../../assets/terrain.json").to_string()
+        });
+        let research_json = fs::read_to_string("assets/research.json").unwrap_or_else(|_| {
+            macroquad_toolkit::include_json_str!("../../assets/research.json").to_string()
+        });
+        let seed_ship_json = fs::read_to_string("assets/seed_ship.json").unwrap_or_else(|_| {
+            macroquad_toolkit::include_json_str!("../../assets/seed_ship.json").to_string()
+        });
+        let planets_json = fs::read_to_string("assets/planets.json").unwrap_or_else(|_| {
+            macroquad_toolkit::include_json_str!("../../assets/planets.json").to_string()
+        });
+        let tutorial_json = fs::read_to_string("assets/tutorial.json").unwrap_or_else(|_| {
+            macroquad_toolkit::include_json_str!("../../assets/tutorial.json").to_string()
+        });
+        let directives_json = fs::read_to_string("assets/directives.json").unwrap_or_else(|_| {
+            macroquad_toolkit::include_json_str!("../../assets/directives.json").to_string()
+        });
+        let achievements_json =
+            fs::read_to_string("assets/achievements.json").unwrap_or_else(|_| {
+                macroquad_toolkit::include_json_str!("../../assets/achievements.json").to_string()
+            });
+        let core_stages_json = fs::read_to_string("assets/core_stages.json").unwrap_or_else(|_| {
+            macroquad_toolkit::include_json_str!("../../assets/core_stages.json").to_string()
+        });
 
         Self::from_json_strings(
             &buildings_json,
@@ -421,31 +431,49 @@ impl GameData {
     pub async fn load_async() -> Self {
         let buildings_json = load_string("assets/buildings.json")
             .await
-            .unwrap_or_else(|_| include_str!("../../assets/buildings.json").to_string());
+            .unwrap_or_else(|_| {
+                macroquad_toolkit::include_json_str!("../../assets/buildings.json").to_string()
+            });
         let terrain_json = load_string("assets/terrain.json")
             .await
-            .unwrap_or_else(|_| include_str!("../../assets/terrain.json").to_string());
+            .unwrap_or_else(|_| {
+                macroquad_toolkit::include_json_str!("../../assets/terrain.json").to_string()
+            });
         let research_json = load_string("assets/research.json")
             .await
-            .unwrap_or_else(|_| include_str!("../../assets/research.json").to_string());
+            .unwrap_or_else(|_| {
+                macroquad_toolkit::include_json_str!("../../assets/research.json").to_string()
+            });
         let seed_ship_json = load_string("assets/seed_ship.json")
             .await
-            .unwrap_or_else(|_| include_str!("../../assets/seed_ship.json").to_string());
+            .unwrap_or_else(|_| {
+                macroquad_toolkit::include_json_str!("../../assets/seed_ship.json").to_string()
+            });
         let planets_json = load_string("assets/planets.json")
             .await
-            .unwrap_or_else(|_| include_str!("../../assets/planets.json").to_string());
+            .unwrap_or_else(|_| {
+                macroquad_toolkit::include_json_str!("../../assets/planets.json").to_string()
+            });
         let directives_json = load_string("assets/directives.json")
             .await
-            .unwrap_or_else(|_| include_str!("../../assets/directives.json").to_string());
+            .unwrap_or_else(|_| {
+                macroquad_toolkit::include_json_str!("../../assets/directives.json").to_string()
+            });
         let achievements_json = load_string("assets/achievements.json")
             .await
-            .unwrap_or_else(|_| include_str!("../../assets/achievements.json").to_string());
+            .unwrap_or_else(|_| {
+                macroquad_toolkit::include_json_str!("../../assets/achievements.json").to_string()
+            });
         let core_stages_json = load_string("assets/core_stages.json")
             .await
-            .unwrap_or_else(|_| include_str!("../../assets/core_stages.json").to_string());
+            .unwrap_or_else(|_| {
+                macroquad_toolkit::include_json_str!("../../assets/core_stages.json").to_string()
+            });
         let tutorial_json = load_string("assets/tutorial.json")
             .await
-            .unwrap_or_else(|_| include_str!("../../assets/tutorial.json").to_string());
+            .unwrap_or_else(|_| {
+                macroquad_toolkit::include_json_str!("../../assets/tutorial.json").to_string()
+            });
 
         Self::from_json_strings(
             &buildings_json,
@@ -638,79 +666,4 @@ impl GameData {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn sample_data() -> GameData {
-        let buildings_json = r#"{"buildings": [
-            {"id": "core", "name": "Core", "description": "d", "cost": {"minerals": 0.0, "energy": 0.0},
-             "power_generation": 4.0, "power_consumption": 0.0, "hotkey": null, "texture": "t", "icon": null,
-             "build_menu_order": 0, "show_in_build_menu": false, "start_unlocked": true, "unlocked_by": null,
-             "transmits_power": true, "generates_power": true, "consumes_power": false, "uses_efficiency": false}
-        ]}"#;
-        let terrain_json = r#"{"terrain": [
-            {"id": "empty", "name": "Ground", "buildable": true, "harvestable": false,
-             "harvest_rewards": {"minerals": 0.0, "biomass": 0.0}, "harvested_to": "empty",
-             "preservation_bonus": null, "texture": "t", "color": [0.1, 0.1, 0.1, 1.0]}
-        ]}"#;
-        let planets_json = r#"{"planets": []}"#;
-        let tutorial_json = r#"{"steps": []}"#;
-        let directives_json = r#"{"rotation_seconds": 600.0, "directives": []}"#;
-        let achievements_json = r#"{"achievements": []}"#;
-        let core_stages_json = r#"{"stages": []}"#;
-        let seed_ship_json = r#"{"intake_per_second": {"minerals": 1.0, "data": 1.0, "biomass": 1.0}, "stages": []}"#;
-        let research_json = r#"{"starting_unlocked": ["core"], "nodes": [
-            {"id": "core", "name": "Core", "description": "d", "data_cost": 0.0, "prerequisites": [], "position": [0.0, 0.0]}
-        ]}"#;
-        GameData::from_json_strings(
-            buildings_json,
-            terrain_json,
-            research_json,
-            seed_ship_json,
-            planets_json,
-            tutorial_json,
-            directives_json,
-            achievements_json,
-            core_stages_json,
-        )
-    }
-
-    #[test]
-    fn from_json_strings_indexes_buildings_and_terrain_by_id() {
-        let data = sample_data();
-        assert_eq!(data.building("core").name, "Core");
-        assert_eq!(data.terrain("empty").name, "Ground");
-        assert_eq!(data.buildings.len(), 1);
-        assert_eq!(data.terrain.len(), 1);
-    }
-
-    #[test]
-    fn from_json_strings_falls_back_to_empty_on_malformed_json() {
-        let data = GameData::from_json_strings(
-            "not json", "not json", "not json", "not json", "not json", "not json", "not json",
-            "not json", "not json",
-        );
-        assert!(data.buildings.is_empty());
-        assert!(data.terrain.is_empty());
-        // Research falls back to a minimal starting set rather than an empty tree.
-        assert_eq!(
-            data.research.starting_unlocked,
-            vec!["core", "basic_mining"]
-        );
-    }
-
-    #[test]
-    #[should_panic(expected = "Missing building def")]
-    fn building_panics_for_unknown_id() {
-        let data = sample_data();
-        data.building("nonexistent");
-    }
-
-    #[test]
-    fn research_tree_converts_node_defs_into_tree_nodes() {
-        let data = sample_data();
-        let tree = data.research_tree();
-        assert_eq!(tree.nodes.len(), 1);
-        assert_eq!(tree.nodes[0].id, "core");
-    }
-}
+mod tests;
