@@ -31,6 +31,18 @@ fn a_world_that_has_done_nothing_has_earned_almost_nothing() {
 }
 
 #[test]
+fn the_starting_core_does_not_earn_power_surplus() {
+    let mut state = state();
+    assert_eq!(state.power_balance, 4.0);
+    state.update_achievements();
+    assert!(!state.achievements.is_unlocked("power_surplus"));
+
+    state.power_balance = 5.0;
+    state.update_achievements();
+    assert!(state.achievements.is_unlocked("power_surplus"));
+}
+
+#[test]
 fn holding_the_ore_a_declared_achievement_asks_for_earns_it() {
     let mut state = state();
     state.config.resources.base_mineral_cap = 100_000.0;
@@ -154,7 +166,8 @@ fn a_record_with_nothing_to_count_does_not_pretend_otherwise() {
     let manual = record(&state, "Seed Ship");
     assert!(!manual.countable);
     assert_eq!(manual.fraction(), 0.0);
-    // A one-shot condition is done or not; "0 / 1" says nothing.
+    // The declared five-power threshold has useful progress.
     let surplus = record(&state, "Power Surplus");
-    assert!(!surplus.countable);
+    assert!(surplus.countable);
+    assert_eq!(surplus.progress, Some(4.0));
 }

@@ -14,11 +14,12 @@ pub enum MenuAction {
     Load,
     Save,
     Settings,
+    #[cfg(not(target_arch = "wasm32"))]
     Quit,
 }
 
 /// Render the main menu and return any action taken
-pub fn render_main_menu(has_save: bool) -> MenuAction {
+pub fn render_main_menu(has_save: bool, notice: Option<&str>) -> MenuAction {
     clear_background(Colors::BACKGROUND);
 
     let screen_w = screen_width();
@@ -110,6 +111,15 @@ pub fn render_main_menu(has_save: bool) -> MenuAction {
         18.0,
         Colors::PRIMARY,
     );
+    if let Some(notice) = notice {
+        draw_ui_text(
+            notice,
+            panel_x + 20.0,
+            panel_y + panel_h + 20.0,
+            11.0,
+            Colors::WARNING,
+        );
+    }
 
     // Buttons
     let btn_w = panel_w - 40.0;
@@ -140,10 +150,12 @@ pub fn render_main_menu(has_save: bool) -> MenuAction {
     if draw_button_sized(btn_x, btn_y, btn_w, 36.0, "Settings") {
         return MenuAction::Settings;
     }
-    btn_y += btn_spacing;
-
-    if draw_button_sized(btn_x, btn_y, btn_w, 36.0, "Quit") {
-        return MenuAction::Quit;
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        btn_y += btn_spacing;
+        if draw_button_sized(btn_x, btn_y, btn_w, 36.0, "Quit") {
+            return MenuAction::Quit;
+        }
     }
 
     MenuAction::None

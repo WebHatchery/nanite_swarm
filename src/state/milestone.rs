@@ -91,14 +91,7 @@ impl PlanetState {
             Milestone::AlloyHeld => self.resources.alloy,
             Milestone::Technologies => self.research.unlocked_techs.len() as f32,
             Milestone::ForestsHarvested => self.forest_harvested_count as f32,
-            // A surplus is a surplus; the target only asks for a bigger one.
-            Milestone::PowerSurplus => {
-                if self.power_balance > 0.0 {
-                    1.0
-                } else {
-                    0.0
-                }
-            }
+            Milestone::PowerSurplus => self.power_balance.max(0.0),
             Milestone::SeedShipStages => self.seed_ship.stage_index() as f32,
         }
     }
@@ -107,9 +100,6 @@ impl PlanetState {
     pub fn meets(&self, milestone: Milestone, target: f32) -> bool {
         match milestone {
             Milestone::Manual => false,
-            // A surplus has no scale to it: any surplus at all is the whole
-            // condition, whatever number the data asks for.
-            Milestone::PowerSurplus => self.measure(milestone) > 0.0,
             _ => self.measure(milestone) >= target,
         }
     }

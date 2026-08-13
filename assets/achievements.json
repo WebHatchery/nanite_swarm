@@ -9,8 +9,8 @@
     {
       "id": "power_surplus",
       "name": "Power Surplus",
-      "description": "Generate more than the swarm draws.",
-      "condition": { "kind": "power_surplus", "target": 1 }
+      "description": "Maintain at least 5 surplus power.",
+      "condition": { "kind": "power_surplus", "target": 5 }
     },
     {
       "id": "data_miner",

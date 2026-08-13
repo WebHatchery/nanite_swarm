@@ -52,9 +52,8 @@ impl PlanetState {
                     // it happens, so there is no running total to show.
                     progress: milestone.map(|milestone| self.measure(milestone)),
                     target,
-                    countable: milestone.is_some_and(|milestone| {
-                        milestone != Milestone::Manual && milestone != Milestone::PowerSurplus
-                    }) && target > 1.0,
+                    countable: milestone.is_some_and(|milestone| milestone != Milestone::Manual)
+                        && target > 1.0,
                 }
             })
             .collect()

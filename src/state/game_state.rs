@@ -327,7 +327,10 @@ impl PlanetState {
             config,
             time_played: 0.0,
             selected_building: Some(BuildingType::Drill),
-            power_balance: 10.0,
+            // The starting Core produces four power. Keeping the cached value
+            // honest avoids one-frame milestone and HUD spikes before the
+            // first simulation tick recomputes it.
+            power_balance: 4.0,
             biomass_power_bonus: 0.0,
             sim_accumulator: 0.0,
             paused: false,

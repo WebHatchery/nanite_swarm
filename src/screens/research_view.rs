@@ -1,74 +1,16 @@
 //! Neural network research interface
 
-use crate::engine::{describe_modifier, ResearchNode, ResearchState, ResearchTree};
+use crate::engine::{describe_modifier, ResearchState, ResearchTree};
 use crate::state::{StatReading, StatUnit};
 use crate::ui::{draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::math::pulse01;
-use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text, Pointer};
+use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text, truncate_text_to_width, Pointer};
 
-const MAX_NODE_RADIUS: f32 = 25.0;
-const GRID_SCALE: f32 = 100.0;
+mod layout;
+use layout::{ResearchLayout, TreeLayout};
+
 const HEADER_HEIGHT: f32 = 72.0;
-/// Below this the nodes are too small to read, whatever the tree wants.
-const MIN_NODE_RADIUS: f32 = 13.0;
-
-/// Where the declared node positions land on screen.
-///
-/// Fitted to whatever `research.json` declares rather than pinned to a fixed
-/// scale, because a tree that grows another row deep should not simply fall off
-/// the bottom of the screen - which is what the last two nodes were already
-/// doing at 720p, unclickable and invisible.
-struct TreeLayout {
-    origin_x: f32,
-    origin_y: f32,
-    scale: f32,
-}
-
-impl TreeLayout {
-    fn fit(nodes: &[ResearchNode], area: Rect) -> Self {
-        let mut min = (f32::MAX, f32::MAX);
-        let mut max = (f32::MIN, f32::MIN);
-        for node in nodes {
-            min = (min.0.min(node.position.0), min.1.min(node.position.1));
-            max = (max.0.max(node.position.0), max.1.max(node.position.1));
-        }
-        if nodes.is_empty() {
-            return Self {
-                origin_x: area.x + area.w * 0.5,
-                origin_y: area.y + area.h * 0.5,
-                scale: GRID_SCALE,
-            };
-        }
-
-        // Room for the circle itself, the name above it and the cost below.
-        let margin = MAX_NODE_RADIUS + 24.0;
-        let span = ((max.0 - min.0).max(0.001), (max.1 - min.1).max(0.001));
-        let scale = ((area.w - margin * 2.0) / span.0)
-            .min((area.h - margin * 2.0) / span.1)
-            .clamp(1.0, GRID_SCALE);
-        let used = (span.0 * scale, span.1 * scale);
-
-        Self {
-            origin_x: area.x + (area.w - used.0) * 0.5 - min.0 * scale,
-            origin_y: area.y + (area.h - used.1) * 0.5 + max.1 * scale,
-            scale,
-        }
-    }
-
-    fn to_screen(&self, position: (f32, f32)) -> (f32, f32) {
-        (
-            self.origin_x + position.0 * self.scale,
-            self.origin_y - position.1 * self.scale,
-        )
-    }
-
-    /// Nodes shrink with the tree, so a denser one does not draw itself as a
-    /// pile of overlapping circles.
-    fn node_radius(&self) -> f32 {
-        (MAX_NODE_RADIUS * self.scale / GRID_SCALE).clamp(MIN_NODE_RADIUS, MAX_NODE_RADIUS)
-    }
-}
 
 /// Actions from the research view
 #[derive(Debug, Clone, PartialEq)]
@@ -78,6 +20,23 @@ pub enum ResearchAction {
     StartResearch(String),
 }
 
+#[derive(Debug, Clone)]
+pub struct ResearchViewport {
+    pan: Vec2,
+    zoom: f32,
+    drag_distance: f32,
+}
+
+impl Default for ResearchViewport {
+    fn default() -> Self {
+        Self {
+            pan: Vec2::ZERO,
+            zoom: 1.45,
+            drag_distance: 0.0,
+        }
+    }
+}
+
 /// Render the research neural network view
 pub fn render_research_view(
     research_state: &ResearchState,
@@ -85,11 +44,13 @@ pub fn render_research_view(
     data_available: f32,
     research_locked: bool,
     sheet: &[StatReading],
+    viewport: &mut ResearchViewport,
 ) -> ResearchAction {
     clear_background(Colors::BACKGROUND);
 
     let screen_w = screen_width();
     let screen_h = screen_height();
+    let view = ResearchLayout::for_screen(screen_w, screen_h, HEADER_HEIGHT);
     let pulse = pulse01(2.0);
 
     // Background neural haze
@@ -118,10 +79,15 @@ pub fn render_research_view(
         return ResearchAction::Close;
     }
 
-    let left_panel_x = 16.0;
-    let left_panel_y = HEADER_HEIGHT + 12.0;
-    let left_panel_w = 280.0;
-    let left_panel_h = screen_h - left_panel_y - 80.0;
+    if view.compact {
+        update_compact_viewport(viewport, view.tree);
+        draw_compact_viewport_controls(viewport, screen_w);
+    }
+
+    let left_panel_x = view.intel.x;
+    let left_panel_y = view.intel.y;
+    let left_panel_w = view.intel.w;
+    let left_panel_h = view.intel.h;
     draw_panel(left_panel_x, left_panel_y, left_panel_w, left_panel_h);
     draw_ui_text(
         "Research Intel",
@@ -131,100 +97,124 @@ pub fn render_research_view(
         Colors::PRIMARY,
     );
 
-    let right_panel_w = 260.0;
-    let right_panel_x = screen_w - right_panel_w - 16.0;
-    let right_panel_y = HEADER_HEIGHT + 12.0;
-    let right_panel_h = screen_h - right_panel_y - 80.0;
-    draw_panel(right_panel_x, right_panel_y, right_panel_w, right_panel_h);
-    draw_ui_text(
-        "Legend",
-        right_panel_x + 12.0,
-        right_panel_y + 28.0,
-        16.0,
-        Colors::PRIMARY,
-    );
+    let right_panel_w = view.legend.w;
+    let right_panel_x = view.legend.x;
+    let right_panel_y = view.legend.y;
+    if !view.compact {
+        draw_panel(right_panel_x, right_panel_y, right_panel_w, view.legend.h);
+        draw_ui_text(
+            "Legend",
+            right_panel_x + 12.0,
+            right_panel_y + 28.0,
+            16.0,
+            Colors::PRIMARY,
+        );
+    } else {
+        draw_compact_legend(18.0, HEADER_HEIGHT + 22.0);
+        draw_ui_text(
+            "Drag tree; tap - / + to zoom",
+            screen_w - 390.0,
+            HEADER_HEIGHT + 22.0,
+            11.0,
+            Colors::TEXT_DIM,
+        );
+    }
 
     let mut left_text_y = left_panel_y + 56.0;
     if research_locked {
+        let (locked_x, locked_y) = if view.compact {
+            (left_panel_x + left_panel_w - 238.0, left_panel_y + 28.0)
+        } else {
+            (left_panel_x + 12.0, left_text_y)
+        };
         draw_ui_text(
             "Research Locked (power collapse)",
-            left_panel_x + 12.0,
-            left_text_y,
+            locked_x,
+            locked_y,
             12.0,
             Colors::ERROR,
         );
-        left_text_y += 24.0;
+        if !view.compact {
+            left_text_y += 24.0;
+        }
     }
-    if let Some(current) = &research_state.current_research {
-        if let Some(node) = research_tree.get_node(current) {
-            let progress = research_state.research_progress.min(node.data_cost);
-            let pct = if node.data_cost > 0.0 {
-                progress / node.data_cost
-            } else {
-                1.0
-            };
+    if !view.compact {
+        if let Some(current) = &research_state.current_research {
+            if let Some(node) = research_tree.get_node(current) {
+                let progress = research_state.research_progress.min(node.data_cost);
+                let pct = if node.data_cost > 0.0 {
+                    progress / node.data_cost
+                } else {
+                    1.0
+                };
+                draw_ui_text(
+                    "Active Research",
+                    left_panel_x + 12.0,
+                    left_text_y,
+                    12.0,
+                    Colors::TEXT_DIM,
+                );
+                draw_ui_text(
+                    &node.name,
+                    left_panel_x + 12.0,
+                    left_text_y + 18.0,
+                    14.0,
+                    Colors::TEXT,
+                );
+                draw_rectangle(
+                    left_panel_x + 12.0,
+                    left_text_y + 32.0,
+                    left_panel_w - 24.0,
+                    10.0,
+                    Colors::SURFACE_DARK,
+                );
+                draw_rectangle(
+                    left_panel_x + 12.0,
+                    left_text_y + 32.0,
+                    (left_panel_w - 24.0) * pct,
+                    10.0,
+                    Colors::PRIMARY,
+                );
+                draw_rectangle_lines(
+                    left_panel_x + 12.0,
+                    left_text_y + 32.0,
+                    left_panel_w - 24.0,
+                    10.0,
+                    1.0,
+                    Colors::PANEL_BORDER,
+                );
+                left_text_y += 60.0;
+            }
+        } else {
             draw_ui_text(
-                "Active Research",
+                "No research selected.",
                 left_panel_x + 12.0,
                 left_text_y,
                 12.0,
                 Colors::TEXT_DIM,
             );
-            draw_ui_text(
-                &node.name,
-                left_panel_x + 12.0,
-                left_text_y + 18.0,
-                14.0,
-                Colors::TEXT,
-            );
-            draw_rectangle(
-                left_panel_x + 12.0,
-                left_text_y + 32.0,
-                left_panel_w - 24.0,
-                10.0,
-                Colors::SURFACE_DARK,
-            );
-            draw_rectangle(
-                left_panel_x + 12.0,
-                left_text_y + 32.0,
-                (left_panel_w - 24.0) * pct,
-                10.0,
-                Colors::PRIMARY,
-            );
-            draw_rectangle_lines(
-                left_panel_x + 12.0,
-                left_text_y + 32.0,
-                left_panel_w - 24.0,
-                10.0,
-                1.0,
-                Colors::PANEL_BORDER,
-            );
-            left_text_y += 60.0;
+            left_text_y += 24.0;
         }
-    } else {
-        draw_ui_text(
-            "No research selected.",
-            left_panel_x + 12.0,
-            left_text_y,
-            12.0,
-            Colors::TEXT_DIM,
-        );
-        left_text_y += 24.0;
     }
 
-    // The tree gets whatever the two side panels leave it.
-    let tree_area = Rect::new(
-        left_panel_x + left_panel_w + 16.0,
-        HEADER_HEIGHT + 12.0,
-        right_panel_x - (left_panel_x + left_panel_w) - 32.0,
-        screen_h - HEADER_HEIGHT - 72.0,
-    );
-    let layout = TreeLayout::fit(&research_tree.nodes, tree_area);
+    let (zoom, pan) = if view.compact {
+        (viewport.zoom, (viewport.pan.x, viewport.pan.y))
+    } else {
+        (1.0, (0.0, 0.0))
+    };
+    let layout = if view.compact {
+        TreeLayout::fit_with_min_scale(&research_tree.nodes, view.tree, 60.0)
+    } else {
+        TreeLayout::fit(&research_tree.nodes, view.tree)
+    }
+    .with_view(zoom, pan);
     let node_radius = layout.node_radius();
 
     let pointer = Pointer::read(|position| position);
     let mut hovered_node: Option<&str> = None;
+    let mut hovered_distance = f32::MAX;
     let mut activated_node: Option<&str> = None;
+    let mut activated_distance = f32::MAX;
 
     // Draw connections first (behind nodes)
     for (from, to) in research_tree.get_connections() {
@@ -233,6 +223,11 @@ pub fn render_research_view(
 
         let (from_x, from_y) = layout.to_screen(from.position);
         let (to_x, to_y) = layout.to_screen(to.position);
+        let Some((from_point, to_point)) =
+            clip_line(view.tree, vec2(from_x, from_y), vec2(to_x, to_y))
+        else {
+            continue;
+        };
 
         let line_color = if from_unlocked && to_unlocked {
             Colors::PRIMARY
@@ -242,12 +237,19 @@ pub fn render_research_view(
             Color::new(0.25, 0.25, 0.3, 0.7)
         };
 
-        draw_line(from_x, from_y, to_x, to_y, 2.0, line_color);
         draw_line(
-            from_x,
-            from_y,
-            to_x,
-            to_y,
+            from_point.x,
+            from_point.y,
+            to_point.x,
+            to_point.y,
+            2.0,
+            line_color,
+        );
+        draw_line(
+            from_point.x,
+            from_point.y,
+            to_point.x,
+            to_point.y,
             1.0,
             Color::new(0.6, 0.8, 1.0, 0.15),
         );
@@ -256,6 +258,15 @@ pub fn render_research_view(
     // Draw nodes
     for node in &research_tree.nodes {
         let (node_x, node_y) = layout.to_screen(node.position);
+        let safe_tree = Rect::new(
+            view.tree.x + 28.0,
+            view.tree.y + 28.0,
+            view.tree.w - 56.0,
+            view.tree.h - 56.0,
+        );
+        if !safe_tree.contains(vec2(node_x, node_y)) {
+            continue;
+        }
 
         let is_unlocked = research_state.is_unlocked(&node.id);
         let can_select = research_tree.can_select(&node.id, &research_state.unlocked);
@@ -271,11 +282,19 @@ pub fn render_research_view(
             target_radius * 2.0,
         );
         let is_hovered = pointer.hovering_over(target);
-        if is_hovered || pointer.pressing(target) || pointer.released_on(target) {
+        let pointer_distance = pointer.position.distance(vec2(node_x, node_y));
+        if (is_hovered || pointer.pressing(target) || pointer.released_on(target))
+            && pointer_distance < hovered_distance
+        {
             hovered_node = Some(&node.id);
+            hovered_distance = pointer_distance;
         }
-        if pointer.released_on(target) {
+        if pointer.released_on(target)
+            && viewport.drag_distance < 6.0
+            && pointer_distance < activated_distance
+        {
             activated_node = Some(&node.id);
+            activated_distance = pointer_distance;
         }
 
         // Node colors
@@ -393,83 +412,99 @@ pub fn render_research_view(
             } else {
                 "Researching"
             };
-            draw_ui_text(
-                heading,
-                left_panel_x + 12.0,
-                left_text_y,
-                12.0,
-                Colors::TEXT_DIM,
-            );
-            draw_ui_text(
-                &node.name,
-                left_panel_x + 12.0,
-                left_text_y + 18.0,
-                14.0,
-                Colors::TEXT,
-            );
-            draw_ui_text(
-                &node.description,
-                left_panel_x + 12.0,
-                left_text_y + 36.0,
-                12.0,
-                Colors::TEXT_DIM,
-            );
+            if view.compact {
+                draw_compact_node_info(
+                    research_state,
+                    research_tree,
+                    node_id,
+                    heading,
+                    left_panel_x,
+                    left_text_y,
+                    left_panel_w,
+                    data_available,
+                );
+            } else {
+                draw_ui_text(
+                    heading,
+                    left_panel_x + 12.0,
+                    left_text_y,
+                    12.0,
+                    Colors::TEXT_DIM,
+                );
+                draw_ui_text(
+                    &node.name,
+                    left_panel_x + 12.0,
+                    left_text_y + 18.0,
+                    14.0,
+                    Colors::TEXT,
+                );
+                draw_ui_text(
+                    &node.description,
+                    left_panel_x + 12.0,
+                    left_text_y + 36.0,
+                    12.0,
+                    Colors::TEXT_DIM,
+                );
 
-            // What it actually does, under what it says it does.
-            let mut y = left_text_y + 58.0;
-            for (text, color) in node_effects(node_id) {
-                draw_ui_text(&text, left_panel_x + 12.0, y, 12.0, color);
-                y += 16.0;
-            }
-            y += 4.0;
+                // What it actually does, under what it says it does.
+                let mut y = left_text_y + 58.0;
+                for (text, color) in node_effects(node_id) {
+                    draw_ui_text(&text, left_panel_x + 12.0, y, 12.0, color);
+                    y += 16.0;
+                }
+                y += 4.0;
 
-            if !research_state.is_unlocked(node_id) {
-                let cost_text = format!("Cost {:.0} Data", node.data_cost);
-                draw_ui_text(&cost_text, left_panel_x + 12.0, y, 12.0, Colors::ACCENT);
-                y += 18.0;
+                if !research_state.is_unlocked(node_id) {
+                    let cost_text = format!("Cost {:.0} Data", node.data_cost);
+                    draw_ui_text(&cost_text, left_panel_x + 12.0, y, 12.0, Colors::ACCENT);
+                    y += 18.0;
 
-                if research_tree.can_select(node_id, &research_state.unlocked) {
-                    if research_tree.can_research(node_id, &research_state.unlocked, data_available)
+                    if research_tree.can_select(node_id, &research_state.unlocked) {
+                        if research_tree.can_research(
+                            node_id,
+                            &research_state.unlocked,
+                            data_available,
+                        ) {
+                            draw_ui_text(
+                                "Tap node to research",
+                                left_panel_x + 12.0,
+                                y,
+                                12.0,
+                                Colors::SUCCESS,
+                            );
+                        } else {
+                            draw_ui_text(
+                                "Tap node to select (insufficient Data)",
+                                left_panel_x + 12.0,
+                                y,
+                                11.0,
+                                Colors::WARNING,
+                            );
+                        }
+                    } else if !node
+                        .prerequisites
+                        .iter()
+                        .all(|p| research_state.is_unlocked(p))
                     {
                         draw_ui_text(
-                            "Tap node to research",
+                            "Prerequisites not met",
                             left_panel_x + 12.0,
                             y,
                             12.0,
-                            Colors::SUCCESS,
+                            Colors::ERROR,
                         );
                     } else {
                         draw_ui_text(
-                            "Tap node to select (insufficient Data)",
+                            "Not enough Data",
                             left_panel_x + 12.0,
                             y,
-                            11.0,
+                            12.0,
                             Colors::WARNING,
                         );
                     }
-                } else if !node
-                    .prerequisites
-                    .iter()
-                    .all(|p| research_state.is_unlocked(p))
-                {
-                    draw_ui_text(
-                        "Prerequisites not met",
-                        left_panel_x + 12.0,
-                        y,
-                        12.0,
-                        Colors::ERROR,
-                    );
                 } else {
-                    draw_ui_text(
-                        "Not enough Data",
-                        left_panel_x + 12.0,
-                        y,
-                        12.0,
-                        Colors::WARNING,
-                    );
+                    draw_ui_text("UNLOCKED", left_panel_x + 12.0, y, 12.0, Colors::SUCCESS);
                 }
-            } else {
-                draw_ui_text("UNLOCKED", left_panel_x + 12.0, y, 12.0, Colors::SUCCESS);
             }
         }
     } else {
@@ -482,61 +517,65 @@ pub fn render_research_view(
         );
     }
 
-    // Legend
-    draw_ui_text(
-        "Unlocked",
-        right_panel_x + 12.0,
-        right_panel_y + 56.0,
-        12.0,
-        Colors::TEXT_DIM,
-    );
-    draw_circle(
-        right_panel_x + 18.0,
-        right_panel_y + 74.0,
-        6.0,
-        Colors::PRIMARY,
-    );
-    draw_ui_text(
-        "In Progress",
-        right_panel_x + 12.0,
-        right_panel_y + 98.0,
-        12.0,
-        Colors::TEXT_DIM,
-    );
-    draw_circle(
-        right_panel_x + 18.0,
-        right_panel_y + 116.0,
-        6.0,
-        Colors::WARNING,
-    );
-    draw_ui_text(
-        "Available",
-        right_panel_x + 12.0,
-        right_panel_y + 140.0,
-        12.0,
-        Colors::TEXT_DIM,
-    );
-    draw_circle(
-        right_panel_x + 18.0,
-        right_panel_y + 158.0,
-        6.0,
-        Colors::SUCCESS,
-    );
-    draw_ui_text(
-        "Locked",
-        right_panel_x + 12.0,
-        right_panel_y + 182.0,
-        12.0,
-        Colors::TEXT_DIM,
-    );
-    draw_circle(
-        right_panel_x + 18.0,
-        right_panel_y + 200.0,
-        6.0,
-        Colors::SECONDARY,
-    );
+    // Legend and stat sheet stay in the sidebar on roomy screens. The compact
+    // legend is above the full-width tree, while the lower drawer is reserved
+    // for the active/inspected node and remains a large touch target.
+    if !view.compact {
+        draw_ui_text(
+            "Unlocked",
+            right_panel_x + 12.0,
+            right_panel_y + 56.0,
+            12.0,
+            Colors::TEXT_DIM,
+        );
+        draw_circle(
+            right_panel_x + 18.0,
+            right_panel_y + 74.0,
+            6.0,
+            Colors::PRIMARY,
+        );
+        draw_ui_text(
+            "In Progress",
+            right_panel_x + 12.0,
+            right_panel_y + 98.0,
+            12.0,
+            Colors::TEXT_DIM,
+        );
+        draw_circle(
+            right_panel_x + 18.0,
+            right_panel_y + 116.0,
+            6.0,
+            Colors::WARNING,
+        );
+        draw_ui_text(
+            "Available",
+            right_panel_x + 12.0,
+            right_panel_y + 140.0,
+            12.0,
+            Colors::TEXT_DIM,
+        );
+        draw_circle(
+            right_panel_x + 18.0,
+            right_panel_y + 158.0,
+            6.0,
+            Colors::SUCCESS,
+        );
+        draw_ui_text(
+            "Locked",
+            right_panel_x + 12.0,
+            right_panel_y + 182.0,
+            12.0,
+            Colors::TEXT_DIM,
+        );
+        draw_circle(
+            right_panel_x + 18.0,
+            right_panel_y + 200.0,
+            6.0,
+            Colors::SECONDARY,
+        );
 
-    draw_swarm_sheet(sheet, right_panel_x, right_panel_y + 232.0, right_panel_w);
+        draw_swarm_sheet(sheet, right_panel_x, right_panel_y + 232.0, right_panel_w);
+    }
 
     // Instructions
     draw_ui_text(
@@ -559,6 +598,139 @@ pub fn render_research_view(
     }
 
     ResearchAction::None
+}
+
+fn draw_compact_legend(x: f32, y: f32) {
+    let entries = [
+        ("Unlocked", Colors::PRIMARY),
+        ("In Progress", Colors::WARNING),
+        ("Available", Colors::SUCCESS),
+        ("Locked", Colors::SECONDARY),
+    ];
+    let mut entry_x = x;
+    for (label, color) in entries {
+        draw_circle(entry_x + 5.0, y - 4.0, 5.0, color);
+        draw_ui_text(label, entry_x + 14.0, y, 11.0, Colors::TEXT_DIM);
+        entry_x += measure_ui_text(label, None, 11, 1.0).width + 36.0;
+    }
+}
+
+fn update_compact_viewport(viewport: &mut ResearchViewport, tree: Rect) {
+    let mouse = Vec2::from(mouse_position());
+    if is_mouse_button_pressed(MouseButton::Left) && tree.contains(mouse) {
+        viewport.drag_distance = 0.0;
+    }
+    if is_mouse_button_down(MouseButton::Left) && tree.contains(mouse) {
+        let delta = mouse_delta_position();
+        viewport.pan += delta;
+        viewport.drag_distance += delta.length();
+    }
+    let (_, wheel_y) = mouse_wheel();
+    if wheel_y.abs() > f32::EPSILON && tree.contains(mouse) {
+        viewport.zoom = (viewport.zoom + wheel_y.signum() * 0.1).clamp(1.0, 2.4);
+    }
+    viewport.pan.x = viewport.pan.x.clamp(-tree.w, tree.w);
+    viewport.pan.y = viewport.pan.y.clamp(-tree.h * 2.5, tree.h * 2.5);
+}
+
+fn draw_compact_viewport_controls(viewport: &mut ResearchViewport, screen_w: f32) {
+    let y = HEADER_HEIGHT + 4.0;
+    let mut x = screen_w - 178.0;
+    if draw_button_sized(x, y, 32.0, 28.0, "-") {
+        viewport.zoom = (viewport.zoom - 0.15).max(1.0);
+    }
+    x += 38.0;
+    if draw_button_sized(x, y, 32.0, 28.0, "+") {
+        viewport.zoom = (viewport.zoom + 0.15).min(2.4);
+    }
+    x += 38.0;
+    if draw_button_sized(x, y, 68.0, 28.0, "Center") {
+        viewport.pan = Vec2::ZERO;
+        viewport.zoom = 1.45;
+    }
+}
+
+fn clip_line(rect: Rect, from: Vec2, to: Vec2) -> Option<(Vec2, Vec2)> {
+    let delta = to - from;
+    let checks = [
+        (-delta.x, from.x - rect.x),
+        (delta.x, rect.right() - from.x),
+        (-delta.y, from.y - rect.y),
+        (delta.y, rect.bottom() - from.y),
+    ];
+    let (mut start, mut end) = (0.0_f32, 1.0_f32);
+    for (p, q) in checks {
+        if p.abs() < f32::EPSILON {
+            if q < 0.0 {
+                return None;
+            }
+        } else {
+            let t = q / p;
+            if p < 0.0 {
+                start = start.max(t);
+            } else {
+                end = end.min(t);
+            }
+        }
+    }
+    (start <= end).then_some((from + delta * start, from + delta * end))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn draw_compact_node_info(
+    research_state: &ResearchState,
+    research_tree: &ResearchTree,
+    node_id: &str,
+    heading: &str,
+    panel_x: f32,
+    y: f32,
+    panel_w: f32,
+    data_available: f32,
+) {
+    let Some(node) = research_tree.get_node(node_id) else {
+        return;
+    };
+    let split_x = panel_x + panel_w * 0.52;
+    draw_ui_text(heading, panel_x + 12.0, y, 12.0, Colors::TEXT_DIM);
+    draw_ui_text(&node.name, panel_x + 12.0, y + 18.0, 14.0, Colors::TEXT);
+    let description = truncate_text_to_width(&node.description, panel_w * 0.46, 11.0);
+    draw_ui_text(
+        &description,
+        panel_x + 12.0,
+        y + 38.0,
+        11.0,
+        Colors::TEXT_DIM,
+    );
+
+    let mut detail_y = y;
+    for (text, color) in node_effects(node_id) {
+        draw_ui_text(&text, split_x, detail_y, 11.0, color);
+        detail_y += 16.0;
+    }
+    if research_state.is_unlocked(node_id) {
+        draw_ui_text("UNLOCKED", split_x, detail_y + 2.0, 11.0, Colors::SUCCESS);
+        return;
+    }
+
+    draw_ui_text(
+        &format!("Cost {:.0} Data", node.data_cost),
+        split_x,
+        detail_y + 2.0,
+        11.0,
+        Colors::ACCENT,
+    );
+    let status = if !node
+        .prerequisites
+        .iter()
+        .all(|prerequisite| research_state.is_unlocked(prerequisite))
+    {
+        ("Prerequisites not met", Colors::ERROR)
+    } else if research_tree.can_research(node_id, &research_state.unlocked, data_available) {
+        ("Tap node to research", Colors::SUCCESS)
+    } else {
+        ("Tap node to select (insufficient Data)", Colors::WARNING)
+    };
+    draw_ui_text(status.0, split_x, detail_y + 18.0, 11.0, status.1);
 }
 
 /// What a node does, as lines for the hover panel: every stat it moves, then

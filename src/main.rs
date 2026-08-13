@@ -28,7 +28,7 @@ use screens::{
     LaunchAction, MenuAction, PlanetaryAction, RecordsAction, ResearchAction, SeedShipAction,
     SettingsAction,
 };
-use state::{load_from_file, save_to_file, Campaign, LaunchSequence, GAME_NAME};
+use state::{load_from_file, save_exists, save_to_file, Campaign, LaunchSequence, GAME_NAME};
 
 /// Game phases/screens
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -55,6 +55,7 @@ pub struct Game {
     settings: GameSettings,
     debug_overlay: DebugOverlay,
     has_save: bool,
+    menu_notice: Option<String>,
     /// The ending has been shown once; seeing it again is the player's choice.
     ending_seen: bool,
     /// The launch being played out, if one is.
@@ -66,12 +67,18 @@ pub struct Game {
     textures: GameTextures,
     config: data::GameConfig,
     ui_theme: data::UiTheme,
+    research_viewport: screens::ResearchViewport,
 }
 
 const SAVE_PATH: &str = "save.json";
 
 impl Game {
     pub async fn new() -> Self {
+        // Rajdhani's dynamic glyph atlas can resize several times on the first
+        // text-heavy gameplay frame. WebGL then tries to flush batches that
+        // still refer to the deleted atlas textures. Macroquad's built-in font
+        // has a stable, prebuilt atlas and avoids that first-frame corruption.
+        macroquad_toolkit::ui::use_macroquad_default_ui_font();
         #[cfg(not(target_arch = "wasm32"))]
         let config = load_game_config();
         #[cfg(target_arch = "wasm32")]
@@ -103,13 +110,15 @@ impl Game {
             research_state: ResearchState::default(),
             settings,
             debug_overlay: DebugOverlay::new(),
-            has_save: false,
+            has_save: save_exists(SAVE_PATH),
+            menu_notice: None,
             ending_seen: false,
             launch: None,
             capture_still: false,
             textures: GameTextures::load().await,
             config,
             ui_theme,
+            research_viewport: screens::ResearchViewport::default(),
         }
     }
 
@@ -123,42 +132,38 @@ impl Game {
         self.debug_overlay.visible = self.settings.show_fps;
 
         match self.phase {
-            GamePhase::MainMenu => match render_main_menu(self.has_save) {
-                MenuAction::NewGame => {
-                    self.campaign =
-                        Campaign::new(self.config.clone(), macroquad_toolkit::rng::random_u64());
-                    self.research_state = ResearchState::default();
-                    self.sync_research_to_planet();
-                    self.sync_building_unlocks();
-                    self.phase = GamePhase::Playing;
-                }
-                MenuAction::Continue => {
-                    self.phase = GamePhase::Playing;
-                }
-                MenuAction::Load => {
-                    if let Ok((campaign, source)) = load_from_file(SAVE_PATH) {
-                        self.campaign = campaign;
-                        // A save written before research was campaign-wide
-                        // keeps it on the planet; take it from there once.
-                        self.campaign.adopt_planet_research();
-                        self.sync_research_from_planet();
-                        self.phase = GamePhase::Playing;
-                        self.has_save = true;
+            GamePhase::MainMenu => {
+                match render_main_menu(self.has_save, self.menu_notice.as_deref()) {
+                    MenuAction::NewGame => {
+                        self.menu_notice = None;
+                        self.campaign = Campaign::new(
+                            self.config.clone(),
+                            macroquad_toolkit::rng::random_u64(),
+                        );
+                        self.research_state = ResearchState::default();
+                        self.sync_research_to_planet();
                         self.sync_building_unlocks();
-                        // The player is owed the truth about which copy this is.
-                        self.campaign.current_mut().restored_from_backup =
-                            source == state::LoadSource::Backup;
+                        self.phase = GamePhase::Playing;
                     }
+                    MenuAction::Continue => {
+                        self.load_campaign();
+                    }
+                    MenuAction::Load => {
+                        self.load_campaign();
+                    }
+                    MenuAction::Save => {
+                        self.save_campaign();
+                    }
+                    MenuAction::Settings => {
+                        self.phase = GamePhase::Settings;
+                    }
+                    #[cfg(not(target_arch = "wasm32"))]
+                    MenuAction::Quit => {
+                        macroquad::miniquad::window::quit();
+                    }
+                    MenuAction::None => {}
                 }
-                MenuAction::Save => {
-                    self.save_campaign();
-                }
-                MenuAction::Settings => {
-                    self.phase = GamePhase::Settings;
-                }
-                MenuAction::Quit => {}
-                MenuAction::None => {}
-            },
+            }
             GamePhase::Settings => {
                 let before = self.settings.clone();
                 let action = render_settings_menu(&mut self.settings);
@@ -209,6 +214,7 @@ impl Game {
                     self.campaign.current().resources.data,
                     self.campaign.current().research_lock_timer > 0.0,
                     &sheet,
+                    &mut self.research_viewport,
                 ) {
                     ResearchAction::Close => {
                         self.phase = GamePhase::Playing;
@@ -417,6 +423,29 @@ impl Game {
             }
             Err(_) => {
                 self.campaign.current_mut().save_failed = true;
+            }
+        }
+    }
+
+    fn load_campaign(&mut self) {
+        match load_from_file(SAVE_PATH) {
+            Ok((campaign, source)) => {
+                self.campaign = campaign;
+                // A save written before research was campaign-wide keeps it
+                // on the planet; take it from there once.
+                self.campaign.adopt_planet_research();
+                self.sync_research_from_planet();
+                self.sync_building_unlocks();
+                self.campaign.current_mut().restored_from_backup =
+                    source == state::LoadSource::Backup;
+                self.has_save = true;
+                self.menu_notice = None;
+                self.phase = GamePhase::Playing;
+            }
+            Err(error) => {
+                eprintln!("Could not load campaign: {error}");
+                self.has_save = save_exists(SAVE_PATH);
+                self.menu_notice = Some("Load failed: save is missing or corrupt.".to_string());
             }
         }
     }

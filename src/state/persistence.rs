@@ -3,7 +3,7 @@
 use super::campaign::Campaign;
 use super::PlanetState;
 use macroquad::miniquad;
-use macroquad_toolkit::persistence::{load_string_key, save_string_key};
+use macroquad_toolkit::persistence::{json_key_exists, load_string_key, save_string_key};
 use serde::{Deserialize, Serialize};
 use std::io;
 
@@ -149,6 +149,11 @@ pub fn save_to_file(campaign: &mut Campaign, path: &str) -> Result<(), io::Error
 
 pub fn load_from_file(path: &str) -> Result<(Campaign, LoadSource), io::Error> {
     load_campaign(&KeyStore, path).map_err(io::Error::other)
+}
+
+/// Whether either recoverable copy of a save exists.
+pub fn save_exists(path: &str) -> bool {
+    json_key_exists(GAME_NAME, path) || json_key_exists(GAME_NAME, &backup_key(path))
 }
 
 #[cfg(test)]

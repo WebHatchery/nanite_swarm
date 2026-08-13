@@ -21,7 +21,7 @@ pub fn render_settings_menu(settings: &mut GameSettings) -> SettingsAction {
 
     draw_panel(0.0, 0.0, screen_w, header_height);
     draw_ui_text("Settings", 18.0, 30.0, 18.0, Colors::PRIMARY);
-    draw_ui_text("Audio & Display", 18.0, 52.0, 12.0, Colors::TEXT_DIM);
+    draw_ui_text("Display", 18.0, 52.0, 12.0, Colors::TEXT_DIM);
 
     if draw_button_sized(screen_w - 110.0, 18.0, 80.0, 34.0, "Back") {
         return SettingsAction::Back;
@@ -30,45 +30,10 @@ pub fn render_settings_menu(settings: &mut GameSettings) -> SettingsAction {
     let panel_w = 320.0;
     let panel_h = 240.0;
     let panel_y = screen_h * 0.3;
-    let audio_x = screen_w * 0.5 - panel_w - 20.0;
-    let display_x = screen_w * 0.5 + 20.0;
+    let display_x = screen_w * 0.5 - panel_w * 0.5;
     let row_w = panel_w - 32.0;
     let row_h = 30.0;
     let row_gap = 18.0;
-
-    draw_panel(audio_x, panel_y, panel_w, panel_h);
-    draw_ui_text(
-        "Audio",
-        audio_x + 16.0,
-        panel_y + 28.0,
-        16.0,
-        Colors::PRIMARY,
-    );
-
-    let music_row = Rect::new(audio_x + 16.0, panel_y + 54.0, row_w, row_h);
-    let music_step = stepper_row(
-        music_row,
-        "Music Volume",
-        &format!("{:.0}%", settings.music_volume * 100.0),
-    );
-    if music_step != 0 {
-        settings.music_volume = (settings.music_volume + music_step as f32 * 0.1).clamp(0.0, 1.0);
-    }
-
-    let sfx_row = Rect::new(
-        audio_x + 16.0,
-        panel_y + 54.0 + row_h + row_gap,
-        row_w,
-        row_h,
-    );
-    let sfx_step = stepper_row(
-        sfx_row,
-        "SFX Volume",
-        &format!("{:.0}%", settings.sfx_volume * 100.0),
-    );
-    if sfx_step != 0 {
-        settings.sfx_volume = (settings.sfx_volume + sfx_step as f32 * 0.1).clamp(0.0, 1.0);
-    }
 
     draw_panel(display_x, panel_y, panel_w, panel_h);
     draw_ui_text(
