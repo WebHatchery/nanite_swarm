@@ -99,7 +99,7 @@ pub fn render_settings_menu(settings: &mut GameSettings) -> SettingsAction {
     toggle_row(fps_row, "Show FPS", &mut settings.show_fps);
 
     draw_ui_text(
-        "Press ESC to return",
+        "Tap Back to return",
         20.0,
         screen_h - 20.0,
         Dimensions::FONT_SIZE_SMALL,

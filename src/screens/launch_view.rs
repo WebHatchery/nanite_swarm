@@ -5,7 +5,7 @@ use crate::state::{LaunchBeat, LaunchSequence};
 use crate::ui::{color_from_rgba, draw_panel, Colors};
 use macroquad::prelude::*;
 use macroquad_toolkit::math::lerp;
-use macroquad_toolkit::ui::draw_ui_text;
+use macroquad_toolkit::ui::{draw_ui_text, Pointer};
 
 /// What the player did to the launch sequence.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -97,7 +97,7 @@ pub fn render_launch_view(sequence: &LaunchSequence, arrival_line: &str) -> Laun
         draw_ui_text(hint, 18.0, screen_h - 18.0, 12.0, Colors::TEXT_DIM);
     }
 
-    let skipped = is_mouse_button_pressed(MouseButton::Left)
+    let skipped = Pointer::read(|position| position).released
         || get_last_key_pressed().is_some()
         || sequence.is_finished();
     if skipped {

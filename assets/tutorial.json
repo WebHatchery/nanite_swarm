@@ -3,31 +3,31 @@
     {
       "id": "first_drill",
       "title": "Break ground",
-      "instruction": "Place a Drill on the ground beside the Core.",
+      "instruction": "Tap DRILL in the BUILD PALETTE, then tap revealed ground beside the Core.",
       "goal": { "kind": "build", "target": "drill" }
     },
     {
       "id": "power_grid",
       "title": "Lay pipe",
-      "instruction": "Research Power Grid. Ore only moves along conduits.",
+      "instruction": "Tap RESEARCH, then tap POWER GRID. Ore only moves along conduits.",
       "goal": { "kind": "research", "target": "power_grid" }
     },
     {
       "id": "connect",
       "title": "Connect the drill",
-      "instruction": "Run conduits from the Core to the Drill so drones can reach it.",
+      "instruction": "Tap CONDUIT, then tap grid tiles from the Core to the Drill.",
       "goal": { "kind": "connect", "target": "drill" }
     },
     {
       "id": "server_bank",
       "title": "Think faster",
-      "instruction": "Build a Server Bank. Data is what research is made of.",
+      "instruction": "Tap SERVER BANK, then tap revealed ground to build it.",
       "goal": { "kind": "build", "target": "server_bank" }
     },
     {
       "id": "wind_turbine",
       "title": "Stop borrowing power",
-      "instruction": "Build a Wind Turbine. Mountains give it more to work with.",
+      "instruction": "Tap WIND TURBINE, then tap revealed ground. Mountains give it a bonus.",
       "goal": { "kind": "build", "target": "wind_turbine" }
     }
   ]

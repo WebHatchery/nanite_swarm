@@ -14,47 +14,47 @@ pub use game_config::*;
 pub use loader::*;
 pub use ui_theme::*;
 
-#[cfg(target_arch = "wasm32")]
-use macroquad::prelude::*;
-use std::fs;
+use std::path::PathBuf;
 use std::sync::OnceLock;
 
 static GAME_DATA: OnceLock<GameData> = OnceLock::new();
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn load_game_config() -> GameConfig {
-    let json = fs::read_to_string("assets/game_config.json").unwrap_or_else(|_| {
-        macroquad_toolkit::include_json_str!("../../assets/game_config.json").to_string()
-    });
-    load_json(&json).unwrap_or_else(|_| GameConfig::default())
+    load_game_config_source()
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn load_ui_theme() -> UiTheme {
-    let json = fs::read_to_string("assets/ui_theme.json").unwrap_or_else(|_| {
-        macroquad_toolkit::include_json_str!("../../assets/ui_theme.json").to_string()
-    });
-    load_json(&json).unwrap_or_else(|_| UiTheme::default())
+    load_ui_theme_source()
 }
 
 #[cfg(target_arch = "wasm32")]
 pub async fn load_game_config() -> GameConfig {
-    let json = load_string("assets/game_config.json")
-        .await
-        .unwrap_or_else(|_| {
-            macroquad_toolkit::include_json_str!("../../assets/game_config.json").to_string()
-        });
-    load_json(&json).unwrap_or_else(|_| GameConfig::default())
+    load_game_config_source()
 }
 
 #[cfg(target_arch = "wasm32")]
 pub async fn load_ui_theme() -> UiTheme {
-    let json = load_string("assets/ui_theme.json")
-        .await
-        .unwrap_or_else(|_| {
-            macroquad_toolkit::include_json_str!("../../assets/ui_theme.json").to_string()
-        });
-    load_json(&json).unwrap_or_else(|_| UiTheme::default())
+    load_ui_theme_source()
+}
+
+fn load_game_config_source() -> GameConfig {
+    macroquad_toolkit::data_loader::load_json_with_fallback_sync(
+        "assets/game_config.json",
+        &[PathBuf::from("assets/game_config.json")],
+        macroquad_toolkit::include_json_str!("../../assets/game_config.json"),
+    )
+    .unwrap_or_else(|_| GameConfig::default())
+}
+
+fn load_ui_theme_source() -> UiTheme {
+    macroquad_toolkit::data_loader::load_json_with_fallback_sync(
+        "assets/ui_theme.json",
+        &[PathBuf::from("assets/ui_theme.json")],
+        macroquad_toolkit::include_json_str!("../../assets/ui_theme.json"),
+    )
+    .unwrap_or_else(|_| UiTheme::default())
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -64,7 +64,7 @@ pub fn load_game_data() -> GameData {
 
 #[cfg(target_arch = "wasm32")]
 pub async fn load_game_data() -> GameData {
-    GameData::load_async().await
+    GameData::load()
 }
 
 pub fn set_game_data(data: GameData) {

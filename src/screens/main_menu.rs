@@ -90,7 +90,7 @@ pub fn render_main_menu(has_save: bool) -> MenuAction {
         Colors::TEXT_DIM,
     );
     draw_ui_text(
-        "Tip: Click building cards to enter build mode.",
+        "Tip: Tap a building card, then tap the grid.",
         briefing_x + 16.0,
         briefing_y + 130.0,
         11.0,

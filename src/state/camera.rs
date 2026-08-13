@@ -46,7 +46,15 @@ impl Camera {
         if notches == 0.0 {
             return;
         }
-        let target = (self.zoom * ZOOM_STEP.powf(notches)).clamp(MIN_ZOOM, MAX_ZOOM);
+        self.zoom_by_scale(ZOOM_STEP.powf(notches), cursor);
+    }
+
+    /// Zoom by a direct scale, as reported by a two-finger pinch.
+    pub fn zoom_by_scale(&mut self, scale: f32, cursor: (f32, f32)) {
+        if !scale.is_finite() || scale <= 0.0 || scale == 1.0 {
+            return;
+        }
+        let target = (self.zoom * scale).clamp(MIN_ZOOM, MAX_ZOOM);
         if target == self.zoom {
             return;
         }

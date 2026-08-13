@@ -5,7 +5,7 @@ use crate::state::{StatReading, StatUnit};
 use crate::ui::{draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::math::pulse01;
-use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text};
+use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text, Pointer};
 
 const MAX_NODE_RADIUS: f32 = 25.0;
 const GRID_SCALE: f32 = 100.0;
@@ -222,9 +222,9 @@ pub fn render_research_view(
     let layout = TreeLayout::fit(&research_tree.nodes, tree_area);
     let node_radius = layout.node_radius();
 
-    // Get mouse position
-    let (mouse_x, mouse_y) = mouse_position();
+    let pointer = Pointer::read(|position| position);
     let mut hovered_node: Option<&str> = None;
+    let mut activated_node: Option<&str> = None;
 
     // Draw connections first (behind nodes)
     for (from, to) in research_tree.get_connections() {
@@ -263,11 +263,19 @@ pub fn render_research_view(
             research_tree.can_research(&node.id, &research_state.unlocked, data_available);
         let is_current = research_state.current_research.as_ref() == Some(&node.id);
 
-        // Check if mouse is hovering
-        let dist = ((mouse_x - node_x).powi(2) + (mouse_y - node_y).powi(2)).sqrt();
-        let is_hovered = dist < node_radius;
-        if is_hovered {
+        let target_radius = node_radius.max(22.0);
+        let target = Rect::new(
+            node_x - target_radius,
+            node_y - target_radius,
+            target_radius * 2.0,
+            target_radius * 2.0,
+        );
+        let is_hovered = pointer.hovering_over(target);
+        if is_hovered || pointer.pressing(target) || pointer.released_on(target) {
             hovered_node = Some(&node.id);
+        }
+        if pointer.released_on(target) {
+            activated_node = Some(&node.id);
         }
 
         // Node colors
@@ -424,7 +432,7 @@ pub fn render_research_view(
                     if research_tree.can_research(node_id, &research_state.unlocked, data_available)
                     {
                         draw_ui_text(
-                            "Click to research",
+                            "Tap node to research",
                             left_panel_x + 12.0,
                             y,
                             12.0,
@@ -432,7 +440,7 @@ pub fn render_research_view(
                         );
                     } else {
                         draw_ui_text(
-                            "Click to select (insufficient Data)",
+                            "Tap node to select (insufficient Data)",
                             left_panel_x + 12.0,
                             y,
                             11.0,
@@ -466,7 +474,7 @@ pub fn render_research_view(
         }
     } else {
         draw_ui_text(
-            "Hover a node to inspect.",
+            "Point at or tap a node to inspect.",
             left_panel_x + 12.0,
             left_text_y,
             12.0,
@@ -532,7 +540,7 @@ pub fn render_research_view(
 
     // Instructions
     draw_ui_text(
-        "Press ESC to return",
+        "Tap Back to return",
         20.0,
         screen_h - 20.0,
         Dimensions::FONT_SIZE_SMALL,
@@ -544,12 +552,9 @@ pub fn render_research_view(
         return ResearchAction::Close;
     }
 
-    // Click to research
-    if is_mouse_button_pressed(MouseButton::Left) {
-        if let Some(node_id) = hovered_node {
-            if research_tree.can_select(node_id, &research_state.unlocked) {
-                return ResearchAction::StartResearch(node_id.to_string());
-            }
+    if let Some(node_id) = activated_node {
+        if research_tree.can_select(node_id, &research_state.unlocked) {
+            return ResearchAction::StartResearch(node_id.to_string());
         }
     }
 

@@ -120,28 +120,28 @@ pub(super) fn draw(
     let control_y = bottom_y + 30.0;
     let controls = if controls_w < 420.0 {
         vec![
-            ("SELECT", "Left Click"),
-            ("PAN", "Drag"),
-            ("ZOOM", "Wheel"),
-            ("PAUSE", "Space"),
+            ("SELECT", "Tap grid"),
+            ("PAN", "Drag grid"),
+            ("ZOOM", "Pinch grid"),
+            ("PAUSE", "Tap II"),
         ]
     } else if controls_w < 560.0 {
         vec![
-            ("SELECT", "Left Click"),
-            ("PAN", "Middle Drag"),
-            ("ZOOM", "Wheel"),
-            ("BUILD", "B"),
-            ("PAUSE", "Space"),
+            ("SELECT", "Tap grid"),
+            ("PAN", "Drag grid"),
+            ("ZOOM", "Pinch grid"),
+            ("BUILD", "Tap card"),
+            ("PAUSE", "Tap II"),
         ]
     } else {
         vec![
-            ("SELECT", "Left Click"),
-            ("PAN", "Middle Drag"),
-            ("BOX SELECT", "Shift + Drag"),
-            ("ZOOM", "Mouse Wheel"),
-            ("BUILD MENU", "B"),
-            ("DEMOLISH", "X"),
-            ("PAUSE", "Space"),
+            ("SELECT", "Tap grid"),
+            ("PAN", "Drag grid"),
+            ("ZOOM", "Pinch grid"),
+            ("BUILD", "Tap card"),
+            ("HARVEST", "Tap inspector"),
+            ("DEMOLISH", "Tap button"),
+            ("PAUSE", "Tap II"),
         ]
     };
     let slot_w = controls_w / controls.len() as f32;
@@ -290,49 +290,49 @@ pub(super) fn draw(
             Some("HELP & CONTROLS"),
         );
         draw_ui_text(
-            "Left Click / Drag: Place building",
+            "Tap grid: build or inspect",
             help_x + 16.0,
             help_y + 55.0,
             14.0,
             text,
         );
         draw_ui_text(
-            "Right Click: Cancel selection / Harvest",
+            "Drag grid: pan the map",
             help_x + 16.0,
             help_y + 75.0,
             14.0,
             text,
         );
         draw_ui_text(
-            "H: Harvest terrain",
+            "Pinch grid: zoom the map",
             help_x + 16.0,
             help_y + 95.0,
             14.0,
             text,
         );
         draw_ui_text(
-            "R: Research  |  M: Map",
+            "Tap inspector: harvest, filter, or sell",
             help_x + 16.0,
             help_y + 115.0,
             14.0,
             text,
         );
         draw_ui_text(
-            "1-9: Select buildings",
+            "Tap CANCEL: leave build or demolish mode",
             help_x + 16.0,
             help_y + 135.0,
             14.0,
             text,
         );
         draw_ui_text(
-            "F: Convert forest to filter",
+            "Top buttons open Research, Ship, Map, Menu",
             help_x + 16.0,
             help_y + 155.0,
             14.0,
             text,
         );
         draw_ui_text(
-            "Space: Pause  |  F1: Toggle help",
+            "Tap HELP again to close",
             help_x + 16.0,
             help_y + 175.0,
             14.0,

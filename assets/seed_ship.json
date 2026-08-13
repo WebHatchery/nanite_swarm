@@ -8,7 +8,7 @@
     "countdown_line": "The pad is cleared. Nothing left on {origin} needs it.",
     "ascent_line": "Ignition. The last of {origin}, spent on leaving it.",
     "transit_line": "Transit. Nothing aboard is awake.",
-    "skip_hint": "Any key to skip"
+    "skip_hint": "Tap anywhere to skip"
   },
   "stages": [
     {

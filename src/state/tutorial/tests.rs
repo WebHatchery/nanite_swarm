@@ -24,6 +24,18 @@ fn the_shipped_tutorial_declares_only_goals_the_game_can_check() {
 }
 
 #[test]
+fn every_tutorial_step_names_the_visible_touch_action() {
+    for step in &crate::data::game_data().tutorial {
+        assert!(
+            step.instruction.contains("Tap ") || step.instruction.contains("Drag "),
+            "step {} does not explain its touch action: {}",
+            step.id,
+            step.instruction
+        );
+    }
+}
+
+#[test]
 fn a_new_planet_starts_on_the_first_step() {
     let state = state();
     assert_eq!(state.tutorial_step, 0);

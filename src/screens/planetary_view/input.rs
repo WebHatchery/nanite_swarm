@@ -4,6 +4,7 @@ use crate::data;
 use crate::engine::{BuildingType, GridPos};
 use crate::state::PlanetState;
 use macroquad::prelude::*;
+use macroquad_toolkit::input::TouchGestureFrame;
 
 use super::format::keycode_from_hotkey;
 use super::metrics::HudMetrics;
@@ -19,6 +20,8 @@ pub(super) fn handle_camera(
     cursor_over_ui: bool,
     screen_w: f32,
     screen_h: f32,
+    touch: TouchGestureFrame,
+    touch_camera_active: bool,
 ) {
     let (mouse_x, mouse_y) = mouse_position();
 
@@ -42,6 +45,17 @@ pub(super) fn handle_camera(
         state.camera.zoom_by(notches, cursor);
     }
 
+    if touch_camera_active && touch.claimed {
+        state.camera.pan_by(touch.pan.x, touch.pan.y);
+        if touch.scale != 1.0 {
+            let center = (
+                touch.center.x - metrics.base_offset_x(),
+                touch.center.y - metrics.base_offset_y(),
+            );
+            state.camera.zoom_by_scale(touch.scale, center);
+        }
+    }
+
     let grid_size = (
         state.grid.width as f32 * metrics.tile_size,
         state.grid.height as f32 * metrics.tile_size,
@@ -55,7 +69,12 @@ pub(super) fn handle_camera(
 pub(super) fn handle_input(
     state: &mut PlanetState,
     hovered_pos: Option<GridPos>,
+    touch_tap: Option<GridPos>,
 ) -> PlanetaryAction {
+    let mouse_input = touches().is_empty();
+    let activated_pos = touch_tap.or(hovered_pos);
+    let primary_pressed =
+        touch_tap.is_some() || (mouse_input && is_mouse_button_pressed(MouseButton::Left));
     // Building hotkeys
     for def in &data::game_data().buildings {
         let Some(hotkey) = def.hotkey.as_ref().and_then(|key| key.chars().next()) else {
@@ -105,10 +124,12 @@ pub(super) fn handle_input(
     // Demolition takes the same clicks as building, so it comes first and
     // returns rather than falling through into placement.
     if state.demolish_mode {
-        if is_mouse_button_pressed(MouseButton::Left)
-            || (is_mouse_button_down(MouseButton::Left) && state.drag_last_pos != hovered_pos)
+        if primary_pressed
+            || (mouse_input
+                && is_mouse_button_down(MouseButton::Left)
+                && state.drag_last_pos != hovered_pos)
         {
-            if let Some(pos) = hovered_pos {
+            if let Some(pos) = activated_pos {
                 state.try_sell_building(pos);
                 state.drag_last_pos = Some(pos);
             }
@@ -134,8 +155,8 @@ pub(super) fn handle_input(
     }
 
     // Place building on click
-    if is_mouse_button_pressed(MouseButton::Left) {
-        if let Some(pos) = hovered_pos {
+    if primary_pressed {
+        if let Some(pos) = activated_pos {
             let mut placed = false;
             if let Some(building_type) = state.selected_building {
                 if state.grid.can_place_building(pos, building_type) {
@@ -152,7 +173,7 @@ pub(super) fn handle_input(
     }
 
     // Drag placement while holding left mouse
-    if is_mouse_button_down(MouseButton::Left) {
+    if mouse_input && is_mouse_button_down(MouseButton::Left) {
         if let Some(pos) = hovered_pos {
             if state.drag_last_pos != Some(pos) {
                 if state.selected_building == Some(BuildingType::Conduit) {

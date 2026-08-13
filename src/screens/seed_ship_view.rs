@@ -103,7 +103,7 @@ pub fn render_seed_ship_view(state: &PlanetState) -> SeedShipAction {
     }
 
     draw_ui_text(
-        "Press ESC to return",
+        "Tap Back to return",
         18.0,
         screen_h - 18.0,
         12.0,

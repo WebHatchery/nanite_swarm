@@ -10,28 +10,28 @@
   ],
   "controls": [
     {
-      "key": "1-5",
-      "desc": "Select buildings"
+      "key": "Tap",
+      "desc": "Select controls, inspect tiles, and build"
     },
     {
-      "key": "H",
-      "desc": "Harvest terrain"
+      "key": "Drag",
+      "desc": "Pan the planetary grid and scroll lists"
     },
     {
-      "key": "R",
-      "desc": "Research view"
+      "key": "Pinch",
+      "desc": "Zoom the planetary grid"
     },
     {
-      "key": "M",
-      "desc": "Interplanetary map"
+      "key": "Inspector",
+      "desc": "Harvest, filter, or sell the selected tile"
     },
     {
-      "key": "ESC",
-      "desc": "Main menu"
+      "key": "Top bar",
+      "desc": "Open Research, Ship, Map, and Menu"
     },
     {
-      "key": "F1",
-      "desc": "Help overlay"
+      "key": "Buttons",
+      "desc": "Pause, change speed, cancel, and show help"
     }
   ],
   "details": [

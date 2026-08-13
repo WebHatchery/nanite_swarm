@@ -5,7 +5,7 @@ mod shipping_panel;
 use crate::state::{ExportOrder, Shipment};
 use crate::ui::{color_from_rgba, draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
-use macroquad_toolkit::ui::draw_ui_text;
+use macroquad_toolkit::ui::{draw_ui_text, Pointer};
 
 /// Planet identity comes from `assets/planets.json`, so the map and the world
 /// the swarm lands on can never drift apart.
@@ -52,7 +52,7 @@ pub fn render_interplanetary_view(view: &MapView) -> InterplanetaryAction {
 
     let screen_w = screen_width();
     let screen_h = screen_height();
-    let (mouse_x, mouse_y) = mouse_position();
+    let pointer = Pointer::read(|position| position);
 
     let header_height = 72.0;
 
@@ -124,10 +124,16 @@ pub fn render_interplanetary_view(view: &MapView) -> InterplanetaryAction {
         let py = center_y + planet.orbit_radius * angle.sin();
         positions.push((px, py));
 
-        // Check hover
-        let dist = ((mouse_x - px).powi(2) + (mouse_y - py).powi(2)).sqrt();
-        let is_hovered = dist < planet.size + 5.0;
-        if is_hovered {
+        let target_radius = (planet.size + 5.0).max(22.0);
+        let target = Rect::new(
+            px - target_radius,
+            py - target_radius,
+            target_radius * 2.0,
+            target_radius * 2.0,
+        );
+        let is_hovered = pointer.hovering_over(target);
+        let focused = is_hovered || pointer.pressing(target) || pointer.released_on(target);
+        if focused {
             hovered_planet = Some(i);
         }
 
@@ -175,7 +181,17 @@ pub fn render_interplanetary_view(view: &MapView) -> InterplanetaryAction {
 
     // Info panel for hovered planet
     if let Some(index) = hovered_planet {
-        if let Some(clicked) = draw_planet_info(view, index, can_launch, screen_w, header_height) {
+        let target = positions[index];
+        let radius = (planets[index].size + 5.0).max(22.0);
+        let activated = pointer.released_on(Rect::new(
+            target.0 - radius,
+            target.1 - radius,
+            radius * 2.0,
+            radius * 2.0,
+        ));
+        if let Some(clicked) =
+            draw_planet_info(view, index, can_launch, screen_w, header_height, activated)
+        {
             if action == InterplanetaryAction::None {
                 action = clicked;
             }
@@ -186,7 +202,7 @@ pub fn render_interplanetary_view(view: &MapView) -> InterplanetaryAction {
 
     // Instructions
     draw_ui_text(
-        "Press ESC to return | M to toggle map",
+        "Tap a planet to travel or launch | Tap Back to return",
         20.0,
         screen_h - 20.0,
         Dimensions::FONT_SIZE_SMALL,
@@ -239,6 +255,7 @@ fn draw_planet_info(
     can_launch: bool,
     screen_w: f32,
     header_height: f32,
+    activated: bool,
 ) -> Option<InterplanetaryAction> {
     let planet = &planets()[index];
     let is_colonized = view.colonized.get(index).copied().unwrap_or(false);
@@ -289,7 +306,7 @@ fn draw_planet_info(
         );
     } else if is_colonized {
         draw_ui_text(
-            "Click to travel",
+            "Tap to travel",
             panel_x + 15.0,
             panel_y + 150.0,
             12.0,
@@ -297,7 +314,7 @@ fn draw_planet_info(
         );
     } else if can_launch {
         draw_ui_text(
-            "Click to launch the Seed Ship",
+            "Tap to launch the Seed Ship",
             panel_x + 15.0,
             panel_y + 150.0,
             12.0,
@@ -318,7 +335,7 @@ fn draw_planet_info(
         );
     }
 
-    if !is_mouse_button_pressed(MouseButton::Left) {
+    if !activated {
         return None;
     }
     if is_colonized && !is_current {

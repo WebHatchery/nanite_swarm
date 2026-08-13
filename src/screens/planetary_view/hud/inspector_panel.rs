@@ -2,7 +2,7 @@
 
 use crate::assets::GameTextures;
 use crate::data::UiTheme;
-use crate::engine::{BuildingType, GridPos};
+use crate::engine::{BuildingType, GridPos, TerrainType};
 use crate::state::PlanetState;
 use crate::ui::{color_from_rgba, draw_hud_button, draw_hud_panel, draw_status_row};
 use macroquad::prelude::*;
@@ -243,10 +243,35 @@ pub(super) fn draw(
                         success,
                     );
                 }
+                let button_y = inspector_y + inspector_h - 38.0;
+                let filter_available = terrain == TerrainType::Forest;
+                let button_w = if filter_available {
+                    (right_w - 40.0) * 0.5
+                } else {
+                    right_w - 32.0
+                };
+                if let Some(tile_pos) = display_pos {
+                    if draw_hud_button(
+                        theme,
+                        Rect::new(right_x + 16.0, button_y, button_w, 28.0),
+                        "HARVEST",
+                    ) {
+                        state.try_harvest_terrain(tile_pos);
+                    }
+                    if filter_available
+                        && draw_hud_button(
+                            theme,
+                            Rect::new(right_x + 24.0 + button_w, button_y, button_w, 28.0),
+                            "MAKE FILTER",
+                        )
+                    {
+                        state.try_convert_forest_to_filter(tile_pos);
+                    }
+                }
             }
         } else {
             draw_ui_text(
-                "Hover a tile or select a build option.",
+                "Tap a tile or select a build option.",
                 right_x + 16.0,
                 inspector_y + 82.0,
                 11.0,

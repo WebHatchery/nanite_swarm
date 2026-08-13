@@ -7,6 +7,7 @@ use crate::engine::{BuildingType, DroneManager, Grid, GridPos, ResourceType, Sta
 use macroquad::miniquad;
 use macroquad_toolkit::achievements::{Achievement, Achievements};
 use macroquad_toolkit::fx::ParticleSystem;
+use macroquad_toolkit::input::TouchGesture;
 use macroquad_toolkit::notifications::NotificationManager;
 use macroquad_toolkit::ui::ScrollArea;
 use serde::{Deserialize, Serialize};
@@ -237,6 +238,15 @@ pub struct PlanetState {
     /// world is framed as it was left.
     #[serde(default)]
     pub camera: Camera,
+    /// Tap, pan, and pinch state for the planetary map.
+    #[serde(skip, default)]
+    pub touch_gesture: TouchGesture,
+    /// The current touch began on the map rather than over a HUD panel.
+    #[serde(skip, default)]
+    pub touch_camera_active: bool,
+    /// Whether the current touch was already assigned to the map or the HUD.
+    #[serde(skip, default)]
+    pub touch_gesture_routed: bool,
     /// Cursor position the current middle-drag was last seen at.
     #[serde(skip, default)]
     pub camera_drag_anchor: Option<(f32, f32)>,
@@ -363,6 +373,9 @@ impl PlanetState {
             selected_tile: None,
             demolish_mode: false,
             camera: Camera::default(),
+            touch_gesture: TouchGesture::new(),
+            touch_camera_active: false,
+            touch_gesture_routed: false,
             camera_drag_anchor: None,
             show_help: false,
             build_palette_scroll: ScrollArea::new(),

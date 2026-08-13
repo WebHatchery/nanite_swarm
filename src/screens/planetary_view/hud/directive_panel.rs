@@ -7,14 +7,15 @@
 use crate::data::UiTheme;
 use crate::directives::Directive;
 use crate::state::PlanetState;
-use crate::ui::{draw_hud_panel, draw_status_row};
+use crate::ui::{draw_hud_button, draw_hud_panel, draw_status_row};
+use macroquad::prelude::Rect;
 use macroquad_toolkit::ui::draw_ui_text;
 
 use super::super::format::fit_text_to_width;
 use super::{PanelColors, RightStackLayout};
 
 pub(super) fn draw(
-    state: &PlanetState,
+    state: &mut PlanetState,
     directive: &Directive,
     theme: &UiTheme,
     colors: &PanelColors,
@@ -29,11 +30,26 @@ pub(super) fn draw(
         draw_tutorial(state, theme, colors, right);
     } else {
         draw_directive(directive, theme, colors, right);
+        if !state.tutorial_done
+            && state.tutorial_hidden
+            && draw_hud_button(
+                theme,
+                Rect::new(
+                    right.right_x + right.right_w - 78.0,
+                    right.directive.y + 8.0,
+                    66.0,
+                    26.0,
+                ),
+                "SHOW HELP",
+            )
+        {
+            state.tutorial_hidden = false;
+        }
     }
 }
 
 fn draw_tutorial(
-    state: &PlanetState,
+    state: &mut PlanetState,
     theme: &UiTheme,
     colors: &PanelColors,
     right: &RightStackLayout,
@@ -71,13 +87,18 @@ fn draw_tutorial(
         11.0,
         colors.text,
     );
-    draw_ui_text(
-        "[T] hide",
-        right_x + 12.0,
-        right.directive.y + right.directive.h - 12.0,
-        9.0,
-        colors.dim,
-    );
+    if draw_hud_button(
+        theme,
+        Rect::new(
+            right_x + right_w - 62.0,
+            right.directive.y + 8.0,
+            50.0,
+            26.0,
+        ),
+        "HIDE",
+    ) {
+        state.tutorial_hidden = true;
+    }
 }
 
 fn draw_directive(

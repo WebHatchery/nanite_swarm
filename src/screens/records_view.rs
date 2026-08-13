@@ -91,7 +91,7 @@ pub fn render_records_view(
     }
 
     draw_ui_text(
-        "Press ESC or A to return",
+        "Drag the log to scroll | Tap Back to return",
         20.0,
         screen_h - 20.0,
         Dimensions::FONT_SIZE_SMALL,

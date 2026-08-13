@@ -1,11 +1,8 @@
 //! Game data definitions loaded from JSON.
 
-#[cfg(target_arch = "wasm32")]
-use macroquad::prelude::*;
 use serde::Deserialize;
 use std::collections::HashMap;
-#[cfg(not(target_arch = "wasm32"))]
-use std::fs;
+use std::path::PathBuf;
 
 use crate::data::load_json;
 use crate::engine::{ResearchNode, ResearchTree};
@@ -383,97 +380,61 @@ pub struct GameData {
 }
 
 impl GameData {
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn load() -> Self {
-        let buildings_json = fs::read_to_string("assets/buildings.json").unwrap_or_else(|_| {
-            macroquad_toolkit::include_json_str!("../../assets/buildings.json").to_string()
-        });
-        let terrain_json = fs::read_to_string("assets/terrain.json").unwrap_or_else(|_| {
-            macroquad_toolkit::include_json_str!("../../assets/terrain.json").to_string()
-        });
-        let research_json = fs::read_to_string("assets/research.json").unwrap_or_else(|_| {
-            macroquad_toolkit::include_json_str!("../../assets/research.json").to_string()
-        });
-        let seed_ship_json = fs::read_to_string("assets/seed_ship.json").unwrap_or_else(|_| {
-            macroquad_toolkit::include_json_str!("../../assets/seed_ship.json").to_string()
-        });
-        let planets_json = fs::read_to_string("assets/planets.json").unwrap_or_else(|_| {
-            macroquad_toolkit::include_json_str!("../../assets/planets.json").to_string()
-        });
-        let tutorial_json = fs::read_to_string("assets/tutorial.json").unwrap_or_else(|_| {
-            macroquad_toolkit::include_json_str!("../../assets/tutorial.json").to_string()
-        });
-        let directives_json = fs::read_to_string("assets/directives.json").unwrap_or_else(|_| {
-            macroquad_toolkit::include_json_str!("../../assets/directives.json").to_string()
-        });
-        let achievements_json =
-            fs::read_to_string("assets/achievements.json").unwrap_or_else(|_| {
-                macroquad_toolkit::include_json_str!("../../assets/achievements.json").to_string()
-            });
-        let core_stages_json = fs::read_to_string("assets/core_stages.json").unwrap_or_else(|_| {
-            macroquad_toolkit::include_json_str!("../../assets/core_stages.json").to_string()
-        });
-
-        Self::from_json_strings(
-            &buildings_json,
-            &terrain_json,
-            &research_json,
-            &seed_ship_json,
-            &planets_json,
-            &tutorial_json,
-            &directives_json,
-            &achievements_json,
-            &core_stages_json,
+        let buildings_json = macroquad_toolkit::data_loader::load_text_with_fallback_sync(
+            "assets/buildings.json",
+            &[PathBuf::from("assets/buildings.json")],
+            macroquad_toolkit::include_json_str!("../../assets/buildings.json"),
         )
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    pub async fn load_async() -> Self {
-        let buildings_json = load_string("assets/buildings.json")
-            .await
-            .unwrap_or_else(|_| {
-                macroquad_toolkit::include_json_str!("../../assets/buildings.json").to_string()
-            });
-        let terrain_json = load_string("assets/terrain.json")
-            .await
-            .unwrap_or_else(|_| {
-                macroquad_toolkit::include_json_str!("../../assets/terrain.json").to_string()
-            });
-        let research_json = load_string("assets/research.json")
-            .await
-            .unwrap_or_else(|_| {
-                macroquad_toolkit::include_json_str!("../../assets/research.json").to_string()
-            });
-        let seed_ship_json = load_string("assets/seed_ship.json")
-            .await
-            .unwrap_or_else(|_| {
-                macroquad_toolkit::include_json_str!("../../assets/seed_ship.json").to_string()
-            });
-        let planets_json = load_string("assets/planets.json")
-            .await
-            .unwrap_or_else(|_| {
-                macroquad_toolkit::include_json_str!("../../assets/planets.json").to_string()
-            });
-        let directives_json = load_string("assets/directives.json")
-            .await
-            .unwrap_or_else(|_| {
-                macroquad_toolkit::include_json_str!("../../assets/directives.json").to_string()
-            });
-        let achievements_json = load_string("assets/achievements.json")
-            .await
-            .unwrap_or_else(|_| {
-                macroquad_toolkit::include_json_str!("../../assets/achievements.json").to_string()
-            });
-        let core_stages_json = load_string("assets/core_stages.json")
-            .await
-            .unwrap_or_else(|_| {
-                macroquad_toolkit::include_json_str!("../../assets/core_stages.json").to_string()
-            });
-        let tutorial_json = load_string("assets/tutorial.json")
-            .await
-            .unwrap_or_else(|_| {
-                macroquad_toolkit::include_json_str!("../../assets/tutorial.json").to_string()
-            });
+        .expect("buildings data source");
+        let terrain_json = macroquad_toolkit::data_loader::load_text_with_fallback_sync(
+            "assets/terrain.json",
+            &[PathBuf::from("assets/terrain.json")],
+            macroquad_toolkit::include_json_str!("../../assets/terrain.json"),
+        )
+        .expect("terrain data source");
+        let research_json = macroquad_toolkit::data_loader::load_text_with_fallback_sync(
+            "assets/research.json",
+            &[PathBuf::from("assets/research.json")],
+            macroquad_toolkit::include_json_str!("../../assets/research.json"),
+        )
+        .expect("research data source");
+        let seed_ship_json = macroquad_toolkit::data_loader::load_text_with_fallback_sync(
+            "assets/seed_ship.json",
+            &[PathBuf::from("assets/seed_ship.json")],
+            macroquad_toolkit::include_json_str!("../../assets/seed_ship.json"),
+        )
+        .expect("seed ship data source");
+        let planets_json = macroquad_toolkit::data_loader::load_text_with_fallback_sync(
+            "assets/planets.json",
+            &[PathBuf::from("assets/planets.json")],
+            macroquad_toolkit::include_json_str!("../../assets/planets.json"),
+        )
+        .expect("planet data source");
+        let tutorial_json = macroquad_toolkit::data_loader::load_text_with_fallback_sync(
+            "assets/tutorial.json",
+            &[PathBuf::from("assets/tutorial.json")],
+            macroquad_toolkit::include_json_str!("../../assets/tutorial.json"),
+        )
+        .expect("tutorial data source");
+        let directives_json = macroquad_toolkit::data_loader::load_text_with_fallback_sync(
+            "assets/directives.json",
+            &[PathBuf::from("assets/directives.json")],
+            macroquad_toolkit::include_json_str!("../../assets/directives.json"),
+        )
+        .expect("directive data source");
+        let achievements_json = macroquad_toolkit::data_loader::load_text_with_fallback_sync(
+            "assets/achievements.json",
+            &[PathBuf::from("assets/achievements.json")],
+            macroquad_toolkit::include_json_str!("../../assets/achievements.json"),
+        )
+        .expect("achievement data source");
+        let core_stages_json = macroquad_toolkit::data_loader::load_text_with_fallback_sync(
+            "assets/core_stages.json",
+            &[PathBuf::from("assets/core_stages.json")],
+            macroquad_toolkit::include_json_str!("../../assets/core_stages.json"),
+        )
+        .expect("core stage data source");
 
         Self::from_json_strings(
             &buildings_json,

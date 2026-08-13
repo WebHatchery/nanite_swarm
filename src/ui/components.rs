@@ -3,8 +3,9 @@
 use super::core::{Colors, Dimensions};
 use crate::data::UiTheme;
 use macroquad::prelude::*;
-use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text};
-use macroquad_toolkit::{input::is_hovered, ui::draw_text_centered_in_box};
+use macroquad_toolkit::ui::{
+    draw_text_centered_in_box, draw_ui_text, measure_ui_text, note_neighbour, touch_area, Pointer,
+};
 
 /// Draw a styled button and return true if clicked
 #[allow(dead_code)]
@@ -14,8 +15,12 @@ pub fn draw_button(x: f32, y: f32, width: f32, text: &str) -> bool {
 
 /// Draw a styled button with a custom size
 pub fn draw_button_sized(x: f32, y: f32, width: f32, height: f32, text: &str) -> bool {
-    let hovered = is_hovered(x, y, width, height);
-    let pressed = hovered && is_mouse_button_down(MouseButton::Left);
+    let rect = Rect::new(x, y, width, height);
+    note_neighbour(rect);
+    let hit_rect = touch_area(rect);
+    let pointer = Pointer::read(|position| position);
+    let hovered = pointer.hovering_over(hit_rect);
+    let pressed = pointer.pressing(hit_rect);
 
     let base_color = if pressed {
         Colors::PRIMARY_SOFT
@@ -34,7 +39,7 @@ pub fn draw_button_sized(x: f32, y: f32, width: f32, height: f32, text: &str) ->
         .with_shadow(vec2(2.0, 3.0), Color::new(0.0, 0.0, 0.0, 0.35))
         .with_border(2.0, Colors::PANEL_BORDER)
         .with_top_highlight(3.0, Color::new(1.0, 1.0, 1.0, 0.08));
-    macroquad_toolkit::ui::draw_surface(Rect::new(x, y, width, height), &surface);
+    macroquad_toolkit::ui::draw_surface(rect, &surface);
 
     let font_size = if height >= 38.0 {
         Dimensions::FONT_SIZE_NORMAL
@@ -51,7 +56,7 @@ pub fn draw_button_sized(x: f32, y: f32, width: f32, height: f32, text: &str) ->
         text_color,
     );
 
-    hovered && is_mouse_button_pressed(MouseButton::Left)
+    pointer.released_on(hit_rect)
 }
 
 /// Draw a panel background
@@ -133,8 +138,11 @@ pub fn draw_hud_panel(theme: &UiTheme, rect: Rect, title: Option<&str>) {
 }
 
 pub fn draw_hud_button(theme: &UiTheme, rect: Rect, label: &str) -> bool {
-    let hovered = is_hovered(rect.x, rect.y, rect.w, rect.h);
-    let pressed = hovered && is_mouse_button_down(MouseButton::Left);
+    note_neighbour(rect);
+    let hit_rect = touch_area(rect);
+    let pointer = Pointer::read(|position| position);
+    let hovered = pointer.hovering_over(hit_rect);
+    let pressed = pointer.pressing(hit_rect);
     let mut fill = color_from_rgba(&theme.colors.panel_deep);
     if hovered {
         fill = color_from_rgba(&theme.colors.panel_inner);
@@ -162,7 +170,7 @@ pub fn draw_hud_button(theme: &UiTheme, rect: Rect, label: &str) -> bool {
         text_color,
     );
 
-    hovered && is_mouse_button_pressed(MouseButton::Left)
+    pointer.released_on(hit_rect)
 }
 
 pub fn draw_hud_progress_bar(theme: &UiTheme, rect: Rect, progress: f32, fill_color: Color) {

@@ -74,6 +74,40 @@ fn zooming_out_keeps_the_point_under_the_cursor_too() {
 }
 
 #[test]
+fn pinch_scale_keeps_its_center_over_the_same_grid_point() {
+    let cursor = (240.0, 160.0);
+    let mut camera = Camera::default();
+    let before = (
+        (cursor.0 - camera.pan_x) / camera.zoom,
+        (cursor.1 - camera.pan_y) / camera.zoom,
+    );
+
+    camera.zoom_by_scale(1.5, cursor);
+
+    let after = (
+        (cursor.0 - camera.pan_x) / camera.zoom,
+        (cursor.1 - camera.pan_y) / camera.zoom,
+    );
+    assert!((before.0 - after.0).abs() < 1e-3);
+    assert!((before.1 - after.1).abs() < 1e-3);
+    assert_eq!(camera.zoom, 1.5);
+}
+
+#[test]
+fn nonsense_pinch_scales_do_not_move_the_camera() {
+    let original = Camera {
+        pan_x: 12.0,
+        pan_y: -8.0,
+        zoom: 1.0,
+    };
+    for scale in [0.0, -1.0, f32::NAN, f32::INFINITY] {
+        let mut camera = original;
+        camera.zoom_by_scale(scale, (200.0, 200.0));
+        assert_eq!(camera, original);
+    }
+}
+
+#[test]
 fn a_zoom_that_changes_nothing_leaves_the_pan_alone() {
     let mut camera = Camera {
         pan_x: 12.0,

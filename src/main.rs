@@ -576,6 +576,7 @@ async fn main() {
             game.begin_capture_scene(&config.scene);
             capture::run_capture_once(&config, |_dt| {
                 game.update();
+                macroquad_toolkit::ui::end_frame_neighbours();
             })
             .await;
         }
@@ -584,6 +585,7 @@ async fn main() {
 
     loop {
         game.update();
+        macroquad_toolkit::ui::end_frame_neighbours();
         next_frame().await;
     }
 }

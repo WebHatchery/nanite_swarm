@@ -7,7 +7,7 @@ use crate::state::PlanetState;
 use crate::ui::{color_from_rgba, draw_hud_button, draw_hud_panel};
 use macroquad::prelude::*;
 use macroquad_toolkit::colors::with_alpha;
-use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text};
+use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text, Pointer};
 
 use super::super::format::{fit_text_to_width, format_power_delta};
 use super::super::metrics::HudMetrics;
@@ -23,9 +23,11 @@ fn draw_build_row(
     width: f32,
     height: f32,
     building_type: BuildingType,
+    interactive: bool,
 ) -> f32 {
-    let (mouse_x, mouse_y) = mouse_position();
-    let hovered = mouse_x >= x && mouse_x <= x + width && mouse_y >= y && mouse_y <= y + height;
+    let rect = Rect::new(x, y, width, height);
+    let pointer = Pointer::read(|position| position);
+    let hovered = pointer.hovering_over(rect);
     let selected = state.selected_building == Some(building_type);
     let (mineral_cost, energy_cost) = building_type.cost();
     let can_afford = state.resources.can_afford(mineral_cost, energy_cost);
@@ -136,19 +138,6 @@ fn draw_build_row(
         name_color,
     );
 
-    if let Some(hotkey) = building_type.hotkey() {
-        let hotkey_text = format!("[{}]", hotkey);
-        let hotkey_width =
-            measure_ui_text(&hotkey_text, None, theme.typography.small as u16, 1.0).width;
-        draw_ui_text(
-            &hotkey_text,
-            x + width - hotkey_width - 10.0,
-            y + 20.0,
-            theme.typography.small,
-            accent,
-        );
-    }
-
     let description = fit_text_to_width(
         building_type.description(),
         width - 92.0,
@@ -214,7 +203,7 @@ fn draw_build_row(
         draw_ui_text(label, name_x, cost_y, theme.typography.small, label_color);
     }
 
-    if unlocked && hovered && is_mouse_button_pressed(MouseButton::Left) {
+    if unlocked && interactive && pointer.released_on(rect) {
         state.select_building(building_type);
     }
 
@@ -241,7 +230,7 @@ pub(super) fn draw(
         Some("BUILD PALETTE"),
     );
     draw_ui_text(
-        "Drag or click to build",
+        "Tap a building, then tap the grid",
         sidebar_x + metrics.panel_padding,
         sidebar_y + 50.0,
         theme.typography.small,
@@ -256,7 +245,7 @@ pub(super) fn draw(
     building_defs.sort_by_key(|def| def.build_menu_order);
 
     let list_top = sidebar_y + 62.0;
-    let quick_actions_h = 64.0;
+    let quick_actions_h = 106.0;
     let list_bottom = sidebar_y + sidebar_h - quick_actions_h - metrics.panel_gap;
     let list_height = (list_bottom - list_top).max(0.0);
     let content_x = sidebar_x + metrics.panel_padding;
@@ -289,6 +278,7 @@ pub(super) fn draw(
     let scroll_offset = state.build_palette_scroll.offset();
 
     let start_y = list_top - scroll_offset;
+    let rows_interactive = !state.build_palette_scroll.absorbs_press();
     for (index, building) in visible_buildings.into_iter().enumerate() {
         let card_y = start_y + index as f32 * (metrics.build_row_height + row_gap);
         if card_y + metrics.build_row_height < list_top || card_y > list_bottom {
@@ -303,6 +293,7 @@ pub(super) fn draw(
             card_w,
             metrics.build_row_height,
             building,
+            rows_interactive,
         );
     }
 
@@ -327,11 +318,27 @@ pub(super) fn draw(
     ) {
         state.toggle_demolish_mode();
     }
-    draw_ui_text(
-        "[H] Harvest terrain  [F] Forest filter",
-        sidebar_x + metrics.panel_padding,
-        quick_actions_y + 48.0,
-        theme.typography.small,
-        dim,
-    );
+    let half_w = (sidebar_w - metrics.panel_padding * 2.0 - 8.0) * 0.5;
+    let second_y = quick_actions_y + 38.0;
+    if draw_hud_button(
+        theme,
+        Rect::new(sidebar_x + metrics.panel_padding, second_y, half_w, 30.0),
+        "CANCEL",
+    ) {
+        state.clear_selection();
+        state.selected_tile = None;
+        state.demolish_mode = false;
+    }
+    if draw_hud_button(
+        theme,
+        Rect::new(
+            sidebar_x + metrics.panel_padding + half_w + 8.0,
+            second_y,
+            half_w,
+            30.0,
+        ),
+        "HELP",
+    ) {
+        state.show_help = !state.show_help;
+    }
 }

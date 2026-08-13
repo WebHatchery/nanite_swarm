@@ -51,7 +51,22 @@ pub fn render_planetary_view(
     let (mouse_x, mouse_y) = mouse_position();
     let layout = HudMetrics::for_screen(theme, screen_w, screen_h, state.camera);
     let cursor_over_ui = is_cursor_over_ui(mouse_x, mouse_y, screen_w, screen_h, layout);
-    input::handle_camera(state, layout, cursor_over_ui, screen_w, screen_h);
+    let touch = state.touch_gesture.update();
+    if touch.active && !state.touch_gesture_routed {
+        state.touch_gesture_routed = true;
+        state.touch_camera_active =
+            !is_cursor_over_ui(touch.center.x, touch.center.y, screen_w, screen_h, layout);
+    }
+    let touch_camera_active = state.touch_camera_active;
+    input::handle_camera(
+        state,
+        layout,
+        cursor_over_ui,
+        screen_w,
+        screen_h,
+        touch,
+        touch_camera_active,
+    );
 
     let metrics = HudMetrics::for_screen(theme, screen_w, screen_h, state.camera);
     let hovered_pos = if cursor_over_ui {
@@ -60,6 +75,15 @@ pub fn render_planetary_view(
         screen_to_grid(mouse_x, mouse_y, metrics)
             .filter(|pos| pos.in_bounds(state.grid.width, state.grid.height))
     };
+    let touch_tap = touch
+        .tap
+        .filter(|_| touch_camera_active)
+        .and_then(|position| screen_to_grid(position.x, position.y, metrics))
+        .filter(|pos| pos.in_bounds(state.grid.width, state.grid.height));
+    if !touch.active {
+        state.touch_camera_active = false;
+        state.touch_gesture_routed = false;
+    }
 
     terrain_render::draw_planetary_background(screen_w, screen_h, time);
     terrain_render::draw_grid_tiles(state, textures, metrics, hovered_pos, pulse, global_pulse);
@@ -91,6 +115,6 @@ pub fn render_planetary_view(
     if ui_action != PlanetaryAction::None {
         ui_action
     } else {
-        input::handle_input(state, hovered_pos)
+        input::handle_input(state, hovered_pos, touch_tap)
     }
 }
