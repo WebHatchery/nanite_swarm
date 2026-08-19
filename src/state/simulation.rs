@@ -96,7 +96,7 @@ impl PlanetState {
         if self.power_collapse_shutdown <= 0.0 {
             let core = self.grid.find_core();
             let events = self.drones.update(sim_delta);
-            let mut delivered_total = 0.0;
+            let mut minerals_delivered = 0.0;
             for event in events {
                 match event {
                     crate::engine::DroneEvent::Delivered {
@@ -107,14 +107,9 @@ impl PlanetState {
                     } => {
                         if Some(at) == core {
                             self.emit_audio(super::audio::AudioEvent::Delivery);
-                            match resource {
-                                crate::engine::ResourceType::Alloy => {
-                                    self.resources.alloy += amount
-                                }
-                                crate::engine::ResourceType::Components => {
-                                    self.resources.components += amount
-                                }
-                                _ => delivered_total += amount,
+                            self.resources.add(resource, amount);
+                            if resource == crate::engine::ResourceType::Minerals {
+                                minerals_delivered += amount;
                             }
                         } else {
                             // Ore dropped at a processing building waits there
@@ -136,9 +131,8 @@ impl PlanetState {
                     _ => {}
                 }
             }
-            if delivered_total > 0.0 {
-                self.resources.minerals += delivered_total;
-                self.delivered_since_sample += delivered_total;
+            if minerals_delivered > 0.0 {
+                self.delivered_since_sample += minerals_delivered;
                 if allow_visuals {
                     self.spawn_resource_burst();
                 }
@@ -288,6 +282,18 @@ impl PlanetState {
                 } else {
                     self.resources.add(resource, -taken);
                 }
+                match resource {
+                    crate::engine::ResourceType::Minerals => {
+                        self.factory_flow_since_sample.minerals_consumed += taken
+                    }
+                    crate::engine::ResourceType::Alloy => {
+                        self.factory_flow_since_sample.alloy_consumed += taken
+                    }
+                    crate::engine::ResourceType::Components => {
+                        self.factory_flow_since_sample.components_consumed += taken
+                    }
+                    _ => {}
+                }
             }
 
             for (id, rate) in &recipe.outputs {
@@ -307,6 +313,18 @@ impl PlanetState {
                 } else {
                     // Nothing carries Data. It is simply known.
                     self.resources.add(resource, made);
+                }
+                match resource {
+                    crate::engine::ResourceType::Alloy => {
+                        self.factory_flow_since_sample.alloy_produced += made
+                    }
+                    crate::engine::ResourceType::Components => {
+                        self.factory_flow_since_sample.components_produced += made
+                    }
+                    crate::engine::ResourceType::Data => {
+                        self.factory_flow_since_sample.data_produced += made
+                    }
+                    _ => {}
                 }
             }
         }
@@ -568,24 +586,27 @@ impl PlanetState {
             self.throughput_timer -= THROUGHPUT_SAMPLE_SECONDS;
             let rate = self.delivered_since_sample / THROUGHPUT_SAMPLE_SECONDS;
             self.throughput.push(rate);
-            let data_produced = self.config.resources.core_data_rate
-                + self.config.resources.server_data_rate
-                    * self.grid.find_buildings(BuildingType::ServerBank).len() as f32;
+            let data_produced = self.config.resources.core_data_rate;
             let data_consumed = self
                 .research
                 .current_research
                 .as_ref()
                 .map(|_| self.config.resources.research_rate)
                 .unwrap_or(0.0);
+            let observed = self.factory_flow_since_sample;
+            let per_second = 1.0 / THROUGHPUT_SAMPLE_SECONDS;
             self.graph_samples.push(crate::state::GraphSample {
                 power_produced: self.power_generation().max(0.0),
                 power_consumed: self.power_consumption().max(0.0),
-                alloy_produced: self.alloy_rate().max(0.0),
-                alloy_consumed: self.grid.find_buildings(BuildingType::ServerBank).len() as f32
-                    * 0.5,
-                data_produced: data_produced.max(0.0),
+                minerals_consumed: observed.minerals_consumed * per_second,
+                alloy_produced: observed.alloy_produced * per_second,
+                alloy_consumed: observed.alloy_consumed * per_second,
+                components_produced: observed.components_produced * per_second,
+                components_consumed: observed.components_consumed * per_second,
+                data_produced: (data_produced + observed.data_produced).max(0.0),
                 data_consumed,
             });
+            self.factory_flow_since_sample = crate::state::GraphSample::default();
             if self.graph_samples.len() > 120 {
                 self.graph_samples.remove(0);
             }

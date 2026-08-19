@@ -220,6 +220,68 @@ fn the_assembler_needs_both_routed_inputs_before_it_makes_components() {
 }
 
 #[test]
+fn graph_samples_measure_factory_work_that_really_happened() {
+    let (mut state, pos) = processing_world(BuildingType::Assembler, 0.0);
+    state.input_hoppers.insert(
+        (pos.x, pos.y),
+        [
+            (crate::engine::ResourceType::Minerals, 10.0),
+            (crate::engine::ResourceType::Alloy, 10.0),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    state.update_recipes(1.0);
+    state.sample_throughput(1.0);
+
+    let sample = state.graph_samples.last().expect("one observed second");
+    assert!((sample.minerals_consumed - 2.0).abs() < 0.001);
+    assert!((sample.alloy_consumed - 1.0).abs() < 0.001);
+    assert!((sample.components_produced - 0.5).abs() < 0.001);
+    assert_eq!(state.observed_components_rate(), 0.5);
+}
+
+#[test]
+fn starvation_marks_only_powered_processors_with_a_missing_input() {
+    let (mut state, pos) = processing_world(BuildingType::Smelter, 0.0);
+    assert_eq!(state.starved_factories(), [pos]);
+
+    state.input_buffers.insert((pos.x, pos.y), 10.0);
+    assert!(state.starved_factories().is_empty());
+
+    state
+        .grid
+        .get_mut(pos)
+        .unwrap()
+        .building
+        .as_mut()
+        .unwrap()
+        .powered = false;
+    state.input_buffers.insert((pos.x, pos.y), 0.0);
+    assert!(
+        state.starved_factories().is_empty(),
+        "an offline machine needs power, not an input warning"
+    );
+}
+
+#[test]
+fn physical_delivery_keeps_its_resource_identity_at_the_core() {
+    let mut state = state();
+    let core = state.grid.find_core().unwrap();
+    let id = state.drones.spawn_drone(core);
+    let drone = state.drones.get_drone_mut(id).unwrap();
+    drone.dispatch(core, vec![core], 3.0, crate::engine::ResourceType::Biomass);
+    drone.progress = 1.0;
+    let before_minerals = state.resources.minerals;
+    let before_biomass = state.resources.biomass;
+
+    state.step(TICK_SECONDS, false);
+
+    assert_eq!(state.resources.minerals, before_minerals);
+    assert_eq!(state.resources.biomass, before_biomass + 3.0);
+}
+
+#[test]
 fn an_output_nothing_can_carry_goes_straight_into_the_pool() {
     // A Server Bank turns carried alloy into Data, and nothing carries Data.
     let (mut state, pos) = processing_world(BuildingType::ServerBank, 10.0);

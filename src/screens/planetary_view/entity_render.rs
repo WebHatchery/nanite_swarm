@@ -245,6 +245,39 @@ pub(super) fn draw_congestion(state: &PlanetState, metrics: HudMetrics, time: f3
     }
 }
 
+/// Put the missing-input warning on the machine itself. A count in the
+/// sidebar tells the player there is a problem; this marker tells them where.
+pub(super) fn draw_factory_warnings(
+    state: &PlanetState,
+    metrics: HudMetrics,
+    theme: &UiTheme,
+    time: f32,
+) {
+    let warning = color_from_rgba(&theme.colors.warning);
+    let pulse = 0.72 + (time * 4.0).sin().abs() * 0.28;
+    for pos in state.starved_factories() {
+        let (x, y) = grid_to_screen(pos, metrics);
+        let cx = x + metrics.tile_size - 5.5;
+        let cy = y + 5.5;
+        let radius = (metrics.tile_size * 0.22).clamp(5.0, 8.0);
+        draw_triangle(
+            vec2(cx, cy - radius),
+            vec2(cx - radius, cy + radius * 0.75),
+            vec2(cx + radius, cy + radius * 0.75),
+            with_alpha(Colors::BACKGROUND, 0.94),
+        );
+        draw_triangle_lines(
+            vec2(cx, cy - radius),
+            vec2(cx - radius, cy + radius * 0.75),
+            vec2(cx + radius, cy + radius * 0.75),
+            1.4,
+            with_alpha(warning, pulse),
+        );
+        draw_line(cx, cy - radius * 0.35, cx, cy + radius * 0.2, 1.2, warning);
+        draw_circle(cx, cy + radius * 0.46, 1.0, warning);
+    }
+}
+
 pub(super) fn draw_particles(state: &PlanetState, metrics: HudMetrics) {
     for particle in state.particles.particles() {
         let screen_x = metrics.grid_offset_x()

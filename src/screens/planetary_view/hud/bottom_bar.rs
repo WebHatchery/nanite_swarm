@@ -2,7 +2,7 @@
 
 use crate::data::UiTheme;
 use crate::state::PlanetState;
-use crate::ui::{color_from_rgba, draw_hud_button, draw_hud_panel, Colors};
+use crate::ui::{color_from_rgba, draw_hud_button, draw_hud_panel};
 use macroquad::prelude::*;
 use macroquad_toolkit::colors::with_alpha;
 use macroquad_toolkit::ui::draw_ui_text;
@@ -290,6 +290,7 @@ pub(super) fn draw(
     draw_throughput(
         state,
         Rect::new(graph_x, graph_y, graph_w, graph_h),
+        theme,
         primary,
         text,
     );
@@ -377,7 +378,7 @@ pub(super) fn draw(
 /// This was a sine wave for a long time: an automation game with a decorative
 /// graph of nothing. Each bucket keeps the range it covers, so a spike stays
 /// visible however far back it happened.
-fn draw_throughput(state: &PlanetState, area: Rect, line: Color, text: Color) {
+fn draw_throughput(state: &PlanetState, area: Rect, theme: &UiTheme, line: Color, text: Color) {
     let buckets = state.throughput.buckets();
     if buckets.is_empty() {
         draw_ui_text(
@@ -397,12 +398,11 @@ fn draw_throughput(state: &PlanetState, area: Rect, line: Color, text: Color) {
         .iter()
         .flat_map(|sample| {
             [
-                sample.power_produced,
-                sample.power_consumed,
+                sample.minerals_consumed,
                 sample.alloy_produced,
                 sample.alloy_consumed,
-                sample.data_produced,
-                sample.data_consumed,
+                sample.components_produced,
+                sample.components_consumed,
             ]
         })
         .fold(0.0, f32::max);
@@ -432,11 +432,10 @@ fn draw_throughput(state: &PlanetState, area: Rect, line: Color, text: Color) {
     let latest = state.throughput.last().unwrap_or(0.0);
     draw_ui_text(
         &format!(
-            "O {:.1}  P {:.1}  A {:.1}  D {:.1}",
+            "IN {:.1}  A {:.1}  C {:.1}",
             latest,
-            state.power_balance,
-            state.alloy_rate(),
-            state.config.resources.core_data_rate
+            state.observed_alloy_rate(),
+            state.observed_components_rate()
         ),
         area.x + 4.0,
         area.y + 9.0,
@@ -444,20 +443,20 @@ fn draw_throughput(state: &PlanetState, area: Rect, line: Color, text: Color) {
         text,
     );
     if !state.graph_samples.is_empty() {
-        draw_graph_series(state, area, peak, line);
+        draw_graph_series(state, area, peak, theme, line);
     }
     let legend = [
-        ("P+", Colors::PRIMARY_SOFT),
-        ("P-", Colors::ERROR),
-        ("A+", Colors::ACCENT),
-        ("A-", Colors::WARNING),
-        ("D+", Colors::PRIMARY),
-        ("D-", Colors::TEXT_DIM),
+        ("IN", line),
+        ("O>", color_from_rgba(&theme.colors.minerals)),
+        ("A+", color_from_rgba(&theme.colors.alloy)),
+        ("A>", color_from_rgba(&theme.colors.warning)),
+        ("C+", color_from_rgba(&theme.colors.components)),
     ];
+    let legend_step = (area.w - 8.0) / legend.len() as f32;
     for (index, (label, color)) in legend.into_iter().enumerate() {
         draw_ui_text(
             label,
-            area.x + 4.0 + index as f32 * 23.0,
+            area.x + 4.0 + index as f32 * legend_step,
             area.bottom() - 3.0,
             8.0,
             color,
@@ -465,28 +464,24 @@ fn draw_throughput(state: &PlanetState, area: Rect, line: Color, text: Color) {
     }
 }
 
-fn draw_graph_series(state: &PlanetState, area: Rect, peak: f32, line: Color) {
+fn draw_graph_series(state: &PlanetState, area: Rect, peak: f32, theme: &UiTheme, line: Color) {
     let count = state.graph_samples.len().max(2) as f32;
     let step = area.w / count;
     let series = [
-        (0usize, Colors::PRIMARY_SOFT),
-        (1, Colors::ERROR),
-        (2, Colors::ACCENT),
-        (3, Colors::WARNING),
-        (4, Colors::PRIMARY),
-        (5, Colors::TEXT_DIM),
+        (0usize, color_from_rgba(&theme.colors.minerals)),
+        (1, color_from_rgba(&theme.colors.alloy)),
+        (2, color_from_rgba(&theme.colors.warning)),
+        (3, color_from_rgba(&theme.colors.components)),
     ];
     for (kind, color) in series {
         for (index, pair) in state.graph_samples.windows(2).enumerate() {
             let x0 = area.x + index as f32 * step;
             let x1 = x0 + step;
             let read = |sample: &crate::state::GraphSample| match kind {
-                0 => sample.power_produced,
-                1 => sample.power_consumed,
-                2 => sample.alloy_produced,
-                3 => sample.alloy_consumed,
-                4 => sample.data_produced,
-                _ => sample.data_consumed,
+                0 => sample.minerals_consumed,
+                1 => sample.alloy_produced,
+                2 => sample.alloy_consumed,
+                _ => sample.components_produced,
             };
             let y0 =
                 area.y + area.h - 2.0 - (read(&pair[0]) / peak).clamp(0.0, 1.0) * (area.h - 10.0);

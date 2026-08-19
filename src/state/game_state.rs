@@ -61,8 +61,14 @@ pub struct CollapseRecord {
 pub struct GraphSample {
     pub power_produced: f32,
     pub power_consumed: f32,
+    #[serde(default)]
+    pub minerals_consumed: f32,
     pub alloy_produced: f32,
     pub alloy_consumed: f32,
+    #[serde(default)]
+    pub components_produced: f32,
+    #[serde(default)]
+    pub components_consumed: f32,
     pub data_produced: f32,
     pub data_consumed: f32,
 }
@@ -352,6 +358,10 @@ pub struct PlanetState {
     pub collapse_history: Vec<CollapseRecord>,
     #[serde(default)]
     pub graph_samples: Vec<GraphSample>,
+    /// Recipe inputs and outputs accumulated until the next one-second graph
+    /// sample. Session-only: a loaded game starts a fresh observation window.
+    #[serde(skip, default)]
+    pub factory_flow_since_sample: GraphSample,
     #[serde(skip, default)]
     pub last_offline_report: super::progress::OfflineReport,
     #[serde(skip, default)]
@@ -496,6 +506,7 @@ impl PlanetState {
             route_reservations: std::collections::HashMap::new(),
             collapse_history: Vec::new(),
             graph_samples: Vec::new(),
+            factory_flow_since_sample: GraphSample::default(),
             last_offline_report: super::progress::OfflineReport::default(),
             audio_events: Vec::new(),
             blueprint: Vec::new(),

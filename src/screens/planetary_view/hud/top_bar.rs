@@ -82,9 +82,9 @@ pub(super) fn draw(
     let biomass_value = format!("{:.0}", state.resources.biomass);
     let biomass_rate = format!("+{:.1}/s", state.biomass_power_bonus.max(0.0));
     let alloy_value = format!("{:.0}", state.resources.alloy);
-    let alloy_rate = format!("+{:.1}/s", state.alloy_rate());
+    let alloy_rate = format!("+{:.1}/s", state.observed_alloy_rate());
     let components_value = format!("{:.0}", state.resources.components);
-    let components_rate = format!("+{:.1}/s", state.components_rate());
+    let components_rate = format!("+{:.1}/s", state.observed_components_rate());
 
     draw_metric_card(
         theme,

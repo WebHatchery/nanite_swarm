@@ -406,6 +406,12 @@ impl Game {
                 for _ in 0..60 {
                     planet.step(state::TICK_SECONDS, false);
                 }
+                // Let the graph remember a working line, then empty one feed
+                // so the same frame verifies the bottleneck marker and count.
+                if let Some(hopper) = planet.input_hoppers.get_mut(&key) {
+                    hopper.insert(engine::ResourceType::Minerals, 0.0);
+                    planet.input_buffers.insert(key, hopper.values().sum());
+                }
                 planet.select_building(engine::BuildingType::Assembler);
                 planet.selected_tile = Some(assembler);
             }

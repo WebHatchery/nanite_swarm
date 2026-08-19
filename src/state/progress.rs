@@ -1,5 +1,5 @@
 use crate::data::DustResponseConfig;
-use crate::engine::{BuildingType, GridPos, StatId};
+use crate::engine::{BuildingType, GridPos, ResourceType, StatId};
 
 use super::game_state::PlanetState;
 
@@ -276,6 +276,77 @@ impl PlanetState {
     /// Components the working assemblers would produce per second.
     pub fn components_rate(&self) -> f32 {
         self.physical_output_rate("components")
+    }
+
+    /// What the factory actually produced in its latest complete observation
+    /// window, rather than its theoretical powered capacity.
+    pub fn observed_alloy_rate(&self) -> f32 {
+        self.graph_samples
+            .last()
+            .map(|sample| sample.alloy_produced)
+            .unwrap_or(0.0)
+    }
+
+    pub fn observed_components_rate(&self) -> f32 {
+        self.graph_samples
+            .last()
+            .map(|sample| sample.components_produced)
+            .unwrap_or(0.0)
+    }
+
+    /// Powered processors with at least one empty required input. Returning
+    /// positions lets both the HUD count the bottleneck and the map mark it.
+    pub fn starved_factories(&self) -> Vec<GridPos> {
+        crate::data::game_data()
+            .buildings
+            .iter()
+            .filter(|def| !def.recipe.is_empty())
+            .filter_map(|def| BuildingType::from_id(&def.id).map(|kind| (kind, &def.recipe)))
+            .flat_map(|(kind, recipe)| {
+                self.grid
+                    .find_buildings(kind)
+                    .into_iter()
+                    .map(move |pos| (pos, recipe))
+            })
+            .filter(|(pos, recipe)| {
+                let Some(building) = self.grid.get(*pos).and_then(|tile| tile.building.as_ref())
+                else {
+                    return false;
+                };
+                if !building.powered || building.is_dust_stalled() {
+                    return false;
+                }
+                let carried = recipe.carried_ids();
+                recipe.inputs.iter().any(|(id, rate)| {
+                    if *rate <= 0.0 {
+                        return false;
+                    }
+                    let Some(resource) = ResourceType::from_id(id) else {
+                        return false;
+                    };
+                    let available = if carried.contains(&resource.id()) {
+                        self.input_hoppers
+                            .get(&(pos.x, pos.y))
+                            .and_then(|hopper| hopper.get(&resource))
+                            .copied()
+                            .unwrap_or_else(|| {
+                                if recipe.carried.as_deref() == Some(resource.id()) {
+                                    self.input_buffers
+                                        .get(&(pos.x, pos.y))
+                                        .copied()
+                                        .unwrap_or(0.0)
+                                } else {
+                                    0.0
+                                }
+                            })
+                    } else {
+                        self.resources.get(resource)
+                    };
+                    available <= 0.001
+                })
+            })
+            .map(|(pos, _)| pos)
+            .collect()
     }
 
     fn physical_output_rate(&self, resource_id: &str) -> f32 {

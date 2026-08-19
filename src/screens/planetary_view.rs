@@ -103,6 +103,7 @@ pub fn render_planetary_view(
     upkeep_render::draw_uncovered_hazards(state, metrics);
     upkeep_render::draw_severed_network(state, metrics, time);
     entity_render::draw_congestion(state, metrics, time);
+    entity_render::draw_factory_warnings(state, metrics, theme, time);
     // Over the tiles and under the drones: the ship is the tallest thing on
     // the world, but the swarm still crawls in front of it.
     seed_ship_render::draw_seed_ship(state, metrics, time);
