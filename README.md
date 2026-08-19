@@ -43,6 +43,7 @@ FLOW recipe nodes use separate gauges: the bottom bar is input readiness, while 
 FLOW routes now thicken as live traffic approaches conduit capacity, pulse amber when saturated, and slow their packet animation to mirror the drones caught in that lane.
 Selected processors expose a STANDARD / PRIORITY touch control beside their live recipe flow; priority lines claim scarce routed inputs before standard lines while still balancing demand among equal peers.
 Box-select a production district to prioritize or standardize every processor together; priority nodes carry a cyan P badge in FLOW so the policy stays visible at map scale.
+The FLOW ledger compares observed alloy and parts output with installed processor capacity and draws utilization bars, making underused factory depth visible alongside starvation and backpressure.
 
 Keyboard shortcuts are optional:
 

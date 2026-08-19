@@ -113,6 +113,7 @@ fn factory_ledger_names_the_missing_input_and_boosted_processor() {
     let building = state.grid.get_mut(pos).unwrap().building.as_mut().unwrap();
     building.powered = true;
     building.overclocked = true;
+    building.input_priority = true;
     state.input_hoppers.insert(
         (pos.x, pos.y),
         [(ResourceType::Alloy, 8.0)].into_iter().collect(),
@@ -123,7 +124,24 @@ fn factory_ledger_names_the_missing_input_and_boosted_processor() {
     assert_eq!(ledger.active, 0);
     assert_eq!(ledger.starved, 1);
     assert_eq!(ledger.boosted, 1);
+    assert_eq!(ledger.priority, 1);
     assert_eq!(ledger.bottleneck, Some(ResourceType::Minerals));
+    assert!(ledger.components_capacity > 0.0);
+}
+
+#[test]
+fn rated_output_capacity_follows_boost_and_dust_efficiency() {
+    let mut state = PlanetState::new(2, 42, GameConfig::default());
+    let pos = state.grid.find_core().unwrap();
+    let mut building = crate::engine::Building::new(BuildingType::Smelter, pos);
+    state.grid.get_mut(pos).unwrap().building = Some(building.clone());
+    let normal = processor_output_capacity(&state, ResourceType::Alloy);
+
+    building.overclocked = true;
+    building.dust = 30.0;
+    state.grid.get_mut(pos).unwrap().building = Some(building);
+    let boosted_and_dusty = processor_output_capacity(&state, ResourceType::Alloy);
+    assert!((boosted_and_dusty - normal * 1.5 * 0.9).abs() < 0.001);
 }
 
 #[test]

@@ -37,13 +37,16 @@ struct FactoryLedger {
     starved: usize,
     blocked: usize,
     boosted: usize,
+    priority: usize,
     congested: usize,
     peak_network_load: u32,
     network_capacity: f32,
     bottleneck: Option<ResourceType>,
     ore_rate: f32,
     alloy_rate: f32,
+    alloy_capacity: f32,
     components_rate: f32,
+    components_capacity: f32,
     auto_clocking: bool,
 }
 
@@ -132,7 +135,7 @@ fn draw_node_key(metrics: HudMetrics, theme: &UiTheme) {
 
 fn draw_factory_ledger(ledger: &FactoryLedger, metrics: HudMetrics, theme: &UiTheme) {
     let grid_room = screen_width() - metrics.base_offset_x() - metrics.right_panel_width - 14.0;
-    let x = metrics.base_offset_x() + if grid_room >= 500.0 { 170.0 } else { 8.0 };
+    let x = metrics.base_offset_x() + if grid_room >= 500.0 { 210.0 } else { 8.0 };
     let width = (screen_width() - x - metrics.right_panel_width - 14.0)
         .max(250.0)
         .min(520.0);
@@ -150,8 +153,13 @@ fn draw_factory_ledger(ledger: &FactoryLedger, metrics: HudMetrics, theme: &UiTh
     let warning = color_from_rgba(&theme.colors.warning);
     let success = color_from_rgba(&theme.colors.success);
     let summary = format!(
-        "PROC {}   ACTIVE {}   STARVED {}   BLOCKED {}   BOOST {}",
-        ledger.processors, ledger.active, ledger.starved, ledger.blocked, ledger.boosted
+        "PROC {}  ACTIVE {}  STARVED {}  BLOCKED {}  BOOST {}  PRIO {}",
+        ledger.processors,
+        ledger.active,
+        ledger.starved,
+        ledger.blocked,
+        ledger.boosted,
+        ledger.priority
     );
     draw_ui_text(&summary, area.x + 12.0, area.y + 50.0, 10.0, text);
 
@@ -195,9 +203,19 @@ fn draw_factory_ledger(ledger: &FactoryLedger, metrics: HudMetrics, theme: &UiTh
     );
 
     let rates = [
-        (ResourceType::Minerals, "IN", ledger.ore_rate),
-        (ResourceType::Alloy, "A", ledger.alloy_rate),
-        (ResourceType::Components, "C", ledger.components_rate),
+        (ResourceType::Minerals, "IN", ledger.ore_rate, None),
+        (
+            ResourceType::Alloy,
+            "A",
+            ledger.alloy_rate,
+            Some(ledger.alloy_capacity),
+        ),
+        (
+            ResourceType::Components,
+            "C",
+            ledger.components_rate,
+            Some(ledger.components_capacity),
+        ),
     ];
     let start_x = if compact {
         area.x + 12.0
@@ -209,7 +227,7 @@ fn draw_factory_ledger(ledger: &FactoryLedger, metrics: HudMetrics, theme: &UiTh
     } else {
         area.y + 59.0
     };
-    for (index, (resource, label, rate)) in rates.into_iter().enumerate() {
+    for (index, (resource, label, rate, capacity)) in rates.into_iter().enumerate() {
         let chip_x = start_x + index as f32 * 74.0;
         draw_resource_icon(
             resource,
@@ -217,12 +235,36 @@ fn draw_factory_ledger(ledger: &FactoryLedger, metrics: HudMetrics, theme: &UiTh
             resource_color(theme, resource),
         );
         draw_ui_text(
-            &format!("{} {:.1}/s", label, rate),
+            &capacity.map_or_else(
+                || format!("{} {:.1}/s", label, rate),
+                |rated| format!("{} {:.1}/{:.1}", label, rate, rated),
+            ),
             chip_x + 14.0,
             rate_y + 10.0,
             8.0,
             dim,
         );
+        if let Some(rated) = capacity {
+            let utilization = if rated <= 0.001 {
+                0.0
+            } else {
+                (rate / rated).clamp(0.0, 1.0)
+            };
+            draw_rectangle(
+                chip_x + 14.0,
+                rate_y + 14.0,
+                50.0,
+                1.5,
+                with_alpha(Colors::TEXT_DIM, 0.22),
+            );
+            draw_rectangle(
+                chip_x + 14.0,
+                rate_y + 14.0,
+                50.0 * utilization,
+                1.5,
+                resource_color(theme, resource),
+            );
+        }
     }
 }
 
@@ -246,21 +288,42 @@ fn factory_ledger(state: &PlanetState) -> FactoryLedger {
                 .is_some_and(|building| building.overclocked)
         })
         .count();
+    let priority = nodes.iter().filter(|node| node.priority).count();
     FactoryLedger {
         processors: nodes.len(),
         active,
         starved: starved.len(),
         blocked: blocked.len(),
         boosted,
+        priority,
         congested: state.congested_tiles(),
         peak_network_load: state.traffic.values().copied().max().unwrap_or(0),
         network_capacity: state.config.buildings.conduit_capacity.max(1.0),
         bottleneck: factory_bottleneck(state, &starved),
         ore_rate: state.throughput.last().unwrap_or(0.0),
         alloy_rate: state.observed_alloy_rate(),
+        alloy_capacity: processor_output_capacity(state, ResourceType::Alloy),
         components_rate: state.observed_components_rate(),
+        components_capacity: processor_output_capacity(state, ResourceType::Components),
         auto_clocking: state.auto_clocking,
     }
+}
+
+fn processor_output_capacity(state: &PlanetState, resource: ResourceType) -> f32 {
+    state
+        .grid
+        .iter_tiles()
+        .filter_map(|(_, tile)| tile.building.as_ref())
+        .filter_map(|building| {
+            let rate = crate::data::game_data()
+                .building(building.building_type.id())
+                .recipe
+                .outputs
+                .get(resource.id())
+                .copied()?;
+            Some(rate * building.work_multiplier() * building.dust_efficiency())
+        })
+        .sum()
 }
 
 fn factory_bottleneck(
