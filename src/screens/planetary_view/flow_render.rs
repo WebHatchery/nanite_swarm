@@ -39,6 +39,7 @@ struct FactoryLedger {
     blocked: usize,
     boosted: usize,
     priority: usize,
+    standby: usize,
     congested: usize,
     peak_network_load: u32,
     network_capacity: f32,
@@ -154,13 +155,14 @@ fn draw_factory_ledger(ledger: &FactoryLedger, metrics: HudMetrics, theme: &UiTh
     let warning = color_from_rgba(&theme.colors.warning);
     let success = color_from_rgba(&theme.colors.success);
     let summary = format!(
-        "PROC {}  ACTIVE {}  STARVED {}  BLOCKED {}  BOOST {}  PRIO {}",
+        "PROC {} ACTIVE {} STARVED {} BLOCKED {} BOOST {} PRIO {} PAUSE {}",
         ledger.processors,
         ledger.active,
         ledger.starved,
         ledger.blocked,
         ledger.boosted,
-        ledger.priority
+        ledger.priority,
+        ledger.standby
     );
     draw_ui_text(&summary, area.x + 12.0, area.y + 50.0, 10.0, text);
 
@@ -290,6 +292,7 @@ fn factory_ledger(state: &PlanetState) -> FactoryLedger {
         })
         .count();
     let priority = nodes.iter().filter(|node| node.priority).count();
+    let standby = nodes.iter().filter(|node| node.standby).count();
     FactoryLedger {
         processors: nodes.len(),
         active,
@@ -297,6 +300,7 @@ fn factory_ledger(state: &PlanetState) -> FactoryLedger {
         blocked: blocked.len(),
         boosted,
         priority,
+        standby,
         congested: state.congested_tiles(),
         peak_network_load: state.traffic.values().copied().max().unwrap_or(0),
         network_capacity: state.config.buildings.conduit_capacity.max(1.0),

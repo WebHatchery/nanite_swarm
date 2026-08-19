@@ -372,6 +372,38 @@ fn box_selection_changes_every_processor_without_touching_other_buildings() {
             .input_priority
     );
     assert_eq!(state.set_selected_input_priority(false), 2);
+    assert_eq!(state.set_selected_standby(true), 2);
+    assert!(
+        state
+            .grid
+            .get(smelter)
+            .unwrap()
+            .building
+            .as_ref()
+            .unwrap()
+            .standby
+    );
+    assert!(
+        state
+            .grid
+            .get(assembler)
+            .unwrap()
+            .building
+            .as_ref()
+            .unwrap()
+            .standby
+    );
+    assert!(
+        !state
+            .grid
+            .get(drill)
+            .unwrap()
+            .building
+            .as_ref()
+            .unwrap()
+            .standby
+    );
+    assert_eq!(state.set_selected_standby(false), 2);
 }
 
 #[test]

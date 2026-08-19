@@ -373,6 +373,39 @@ impl PlanetState {
         changed
     }
 
+    /// Pause or resume every recipe building in the current box selection.
+    pub fn set_selected_standby(&mut self, standby: bool) -> usize {
+        let positions = self.box_selected.clone();
+        let mut changed = 0;
+        for pos in positions {
+            let Some(building) = self
+                .grid
+                .get_mut(pos)
+                .and_then(|tile| tile.building.as_mut())
+            else {
+                continue;
+            };
+            if building.supports_overclock() && building.standby != standby {
+                building.standby = standby;
+                if standby {
+                    building.overclocked = false;
+                }
+                changed += 1;
+            }
+        }
+        if changed > 0 {
+            self.grid.update_power_grid();
+            self.power_balance = self.net_power();
+            self.notifications.info(format!(
+                "{} processor{} {}",
+                changed,
+                if changed == 1 { "" } else { "s" },
+                if standby { "paused" } else { "resumed" }
+            ));
+        }
+        changed
+    }
+
     /// Two-tap recovery for a processor whose output cannot leave the pad.
     pub fn request_processor_pad_purge(&mut self, pos: GridPos) -> bool {
         let waiting = self

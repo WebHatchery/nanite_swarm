@@ -488,12 +488,45 @@ pub(super) fn draw(
             Rect::new(
                 sidebar_x + metrics.panel_padding,
                 fifth_y + 36.0,
-                sidebar_w - metrics.panel_padding * 2.0,
+                half_w,
                 24.0,
             ),
             &label,
         ) {
             state.set_selected_input_priority(prioritize);
+        }
+        let selected_standby: Vec<bool> = state
+            .box_selected
+            .iter()
+            .filter_map(|pos| {
+                state
+                    .grid
+                    .get(*pos)
+                    .and_then(|tile| tile.building.as_ref())
+                    .filter(|building| building.supports_overclock())
+                    .map(|building| building.standby)
+            })
+            .collect();
+        let pause = selected_standby.iter().any(|standby| !standby);
+        let label = if pause {
+            format!(
+                "PAUSE {}",
+                selected_standby.iter().filter(|standby| !**standby).count()
+            )
+        } else {
+            format!("RESUME {}", selected_standby.len())
+        };
+        if draw_hud_button(
+            theme,
+            Rect::new(
+                sidebar_x + metrics.panel_padding + half_w + 8.0,
+                fifth_y + 36.0,
+                half_w,
+                24.0,
+            ),
+            &label,
+        ) {
+            state.set_selected_standby(pause);
         }
     } else {
         let unlocked = state

@@ -125,6 +125,7 @@ fn factory_ledger_names_the_missing_input_and_boosted_processor() {
     assert_eq!(ledger.starved, 1);
     assert_eq!(ledger.boosted, 1);
     assert_eq!(ledger.priority, 1);
+    assert_eq!(ledger.standby, 0);
     assert_eq!(ledger.bottleneck, Some(ResourceType::Minerals));
     assert!(ledger.components_capacity > 0.0);
 }

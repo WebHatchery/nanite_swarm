@@ -344,6 +344,27 @@ fn starvation_marks_only_powered_processors_with_a_missing_input() {
         state.starved_factories().is_empty(),
         "an offline machine needs power, not an input warning"
     );
+
+    state
+        .grid
+        .get_mut(pos)
+        .unwrap()
+        .building
+        .as_mut()
+        .unwrap()
+        .powered = true;
+    state
+        .grid
+        .get_mut(pos)
+        .unwrap()
+        .building
+        .as_mut()
+        .unwrap()
+        .standby = true;
+    assert!(
+        state.starved_factories().is_empty(),
+        "a deliberately paused machine is not starved"
+    );
 }
 
 #[test]

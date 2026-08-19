@@ -46,6 +46,7 @@ Box-select a production district to prioritize or standardize every processor to
 The FLOW ledger compares observed alloy and parts output with installed processor capacity and draws utilization bars, making underused factory depth visible alongside starvation and backpressure.
 Processor floor art now carries its operating policy: priority machines pulse a cyan beacon, boosted lines move twin product packets faster, and full output pads close red warning shutters over their crate dock.
 Selected processors can enter STANDBY without demolition: production and base power demand stop, freight ignores the paused line, and both input and output buffers remain intact for RESUME.
+Box-selected production districts can be paused or resumed together, and standby processors are excluded from starvation/backpressure alerts while the FLOW ledger reports their count separately.
 
 Keyboard shortcuts are optional:
 

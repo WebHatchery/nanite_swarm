@@ -321,7 +321,9 @@ impl PlanetState {
                 self.grid
                     .get(*pos)
                     .and_then(|tile| tile.building.as_ref())
-                    .is_some_and(|building| building.powered && !building.is_dust_stalled())
+                    .is_some_and(|building| {
+                        building.powered && !building.standby && !building.is_dust_stalled()
+                    })
                     && self
                         .output_buffers
                         .get(&(pos.x, pos.y))
@@ -351,7 +353,7 @@ impl PlanetState {
                 else {
                     return false;
                 };
-                if !building.powered || building.is_dust_stalled() {
+                if !building.powered || building.standby || building.is_dust_stalled() {
                     return false;
                 }
                 let carried = recipe.carried_ids();
