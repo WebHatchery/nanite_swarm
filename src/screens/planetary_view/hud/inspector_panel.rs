@@ -376,6 +376,7 @@ pub(super) fn draw(
 struct RecipeFlowData {
     inputs: Vec<(ResourceType, f32)>,
     output: (ResourceType, f32),
+    output_capacity: f32,
 }
 
 fn recipe_flow_data(
@@ -415,12 +416,16 @@ fn recipe_flow_data(
     Some(RecipeFlowData {
         inputs,
         output: (output, waiting),
+        output_capacity: state.processor_pad_capacity(),
     })
 }
 
 fn recipe_status(flow: &RecipeFlowData, powered: bool) -> String {
     if !powered {
         return "No power".to_string();
+    }
+    if flow.output.1 >= flow.output_capacity - 0.001 {
+        return "Output pad full".to_string();
     }
     let missing: Vec<&str> = flow
         .inputs

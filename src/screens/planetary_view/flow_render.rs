@@ -23,6 +23,7 @@ struct FlowNode {
     outputs: Vec<ResourceType>,
     readiness: f32,
     powered: bool,
+    blocked: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -30,6 +31,7 @@ struct FactoryLedger {
     processors: usize,
     active: usize,
     starved: usize,
+    blocked: usize,
     boosted: usize,
     bottleneck: Option<ResourceType>,
     ore_rate: f32,
@@ -84,8 +86,8 @@ fn draw_factory_ledger(ledger: &FactoryLedger, metrics: HudMetrics, theme: &UiTh
     let warning = color_from_rgba(&theme.colors.warning);
     let success = color_from_rgba(&theme.colors.success);
     let summary = format!(
-        "PROCESSORS {}   ACTIVE {}   STARVED {}   BOOST {}",
-        ledger.processors, ledger.active, ledger.starved, ledger.boosted
+        "PROC {}   ACTIVE {}   STARVED {}   BLOCKED {}   BOOST {}",
+        ledger.processors, ledger.active, ledger.starved, ledger.blocked, ledger.boosted
     );
     draw_ui_text(&summary, area.x + 12.0, area.y + 50.0, 10.0, text);
 
@@ -104,13 +106,19 @@ fn draw_factory_ledger(ledger: &FactoryLedger, metrics: HudMetrics, theme: &UiTh
             };
             format!("{} // BOTTLENECK {}", clock_mode, label)
         })
-        .unwrap_or_else(|| format!("{} // FLOW STABLE", clock_mode));
+        .unwrap_or_else(|| {
+            if ledger.blocked > 0 {
+                format!("{} // DISPATCH PAD FULL", clock_mode)
+            } else {
+                format!("{} // FLOW STABLE", clock_mode)
+            }
+        });
     draw_ui_text(
         &bottleneck,
         area.x + 12.0,
         area.y + 71.0,
         9.0,
-        if ledger.bottleneck.is_some() {
+        if ledger.bottleneck.is_some() || ledger.blocked > 0 {
             warning
         } else {
             success
@@ -153,9 +161,11 @@ fn factory_ledger(state: &PlanetState) -> FactoryLedger {
     let nodes = factory_flow_nodes(state);
     let starved: std::collections::HashSet<GridPos> =
         state.starved_factories().into_iter().collect();
+    let blocked: std::collections::HashSet<GridPos> =
+        state.blocked_factories().into_iter().collect();
     let active = nodes
         .iter()
-        .filter(|node| node.powered && node.readiness > 0.001)
+        .filter(|node| node.powered && node.readiness > 0.001 && !blocked.contains(&node.pos))
         .count();
     let boosted = nodes
         .iter()
@@ -171,6 +181,7 @@ fn factory_ledger(state: &PlanetState) -> FactoryLedger {
         processors: nodes.len(),
         active,
         starved: starved.len(),
+        blocked: blocked.len(),
         boosted,
         bottleneck: factory_bottleneck(state, &starved),
         ore_rate: state.throughput.last().unwrap_or(0.0),
@@ -255,6 +266,8 @@ fn draw_node(node: &FlowNode, starved: bool, metrics: HudMetrics, theme: &UiThem
     let y = center.y - metrics.tile_size * 0.72 - height;
     let border = if !node.powered {
         color_from_rgba(&theme.colors.text_dim)
+    } else if node.blocked {
+        color_from_rgba(&theme.colors.error)
     } else if starved {
         color_from_rgba(&theme.colors.warning)
     } else {
@@ -302,7 +315,9 @@ fn draw_node(node: &FlowNode, starved: bool, metrics: HudMetrics, theme: &UiThem
         bar_y,
         (width - 4.0) * node.readiness,
         1.5,
-        if starved {
+        if node.blocked {
+            color_from_rgba(&theme.colors.error)
+        } else if starved {
             color_from_rgba(&theme.colors.warning)
         } else {
             color_from_rgba(&theme.colors.success)
@@ -312,6 +327,8 @@ fn draw_node(node: &FlowNode, starved: bool, metrics: HudMetrics, theme: &UiThem
 
 fn factory_flow_nodes(state: &PlanetState) -> Vec<FlowNode> {
     let mut nodes = Vec::new();
+    let blocked: std::collections::HashSet<GridPos> =
+        state.blocked_factories().into_iter().collect();
     for def in &crate::data::game_data().buildings {
         if def.recipe.is_empty() {
             continue;
@@ -328,6 +345,7 @@ fn factory_flow_nodes(state: &PlanetState) -> Vec<FlowNode> {
                 outputs: outputs.clone(),
                 readiness: recipe_readiness(state, pos, &def.recipe),
                 powered: is_operational(state, pos),
+                blocked: blocked.contains(&pos),
             });
         }
     }

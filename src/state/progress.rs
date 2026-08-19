@@ -294,6 +294,42 @@ impl PlanetState {
             .unwrap_or(0.0)
     }
 
+    /// The finite dispatch apron shared by every physical-output processor.
+    pub fn processor_pad_capacity(&self) -> f32 {
+        self.config
+            .logistics
+            .pad_depth
+            .max(self.drones.drone_capacity * 3.0)
+    }
+
+    /// Powered processors that cannot work because their dispatch pad is full.
+    pub fn blocked_factories(&self) -> Vec<GridPos> {
+        let capacity = self.processor_pad_capacity();
+        crate::data::game_data()
+            .buildings
+            .iter()
+            .filter(|def| {
+                def.recipe.outputs.iter().any(|(id, rate)| {
+                    *rate > 0.0 && ResourceType::from_id(id).is_some_and(ResourceType::is_physical)
+                })
+            })
+            .filter_map(|def| BuildingType::from_id(&def.id))
+            .flat_map(|kind| self.grid.find_buildings(kind))
+            .filter(|pos| {
+                self.grid
+                    .get(*pos)
+                    .and_then(|tile| tile.building.as_ref())
+                    .is_some_and(|building| building.powered && !building.is_dust_stalled())
+                    && self
+                        .output_buffers
+                        .get(&(pos.x, pos.y))
+                        .copied()
+                        .unwrap_or(0.0)
+                        >= capacity - 0.001
+            })
+            .collect()
+    }
+
     /// Powered processors with at least one empty required input. Returning
     /// positions lets both the HUD count the bottleneck and the map mark it.
     pub fn starved_factories(&self) -> Vec<GridPos> {

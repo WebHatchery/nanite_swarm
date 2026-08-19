@@ -440,8 +440,8 @@ impl Game {
                 for _ in 0..60 {
                     planet.step(state::TICK_SECONDS, false);
                 }
-                // Let the graph remember a working line, then empty one feed
-                // so the same frame verifies the bottleneck marker and count.
+                let pad_capacity = planet.processor_pad_capacity() + planet.drones.drone_capacity;
+                planet.output_buffers.insert(key, pad_capacity);
                 if let Some(hopper) = planet.input_hoppers.get_mut(&key) {
                     hopper.insert(engine::ResourceType::Minerals, 0.0);
                     planet.input_buffers.insert(key, hopper.values().sum());

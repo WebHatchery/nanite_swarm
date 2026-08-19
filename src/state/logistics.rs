@@ -323,11 +323,7 @@ impl PlanetState {
         core: GridPos,
         resource: ResourceType,
     ) -> Option<(GridPos, Vec<GridPos>)> {
-        let hopper_ceiling = self
-            .config
-            .logistics
-            .pad_depth
-            .max(self.drones.drone_capacity * 3.0);
+        let hopper_ceiling = self.processor_pad_capacity();
         let mut best: Option<((i32, usize, i32, i32), GridPos, Vec<GridPos>)> = None;
 
         for pos in self.consumers_of(resource) {

@@ -40,3 +40,14 @@ fn multi_input_flow_is_structured_and_names_the_missing_feed() {
     assert_eq!(recipe_status(&flow, true), "Needs Ore");
     assert_eq!(recipe_status(&flow, false), "No power");
 }
+
+#[test]
+fn a_full_dispatch_pad_is_named_before_it_can_hide_as_idle() {
+    let mut state = PlanetState::new(2, 42, GameConfig::default());
+    let pos = state.grid.find_core().unwrap();
+    state
+        .output_buffers
+        .insert((pos.x, pos.y), state.processor_pad_capacity());
+    let flow = recipe_flow_data(&state, pos, BuildingType::Smelter).unwrap();
+    assert_eq!(recipe_status(&flow, true), "Output pad full");
+}

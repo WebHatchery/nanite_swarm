@@ -48,6 +48,7 @@ impl PlanetState {
 
     fn rebalance_auto_clocking(&mut self) -> (usize, usize) {
         let starved: HashSet<GridPos> = self.starved_factories().into_iter().collect();
+        let blocked: HashSet<GridPos> = self.blocked_factories().into_iter().collect();
         let mut processors: Vec<GridPos> = self
             .grid
             .iter_tiles()
@@ -74,6 +75,7 @@ impl PlanetState {
             };
             let unsafe_to_boost = !building.powered
                 || starved.contains(pos)
+                || blocked.contains(pos)
                 || building.dust >= DISABLE_AT_DUST
                 || headroom < 0.0;
             if building.overclocked && unsafe_to_boost {
@@ -96,6 +98,7 @@ impl PlanetState {
             if !building.overclocked
                 && building.powered
                 && !starved.contains(&pos)
+                && !blocked.contains(&pos)
                 && building.dust <= ENABLE_BELOW_DUST
                 && headroom >= extra + POWER_RESERVE
             {

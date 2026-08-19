@@ -277,6 +277,28 @@ fn overclocked_assembler_pays_for_half_again_as_much_real_work() {
 }
 
 #[test]
+fn a_full_processor_pad_stops_output_without_eating_more_input() {
+    let (mut state, pos) = processing_world(BuildingType::Smelter, 0.0);
+    state.input_hoppers.insert(
+        (pos.x, pos.y),
+        [(crate::engine::ResourceType::Minerals, 20.0)]
+            .into_iter()
+            .collect(),
+    );
+    let capacity = state.processor_pad_capacity();
+    state.output_buffers.insert((pos.x, pos.y), capacity);
+
+    state.update_recipes(1.0);
+
+    assert_eq!(state.output_buffers.get(&(pos.x, pos.y)), Some(&capacity));
+    assert_eq!(
+        state.input_hoppers[&(pos.x, pos.y)][&crate::engine::ResourceType::Minerals],
+        20.0
+    );
+    assert_eq!(state.blocked_factories(), [pos]);
+}
+
+#[test]
 fn starvation_marks_only_powered_processors_with_a_missing_input() {
     let (mut state, pos) = processing_world(BuildingType::Smelter, 0.0);
     assert_eq!(state.starved_factories(), [pos]);

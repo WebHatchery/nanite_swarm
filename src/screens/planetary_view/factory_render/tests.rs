@@ -27,7 +27,13 @@ fn assembler_art_tracks_each_hopper_and_its_waiting_components() {
     let visual = processor_visual(&state, pos, recipe).unwrap();
     assert_eq!(visual.inputs[0], (ResourceType::Minerals, 0.5));
     assert_eq!(visual.inputs[1], (ResourceType::Alloy, 1.0));
-    assert_eq!(visual.output, (ResourceType::Components, 0.5));
+    assert_eq!(
+        visual.output,
+        (
+            ResourceType::Components,
+            5.0 / state.processor_pad_capacity()
+        )
+    );
     assert!(visual.active);
 }
 

@@ -64,6 +64,7 @@ pub(super) fn draw(
     );
     let congested = state.congested_tiles();
     let starved = state.starved_factories().len();
+    let blocked = state.blocked_factories().len();
     let alert_count = i32::from(state.save_failed)
         + i32::from(state.restored_from_backup)
         + i32::from(state.power_balance < 0.0)
@@ -71,6 +72,7 @@ pub(super) fn draw(
         + i32::from(state.power_collapse_shutdown > 0.0)
         + i32::from(congested > 0)
         + i32::from(starved > 0)
+        + i32::from(blocked > 0)
         + i32::from(state.stalled_drone_count() > 0);
     draw_ui_text("ALERTS", 30.0, bottom_y + 31.0, 12.0, warning);
     draw_ui_text(
@@ -98,6 +100,8 @@ pub(super) fn draw(
         "ROUTE SEVERED"
     } else if starved > 0 {
         "INPUT STARVED"
+    } else if blocked > 0 {
+        "OUTPUT PAD FULL"
     } else if congested > 0 {
         "TRAFFIC SATURATED"
     } else {

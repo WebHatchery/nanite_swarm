@@ -35,6 +35,7 @@ Use BOX SELECT to mark a factory block, then tap BOOST N or NORMAL N to change e
 Tap AUTO CLOCK to let the swarm boost only fed processors with spare power and low dust, normalizing them when those margins disappear.
 Processor tiles carry their own live art: colored intake tanks show separate recipe inputs, moving packets show active work, and output crates stack on the dispatch pad.
 Drone dispatch counts stock already in each hopper plus cargo still in flight, feeding the leanest processor before using route distance as a tie-breaker.
+Processor dispatch pads are finite: a full alloy or components stack pauses that recipe without consuming more inputs, and appears as a blocked factory in the HUD and FLOW ledger.
 
 Keyboard shortcuts are optional:
 

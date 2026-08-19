@@ -93,8 +93,11 @@ pub(super) fn draw(
         drone_color,
     );
     let starved = state.starved_factories().len();
+    let blocked = state.blocked_factories().len();
     let structure_value = if starved > 0 {
         format!("{} ({} STARVED)", state.grid.total_buildings(), starved)
+    } else if blocked > 0 {
+        format!("{} ({} BLOCKED)", state.grid.total_buildings(), blocked)
     } else {
         format!("{}", state.grid.total_buildings())
     };
@@ -105,7 +108,11 @@ pub(super) fn draw(
         right_w - 24.0,
         "Structures",
         &structure_value,
-        if starved > 0 { colors.warning } else { text },
+        if starved > 0 || blocked > 0 {
+            colors.warning
+        } else {
+            text
+        },
     );
     // The one row on the stack that opens something: a count of achievements
     // with no way to see which ones is a count of nothing.

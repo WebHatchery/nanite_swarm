@@ -170,11 +170,11 @@ fn processor_visual(
         .get(&(pos.x, pos.y))
         .copied()
         .unwrap_or(0.0);
-    let output_fill =
-        (waiting / (state.drones.drone_capacity.max(output.1 * 10.0))).clamp(0.0, 1.0);
+    let output_fill = (waiting / state.processor_pad_capacity()).clamp(0.0, 1.0);
     let active = building.powered
         && !building.is_dust_stalled()
-        && inputs.iter().all(|(_, fill)| *fill > 0.001);
+        && inputs.iter().all(|(_, fill)| *fill > 0.001)
+        && output_fill < 0.999;
     Some(ProcessorVisual {
         pos,
         inputs,

@@ -239,6 +239,24 @@ impl PlanetState {
             let mut scale = building.dust_efficiency_with(&dust_response)
                 * building.work_multiplier()
                 * delta_time;
+            let physical_output_rate: f32 = recipe
+                .outputs
+                .iter()
+                .filter_map(|(id, rate)| {
+                    crate::engine::ResourceType::from_id(id)
+                        .is_some_and(crate::engine::ResourceType::is_physical)
+                        .then_some(*rate)
+                })
+                .sum();
+            if physical_output_rate > 0.0 {
+                let waiting = self
+                    .output_buffers
+                    .get(&(pos.x, pos.y))
+                    .copied()
+                    .unwrap_or(0.0);
+                let room = (self.processor_pad_capacity() - waiting).max(0.0);
+                scale = scale.min(room / physical_output_rate);
+            }
             for (id, rate) in &recipe.inputs {
                 if *rate <= 0.0 {
                     continue;
