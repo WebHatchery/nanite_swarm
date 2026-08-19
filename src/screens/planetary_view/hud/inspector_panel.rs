@@ -2,9 +2,12 @@
 
 use crate::assets::GameTextures;
 use crate::data::UiTheme;
-use crate::engine::{BuildingType, GridPos, TerrainType};
+use crate::engine::{BuildingType, GridPos, ResourceType, TerrainType};
 use crate::state::PlanetState;
-use crate::ui::{color_from_rgba, draw_hud_button, draw_hud_panel, draw_status_row};
+use crate::ui::{
+    color_from_rgba, draw_hud_button, draw_hud_panel, draw_resource_icon, draw_status_row,
+    resource_color,
+};
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::draw_ui_text;
 
@@ -61,60 +64,64 @@ pub(super) fn draw(
     let inspected_building = tile_building.or(state.selected_building);
     if let Some(building_type) = inspected_building {
         let header_y = inspector_y + 44.0;
-        let compact_inspector = inspector_h < 204.0;
-        let icon_size = if compact_inspector { 54.0 } else { 72.0 };
+        let row_layout = inspector_row_layout(inspector_y, inspector_h);
+        let icon_size = if inspector_h < 204.0 { 54.0 } else { 72.0 };
         let icon_rect = Rect::new(right_x + 16.0, header_y, icon_size, icon_size);
-        draw_rectangle(
-            icon_rect.x,
-            icon_rect.y,
-            icon_rect.w,
-            icon_rect.h,
-            color_from_rgba(&theme.colors.panel_inner),
-        );
-        draw_rectangle_lines(
-            icon_rect.x,
-            icon_rect.y,
-            icon_rect.w,
-            icon_rect.h,
-            1.0,
-            color_from_rgba(&theme.colors.border),
-        );
-        if let Some(icon) = textures
-            .building_icons
-            .by_id
-            .get(building_type.id())
-            .or_else(|| textures.buildings.by_id.get(building_type.id()))
-        {
-            draw_texture_ex(
-                icon,
-                icon_rect.x + 6.0,
-                icon_rect.y + 6.0,
-                WHITE,
-                DrawTextureParams {
-                    dest_size: Some(vec2(icon_size - 12.0, icon_size - 12.0)),
-                    ..Default::default()
-                },
+        if row_layout.show_icon {
+            draw_rectangle(
+                icon_rect.x,
+                icon_rect.y,
+                icon_rect.w,
+                icon_rect.h,
+                color_from_rgba(&theme.colors.panel_inner),
             );
+            draw_rectangle_lines(
+                icon_rect.x,
+                icon_rect.y,
+                icon_rect.w,
+                icon_rect.h,
+                1.0,
+                color_from_rgba(&theme.colors.border),
+            );
+            if let Some(icon) = textures
+                .building_icons
+                .by_id
+                .get(building_type.id())
+                .or_else(|| textures.buildings.by_id.get(building_type.id()))
+            {
+                draw_texture_ex(
+                    icon,
+                    icon_rect.x + 6.0,
+                    icon_rect.y + 6.0,
+                    WHITE,
+                    DrawTextureParams {
+                        dest_size: Some(vec2(icon_size - 12.0, icon_size - 12.0)),
+                        ..Default::default()
+                    },
+                );
+            }
         }
-        let info_x = icon_rect.x + icon_rect.w + 14.0;
+        let info_x = if row_layout.show_icon {
+            icon_rect.x + icon_rect.w + 14.0
+        } else {
+            right_x + 16.0
+        };
         draw_ui_text(building_type.name(), info_x, header_y + 16.0, 13.0, text);
-        draw_ui_text(
-            "Tier 1",
-            right_x + right_w - 56.0,
-            header_y + 16.0,
-            10.0,
-            dim,
-        );
         let description = fit_text_to_width(
             building_type.description(),
             right_x + right_w - info_x - 14.0,
-            10.0,
+            if row_layout.show_icon { 10.0 } else { 9.0 },
         );
-        draw_ui_text(&description, info_x, header_y + 40.0, 10.0, dim);
+        draw_ui_text(
+            &description,
+            info_x,
+            header_y + if row_layout.show_icon { 40.0 } else { 32.0 },
+            if row_layout.show_icon { 10.0 } else { 9.0 },
+            dim,
+        );
         let output = format_power_delta(building_type.power_delta());
-        // Four rows now. They start higher than they did, but not so high as
-        // to run into the description above them.
-        let row_base = inspector_y + inspector_h - 72.0;
+        let row_base = row_layout.row_base;
+        let row_gap = row_layout.row_gap;
         draw_status_row(
             theme,
             right_x + 16.0,
@@ -128,7 +135,7 @@ pub(super) fn draw(
         draw_status_row(
             theme,
             right_x + 16.0,
-            row_base + 20.0,
+            row_base + row_gap,
             right_w - 32.0,
             "Dust",
             &format!("{:.0}% {}", tile_dust, dust_label),
@@ -137,17 +144,23 @@ pub(super) fn draw(
 
         // What the ground itself is worth. Without this a deposit is invisible
         // and drill placement is guesswork.
-        if let Some(tile) = display_pos.and_then(|pos| state.grid.get(pos)) {
-            let (ore_label, ore_color) = ore_status(tile.ore_richness, colors);
-            draw_status_row(
-                theme,
-                right_x + 16.0,
-                row_base + 60.0,
-                right_w - 32.0,
-                "Ore",
-                &format!("{:.0}% {}", tile.ore_richness * 100.0, ore_label),
-                ore_color,
-            );
+        let has_recipe = !crate::data::game_data()
+            .building(building_type.id())
+            .recipe
+            .is_empty();
+        if !has_recipe {
+            if let Some(tile) = display_pos.and_then(|pos| state.grid.get(pos)) {
+                let (ore_label, ore_color) = ore_status(tile.ore_richness, colors);
+                draw_status_row(
+                    theme,
+                    right_x + 16.0,
+                    row_base + row_gap * 3.0,
+                    right_w - 32.0,
+                    "Ore",
+                    &format!("{:.0}% {}", tile.ore_richness * 100.0, ore_label),
+                    ore_color,
+                );
+            }
         }
 
         let mut status_text = if tile_building.is_some() {
@@ -165,12 +178,8 @@ pub(super) fn draw(
             let key = (pos.x, pos.y);
             let waiting_in = state.input_buffers.get(&key).copied().unwrap_or(0.0);
             let waiting_out = state.output_buffers.get(&key).copied().unwrap_or(0.0);
-            if let Some(flow) = recipe_flow_summary(state, pos, building_type) {
-                status_text = if tile_powered {
-                    flow
-                } else {
-                    format!("No power - {}", flow)
-                };
+            if let Some(flow) = recipe_flow_data(state, pos, building_type) {
+                status_text = recipe_status(&flow, tile_powered);
             } else if waiting_in >= 1.0 {
                 status_text = format!("{} - {:.0} in", status_text, waiting_in);
             }
@@ -221,23 +230,39 @@ pub(super) fn draw(
         }
         let status_color = if tile_building.is_some() && !tile_powered {
             error
+        } else if status_text.starts_with("Needs ") {
+            warning
         } else {
             success
         };
+        let status_text = fit_text_to_width(&status_text, right_w * 0.52, theme.typography.body);
         draw_status_row(
             theme,
             right_x + 16.0,
-            row_base + 40.0,
+            row_base + row_gap * 2.0,
             right_w - 32.0,
             "Status",
             &status_text,
             status_color,
         );
+        if let Some(pos) = tile_pos_with_building {
+            if let Some(flow) = recipe_flow_data(state, pos, building_type) {
+                draw_recipe_flow_row(
+                    &flow,
+                    theme,
+                    right_x + 16.0,
+                    row_base + row_gap * 3.0,
+                    right_w - 32.0,
+                    dim,
+                    warning,
+                );
+            }
+        }
         if let Some(tile_pos) = tile_pos_with_building {
             if building_type != BuildingType::Core
                 && draw_hud_button(
                     theme,
-                    Rect::new(right_x + right_w - 82.0, inspector_y + 40.0, 62.0, 24.0),
+                    Rect::new(right_x + right_w - 82.0, inspector_y + 8.0, 62.0, 24.0),
                     "SELL",
                 )
             {
@@ -322,11 +347,17 @@ pub(super) fn draw(
     }
 }
 
-fn recipe_flow_summary(
+#[derive(Debug, Clone, PartialEq)]
+struct RecipeFlowData {
+    inputs: Vec<(ResourceType, f32)>,
+    output: (ResourceType, f32),
+}
+
+fn recipe_flow_data(
     state: &PlanetState,
     pos: GridPos,
     building_type: BuildingType,
-) -> Option<String> {
+) -> Option<RecipeFlowData> {
     let recipe = &crate::data::game_data().building(building_type.id()).recipe;
     if recipe.is_empty() {
         return None;
@@ -342,24 +373,122 @@ fn recipe_flow_summary(
                 .and_then(|values| values.get(&resource))
                 .copied()
                 .unwrap_or(0.0);
-            Some(format!("{} {:.0}", flow_resource_name(resource), amount))
+            Some((resource, amount))
         })
         .collect::<Vec<_>>();
-    let (output_id, _) = recipe.outputs.iter().find(|(_, rate)| **rate > 0.0)?;
-    let output = crate::engine::ResourceType::from_id(output_id)
-        .map(flow_resource_name)
-        .unwrap_or(output_id.as_str());
+    let output = ResourceType::ALL.into_iter().find(|resource| {
+        recipe
+            .outputs
+            .get(resource.id())
+            .is_some_and(|rate| *rate > 0.0)
+    })?;
     let waiting = state
         .output_buffers
         .get(&(pos.x, pos.y))
         .copied()
         .unwrap_or(0.0);
-    Some(format!(
-        "{} > {} {:.0}",
-        inputs.join(" + "),
-        output,
-        waiting
-    ))
+    Some(RecipeFlowData {
+        inputs,
+        output: (output, waiting),
+    })
+}
+
+fn recipe_status(flow: &RecipeFlowData, powered: bool) -> String {
+    if !powered {
+        return "No power".to_string();
+    }
+    let missing: Vec<&str> = flow
+        .inputs
+        .iter()
+        .filter(|(_, amount)| *amount <= 0.001)
+        .map(|(resource, _)| flow_resource_name(*resource))
+        .collect();
+    if !missing.is_empty() {
+        return format!("Needs {}", missing.join(" + "));
+    }
+    if flow.output.1 >= 1.0 {
+        "Output waiting".to_string()
+    } else {
+        "Running".to_string()
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn draw_recipe_flow_row(
+    flow: &RecipeFlowData,
+    theme: &UiTheme,
+    x: f32,
+    y: f32,
+    width: f32,
+    label_color: Color,
+    warning: Color,
+) {
+    draw_ui_text("Flow", x, y, theme.typography.body, label_color);
+    let token_w = 46.0;
+    let mut cursor = (x + width * 0.31).max(x + 48.0);
+    for (index, (resource, amount)) in flow.inputs.iter().enumerate() {
+        if index > 0 {
+            draw_ui_text("+", cursor - 7.0, y, 9.0, label_color);
+        }
+        draw_resource_icon(
+            *resource,
+            Rect::new(cursor, y - 9.0, 10.0, 10.0),
+            resource_color(theme, *resource),
+        );
+        draw_ui_text(
+            &format!(
+                "{} {}",
+                flow_resource_abbrev(*resource),
+                compact_amount(*amount)
+            ),
+            cursor + 13.0,
+            y,
+            9.0,
+            if *amount <= 0.001 {
+                warning
+            } else {
+                resource_color(theme, *resource)
+            },
+        );
+        cursor += token_w;
+    }
+    draw_ui_text(">", cursor - 7.0, y, 9.0, label_color);
+    let (resource, amount) = flow.output;
+    draw_resource_icon(
+        resource,
+        Rect::new(cursor + 2.0, y - 9.0, 10.0, 10.0),
+        resource_color(theme, resource),
+    );
+    draw_ui_text(
+        &format!(
+            "{} {}",
+            flow_resource_abbrev(resource),
+            compact_amount(amount)
+        ),
+        cursor + 15.0,
+        y,
+        9.0,
+        resource_color(theme, resource),
+    );
+}
+
+fn compact_amount(amount: f32) -> String {
+    if amount < 10.0 && amount.fract().abs() > 0.05 {
+        format!("{:.1}", amount)
+    } else {
+        format!("{:.0}", amount)
+    }
+}
+
+fn flow_resource_abbrev(resource: ResourceType) -> &'static str {
+    match resource {
+        ResourceType::Minerals => "O",
+        ResourceType::Energy => "P",
+        ResourceType::Data => "D",
+        ResourceType::Biomass => "B",
+        ResourceType::Alloy => "A",
+        ResourceType::Components => "C",
+    }
 }
 
 fn flow_resource_name(resource: crate::engine::ResourceType) -> &'static str {
@@ -367,6 +496,29 @@ fn flow_resource_name(resource: crate::engine::ResourceType) -> &'static str {
         crate::engine::ResourceType::Minerals => "Ore",
         crate::engine::ResourceType::Components => "Parts",
         _ => crate::state::cargo_name(resource),
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct InspectorRowLayout {
+    show_icon: bool,
+    row_base: f32,
+    row_gap: f32,
+}
+
+fn inspector_row_layout(inspector_y: f32, inspector_h: f32) -> InspectorRowLayout {
+    if inspector_h < 175.0 {
+        InspectorRowLayout {
+            show_icon: false,
+            row_base: inspector_y + 88.0,
+            row_gap: 18.0,
+        }
+    } else {
+        InspectorRowLayout {
+            show_icon: true,
+            row_base: inspector_y + inspector_h - 72.0,
+            row_gap: 20.0,
+        }
     }
 }
 
@@ -380,3 +532,6 @@ fn ore_status(richness: f32, colors: &PanelColors) -> (&'static str, Color) {
         ("ORDINARY", colors.dim)
     }
 }
+
+#[cfg(test)]
+mod tests;
