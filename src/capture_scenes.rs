@@ -205,6 +205,20 @@ impl Game {
                 for tech in ["power_grid", "data_processing", "efficient_drills"] {
                     planet.research.unlocked_techs.push(tech.to_string());
                 }
+                // Exercise the factory-policy records end to end rather than
+                // showing the new rows only as empty definitions.
+                if let Some(core) = planet.grid.find_core() {
+                    for step in 1..=3 {
+                        let pos = engine::GridPos::new(core.x + step, core.y + 2);
+                        let mut building =
+                            engine::Building::new(engine::BuildingType::Smelter, pos);
+                        building.input_priority = true;
+                        building.standby = true;
+                        if let Some(tile) = planet.grid.get_mut(pos) {
+                            tile.building = Some(building);
+                        }
+                    }
+                }
                 planet.refresh_stats();
                 // A step is what fires them, the same as in play.
                 for _ in 0..4 {
