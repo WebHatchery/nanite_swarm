@@ -18,6 +18,7 @@ struct ProcessorVisual {
     blocked: bool,
     priority: bool,
     overclocked: bool,
+    standby: bool,
 }
 
 pub(super) fn draw_processor_buffers(
@@ -139,6 +140,33 @@ fn draw_processor(visual: &ProcessorVisual, metrics: HudMetrics, theme: &UiTheme
         );
     }
 
+    if visual.standby {
+        let standby = color_from_rgba(&theme.colors.text_dim);
+        draw_rectangle(
+            center.x - 5.0,
+            center.y - 5.0,
+            10.0,
+            10.0,
+            with_alpha(Colors::BACKGROUND, 0.78),
+        );
+        draw_line(
+            center.x - 2.0,
+            center.y - 3.0,
+            center.x - 2.0,
+            center.y + 3.0,
+            1.5,
+            standby,
+        );
+        draw_line(
+            center.x + 2.0,
+            center.y - 3.0,
+            center.x + 2.0,
+            center.y + 3.0,
+            1.5,
+            standby,
+        );
+    }
+
     if visual.active {
         let speed = if visual.overclocked { 3.8 } else { 2.4 };
         let phase = (time * speed + visual.pos.x as f32 * 0.17).fract();
@@ -213,6 +241,7 @@ fn processor_visual(
         .unwrap_or(0.0);
     let output_fill = (waiting / state.processor_pad_capacity()).clamp(0.0, 1.0);
     let active = building.powered
+        && !building.standby
         && !building.is_dust_stalled()
         && inputs.iter().all(|(_, fill)| *fill > 0.001)
         && output_fill < 0.999;
@@ -224,6 +253,7 @@ fn processor_visual(
         blocked: output_fill >= 0.999,
         priority: building.input_priority,
         overclocked: building.overclocked,
+        standby: building.standby,
     })
 }
 

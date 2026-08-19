@@ -161,6 +161,7 @@ impl PlanetState {
                     pos,
                     removed.overclocked,
                     removed.input_priority,
+                    removed.standby,
                 ));
             return true;
         }
@@ -256,6 +257,7 @@ impl PlanetState {
                         building_type: building.building_type,
                         overclocked: building.overclocked,
                         input_priority: building.input_priority,
+                        standby: building.standby,
                     })
             })
             .collect();
@@ -427,6 +429,15 @@ impl PlanetState {
                         building.input_priority = building.supports_overclock();
                     }
                 }
+                if entry.standby {
+                    if let Some(building) = self
+                        .grid
+                        .get_mut(pos)
+                        .and_then(|tile| tile.building.as_mut())
+                    {
+                        building.standby = building.supports_overclock();
+                    }
+                }
                 placed += 1;
             }
         }
@@ -457,7 +468,7 @@ impl PlanetState {
     }
 
     pub fn relocate_building(&mut self, source: GridPos, destination: GridPos) -> bool {
-        let Some((building_type, overclocked, input_priority)) = self
+        let Some((building_type, overclocked, input_priority, standby)) = self
             .grid
             .get(source)
             .and_then(|tile| tile.building.as_ref())
@@ -466,6 +477,7 @@ impl PlanetState {
                     building.building_type,
                     building.overclocked,
                     building.input_priority,
+                    building.standby,
                 )
             })
         else {
@@ -500,6 +512,15 @@ impl PlanetState {
                 building.input_priority = building.supports_overclock();
             }
         }
+        if placed && standby {
+            if let Some(building) = self
+                .grid
+                .get_mut(destination)
+                .and_then(|tile| tile.building.as_mut())
+            {
+                building.standby = building.supports_overclock();
+            }
+        }
         placed
     }
 
@@ -509,7 +530,13 @@ impl PlanetState {
         };
         let success = match action {
             super::game_state::UndoEntry::Placed(pos) => self.try_sell_building(pos),
-            super::game_state::UndoEntry::Removed(kind, pos, overclocked, input_priority) => {
+            super::game_state::UndoEntry::Removed(
+                kind,
+                pos,
+                overclocked,
+                input_priority,
+                standby,
+            ) => {
                 self.select_building(kind);
                 let restored = self.try_place_building(pos);
                 if restored && overclocked {
@@ -529,6 +556,15 @@ impl PlanetState {
                         .and_then(|tile| tile.building.as_mut())
                     {
                         building.input_priority = building.supports_overclock();
+                    }
+                }
+                if restored && standby {
+                    if let Some(building) = self
+                        .grid
+                        .get_mut(pos)
+                        .and_then(|tile| tile.building.as_mut())
+                    {
+                        building.standby = building.supports_overclock();
                     }
                 }
                 restored
@@ -616,6 +652,35 @@ impl PlanetState {
             format!("{} input priority: first claim on routed cargo", name)
         } else {
             format!("{} input priority returned to standard", name)
+        });
+        true
+    }
+
+    /// Pause one processor without demolishing it or discarding either side
+    /// of its freight buffers.
+    pub fn toggle_processor_standby(&mut self, pos: GridPos) -> bool {
+        let Some(building) = self
+            .grid
+            .get_mut(pos)
+            .and_then(|tile| tile.building.as_mut())
+        else {
+            return false;
+        };
+        if !building.supports_overclock() {
+            return false;
+        }
+        building.standby = !building.standby;
+        if building.standby {
+            building.overclocked = false;
+        }
+        let standby = building.standby;
+        let name = building.building_type.name();
+        self.grid.update_power_grid();
+        self.power_balance = self.net_power();
+        self.notifications.info(if standby {
+            format!("{} on standby; freight buffers preserved", name)
+        } else {
+            format!("{} resumed", name)
         });
         true
     }

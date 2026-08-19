@@ -66,6 +66,9 @@ fn only_recipe_buildings_accept_the_overclock_tradeoff() {
     assert_eq!(assembler.work_multiplier(), 1.5);
     assert_eq!(assembler.power_demand_multiplier(), 1.75);
     assert_eq!(assembler.dust_accumulation_multiplier(), 1.8);
+    assembler.standby = true;
+    assert_eq!(assembler.work_multiplier(), 0.0);
+    assert_eq!(assembler.power_demand_multiplier(), 0.0);
 
     let mut conduit = Building::new(BuildingType::Conduit, GridPos::new(1, 0));
     conduit.overclocked = true;

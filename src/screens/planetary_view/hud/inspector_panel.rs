@@ -264,7 +264,7 @@ pub(super) fn draw(
         );
         if let Some(pos) = tile_pos_with_building {
             if let Some(flow) = recipe_flow_data(state, pos, building_type) {
-                if draw_recipe_flow_row(
+                let (priority_toggled, standby_toggled) = draw_recipe_flow_row(
                     &flow,
                     theme,
                     right_x + 16.0,
@@ -272,8 +272,12 @@ pub(super) fn draw(
                     right_w - 32.0,
                     dim,
                     warning,
-                ) {
+                );
+                if priority_toggled {
                     state.toggle_input_priority(pos);
+                }
+                if standby_toggled {
+                    state.toggle_processor_standby(pos);
                 }
             }
         }
@@ -395,6 +399,7 @@ struct RecipeFlowData {
     output: (ResourceType, f32),
     output_capacity: f32,
     input_priority: bool,
+    standby: bool,
 }
 
 fn recipe_flow_data(
@@ -440,10 +445,18 @@ fn recipe_flow_data(
             .get(pos)
             .and_then(|tile| tile.building.as_ref())
             .is_some_and(|building| building.input_priority),
+        standby: state
+            .grid
+            .get(pos)
+            .and_then(|tile| tile.building.as_ref())
+            .is_some_and(|building| building.standby),
     })
 }
 
 fn recipe_status(flow: &RecipeFlowData, powered: bool) -> String {
+    if flow.standby {
+        return "Standby - buffers held".to_string();
+    }
     if !powered {
         return "No power".to_string();
     }
@@ -475,18 +488,23 @@ fn draw_recipe_flow_row(
     width: f32,
     label_color: Color,
     warning: Color,
-) -> bool {
-    let toggled = draw_hud_button(
+) -> (bool, bool) {
+    let priority_toggled = draw_hud_button(
         theme,
-        Rect::new(x, y - 15.0, 72.0, 20.0),
+        Rect::new(x, y - 15.0, 70.0, 20.0),
         if flow.input_priority {
             "PRIORITY"
         } else {
             "STANDARD"
         },
     );
+    let standby_toggled = draw_hud_button(
+        theme,
+        Rect::new(x + 74.0, y - 15.0, 54.0, 20.0),
+        if flow.standby { "RESUME" } else { "STANDBY" },
+    );
     let token_w = 46.0;
-    let mut cursor = (x + width * 0.31).max(x + 48.0);
+    let mut cursor = (x + width * 0.49).max(x + 132.0);
     for (index, (resource, amount)) in flow.inputs.iter().enumerate() {
         if index > 0 {
             draw_ui_text("+", cursor - 7.0, y, 9.0, label_color);
@@ -531,7 +549,7 @@ fn draw_recipe_flow_row(
         9.0,
         resource_color(theme, resource),
     );
-    toggled
+    (priority_toggled, standby_toggled)
 }
 
 fn compact_amount(amount: f32) -> String {

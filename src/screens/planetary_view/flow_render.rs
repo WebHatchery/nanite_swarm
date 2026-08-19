@@ -28,6 +28,7 @@ struct FlowNode {
     blocked: bool,
     output_pressure: f32,
     priority: bool,
+    standby: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -428,7 +429,7 @@ fn draw_node(node: &FlowNode, starved: bool, metrics: HudMetrics, theme: &UiThem
     let height = icon + 9.0;
     let x = center.x - width * 0.5;
     let y = center.y - metrics.tile_size * 0.72 - height;
-    let border = if !node.powered {
+    let border = if node.standby || !node.powered {
         color_from_rgba(&theme.colors.text_dim)
     } else if node.blocked {
         color_from_rgba(&theme.colors.error)
@@ -519,6 +520,11 @@ fn draw_node(node: &FlowNode, starved: bool, metrics: HudMetrics, theme: &UiThem
         );
         draw_ui_text("P", x + 1.0, y + 6.0, 7.0, Colors::BACKGROUND);
     }
+    if node.standby {
+        let standby = color_from_rgba(&theme.colors.text_dim);
+        draw_line(x + 5.0, y + 4.0, x + 5.0, y + 11.0, 1.5, standby);
+        draw_line(x + 8.0, y + 4.0, x + 8.0, y + 11.0, 1.5, standby);
+    }
 }
 
 fn factory_flow_nodes(state: &PlanetState) -> Vec<FlowNode> {
@@ -554,6 +560,11 @@ fn factory_flow_nodes(state: &PlanetState) -> Vec<FlowNode> {
                     .get(pos)
                     .and_then(|tile| tile.building.as_ref())
                     .is_some_and(|building| building.input_priority),
+                standby: state
+                    .grid
+                    .get(pos)
+                    .and_then(|tile| tile.building.as_ref())
+                    .is_some_and(|building| building.standby),
             });
         }
     }
@@ -671,7 +682,9 @@ fn is_operational(state: &PlanetState, pos: GridPos) -> bool {
         .grid
         .get(pos)
         .and_then(|tile| tile.building.as_ref())
-        .is_some_and(|building| building.powered && !building.is_dust_stalled())
+        .is_some_and(|building| {
+            building.powered && !building.standby && !building.is_dust_stalled()
+        })
 }
 
 fn tile_center(pos: GridPos, metrics: HudMetrics) -> Vec2 {

@@ -55,7 +55,7 @@ impl PlanetState {
             .filter_map(|(pos, tile)| {
                 tile.building
                     .as_ref()
-                    .is_some_and(|building| building.supports_overclock())
+                    .is_some_and(|building| building.supports_overclock() && !building.standby)
                     .then_some(pos)
             })
             .collect();

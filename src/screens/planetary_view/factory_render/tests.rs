@@ -41,6 +41,7 @@ fn assembler_art_tracks_each_hopper_and_its_waiting_components() {
     assert!(visual.priority);
     assert!(visual.overclocked);
     assert!(!visual.blocked);
+    assert!(!visual.standby);
 }
 
 #[test]

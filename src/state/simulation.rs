@@ -227,7 +227,10 @@ impl PlanetState {
             let Some(building) = self.grid.get(pos).and_then(|tile| tile.building.as_ref()) else {
                 continue;
             };
-            if !building.powered || building.is_dust_stalled_with(&dust_response) {
+            if !building.powered
+                || building.standby
+                || building.is_dust_stalled_with(&dust_response)
+            {
                 continue;
             }
 
@@ -379,7 +382,10 @@ impl PlanetState {
             let Some(building) = self.grid.get(server_pos).and_then(|t| t.building.as_ref()) else {
                 continue;
             };
-            if !building.powered || building.is_dust_stalled_with(&dust_response) {
+            if !building.powered
+                || building.standby
+                || building.is_dust_stalled_with(&dust_response)
+            {
                 continue;
             }
             let heat_efficiency =
@@ -459,7 +465,9 @@ impl PlanetState {
                     .get(*pos)
                     .and_then(|tile| tile.building.as_ref())
                     .is_some_and(|building| {
-                        building.powered && !building.is_dust_stalled_with(&dust_response)
+                        building.powered
+                            && !building.standby
+                            && !building.is_dust_stalled_with(&dust_response)
                     })
             })
             .collect()

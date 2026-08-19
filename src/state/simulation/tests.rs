@@ -160,6 +160,31 @@ fn a_recipe_takes_its_carried_input_from_the_hopper_and_pays_out_on_the_pad() {
 }
 
 #[test]
+fn standby_processor_holds_both_sides_of_its_recipe_unchanged() {
+    let (mut state, pos) = processing_world(BuildingType::Smelter, 60.0);
+    state
+        .grid
+        .get_mut(pos)
+        .unwrap()
+        .building
+        .as_mut()
+        .unwrap()
+        .standby = true;
+
+    state.update_recipes(5.0);
+
+    assert_eq!(state.input_buffers.get(&(pos.x, pos.y)), Some(&60.0));
+    assert_eq!(
+        state
+            .output_buffers
+            .get(&(pos.x, pos.y))
+            .copied()
+            .unwrap_or(0.0),
+        0.0
+    );
+}
+
+#[test]
 fn a_recipe_with_an_empty_hopper_does_nothing_however_full_the_pool_is() {
     let (mut state, pos) = processing_world(BuildingType::Smelter, 0.0);
     state.resources.minerals = 100_000.0;

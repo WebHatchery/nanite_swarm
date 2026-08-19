@@ -266,6 +266,28 @@ fn processor_input_priority_is_touch_toggleable_without_research() {
 }
 
 #[test]
+fn processor_standby_releases_power_and_preserves_buffers() {
+    let mut state = state();
+    state.resources.energy = 10_000.0;
+    state.config.resources.max_energy = 10_000.0;
+    let core = state.grid.find_core().unwrap();
+    let pos = GridPos::new(core.x + 1, core.y);
+    state.grid.get_mut(pos).unwrap().terrain = TerrainType::Empty;
+    state.grid.get_mut(pos).unwrap().building =
+        Some(crate::engine::Building::new(BuildingType::Smelter, pos));
+    state.input_buffers.insert((pos.x, pos.y), 12.0);
+    state.output_buffers.insert((pos.x, pos.y), 4.0);
+    state.grid.update_power_grid();
+    let running_power = state.power_consumption();
+
+    assert!(state.toggle_processor_standby(pos));
+    assert!(state.power_consumption() < running_power);
+    assert_eq!(state.input_buffers.get(&(pos.x, pos.y)), Some(&12.0));
+    assert_eq!(state.output_buffers.get(&(pos.x, pos.y)), Some(&4.0));
+    assert!(state.toggle_processor_standby(pos));
+}
+
+#[test]
 fn box_selection_changes_every_processor_without_touching_other_buildings() {
     let mut state = state();
     state

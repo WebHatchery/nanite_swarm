@@ -27,6 +27,9 @@ pub struct Building {
     /// Player-selected claim on scarce routed recipe inputs.
     #[serde(default)]
     pub input_priority: bool,
+    /// Player-requested zero-power pause that preserves all buffers.
+    #[serde(default)]
+    pub standby: bool,
 }
 
 impl Building {
@@ -43,6 +46,7 @@ impl Building {
             heat: 0.0,
             overclocked: false,
             input_priority: false,
+            standby: false,
         }
     }
 
@@ -166,7 +170,9 @@ impl Building {
     }
 
     pub fn work_multiplier(&self) -> f32 {
-        if self.overclocked && self.supports_overclock() {
+        if self.standby {
+            0.0
+        } else if self.overclocked && self.supports_overclock() {
             1.5
         } else {
             1.0
@@ -174,7 +180,9 @@ impl Building {
     }
 
     pub fn power_demand_multiplier(&self) -> f32 {
-        if self.overclocked && self.supports_overclock() {
+        if self.standby {
+            0.0
+        } else if self.overclocked && self.supports_overclock() {
             1.75
         } else {
             1.0
