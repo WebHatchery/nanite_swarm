@@ -9,8 +9,14 @@ use crate::state::{Campaign, LaunchSequence};
 use crate::{data, engine, state, Game, GamePhase};
 
 #[allow(dead_code)]
-pub const REQUIRED_CAPTURE_SCENES: [&str; 5] =
-    ["mainmenu", "research", "logistics", "assembly", "focus"];
+pub const REQUIRED_CAPTURE_SCENES: [&str; 6] = [
+    "mainmenu",
+    "research",
+    "logistics",
+    "assembly",
+    "focus",
+    "freight",
+];
 
 impl Game {
     /// Seed a specific scene for the screenshot harness.
@@ -64,6 +70,40 @@ impl Game {
                 let planet = self.campaign.current_mut();
                 planet.focus_mode = true;
                 planet.camera.zoom = 1.35;
+            }
+            "freight" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                let planet = self.campaign.current_mut();
+                let Some(core) = planet.grid.find_core() else {
+                    return;
+                };
+                planet.focus_mode = true;
+                planet.camera.zoom = 1.55;
+                planet.notifications.clear();
+
+                // Freeze four packets in flight on parallel approaches. The
+                // scene verifies colour and silhouette independently without
+                // relying on production timing to line them up for a camera.
+                for (row, resource) in [
+                    engine::ResourceType::Minerals,
+                    engine::ResourceType::Biomass,
+                    engine::ResourceType::Alloy,
+                    engine::ResourceType::Components,
+                ]
+                .into_iter()
+                .enumerate()
+                {
+                    let start = engine::GridPos::new(core.x + 1, core.y - 9 + row as i32 * 2);
+                    let end = engine::GridPos::new(start.x + 4, start.y);
+                    let id = planet.drones.spawn_drone(start);
+                    if let Some(drone) = planet.drones.get_drone_mut(id) {
+                        drone.dispatch(end, vec![start, end], 1.0, resource);
+                        drone.path_index = 1;
+                        drone.position = start;
+                        drone.progress = 0.35;
+                    }
+                }
             }
             // The same world with a Drill in hand, which brings the ground up.
             "prospect" => {

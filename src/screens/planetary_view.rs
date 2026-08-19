@@ -106,7 +106,7 @@ pub fn render_planetary_view(
     // Over the tiles and under the drones: the ship is the tallest thing on
     // the world, but the swarm still crawls in front of it.
     seed_ship_render::draw_seed_ship(state, metrics, time);
-    entity_render::draw_drones(state, metrics, time);
+    entity_render::draw_drones(state, metrics, theme, time);
     entity_render::draw_particles(state, metrics);
 
     let ui_action = hud::draw_ui_panels(

@@ -2,6 +2,7 @@
 
 use super::core::{Colors, Dimensions};
 use crate::data::UiTheme;
+use crate::engine::ResourceType;
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::{
     draw_text_centered_in_box, draw_ui_text, measure_ui_text, note_neighbour, touch_area, Pointer,
@@ -198,7 +199,14 @@ fn draw_metric_icon(kind: &str, rect: Rect, color: Color) {
         "minerals" => {
             draw_poly(cx, cy - 3.0, 6, rect.w * 0.24, 0.0, color);
             draw_poly_lines(cx, cy - 3.0, 6, rect.w * 0.28, 0.0, 1.2, WHITE);
-            draw_line(cx, rect.y + 8.0, cx, rect.y + rect.h - 8.0, 1.0, WHITE);
+            draw_line(
+                cx,
+                rect.y + rect.h * 0.24,
+                cx,
+                rect.y + rect.h * 0.76,
+                1.0,
+                WHITE,
+            );
         }
         "data" => {
             let node = rect.w * 0.14;
@@ -229,17 +237,18 @@ fn draw_metric_icon(kind: &str, rect: Rect, color: Color) {
         "components" => {
             // Interlocked precision rings: readable independently of colour.
             let radius = rect.w * 0.18;
-            draw_poly(cx - 4.0, cy, 6, radius, 0.0, color);
-            draw_poly_lines(cx - 4.0, cy, 6, radius, 0.0, 1.2, WHITE);
-            draw_poly(cx + 5.0, cy, 6, radius, 30.0, color);
-            draw_poly_lines(cx + 5.0, cy, 6, radius, 30.0, 1.2, WHITE);
+            let spread = rect.w * 0.14;
+            draw_poly(cx - spread, cy, 6, radius, 0.0, color);
+            draw_poly_lines(cx - spread, cy, 6, radius, 0.0, 1.2, WHITE);
+            draw_poly(cx + spread, cy, 6, radius, 30.0, color);
+            draw_poly_lines(cx + spread, cy, 6, radius, 30.0, 1.2, WHITE);
             let cutout = Color::new(0.006, 0.025, 0.035, 1.0);
-            draw_circle(cx - 4.0, cy, radius * 0.42, cutout);
-            draw_circle(cx + 5.0, cy, radius * 0.42, cutout);
+            draw_circle(cx - spread, cy, radius * 0.42, cutout);
+            draw_circle(cx + spread, cy, radius * 0.42, cutout);
         }
         "biomass" => {
             draw_ellipse(
-                cx - 5.0,
+                cx - rect.w * 0.14,
                 cy + 1.0,
                 rect.w * 0.13,
                 rect.h * 0.26,
@@ -247,7 +256,7 @@ fn draw_metric_icon(kind: &str, rect: Rect, color: Color) {
                 color,
             );
             draw_ellipse(
-                cx + 5.0,
+                cx + rect.w * 0.14,
                 cy + 1.0,
                 rect.w * 0.13,
                 rect.h * 0.26,
@@ -260,6 +269,24 @@ fn draw_metric_icon(kind: &str, rect: Rect, color: Color) {
             draw_text_centered_in_box(kind, rect.x, rect.y, rect.w, rect.h, 17.0, color);
         }
     }
+}
+
+/// Draw the same shape language used by the resource ribbon at any scale.
+/// Freight packets use this so their material remains readable without colour.
+pub fn draw_resource_icon(resource: ResourceType, rect: Rect, color: Color) {
+    draw_metric_icon(resource.id(), rect, color);
+}
+
+/// Keep world-space freight and HUD cards on the same data-driven palette.
+pub fn resource_color(theme: &UiTheme, resource: ResourceType) -> Color {
+    color_from_rgba(match resource {
+        ResourceType::Energy => &theme.colors.energy,
+        ResourceType::Minerals => &theme.colors.minerals,
+        ResourceType::Data => &theme.colors.data,
+        ResourceType::Biomass => &theme.colors.biomass,
+        ResourceType::Alloy => &theme.colors.alloy,
+        ResourceType::Components => &theme.colors.components,
+    })
 }
 
 pub fn draw_metric_card(

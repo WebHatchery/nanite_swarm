@@ -24,7 +24,8 @@ Every required action has a visible tap/click control. Tap a building card and
 then the grid to build; drag the map to pan, pinch or use the visible zoom
 controls to zoom, and use the bottom command bar for selection, demolition,
 blueprints, relocation, undo, speed, and pause. Tap FOCUS to collapse both
-sidebars for route planning, then tap PANELS to restore them.
+sidebars for route planning, then tap PANELS to restore them. When freight is
+moving, its map key identifies the colour and silhouette of every live cargo.
 
 Keyboard shortcuts are optional:
 
