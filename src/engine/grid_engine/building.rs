@@ -24,6 +24,9 @@ pub struct Building {
     /// Player-selected high-throughput mode for recipe buildings.
     #[serde(default)]
     pub overclocked: bool,
+    /// Player-selected claim on scarce routed recipe inputs.
+    #[serde(default)]
+    pub input_priority: bool,
 }
 
 impl Building {
@@ -39,6 +42,7 @@ impl Building {
             acid_wear: 0.0,
             heat: 0.0,
             overclocked: false,
+            input_priority: false,
         }
     }
 

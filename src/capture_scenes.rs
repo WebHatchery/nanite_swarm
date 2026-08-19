@@ -398,6 +398,7 @@ impl Game {
                     .and_then(|tile| tile.building.as_mut())
                 {
                     building.overclocked = true;
+                    building.input_priority = true;
                 }
 
                 let smelter = engine::GridPos::new(core.x + 4, core.y - 1);

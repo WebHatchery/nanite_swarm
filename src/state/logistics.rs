@@ -324,7 +324,7 @@ impl PlanetState {
         resource: ResourceType,
     ) -> Option<(GridPos, Vec<GridPos>)> {
         let hopper_ceiling = self.processor_pad_capacity();
-        let mut best: Option<((i32, usize, i32, i32), GridPos, Vec<GridPos>)> = None;
+        let mut best: Option<((bool, i32, usize, i32, i32), GridPos, Vec<GridPos>)> = None;
 
         for pos in self.consumers_of(resource) {
             let delivered = self
@@ -355,7 +355,14 @@ impl PlanetState {
             };
             let consumption = self.consumer_rate(pos, resource).max(0.001);
             let demand_band = (committed / consumption).floor() as i32;
-            let key = (demand_band, route.len(), pos.y, pos.x);
+            let priority = self
+                .grid
+                .get(pos)
+                .and_then(|tile| tile.building.as_ref())
+                .is_some_and(|building| building.input_priority);
+            // `false` sorts before `true`: a priority line gets first claim,
+            // while demand and distance still balance peers in the same tier.
+            let key = (!priority, demand_band, route.len(), pos.y, pos.x);
             if best.as_ref().is_none_or(|(best_key, _, _)| key < *best_key) {
                 best = Some((key, pos, route));
             }

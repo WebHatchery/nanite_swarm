@@ -238,6 +238,34 @@ fn processor_boost_waits_for_adaptive_clocking_research() {
 }
 
 #[test]
+fn processor_input_priority_is_touch_toggleable_without_research() {
+    let mut state = state();
+    let core = state.grid.find_core().unwrap();
+    let processor = GridPos::new(core.x + 1, core.y);
+    let drill = GridPos::new(core.x + 2, core.y);
+    state.grid.get_mut(processor).unwrap().building = Some(crate::engine::Building::new(
+        BuildingType::Smelter,
+        processor,
+    ));
+    state.grid.get_mut(drill).unwrap().building =
+        Some(crate::engine::Building::new(BuildingType::Drill, drill));
+
+    assert!(state.toggle_input_priority(processor));
+    assert!(
+        state
+            .grid
+            .get(processor)
+            .unwrap()
+            .building
+            .as_ref()
+            .unwrap()
+            .input_priority
+    );
+    assert!(state.toggle_input_priority(processor));
+    assert!(!state.toggle_input_priority(drill));
+}
+
+#[test]
 fn box_selection_changes_every_processor_without_touching_other_buildings() {
     let mut state = state();
     state

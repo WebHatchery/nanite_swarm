@@ -79,12 +79,14 @@ pub struct BlueprintEntry {
     pub building_type: BuildingType,
     #[serde(default)]
     pub overclocked: bool,
+    #[serde(default)]
+    pub input_priority: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum UndoEntry {
     Placed(GridPos),
-    Removed(BuildingType, GridPos, bool),
+    Removed(BuildingType, GridPos, bool, bool),
 }
 /// Resources held by the player
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

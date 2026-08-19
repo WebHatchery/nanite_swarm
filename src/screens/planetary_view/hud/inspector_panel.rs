@@ -264,7 +264,7 @@ pub(super) fn draw(
         );
         if let Some(pos) = tile_pos_with_building {
             if let Some(flow) = recipe_flow_data(state, pos, building_type) {
-                draw_recipe_flow_row(
+                if draw_recipe_flow_row(
                     &flow,
                     theme,
                     right_x + 16.0,
@@ -272,7 +272,9 @@ pub(super) fn draw(
                     right_w - 32.0,
                     dim,
                     warning,
-                );
+                ) {
+                    state.toggle_input_priority(pos);
+                }
             }
         }
         if let Some(tile_pos) = tile_pos_with_building {
@@ -392,6 +394,7 @@ struct RecipeFlowData {
     inputs: Vec<(ResourceType, f32)>,
     output: (ResourceType, f32),
     output_capacity: f32,
+    input_priority: bool,
 }
 
 fn recipe_flow_data(
@@ -432,6 +435,11 @@ fn recipe_flow_data(
         inputs,
         output: (output, waiting),
         output_capacity: state.processor_pad_capacity(),
+        input_priority: state
+            .grid
+            .get(pos)
+            .and_then(|tile| tile.building.as_ref())
+            .is_some_and(|building| building.input_priority),
     })
 }
 
@@ -467,8 +475,16 @@ fn draw_recipe_flow_row(
     width: f32,
     label_color: Color,
     warning: Color,
-) {
-    draw_ui_text("Flow", x, y, theme.typography.body, label_color);
+) -> bool {
+    let toggled = draw_hud_button(
+        theme,
+        Rect::new(x, y - 15.0, 72.0, 20.0),
+        if flow.input_priority {
+            "PRIORITY"
+        } else {
+            "STANDARD"
+        },
+    );
     let token_w = 46.0;
     let mut cursor = (x + width * 0.31).max(x + 48.0);
     for (index, (resource, amount)) in flow.inputs.iter().enumerate() {
@@ -515,6 +531,7 @@ fn draw_recipe_flow_row(
         9.0,
         resource_color(theme, resource),
     );
+    toggled
 }
 
 fn compact_amount(amount: f32) -> String {

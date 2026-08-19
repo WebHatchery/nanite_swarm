@@ -160,6 +160,7 @@ impl PlanetState {
                     building_type,
                     pos,
                     removed.overclocked,
+                    removed.input_priority,
                 ));
             return true;
         }
@@ -254,6 +255,7 @@ impl PlanetState {
                         offset: (pos.x - anchor.x, pos.y - anchor.y),
                         building_type: building.building_type,
                         overclocked: building.overclocked,
+                        input_priority: building.input_priority,
                     })
             })
             .collect();
@@ -388,6 +390,15 @@ impl PlanetState {
                         building.overclocked = building.supports_overclock();
                     }
                 }
+                if entry.input_priority {
+                    if let Some(building) = self
+                        .grid
+                        .get_mut(pos)
+                        .and_then(|tile| tile.building.as_mut())
+                    {
+                        building.input_priority = building.supports_overclock();
+                    }
+                }
                 placed += 1;
             }
         }
@@ -418,11 +429,17 @@ impl PlanetState {
     }
 
     pub fn relocate_building(&mut self, source: GridPos, destination: GridPos) -> bool {
-        let Some((building_type, overclocked)) = self
+        let Some((building_type, overclocked, input_priority)) = self
             .grid
             .get(source)
             .and_then(|tile| tile.building.as_ref())
-            .map(|building| (building.building_type, building.overclocked))
+            .map(|building| {
+                (
+                    building.building_type,
+                    building.overclocked,
+                    building.input_priority,
+                )
+            })
         else {
             return false;
         };
@@ -446,6 +463,15 @@ impl PlanetState {
             }
             self.power_balance = self.net_power();
         }
+        if placed && input_priority {
+            if let Some(building) = self
+                .grid
+                .get_mut(destination)
+                .and_then(|tile| tile.building.as_mut())
+            {
+                building.input_priority = building.supports_overclock();
+            }
+        }
         placed
     }
 
@@ -455,7 +481,7 @@ impl PlanetState {
         };
         let success = match action {
             super::game_state::UndoEntry::Placed(pos) => self.try_sell_building(pos),
-            super::game_state::UndoEntry::Removed(kind, pos, overclocked) => {
+            super::game_state::UndoEntry::Removed(kind, pos, overclocked, input_priority) => {
                 self.select_building(kind);
                 let restored = self.try_place_building(pos);
                 if restored && overclocked {
@@ -467,6 +493,15 @@ impl PlanetState {
                         building.overclocked = building.supports_overclock();
                     }
                     self.power_balance = self.net_power();
+                }
+                if restored && input_priority {
+                    if let Some(building) = self
+                        .grid
+                        .get_mut(pos)
+                        .and_then(|tile| tile.building.as_mut())
+                    {
+                        building.input_priority = building.supports_overclock();
+                    }
                 }
                 restored
             }
@@ -529,6 +564,30 @@ impl PlanetState {
                 },
                 name
             )
+        });
+        true
+    }
+
+    /// Give one processor first claim on routed inputs without changing its
+    /// production speed. Priority follows blueprints, relocation, and undo.
+    pub fn toggle_input_priority(&mut self, pos: GridPos) -> bool {
+        let Some(building) = self
+            .grid
+            .get_mut(pos)
+            .and_then(|tile| tile.building.as_mut())
+        else {
+            return false;
+        };
+        if !building.supports_overclock() {
+            return false;
+        }
+        building.input_priority = !building.input_priority;
+        let enabled = building.input_priority;
+        let name = building.building_type.name();
+        self.notifications.info(if enabled {
+            format!("{} input priority: first claim on routed cargo", name)
+        } else {
+            format!("{} input priority returned to standard", name)
         });
         true
     }

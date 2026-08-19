@@ -145,6 +145,29 @@ fn the_leaner_processor_is_fed_before_the_nearer_one() {
 }
 
 #[test]
+fn priority_processor_claims_cargo_before_a_leaner_standard_line() {
+    let (mut state, core, drill, near, far) = two_smelter_run();
+    state.input_hoppers.insert(
+        (near.x, near.y),
+        [(ResourceType::Minerals, 12.0)].into_iter().collect(),
+    );
+    state
+        .grid
+        .get_mut(near)
+        .unwrap()
+        .building
+        .as_mut()
+        .unwrap()
+        .input_priority = true;
+
+    let delivery = state
+        .delivery_for(drill, core, ResourceType::Minerals)
+        .expect("processor delivery");
+    assert_eq!(delivery.0, near);
+    assert_ne!(delivery.0, far);
+}
+
+#[test]
 fn cargo_in_flight_counts_as_hopper_supply_for_dispatch() {
     let (mut state, core, drill, near, far) = two_smelter_run();
     let id = state.drones.spawn_drone(drill);

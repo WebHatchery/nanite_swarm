@@ -41,6 +41,7 @@ Records now reward scaling the factory systems themselves: three simultaneous bo
 When a selected processor pad is full, tap PURGE PAD and then PURGE AGAIN to discard only its staged output and recover the machine without accidental one-tap loss.
 FLOW recipe nodes use separate gauges: the bottom bar is input readiness, while the right edge rises with output pressure and turns red at a full dispatch pad.
 FLOW routes now thicken as live traffic approaches conduit capacity, pulse amber when saturated, and slow their packet animation to mirror the drones caught in that lane.
+Selected processors expose a STANDARD / PRIORITY touch control beside their live recipe flow; priority lines claim scarce routed inputs before standard lines while still balancing demand among equal peers.
 
 Keyboard shortcuts are optional:
 
