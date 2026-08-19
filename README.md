@@ -44,6 +44,7 @@ FLOW routes now thicken as live traffic approaches conduit capacity, pulse amber
 Selected processors expose a STANDARD / PRIORITY touch control beside their live recipe flow; priority lines claim scarce routed inputs before standard lines while still balancing demand among equal peers.
 Box-select a production district to prioritize or standardize every processor together; priority nodes carry a cyan P badge in FLOW so the policy stays visible at map scale.
 The FLOW ledger compares observed alloy and parts output with installed processor capacity and draws utilization bars, making underused factory depth visible alongside starvation and backpressure.
+Processor floor art now carries its operating policy: priority machines pulse a cyan beacon, boosted lines move twin product packets faster, and full output pads close red warning shutters over their crate dock.
 
 Keyboard shortcuts are optional:
 

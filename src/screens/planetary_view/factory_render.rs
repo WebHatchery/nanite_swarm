@@ -15,6 +15,9 @@ struct ProcessorVisual {
     inputs: Vec<(ResourceType, f32)>,
     output: (ResourceType, f32),
     active: bool,
+    blocked: bool,
+    priority: bool,
+    overclocked: bool,
 }
 
 pub(super) fn draw_processor_buffers(
@@ -103,10 +106,48 @@ fn draw_processor(visual: &ProcessorVisual, metrics: HudMetrics, theme: &UiTheme
         with_alpha(output_color, 0.7),
     );
 
+    if visual.blocked {
+        let pulse = 0.62 + (time * 4.0).sin().abs() * 0.32;
+        let blocked = color_from_rgba(&theme.colors.error);
+        for shutter in 0..2 {
+            let shutter_y = pad_y + shutter as f32 * 4.0;
+            draw_line(
+                pad_x - 2.0,
+                shutter_y,
+                pad_x + 8.0,
+                shutter_y,
+                1.2,
+                with_alpha(blocked, pulse),
+            );
+        }
+    }
+
+    if visual.priority {
+        let beacon = color_from_rgba(&theme.colors.primary);
+        let beacon_y = y + 4.0 + (time * 3.0).sin() * 0.8;
+        draw_triangle(
+            vec2(center.x, beacon_y - 3.0),
+            vec2(center.x - 3.0, beacon_y),
+            vec2(center.x, beacon_y + 3.0),
+            with_alpha(beacon, 0.9),
+        );
+        draw_triangle(
+            vec2(center.x, beacon_y - 3.0),
+            vec2(center.x + 3.0, beacon_y),
+            vec2(center.x, beacon_y + 3.0),
+            with_alpha(beacon, 0.9),
+        );
+    }
+
     if visual.active {
-        let phase = (time * 2.4 + visual.pos.x as f32 * 0.17).fract();
+        let speed = if visual.overclocked { 3.8 } else { 2.4 };
+        let phase = (time * speed + visual.pos.x as f32 * 0.17).fract();
         let packet = center.lerp(vec2(pad_x - 1.0, pad_y + 3.0), phase);
         draw_circle(packet.x, packet.y, 1.3, with_alpha(output_color, 0.85));
+        if visual.overclocked {
+            let second = center.lerp(vec2(pad_x - 1.0, pad_y + 3.0), (phase + 0.5).fract());
+            draw_circle(second.x, second.y, 1.1, with_alpha(output_color, 0.66));
+        }
     } else if visual.inputs.iter().any(|(_, fill)| *fill <= 0.001) {
         draw_circle_lines(
             center.x,
@@ -180,6 +221,9 @@ fn processor_visual(
         inputs,
         output: (output.0, output_fill),
         active,
+        blocked: output_fill >= 0.999,
+        priority: building.input_priority,
+        overclocked: building.overclocked,
     })
 }
 
