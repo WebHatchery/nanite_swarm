@@ -64,6 +64,15 @@
       "target_per_tier": 1.0,
       "base_reward": 22.0,
       "reward_per_tier": 6.0
+    },
+    {
+      "id": "flight_parts",
+      "kind": "component_stock",
+      "text": "Bank {target} precision components",
+      "base_target": 8.0,
+      "target_per_tier": 4.0,
+      "base_reward": 30.0,
+      "reward_per_tier": 8.0
     }
   ]
 }

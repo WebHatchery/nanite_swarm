@@ -43,6 +43,18 @@
       "condition": { "kind": "alloy_held", "target": 50 }
     },
     {
+      "id": "first_principles",
+      "name": "First Principles",
+      "description": "Hold 25 precision components at once.",
+      "condition": { "kind": "components_held", "target": 25 }
+    },
+    {
+      "id": "unbroken_chain",
+      "name": "Unbroken Chain",
+      "description": "Keep a precision assembler producing at full base rate.",
+      "condition": { "kind": "components_rate", "target": 0.5 }
+    },
+    {
       "id": "stockpile",
       "name": "Stockpile",
       "description": "Hold 500 minerals at once.",

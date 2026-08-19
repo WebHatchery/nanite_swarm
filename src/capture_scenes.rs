@@ -192,6 +192,7 @@ impl Game {
                 planet.resources.minerals = 260.0;
                 planet.resources.data = 30.0;
                 planet.resources.alloy = 12.0;
+                planet.resources.components = 10.0;
                 planet.forest_harvested_count = 2;
                 for tech in ["power_grid", "data_processing", "efficient_drills"] {
                     planet.research.unlocked_techs.push(tech.to_string());

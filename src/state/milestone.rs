@@ -22,6 +22,8 @@ pub enum Milestone {
     MineralsHeld,
     DataHeld,
     AlloyHeld,
+    ComponentsHeld,
+    ComponentsRate,
     Technologies,
     ForestsHarvested,
     PowerSurplus,
@@ -40,6 +42,8 @@ impl Milestone {
             Milestone::MineralsHeld => "minerals_held",
             Milestone::DataHeld => "data_held",
             Milestone::AlloyHeld => "alloy_held",
+            Milestone::ComponentsHeld => "components_held",
+            Milestone::ComponentsRate => "components_rate",
             Milestone::Technologies => "technologies",
             Milestone::ForestsHarvested => "forests_harvested",
             Milestone::PowerSurplus => "power_surplus",
@@ -47,7 +51,7 @@ impl Milestone {
         }
     }
 
-    pub const ALL: [Milestone; 13] = [
+    pub const ALL: [Milestone; 15] = [
         Milestone::Manual,
         Milestone::Drills,
         Milestone::ServerBanks,
@@ -57,6 +61,8 @@ impl Milestone {
         Milestone::MineralsHeld,
         Milestone::DataHeld,
         Milestone::AlloyHeld,
+        Milestone::ComponentsHeld,
+        Milestone::ComponentsRate,
         Milestone::Technologies,
         Milestone::ForestsHarvested,
         Milestone::PowerSurplus,
@@ -89,6 +95,8 @@ impl PlanetState {
             Milestone::MineralsHeld => self.resources.minerals,
             Milestone::DataHeld => self.resources.data,
             Milestone::AlloyHeld => self.resources.alloy,
+            Milestone::ComponentsHeld => self.resources.components,
+            Milestone::ComponentsRate => self.observed_components_rate(),
             Milestone::Technologies => self.research.unlocked_techs.len() as f32,
             Milestone::ForestsHarvested => self.forest_harvested_count as f32,
             Milestone::PowerSurplus => self.power_balance.max(0.0),

@@ -56,6 +56,21 @@ fn holding_the_ore_a_declared_achievement_asks_for_earns_it() {
 }
 
 #[test]
+fn precision_parts_reward_both_stockpiling_and_a_stable_line() {
+    let mut state = state();
+    state.resources.components = 25.0;
+    state.graph_samples.push(crate::state::GraphSample {
+        components_produced: 0.5,
+        ..crate::state::GraphSample::default()
+    });
+
+    state.update_achievements();
+
+    assert!(state.achievements.is_unlocked("first_principles"));
+    assert!(state.achievements.is_unlocked("unbroken_chain"));
+}
+
+#[test]
 fn laying_network_is_counted_by_the_tiles_that_carry_drones() {
     let mut state = state();
     let core = state.grid.find_core().unwrap();

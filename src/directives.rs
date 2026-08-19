@@ -18,6 +18,7 @@ pub enum DirectiveKind {
     StructureCount,
     MineralStock,
     ResearchCount,
+    ComponentStock,
 }
 
 impl DirectiveKind {
@@ -30,10 +31,11 @@ impl DirectiveKind {
             DirectiveKind::StructureCount => "structure_count",
             DirectiveKind::MineralStock => "mineral_stock",
             DirectiveKind::ResearchCount => "research_count",
+            DirectiveKind::ComponentStock => "component_stock",
         }
     }
 
-    pub const ALL: [DirectiveKind; 7] = [
+    pub const ALL: [DirectiveKind; 8] = [
         DirectiveKind::PowerSurplus,
         DirectiveKind::DrillCount,
         DirectiveKind::ServerBanks,
@@ -41,6 +43,7 @@ impl DirectiveKind {
         DirectiveKind::StructureCount,
         DirectiveKind::MineralStock,
         DirectiveKind::ResearchCount,
+        DirectiveKind::ComponentStock,
     ];
 
     pub fn from_id(id: &str) -> Option<Self> {
@@ -141,6 +144,9 @@ impl Directive {
             }
             DirectiveKind::ResearchCount => {
                 self.progress = (state.research.unlocked_techs.len() as i32).min(self.target);
+            }
+            DirectiveKind::ComponentStock => {
+                self.progress = (state.resources.components as i32).min(self.target);
             }
         }
         if self.progress >= self.target {

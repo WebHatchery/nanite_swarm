@@ -116,3 +116,17 @@ fn duration_counts_down_but_never_below_zero() {
     directive.update(&state, 5.0);
     assert_eq!(directive.duration, 0.0);
 }
+
+#[test]
+fn late_factory_directive_counts_banked_components() {
+    let mut directive = Directive::for_test(DirectiveKind::ComponentStock, 8, 100.0);
+    let mut state = PlanetState::new(2, 1, GameConfig::default());
+    state.resources.components = 7.9;
+    directive.update(&state, 0.0);
+    assert_eq!(directive.progress, 7);
+    assert!(!directive.completed);
+
+    state.resources.components = 8.0;
+    directive.update(&state, 0.0);
+    assert!(directive.completed);
+}
