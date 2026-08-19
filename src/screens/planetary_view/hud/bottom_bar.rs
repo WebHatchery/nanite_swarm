@@ -20,6 +20,7 @@ pub(super) enum ClockAction {
     Slower,
     NextEvent,
     ToggleFocus,
+    ToggleFlow,
 }
 
 #[must_use]
@@ -62,12 +63,14 @@ pub(super) fn draw(
         None,
     );
     let congested = state.congested_tiles();
+    let starved = state.starved_factories().len();
     let alert_count = i32::from(state.save_failed)
         + i32::from(state.restored_from_backup)
         + i32::from(state.power_balance < 0.0)
         + i32::from(state.battery_seconds <= 0.0)
         + i32::from(state.power_collapse_shutdown > 0.0)
         + i32::from(congested > 0)
+        + i32::from(starved > 0)
         + i32::from(state.stalled_drone_count() > 0);
     draw_ui_text("ALERTS", 30.0, bottom_y + 31.0, 12.0, warning);
     draw_ui_text(
@@ -93,6 +96,8 @@ pub(super) fn draw(
         "NEGATIVE POWER"
     } else if state.stalled_drone_count() > 0 {
         "ROUTE SEVERED"
+    } else if starved > 0 {
+        "INPUT STARVED"
     } else if congested > 0 {
         "TRAFFIC SATURATED"
     } else {
@@ -146,7 +151,7 @@ pub(super) fn draw(
             ("PAUSE", "Tap II"),
         ]
     };
-    let text_controls_w = (controls_w - 130.0).max(120.0);
+    let text_controls_w = (controls_w - 190.0).max(120.0);
     let slot_w = text_controls_w / controls.len() as f32;
     for (index, (label, hint)) in controls.iter().enumerate() {
         let x = controls_x + index as f32 * slot_w + 12.0;
@@ -182,6 +187,17 @@ pub(super) fn draw(
         if state.focus_mode { "PANELS" } else { "FOCUS" },
     ) {
         clock = ClockAction::ToggleFocus;
+    }
+    if draw_hud_button(
+        theme,
+        Rect::new(controls_x + controls_w - 180.0, bottom_y + 10.0, 54.0, 22.0),
+        if state.flow_overlay {
+            "FLOW ON"
+        } else {
+            "FLOW"
+        },
+    ) {
+        clock = ClockAction::ToggleFlow;
     }
 
     draw_hud_panel(

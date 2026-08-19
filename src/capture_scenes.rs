@@ -9,13 +9,14 @@ use crate::state::{Campaign, LaunchSequence};
 use crate::{data, engine, state, Game, GamePhase};
 
 #[allow(dead_code)]
-pub const REQUIRED_CAPTURE_SCENES: [&str; 6] = [
+pub const REQUIRED_CAPTURE_SCENES: [&str; 7] = [
     "mainmenu",
     "research",
     "logistics",
     "assembly",
     "focus",
     "freight",
+    "flow",
 ];
 
 impl Game {
@@ -25,6 +26,7 @@ impl Game {
         // Batched captures reuse one game process; view-only state from one
         // scene must not leak into the next image.
         self.campaign.current_mut().focus_mode = false;
+        self.campaign.current_mut().flow_overlay = false;
         match scene {
             "mainmenu" => self.phase = GamePhase::MainMenu,
             "research" => {
@@ -350,7 +352,7 @@ impl Game {
                 }
                 planet.selected_tile = Some(smelter);
             }
-            "assembly" => {
+            "assembly" | "flow" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();
                 for tech in [
@@ -372,6 +374,7 @@ impl Game {
                     return;
                 };
                 planet.unlock_building(engine::BuildingType::Assembler);
+                planet.unlock_building(engine::BuildingType::Smelter);
                 planet.unlock_building(engine::BuildingType::WindTurbine);
 
                 let assembler = engine::GridPos::new(core.x + 2, core.y - 1);
@@ -381,6 +384,14 @@ impl Game {
                 }
                 planet.select_building(engine::BuildingType::Assembler);
                 planet.try_place_building(assembler);
+
+                let smelter = engine::GridPos::new(core.x + 4, core.y - 1);
+                if let Some(tile) = planet.grid.get_mut(smelter) {
+                    tile.terrain = engine::TerrainType::Empty;
+                    tile.building = None;
+                }
+                planet.select_building(engine::BuildingType::Smelter);
+                planet.try_place_building(smelter);
 
                 for offset in [(-1, 0), (-1, -1), (0, -1)] {
                     let pos = engine::GridPos::new(core.x + offset.0, core.y + offset.1);
@@ -403,6 +414,14 @@ impl Game {
                     .collect(),
                 );
                 planet.input_buffers.insert(key, 30.0);
+                let smelter_key = (smelter.x, smelter.y);
+                planet.input_hoppers.insert(
+                    smelter_key,
+                    [(engine::ResourceType::Minerals, 24.0)]
+                        .into_iter()
+                        .collect(),
+                );
+                planet.input_buffers.insert(smelter_key, 24.0);
                 for _ in 0..60 {
                     planet.step(state::TICK_SECONDS, false);
                 }
@@ -414,6 +433,14 @@ impl Game {
                 }
                 planet.select_building(engine::BuildingType::Assembler);
                 planet.selected_tile = Some(assembler);
+                if scene == "flow" {
+                    planet.flow_overlay = true;
+                    planet.focus_mode = true;
+                    planet.camera.zoom = 1.45;
+                    planet.camera.pan_y = -72.0;
+                    planet.selected_building = None;
+                    planet.notifications.clear();
+                }
             }
             "paused" => {
                 self.phase = GamePhase::Playing;

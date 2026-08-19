@@ -124,6 +124,7 @@ pub(super) fn draw_ui_panels(
             state.fast_forward_to_next_event();
         }
         bottom_bar::ClockAction::ToggleFocus => state.focus_mode = !state.focus_mode,
+        bottom_bar::ClockAction::ToggleFlow => state.flow_overlay = !state.flow_overlay,
         bottom_bar::ClockAction::None => {}
     }
 

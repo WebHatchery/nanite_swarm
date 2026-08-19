@@ -313,6 +313,9 @@ pub struct PlanetState {
     /// because a returning touch player should keep the viewport they chose.
     #[serde(default)]
     pub focus_mode: bool,
+    /// Show recipe nodes and their intended network routes over the map.
+    #[serde(default)]
+    pub flow_overlay: bool,
     #[serde(skip, default)]
     pub build_palette_scroll: ScrollArea,
     /// Where the Records screen's log is scrolled to.
@@ -489,6 +492,7 @@ impl PlanetState {
             camera_drag_anchor: None,
             show_help: false,
             focus_mode: false,
+            flow_overlay: false,
             build_palette_scroll: ScrollArea::new(),
             log_scroll: ScrollArea::new(),
             records_scroll: ScrollArea::new(),

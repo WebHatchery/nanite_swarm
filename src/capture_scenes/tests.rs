@@ -10,7 +10,8 @@ fn required_capture_scenes_are_registered() {
             "logistics",
             "assembly",
             "focus",
-            "freight"
+            "freight",
+            "flow"
         ]
     );
 }
