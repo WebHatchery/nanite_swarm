@@ -93,3 +93,17 @@ fn factory_ledger_names_the_missing_input_and_boosted_processor() {
     assert_eq!(ledger.boosted, 1);
     assert_eq!(ledger.bottleneck, Some(ResourceType::Minerals));
 }
+
+#[test]
+fn flow_node_output_gauge_uses_the_real_dispatch_pad_capacity() {
+    let mut state = PlanetState::new(2, 42, GameConfig::default());
+    let pos = state.grid.find_core().unwrap();
+    state.grid.get_mut(pos).unwrap().building =
+        Some(crate::engine::Building::new(BuildingType::Smelter, pos));
+    state
+        .output_buffers
+        .insert((pos.x, pos.y), state.processor_pad_capacity() * 0.5);
+
+    let node = factory_flow_nodes(&state).into_iter().next().unwrap();
+    assert!((node.output_pressure - 0.5).abs() < 0.001);
+}

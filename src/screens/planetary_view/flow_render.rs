@@ -24,6 +24,7 @@ struct FlowNode {
     readiness: f32,
     powered: bool,
     blocked: bool,
+    output_pressure: f32,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -63,6 +64,49 @@ pub(super) fn draw(state: &PlanetState, metrics: HudMetrics, theme: &UiTheme, ti
         metrics.base_offset_y() + 53.0,
         10.0,
         color_from_rgba(&theme.colors.primary_soft),
+    );
+    draw_node_key(metrics, theme);
+}
+
+fn draw_node_key(metrics: HudMetrics, theme: &UiTheme) {
+    let x = metrics.base_offset_x() + 12.0;
+    let y = metrics.base_offset_y() + 69.0;
+    draw_ui_text(
+        "NODE BARS",
+        x,
+        y,
+        8.0,
+        color_from_rgba(&theme.colors.text_dim),
+    );
+    draw_line(
+        x + 58.0,
+        y - 3.0,
+        x + 72.0,
+        y - 3.0,
+        2.0,
+        color_from_rgba(&theme.colors.success),
+    );
+    draw_ui_text(
+        "INPUT",
+        x + 77.0,
+        y,
+        8.0,
+        color_from_rgba(&theme.colors.text_dim),
+    );
+    draw_line(
+        x + 116.0,
+        y - 10.0,
+        x + 116.0,
+        y,
+        2.0,
+        color_from_rgba(&theme.colors.components),
+    );
+    draw_ui_text(
+        "OUTPUT",
+        x + 122.0,
+        y,
+        8.0,
+        color_from_rgba(&theme.colors.text_dim),
     );
 }
 
@@ -323,6 +367,29 @@ fn draw_node(node: &FlowNode, starved: bool, metrics: HudMetrics, theme: &UiThem
             color_from_rgba(&theme.colors.success)
         },
     );
+    let output_x = x + width - 3.0;
+    let output_h = (height - 4.0) * node.output_pressure;
+    draw_rectangle(
+        output_x,
+        y + 2.0,
+        1.5,
+        height - 4.0,
+        with_alpha(Colors::TEXT_DIM, 0.2),
+    );
+    draw_rectangle(
+        output_x,
+        y + height - 2.0 - output_h,
+        1.5,
+        output_h,
+        if node.blocked {
+            color_from_rgba(&theme.colors.error)
+        } else {
+            node.outputs
+                .first()
+                .map(|resource| resource_color(theme, *resource))
+                .unwrap_or(Colors::TEXT_DIM)
+        },
+    );
 }
 
 fn factory_flow_nodes(state: &PlanetState) -> Vec<FlowNode> {
@@ -346,6 +413,13 @@ fn factory_flow_nodes(state: &PlanetState) -> Vec<FlowNode> {
                 readiness: recipe_readiness(state, pos, &def.recipe),
                 powered: is_operational(state, pos),
                 blocked: blocked.contains(&pos),
+                output_pressure: (state
+                    .output_buffers
+                    .get(&(pos.x, pos.y))
+                    .copied()
+                    .unwrap_or(0.0)
+                    / state.processor_pad_capacity())
+                .clamp(0.0, 1.0),
             });
         }
     }

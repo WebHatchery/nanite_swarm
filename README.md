@@ -39,6 +39,7 @@ Processor dispatch pads are finite: a full alloy or components stack pauses that
 Research Buffer Lattices after Precision Assembly and Storage Optimization to expand every processor dispatch pad by 50%.
 Records now reward scaling the factory systems themselves: three simultaneous boosted processors earn Redline Cluster, while fifty staged units of refined output earn Freight Yard.
 When a selected processor pad is full, tap PURGE PAD and then PURGE AGAIN to discard only its staged output and recover the machine without accidental one-tap loss.
+FLOW recipe nodes use separate gauges: the bottom bar is input readiness, while the right edge rises with output pressure and turns red at a full dispatch pad.
 
 Keyboard shortcuts are optional:
 
