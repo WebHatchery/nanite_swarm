@@ -25,6 +25,7 @@ impl HudMetrics {
         screen_w: f32,
         screen_h: f32,
         camera: Camera,
+        focus_mode: bool,
     ) -> Self {
         let compact_height = screen_h < 760.0;
         let compact_width = screen_w < 1260.0;
@@ -37,12 +38,16 @@ impl HudMetrics {
             } else {
                 theme.layout.top_bar_height
             },
-            left_panel_width: if compact_width {
+            left_panel_width: if focus_mode {
+                0.0
+            } else if compact_width {
                 260.0
             } else {
                 theme.layout.left_panel_width
             },
-            right_panel_width: if compact_width {
+            right_panel_width: if focus_mode {
+                0.0
+            } else if compact_width {
                 292.0
             } else {
                 theme.layout.right_panel_width
@@ -88,6 +93,9 @@ impl HudMetrics {
         )
     }
 }
+
+#[cfg(test)]
+mod tests;
 
 /// Convert screen position to grid position
 pub(super) fn screen_to_grid(screen_x: f32, screen_y: f32, metrics: HudMetrics) -> Option<GridPos> {

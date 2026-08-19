@@ -303,6 +303,10 @@ pub struct PlanetState {
     pub camera_drag_anchor: Option<(f32, f32)>,
     #[serde(skip, default)]
     pub show_help: bool,
+    /// Hide both side stacks while planning dense routes. Persisted per world
+    /// because a returning touch player should keep the viewport they chose.
+    #[serde(default)]
+    pub focus_mode: bool,
     #[serde(skip, default)]
     pub build_palette_scroll: ScrollArea,
     /// Where the Records screen's log is scrolled to.
@@ -474,6 +478,7 @@ impl PlanetState {
             touch_gesture_routed: false,
             camera_drag_anchor: None,
             show_help: false,
+            focus_mode: false,
             build_palette_scroll: ScrollArea::new(),
             log_scroll: ScrollArea::new(),
             records_scroll: ScrollArea::new(),

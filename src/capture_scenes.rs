@@ -9,12 +9,16 @@ use crate::state::{Campaign, LaunchSequence};
 use crate::{data, engine, state, Game, GamePhase};
 
 #[allow(dead_code)]
-pub const REQUIRED_CAPTURE_SCENES: [&str; 4] = ["mainmenu", "research", "logistics", "assembly"];
+pub const REQUIRED_CAPTURE_SCENES: [&str; 5] =
+    ["mainmenu", "research", "logistics", "assembly", "focus"];
 
 impl Game {
     /// Seed a specific scene for the screenshot harness.
     pub fn begin_capture_scene(&mut self, scene: &str) {
         self.capture_still = true;
+        // Batched captures reuse one game process; view-only state from one
+        // scene must not leak into the next image.
+        self.campaign.current_mut().focus_mode = false;
         match scene {
             "mainmenu" => self.phase = GamePhase::MainMenu,
             "research" => {
@@ -53,6 +57,13 @@ impl Game {
                 planet.selected_tile = drill;
                 // Nothing in hand: the quiet state of the ore overlay.
                 planet.selected_building = None;
+            }
+            "focus" | "focus_compact" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                let planet = self.campaign.current_mut();
+                planet.focus_mode = true;
+                planet.camera.zoom = 1.35;
             }
             // The same world with a Drill in hand, which brings the ground up.
             "prospect" => {
@@ -302,6 +313,20 @@ impl Game {
             "assembly" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();
+                for tech in [
+                    "power_grid",
+                    "wind_power",
+                    "smelting",
+                    "data_processing",
+                    "advanced_research",
+                    "precision_assembly",
+                ] {
+                    if !self.research_state.unlocked.iter().any(|id| id == tech) {
+                        self.research_state.unlocked.push(tech.to_string());
+                    }
+                }
+                self.sync_building_unlocks();
+                self.sync_research_to_planet();
                 let planet = self.campaign.current_mut();
                 let Some(core) = planet.grid.find_core() else {
                     return;

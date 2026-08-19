@@ -23,7 +23,8 @@ Grow the nanite core from a small foothold into a planetary-scale swarm without 
 Every required action has a visible tap/click control. Tap a building card and
 then the grid to build; drag the map to pan, pinch or use the visible zoom
 controls to zoom, and use the bottom command bar for selection, demolition,
-blueprints, relocation, undo, speed, and pause.
+blueprints, relocation, undo, speed, and pause. Tap FOCUS to collapse both
+sidebars for route planning, then tap PANELS to restore them.
 
 Keyboard shortcuts are optional:
 

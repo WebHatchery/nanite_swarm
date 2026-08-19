@@ -54,7 +54,7 @@ pub fn render_planetary_view(
     // Move the camera first, then lay out the frame around where it ended up,
     // so drawing and hit-testing agree about which tile is under the cursor.
     let (mouse_x, mouse_y) = mouse_position();
-    let layout = HudMetrics::for_screen(theme, screen_w, screen_h, state.camera);
+    let layout = HudMetrics::for_screen(theme, screen_w, screen_h, state.camera, state.focus_mode);
     let cursor_over_ui = is_cursor_over_ui(mouse_x, mouse_y, screen_w, screen_h, layout);
     let touch = state.touch_gesture.update();
     if touch.active && !state.touch_gesture_routed {
@@ -73,7 +73,7 @@ pub fn render_planetary_view(
         touch_camera_active,
     );
 
-    let metrics = HudMetrics::for_screen(theme, screen_w, screen_h, state.camera);
+    let metrics = HudMetrics::for_screen(theme, screen_w, screen_h, state.camera, state.focus_mode);
     let hovered_pos = if cursor_over_ui {
         None
     } else {

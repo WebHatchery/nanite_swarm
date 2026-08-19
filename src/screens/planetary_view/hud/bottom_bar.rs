@@ -19,6 +19,7 @@ pub(super) enum ClockAction {
     Faster,
     Slower,
     NextEvent,
+    ToggleFocus,
 }
 
 #[must_use]
@@ -145,7 +146,7 @@ pub(super) fn draw(
             ("PAUSE", "Tap II"),
         ]
     };
-    let text_controls_w = (controls_w - 70.0).max(120.0);
+    let text_controls_w = (controls_w - 130.0).max(120.0);
     let slot_w = text_controls_w / controls.len() as f32;
     for (index, (label, hint)) in controls.iter().enumerate() {
         let x = controls_x + index as f32 * slot_w + 12.0;
@@ -174,6 +175,13 @@ pub(super) fn draw(
         &next_label,
     ) {
         clock = ClockAction::NextEvent;
+    }
+    if draw_hud_button(
+        theme,
+        Rect::new(controls_x + controls_w - 120.0, bottom_y + 10.0, 54.0, 22.0),
+        if state.focus_mode { "PANELS" } else { "FOCUS" },
+    ) {
+        clock = ClockAction::ToggleFocus;
     }
 
     draw_hud_panel(
