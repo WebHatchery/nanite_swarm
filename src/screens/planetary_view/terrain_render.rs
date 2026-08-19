@@ -389,34 +389,6 @@ pub(super) fn draw_grid_tiles(
     let max_x = max_x.min(state.grid.width as i32 - 1);
     let max_y = max_y.min(state.grid.height as i32 - 1);
 
-    for selected in &state.box_selected {
-        let (sx, sy) = grid_to_screen(*selected, metrics);
-        draw_rectangle_lines(
-            sx,
-            sy,
-            metrics.tile_size - 1.0,
-            metrics.tile_size - 1.0,
-            2.0,
-            Colors::ACCENT,
-        );
-    }
-    if state.box_select_mode {
-        if let (Some(start), Some(end)) = (state.box_select_start, hovered_pos) {
-            let min = GridPos::new(start.x.min(end.x), start.y.min(end.y));
-            let max = GridPos::new(start.x.max(end.x), start.y.max(end.y));
-            let (sx, sy) = grid_to_screen(min, metrics);
-            let (ex, ey) = grid_to_screen(
-                GridPos::new(
-                    (max.x + 1).min(state.grid.width as i32 - 1),
-                    (max.y + 1).min(state.grid.height as i32 - 1),
-                ),
-                metrics,
-            );
-            draw_rectangle(sx, sy, ex - sx, ey - sy, Color::new(0.0, 0.85, 1.0, 0.12));
-            draw_rectangle_lines(sx, sy, ex - sx, ey - sy, 2.0, Colors::PRIMARY);
-        }
-    }
-
     for y in min_y..=max_y {
         for x in min_x..=max_x {
             let pos = GridPos::new(x, y);

@@ -231,3 +231,58 @@ fn processor_boost_waits_for_adaptive_clocking_research() {
         .iter()
         .any(|notification| notification.message.contains("Adaptive Clocking")));
 }
+
+#[test]
+fn box_selection_changes_every_processor_without_touching_other_buildings() {
+    let mut state = state();
+    state
+        .research
+        .unlocked_techs
+        .push("adaptive_clocking".into());
+    let core = state.grid.find_core().unwrap();
+    let smelter = GridPos::new(core.x + 1, core.y);
+    let assembler = GridPos::new(core.x + 2, core.y);
+    let drill = GridPos::new(core.x + 3, core.y);
+    state.grid.get_mut(smelter).unwrap().building =
+        Some(crate::engine::Building::new(BuildingType::Smelter, smelter));
+    state.grid.get_mut(assembler).unwrap().building = Some(crate::engine::Building::new(
+        BuildingType::Assembler,
+        assembler,
+    ));
+    state.grid.get_mut(drill).unwrap().building =
+        Some(crate::engine::Building::new(BuildingType::Drill, drill));
+    state.box_selected = vec![smelter, assembler, drill];
+
+    assert_eq!(state.set_selected_overclock(true), 2);
+    assert!(
+        state
+            .grid
+            .get(smelter)
+            .unwrap()
+            .building
+            .as_ref()
+            .unwrap()
+            .overclocked
+    );
+    assert!(
+        state
+            .grid
+            .get(assembler)
+            .unwrap()
+            .building
+            .as_ref()
+            .unwrap()
+            .overclocked
+    );
+    assert!(
+        !state
+            .grid
+            .get(drill)
+            .unwrap()
+            .building
+            .as_ref()
+            .unwrap()
+            .overclocked
+    );
+    assert_eq!(state.set_selected_overclock(false), 2);
+}

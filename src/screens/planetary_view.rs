@@ -8,6 +8,7 @@ mod input;
 mod metrics;
 mod ore_render;
 mod seed_ship_render;
+mod selection_render;
 mod terrain_render;
 mod upkeep_render;
 
@@ -94,6 +95,7 @@ pub fn render_planetary_view(
     terrain_render::draw_planetary_background(screen_w, screen_h, time, state);
     terrain_render::draw_collapse_shake(state, screen_w, screen_h, time);
     terrain_render::draw_grid_tiles(state, textures, metrics, hovered_pos, pulse, global_pulse);
+    selection_render::draw_box_selection(state, metrics, hovered_pos);
     terrain_render::draw_planet_features(state, metrics);
     terrain_render::draw_tutorial_route_hint(state, metrics, time);
     upkeep_render::draw_hazard_fields(state, metrics);

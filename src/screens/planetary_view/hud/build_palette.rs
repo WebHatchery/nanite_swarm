@@ -406,8 +406,57 @@ pub(super) fn draw(
     if draw_hud_button(
         theme,
         Rect::new(sidebar_x + metrics.panel_padding, fifth_y, half_w, 30.0),
-        "BOX SELECT",
+        if state.box_selected.is_empty() {
+            "BOX SELECT"
+        } else {
+            "RESELECT"
+        },
     ) {
         state.begin_box_select();
+    }
+    let selected_processors: Vec<bool> = state
+        .box_selected
+        .iter()
+        .filter_map(|pos| {
+            state
+                .grid
+                .get(*pos)
+                .and_then(|tile| tile.building.as_ref())
+                .filter(|building| building.supports_overclock())
+                .map(|building| building.overclocked)
+        })
+        .collect();
+    if !selected_processors.is_empty() {
+        let enable = selected_processors.iter().any(|boosted| !boosted);
+        let unlocked = state
+            .research
+            .unlocked_techs
+            .iter()
+            .any(|tech| tech == "adaptive_clocking");
+        let label = if !unlocked {
+            "BOOST LOCKED".to_string()
+        } else if enable {
+            format!(
+                "BOOST {}",
+                selected_processors
+                    .iter()
+                    .filter(|boosted| !**boosted)
+                    .count()
+            )
+        } else {
+            format!("NORMAL {}", selected_processors.len())
+        };
+        if draw_hud_button(
+            theme,
+            Rect::new(
+                sidebar_x + metrics.panel_padding + half_w + 8.0,
+                fifth_y,
+                half_w,
+                30.0,
+            ),
+            &label,
+        ) {
+            state.set_selected_overclock(enable);
+        }
     }
 }

@@ -447,7 +447,9 @@ impl Game {
                 }
                 planet.select_building(engine::BuildingType::Assembler);
                 planet.selected_tile = Some(assembler);
+                planet.box_selected = vec![assembler, smelter];
                 if scene == "flow" {
+                    planet.box_selected.clear();
                     planet.flow_overlay = true;
                     planet.focus_mode = true;
                     planet.camera.zoom = 1.45;

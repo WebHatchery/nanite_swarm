@@ -301,6 +301,45 @@ impl PlanetState {
             .info(format!("Selected {} buildings", self.box_selected.len()));
     }
 
+    pub fn set_selected_overclock(&mut self, enabled: bool) -> usize {
+        if !self
+            .research
+            .unlocked_techs
+            .iter()
+            .any(|tech| tech == "adaptive_clocking")
+        {
+            self.notifications
+                .warning("Research Adaptive Clocking to boost processors");
+            return 0;
+        }
+        let selected = self.box_selected.clone();
+        let mut changed = 0;
+        for pos in selected {
+            let Some(building) = self
+                .grid
+                .get_mut(pos)
+                .and_then(|tile| tile.building.as_mut())
+            else {
+                continue;
+            };
+            if building.supports_overclock() && building.overclocked != enabled {
+                building.overclocked = enabled;
+                changed += 1;
+            }
+        }
+        self.power_balance = self.net_power();
+        if changed > 0 {
+            self.notifications.info(if enabled {
+                format!("Boosted {} selected processors", changed)
+            } else {
+                format!("Normalized {} selected processors", changed)
+            });
+        } else {
+            self.notifications.warning("No selected processors changed");
+        }
+        changed
+    }
+
     pub fn place_blueprint(&mut self, anchor: GridPos) -> usize {
         let blueprint = self.blueprint.clone();
         let mut placed = 0;
