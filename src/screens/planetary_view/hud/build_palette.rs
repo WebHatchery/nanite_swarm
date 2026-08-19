@@ -403,16 +403,33 @@ pub(super) fn draw(
         }
     }
     let fifth_y = fourth_y + 38.0;
+    let blocked: std::collections::HashSet<_> = state.blocked_factories().into_iter().collect();
+    let selected_blocked = state
+        .box_selected
+        .iter()
+        .filter(|pos| blocked.contains(pos))
+        .count();
+    let selection_action = if selected_blocked > 0 {
+        if state.bulk_purge_armed {
+            "PURGE AGAIN".to_string()
+        } else {
+            format!("PURGE {}", selected_blocked)
+        }
+    } else if state.box_selected.is_empty() {
+        "BOX SELECT".to_string()
+    } else {
+        "RESELECT".to_string()
+    };
     if draw_hud_button(
         theme,
         Rect::new(sidebar_x + metrics.panel_padding, fifth_y, half_w, 30.0),
-        if state.box_selected.is_empty() {
-            "BOX SELECT"
-        } else {
-            "RESELECT"
-        },
+        &selection_action,
     ) {
-        state.begin_box_select();
+        if selected_blocked > 0 {
+            state.request_selected_pad_purge();
+        } else {
+            state.begin_box_select();
+        }
     }
     let selected_processors: Vec<bool> = state
         .box_selected

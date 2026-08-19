@@ -432,3 +432,48 @@ fn processor_pad_purge_requires_the_same_visible_control_twice() {
         12.0
     );
 }
+
+#[test]
+fn selected_pad_purge_requires_two_taps_and_only_clears_blocked_selection() {
+    let mut state = state();
+    let core = state.grid.find_core().unwrap();
+    let blocked = GridPos::new(core.x + 1, core.y);
+    let partial = GridPos::new(core.x + 2, core.y);
+    let unselected = GridPos::new(core.x + 3, core.y);
+    for pos in [blocked, partial, unselected] {
+        let mut building = crate::engine::Building::new(BuildingType::Smelter, pos);
+        building.powered = true;
+        state.grid.get_mut(pos).unwrap().building = Some(building);
+    }
+    let capacity = state.processor_pad_capacity();
+    state
+        .output_buffers
+        .insert((blocked.x, blocked.y), capacity);
+    state.output_buffers.insert((partial.x, partial.y), 4.0);
+    state
+        .output_buffers
+        .insert((unselected.x, unselected.y), capacity);
+    state.input_buffers.insert((blocked.x, blocked.y), 12.0);
+    state.box_selected = vec![blocked, partial];
+
+    assert_eq!(state.request_selected_pad_purge(), 0);
+    assert!(state.bulk_purge_armed);
+    assert_eq!(
+        state.output_buffers.get(&(blocked.x, blocked.y)),
+        Some(&capacity)
+    );
+    assert_eq!(state.request_selected_pad_purge(), 1);
+    assert!(!state.output_buffers.contains_key(&(blocked.x, blocked.y)));
+    assert_eq!(
+        state.output_buffers.get(&(partial.x, partial.y)),
+        Some(&4.0)
+    );
+    assert_eq!(
+        state.output_buffers.get(&(unselected.x, unselected.y)),
+        Some(&capacity)
+    );
+    assert_eq!(
+        state.input_buffers.get(&(blocked.x, blocked.y)),
+        Some(&12.0)
+    );
+}

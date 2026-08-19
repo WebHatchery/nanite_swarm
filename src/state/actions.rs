@@ -273,6 +273,7 @@ impl PlanetState {
         self.box_select_mode = true;
         self.box_select_start = None;
         self.box_selected.clear();
+        self.bulk_purge_armed = false;
         self.notifications
             .info("Drag across the grid, or tap two opposite corners");
     }
@@ -300,6 +301,7 @@ impl PlanetState {
             })
             .collect();
         self.box_select_mode = false;
+        self.bulk_purge_armed = false;
         self.selected_tile = self.box_selected.first().copied();
         self.notifications
             .info(format!("Selected {} buildings", self.box_selected.len()));
@@ -408,6 +410,7 @@ impl PlanetState {
 
     /// Two-tap recovery for a processor whose output cannot leave the pad.
     pub fn request_processor_pad_purge(&mut self, pos: GridPos) -> bool {
+        self.bulk_purge_armed = false;
         let waiting = self
             .output_buffers
             .get(&(pos.x, pos.y))
@@ -435,6 +438,48 @@ impl PlanetState {
         self.notifications
             .warning(format!("Purged {:.0} staged output", waiting));
         true
+    }
+
+    /// Two-tap recovery for every blocked processor in the current box.
+    pub fn request_selected_pad_purge(&mut self) -> usize {
+        let blocked: std::collections::HashSet<GridPos> =
+            self.blocked_factories().into_iter().collect();
+        let targets: Vec<GridPos> = self
+            .box_selected
+            .iter()
+            .copied()
+            .filter(|pos| blocked.contains(pos))
+            .collect();
+        if targets.is_empty() {
+            self.bulk_purge_armed = false;
+            return 0;
+        }
+        let total: f32 = targets
+            .iter()
+            .filter_map(|pos| self.output_buffers.get(&(pos.x, pos.y)))
+            .sum();
+        if !self.bulk_purge_armed {
+            self.bulk_purge_armed = true;
+            self.purge_armed = None;
+            self.notifications.warning(format!(
+                "Tap PURGE AGAIN to clear {} full pad{} ({:.0} cargo)",
+                targets.len(),
+                if targets.len() == 1 { "" } else { "s" },
+                total
+            ));
+            return 0;
+        }
+        for pos in &targets {
+            self.output_buffers.remove(&(pos.x, pos.y));
+        }
+        self.bulk_purge_armed = false;
+        self.notifications.warning(format!(
+            "Purged {} selected pad{} ({:.0} cargo)",
+            targets.len(),
+            if targets.len() == 1 { "" } else { "s" },
+            total
+        ));
+        targets.len()
     }
 
     pub fn place_blueprint(&mut self, anchor: GridPos) -> usize {

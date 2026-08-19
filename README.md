@@ -47,6 +47,7 @@ The FLOW ledger compares observed alloy and parts output with installed processo
 Processor floor art now carries its operating policy: priority machines pulse a cyan beacon, boosted lines move twin product packets faster, and full output pads close red warning shutters over their crate dock.
 Selected processors can enter STANDBY without demolition: production and base power demand stop, freight ignores the paused line, and both input and output buffers remain intact for RESUME.
 Box-selected production districts can be paused or resumed together, and standby processors are excluded from starvation/backpressure alerts while the FLOW ledger reports their count separately.
+When selected processors have full dispatch pads, the reselect control becomes PURGE N and then PURGE AGAIN; only blocked selected outputs are discarded, while every input hopper and unselected pad is preserved.
 
 Keyboard shortcuts are optional:
 
