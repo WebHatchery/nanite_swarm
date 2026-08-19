@@ -1,7 +1,7 @@
 //! Optional factory-flow overlay: live recipe nodes and intended supply runs.
 
 use crate::data::{RecipeDef, UiTheme};
-use crate::engine::{route_over_network, BuildingType, GridPos, ResourceType};
+use crate::engine::{BuildingType, GridPos, ResourceType};
 use crate::state::PlanetState;
 use crate::ui::{color_from_rgba, draw_hud_panel, draw_resource_icon, resource_color, Colors};
 use macroquad::prelude::*;
@@ -346,8 +346,6 @@ fn factory_flow_links(state: &PlanetState) -> Vec<FlowLink> {
         .filter(|pos| is_operational(state, *pos))
         .map(|pos| (pos, ResourceType::Minerals))
         .collect();
-    let mut consumers: Vec<(GridPos, ResourceType)> = Vec::new();
-
     for def in &crate::data::game_data().buildings {
         let Some(kind) = BuildingType::from_id(&def.id) else {
             continue;
@@ -363,25 +361,13 @@ fn factory_flow_links(state: &PlanetState) -> Vec<FlowLink> {
                 producers.extend(active.iter().copied().map(|pos| (pos, resource)));
             }
         }
-        for id in def.recipe.carried_ids() {
-            let Some(resource) = ResourceType::from_id(id) else {
-                continue;
-            };
-            consumers.extend(active.iter().copied().map(|pos| (pos, resource)));
-        }
     }
 
     let mut links = Vec::new();
     for (source, resource) in producers {
-        let target = consumers
-            .iter()
-            .filter(|(pos, wanted)| *wanted == resource && *pos != source)
-            .filter_map(|(pos, _)| {
-                route_over_network(&state.grid, source, *pos).map(|path| (*pos, path))
-            })
-            .min_by_key(|(_, path)| path.len())
-            .map(|(_, path)| path)
-            .or_else(|| route_over_network(&state.grid, source, core));
+        let target = state
+            .delivery_for(source, core, resource)
+            .map(|(_, path)| path);
         if let Some(mut path) = target {
             // Engine routes are walking instructions and therefore exclude
             // the source. The overlay is a diagram, so close that visual gap.

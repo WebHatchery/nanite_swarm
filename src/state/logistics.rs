@@ -314,10 +314,10 @@ impl PlanetState {
     /// Where a load of ore from `from` should go, and how to get there.
     ///
     /// A processing building with room in its hopper takes priority over the
-    /// Core, nearest first, so a Smelter parked beside the drills is fed before
-    /// the ore ever reaches the pool. Placement is the decision; this only
-    /// reads it.
-    fn delivery_for(
+    /// Core. Lean hoppers are served before distance breaks the tie, including
+    /// loads already in flight, so parallel processors share supply instead of
+    /// one nearby machine quietly monopolising it.
+    pub(crate) fn delivery_for(
         &self,
         from: GridPos,
         core: GridPos,
@@ -328,7 +328,7 @@ impl PlanetState {
             .logistics
             .pad_depth
             .max(self.drones.drone_capacity * 3.0);
-        let mut best: Option<(GridPos, Vec<GridPos>)> = None;
+        let mut best: Option<((i32, usize, i32, i32), GridPos, Vec<GridPos>)> = None;
 
         for pos in self.consumers_of(resource) {
             let delivered = self
@@ -337,25 +337,57 @@ impl PlanetState {
                 .and_then(|hopper| hopper.get(&resource))
                 .copied()
                 .unwrap_or(0.0);
-            if delivered + self.drones.drone_capacity > hopper_ceiling {
+            let inbound: f32 = self
+                .drones
+                .drones()
+                .iter()
+                .filter(|drone| {
+                    drone.target == pos
+                        && drone.resource_type == resource
+                        && drone.carrying > 0.0
+                        && drone.state == DroneState::MovingToCore
+                })
+                .map(|drone| drone.carrying)
+                .sum();
+            let committed = delivered + inbound;
+            if committed + self.drones.drone_capacity > hopper_ceiling {
                 continue;
             }
             let Some(route) = route_over_network_weighted(&self.grid, from, pos, self.route_cost())
             else {
                 continue;
             };
-            if best
-                .as_ref()
-                .is_none_or(|(_, shortest)| route.len() < shortest.len())
-            {
-                best = Some((pos, route));
+            let consumption = self.consumer_rate(pos, resource).max(0.001);
+            let demand_band = (committed / consumption).floor() as i32;
+            let key = (demand_band, route.len(), pos.y, pos.x);
+            if best.as_ref().is_none_or(|(best_key, _, _)| key < *best_key) {
+                best = Some((key, pos, route));
             }
         }
 
-        best.or_else(|| {
+        best.map(|(_, pos, route)| (pos, route)).or_else(|| {
             route_over_network_weighted(&self.grid, from, core, self.route_cost())
                 .map(|route| (core, route))
         })
+    }
+
+    fn consumer_rate(&self, pos: GridPos, resource: ResourceType) -> f32 {
+        let Some(kind) = self
+            .grid
+            .get(pos)
+            .and_then(|tile| tile.building.as_ref())
+            .map(|building| building.building_type)
+        else {
+            return 1.0;
+        };
+        crate::data::game_data()
+            .building(kind.id())
+            .recipe
+            .inputs
+            .get(resource.id())
+            .copied()
+            .unwrap_or(1.0)
+            .max(0.001)
     }
 
     /// Powered buildings whose recipe eats ore.

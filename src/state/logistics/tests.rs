@@ -118,6 +118,49 @@ fn a_resource_nothing_wants_still_goes_home_to_the_core() {
     assert_eq!(delivery.0, core);
 }
 
+fn two_smelter_run() -> (PlanetState, GridPos, GridPos, GridPos, GridPos) {
+    let (mut state, core, drill) = state_with_run(6);
+    let near = GridPos::new(core.x + 2, core.y - 1);
+    let far = GridPos::new(core.x + 4, core.y - 1);
+    for pos in [near, far] {
+        state.grid.get_mut(pos).unwrap().terrain = crate::engine::TerrainType::Empty;
+        assert!(state.grid.place_building(pos, BuildingType::Smelter));
+    }
+    state.grid.update_power_grid();
+    (state, core, drill, near, far)
+}
+
+#[test]
+fn the_leaner_processor_is_fed_before_the_nearer_one() {
+    let (mut state, core, drill, near, far) = two_smelter_run();
+    state.input_hoppers.insert(
+        (near.x, near.y),
+        [(ResourceType::Minerals, 12.0)].into_iter().collect(),
+    );
+
+    let delivery = state
+        .delivery_for(drill, core, ResourceType::Minerals)
+        .expect("processor delivery");
+    assert_eq!(delivery.0, far);
+}
+
+#[test]
+fn cargo_in_flight_counts_as_hopper_supply_for_dispatch() {
+    let (mut state, core, drill, near, far) = two_smelter_run();
+    let id = state.drones.spawn_drone(drill);
+    state.drones.get_drone_mut(id).unwrap().dispatch(
+        near,
+        vec![near],
+        10.0,
+        ResourceType::Minerals,
+    );
+
+    let delivery = state
+        .delivery_for(drill, core, ResourceType::Minerals)
+        .expect("processor delivery");
+    assert_eq!(delivery.0, far);
+}
+
 #[test]
 fn a_drill_on_a_deposit_cuts_more_than_one_on_ordinary_ground() {
     /// Ore banked in ten seconds by a drill on ground of this richness.

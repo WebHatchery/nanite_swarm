@@ -34,6 +34,7 @@ Tap FLOW to open live supply routes and the factory ledger: processor health, th
 Use BOX SELECT to mark a factory block, then tap BOOST N or NORMAL N to change every selected processor together.
 Tap AUTO CLOCK to let the swarm boost only fed processors with spare power and low dust, normalizing them when those margins disappear.
 Processor tiles carry their own live art: colored intake tanks show separate recipe inputs, moving packets show active work, and output crates stack on the dispatch pad.
+Drone dispatch counts stock already in each hopper plus cargo still in flight, feeding the leanest processor before using route distance as a tie-breaker.
 
 Keyboard shortcuts are optional:
 
