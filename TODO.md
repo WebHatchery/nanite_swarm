@@ -171,7 +171,6 @@ intentionally out of scope.
 
 ## Release engineering
 
-- [ ] Wire a `butler` push pipeline into `publish.ps1` without embedding credentials.
 - [ ] Stamp the build version into the game and generated release metadata.
 - [ ] Remove the Ko-fi widget and bug-report branding from paid-distribution builds.
 - [ ] Externalize player-facing strings into a table while preserving the current default language.
