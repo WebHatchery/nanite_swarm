@@ -1,161 +1,179 @@
 # TODO — Nanite Swarm
 
-Open work from the 2026-07-14 code audit against `gdd.md`. The single-planet
-automation loop is solid; the interplanetary pitch, the win condition, and the
-logistics puzzle at the heart of the GDD are the gaps.
+Open implementation work from the 2026-07-14 code audit against `gdd.md`.
+This list is limited to work an implementation agent can complete in the
+repository: Rust code, game data, UI, generated in-game assets, tests, and
+build/release automation. Product decisions, external account operations,
+legal work, marketing, manual playtesting, and subjective art direction are
+intentionally out of scope.
 
 ## Core loop and win condition
 
-The Seed Ship exists: four stages declared in `assets/seed_ship.json`, its own screen behind the SHIP button, and a commit toggle that pours production into the yard at a capped intake, so it can only be paid for with sustained output. Launching it is the only way to reach an untouched world, and it is consumed doing so (rationale in `gdd.md` §4).
+- [ ] Record the source of each collapse, including the building or network failure that caused it.
+- [ ] Show the collapse source in the warning banner and post-collapse summary.
+- [ ] Apply source-specific collapse feedback when a local building failure differs from a broad grid collapse.
+- [ ] Add distinct Core stage 3 and 4 sprite assets and wire them to the saved stage data.
 
-- A launch now plays out: a countdown on the pad, the ship clearing the world it was built on, transit, and an arrival vignette that names the new world and gives it its line from `planets.json`. The beats, their lengths and their prose are `seed_ship.json` data (`launch`), and any key cuts it short. What it does not do is show the *base* being left — the sequence is drawn against a bare limb of the world rather than over the map the player just spent hours on.
-- Each standing stage now works for the world it stands on — the Cradle feeds the drills, the Spine adds a drone per drill, the Payload sharpens data — declared as modifiers in `seed_ship.json` and lost when the ship launches with them. The ship is also on the map now: committing raises a gantry over the Core, the hull grows inside it with `built_fraction`, a finished ship pulses, and a launched one leaves bare ground. It is a schematic silhouette rather than art, it occludes whatever is built directly above the Core, and the launch vignette does not show it leaving.
-- Every stage past the first is now gated on research declared in `seed_ship.json` — the Spine on Efficient Drills, the Payload on Advanced Research, the Ignition Charge on the Mass Driver — and a blocked yard sits idle rather than banking resources against a stage nobody can build yet. The ship screen says which tech it is waiting on. What the screen still will not say is what the *sealed* stages further down need, so the tree gives no advance warning of what to research next.
-The campaign ends: every world taken and a finished ship with nowhere to send it shows SYSTEM CONSUMED with what the run consumed, once, and the player can carry on in the finished system. There is deliberately no failure state (rationale in `gdd.md` §5b).
+## Logistics puzzle
 
-- Nothing after the ending changes. A finished campaign plays exactly like an unfinished one, so there is no reason to keep the save. New-game-plus, a harder second system, or a score to beat would all give it one.
-- Collapse stays a setback, never a death (decided 2026-08-01), and now scales with the size of what collapsed: shutdown, research lock and the share of Data lost all interpolate between a small-swarm figure and a full-scale one, declared in `game_config.json` under `collapse`. The banner counts down the shutdown rather than implying a fixed length. What it still does not do is distinguish *what* collapsed — losing the grid to one overdrawn Server Bank costs the same as losing it across a whole continent of drills.
-- The five Core stages are earned state (`assets/core_stages.json`): each declares milestones that must all be met and modifiers it grants once standing, they are reached in order, never given back, saved, and announced. The stage used to be a number the *renderer* computed from time played plus the current stockpile, so spending minerals walked the Core backwards. Stages 3 and 4 still reuse the stage-2 sprite — see Art.
-
-## The logistics puzzle
-
-Pillar decided 2026-08-01: **drones route along the conduit network** (rationale
-in `gdd.md` §3). Drones now walk Conduit/Power Node/Core tiles only, stop and
-flag when a run is cut, and resume when it is repaired.
-
-A network tile passes `conduit_capacity` drones at full speed; past that they share it, so a shared trunk slows everything routed through it. Saturated tiles are outlined on the map and raise a bottom-bar alert. A drill's crew size is a stat, so `swarm_dispatch` research puts a second drone on every drill.
-
-- A producer sends a part-full drone rather than leave it standing, once the run is long enough that the walk dominates and the pad holds a worthwhile share of a load (`partial_load_min_route`, `partial_load_min_share`). A crew of two now lifts throughput on any run worth having one on. The threshold is a flat tile count rather than a comparison of fill time against travel time, so it does not adapt to a drill made faster by research.
-- Congestion slows drones but never queues them: they pass through each other on a full tile rather than waiting. A real queue would make a junction readable at a glance.
-- Routing weights tiles by traffic (`traffic_cost`, `congestion_route_penalty` in `game_config.json`), so a saturated trunk is worth going around and a second parallel run finally earns its minerals. Congestion makes a tile expensive, never impassable. What it does not do is look ahead: each drone routes against the traffic that exists *now*, so a wave dispatched in the same tick all picks the same clear run and creates the jam it was avoiding.
-- Re-validating every in-flight drone's remaining path each tick is O(drones x path length), and routing is now A* over the network rather than a plain BFS; add a network revision counter and re-check only when the grid changes if either shows up in profiling.
-- A cut run is outlined in red on the map for as long as anything is stalled: every piece of network with no way back to the Core, plus the piece that stopped carrying traffic and caused it, so a conduit choked with dust names itself. It stays quiet while nothing is stalled, because a run being laid outward is disconnected on purpose. It does not yet say the same thing for a *producer* that is standing on open ground with no pipe at all.
-- Ground carries an ore richness laid down in patches at generation (`ore` in `game_config.json`): a drill cuts at its tile's rate, so where one goes is a spatial decision. Only the bonus above ordinary ground depletes, and only for ore actually cut (rationale in `gdd.md` §3). The inspector reads the ground out and the map marks it: deposits carry grains of ore, more of them the richer the ground, and lean ground shows a hollow ring only while a Drill is in hand. What is missing is depletion being visible — a deposit worn down to ordinary ground keeps its grains until it crosses the threshold, so a half-spent patch looks untouched.
-- Bridges are real network pieces: a building that stands on void or water and nowhere else, transmitting power and carrying drones like a conduit, instead of a tile flag that gave a conduit permission to exist. The GDD's Venus gaps are now a routing problem. Two things remain — a bridge on a void tile reads as barely more than the void it spans, and nothing hints that a gap *can* be bridged.
+- [ ] Replace the fixed partial-load tile threshold with a threshold derived from route length, drill rate, and pad fill time.
+- [ ] Add a real per-tile drone queue for congested conduit junctions.
+- [ ] Render queued drones and their order clearly on the map.
+- [ ] Add short-lived route reservations or equivalent look-ahead so a dispatch wave distributes across available paths.
+- [ ] Add a network revision counter and invalidate cached drone paths only when the network changes.
+- [ ] Profile path validation before enabling the revision-based optimization on every route.
+- [ ] Warn when a producer is placed on open ground without a connected conduit route.
+- [ ] Update deposit visuals as bonus ore depletes, including the transition from rich ground to ordinary ground.
+- [ ] Add a clear bridge silhouette and edge treatment so a bridge is readable over void or water.
+- [ ] Show an in-game placement hint when a selected building can bridge a gap.
 
 ## Interplanetary meta-layer
 
-`state::Campaign` owns all five worlds, the current index, and the directive; travel keeps every planet exactly as it was left, and the save carries the lot.
-
-- Left-behind worlds keep working: they run the same simulation in coarse one-second steps without visuals, and the solar map lists what each has stockpiled. The map is now a view of a running system rather than a pause button. Time still stops on the main menu and during a launch, both deliberately.
-- Mass Drivers are gameplay: a building that has to be fed over the conduit network like every other consumer, a standing order per world (cargo and destination) set on the solar map, pods that take real transit time measured off the two worlds' orbits, and cargo that comes down on the destination's Landing Pads. A world left behind keeps throwing at the world the swarm moved to, and the map draws the pods crossing between the orbits. Nothing teleports: a driver with no route is not a destination, and a driver nothing is routed to throws nothing.
-- The receiving end is a place, not a pool: a pod comes down on a Landing Pad, which has to be built, powered and connected on the destination world, and what lands sits on it until that world's own drones carry it off. A pad holds one cargo at a time and only so much of it, so a world that cannot clear its pads backs the pods up in orbit rather than swallowing them - and cargo circling a world with no pad at all lands the moment one is built. What is missing is any *limit* on that queue: ship at a world that never builds a pad and the pods accumulate forever.
-- The route is set blind to what the destination can do with the cargo. The panel warns when the target has no pad, but nothing says a pad is full, and there is no way to point a driver at a *particular* pad.
-- The standing order can only be set for the world underfoot, so redirecting a distant world's shipping means flying there. The map already knows every world; the panel just does not page through them.
-- Every driver runs flat out at `load_rate`. There is no schedule, no priority between drivers, and no way to say "ship only the surplus above what this world needs".
-- Research belongs to the campaign, and every world adopts it — including one colonized after the fact. Each `PlanetState` still keeps a copy, because a world needs its own answer (it can refuse a building the swarm has researched), but the campaign is the only writer. What is *not* shared yet: `unlocked_buildings` is rebuilt per world from that research and never pruned, so a building unlocked and then somehow un-researched would stay unlocked.
-- Worlds are now defined in `assets/planets.json` (size, terrain weights, banned buildings, arrival line) and the map reads the same file, so identity lives in one place. Ground is laid from smooth seeded fields rather than an independent roll per tile, so a world comes out in ridges, belts and chasms — Venus reads as the broken place its arrival line claims. The declared weights are unchanged, because each field is cut at the quantile that gives its share. What is still missing is *named* features: there is no way to say "this world has a central massif" in `planets.json`, only how much of each kind of ground it has.
+- [ ] Add a configurable cap to each destination world's pending pod queue.
+- [ ] Define and display the overflow state when a destination queue reaches its cap.
+- [ ] Warn about a full landing pad in the mass-driver order panel, not only a missing pad.
+- [ ] Allow a standing order to target a specific landing pad on the destination world.
+- [ ] Add a solar-map panel for editing the standing orders of any world in the campaign.
+- [ ] Show the selected remote world's current order, cargo, destination, and delivery status.
+- [ ] Add schedule/cooldown data to the mass-driver order model.
+- [ ] Add priority data and deterministic tie-breaking to the mass-driver order model.
+- [ ] Add a surplus-only shipping mode that leaves a configured reserve on the source world.
+- [ ] Rebuild each world's unlocked-building set from campaign research so stale unlocks are removed.
+- [ ] Define named planet-feature data in `assets/planets.json`.
+- [ ] Generate named features deterministically from the planet definition and map seed.
+- [ ] Display a feature's name and bounds in the map or inspector.
 
 ## Planet hazards
 
-Hazards are per-world data (`planets.json`). Acid rain corrodes anything carrying the network, riding the existing dust-to-stall chain so a neglected Venus run eventually breaks; the cold takes a share of drone speed. The counters are buildings placed on the map — Shield Generators and Heater Nodes, each holding 90% of one hazard off within four tiles — so covering a sprawling base is a layout and power problem. Ceramic Plating remains a small global backstop.
-
-- Coverage is drawn for whatever upkeep building is selected or being placed, and wear is tinted onto the map, so a corroding run is visible from across the base. What is still missing is the reverse view: nothing shows which buildings are *uncovered*, which is the question you actually ask when a base sprawls.
-- A hazard is uniform across a world. Acid squalls that move, or cold that bites hardest far from the Core, would give the map a shape to plan around.
-- Acid and dust share one wear tint, because they share one number in the sim. If they should read differently on the map they need to be different quantities first. A frozen drone still just looks slow.
-- Per-planet constraints are still only a ban list plus hazards. The positive half is missing: infinite geothermal, fusion-only worlds, generators that exist on one world and nowhere else.
-- Add the Heat mechanic the GDD gives Server Banks; water tiles carry a "may provide cooling" comment with no logic behind it.
+- [ ] Add an uncovered-building overlay that identifies network and upkeep buildings outside hazard-counter coverage.
+- [ ] Add spatial hazard fields or regions to the planet definition schema.
+- [ ] Apply spatial acid and cold modifiers during simulation.
+- [ ] Render the active hazard field with a legend on the map.
+- [ ] Split acid wear and dust wear into separate simulation quantities.
+- [ ] Give acid and dust distinct map tints and inspector readouts.
+- [ ] Add positive per-planet building and power constraints to `assets/planets.json`.
+- [ ] Validate per-planet constraints at data load and report invalid combinations with source context.
+- [ ] Enforce positive planet constraints during building availability and placement.
+- [ ] Explain a planet-specific constraint in the build and research UI.
+- [ ] Add Server Bank heat generation and storage to the simulation.
+- [ ] Implement water-tile cooling for buildings that support it.
+- [ ] Expose heat, cooling, and overheating effects in the Server Bank inspector.
 
 ## Research
 
-Techs declare their effects as modifiers in `research.json` (`engine::modifiers`), validated at load; the stringly-typed `unlocked_techs.contains(...)` reads are gone.
+- [ ] Add a planet-condition field to research nodes for per-planet branches.
+- [ ] Filter unavailable research nodes by the active world's condition.
+- [ ] Explain the planet requirement when a branch is unavailable.
+- [ ] Track the research sources contributing to each resolved stat.
+- [ ] Show contributing techs from the stat sheet or stat inspector.
+- [ ] Move the dust stall threshold, efficiency steps, speed penalty, and leak threshold into research/config data.
+- [ ] Resolve those dust-response values through the modifier system.
+- [ ] Move collapse thresholds into the modifier system.
+- [ ] Add deterministic tests for modified dust response and collapse thresholds.
 
-- Expand the tree past 22 nodes, with per-planet branches. Servo Tuning, Excavation Charges and Grid Amplifiers took it from 19 to 22, and the view fits itself to whatever the data declares now, so depth is no longer the constraint. Hazard counters are already research; per-planet branches are not - nothing in `research.json` can say "only on a frozen world".
-- The tree explains itself: the inspect panel lists every stat a node moves (named and signed from a `stats` block in `research.json`, green when it is a gain, amber when it is a cost) and every building it opens, and falls back to whatever is being researched when nothing is hovered. The research screen also carries the swarm's own sheet: every stat resolved against this world, in its declared unit, dim where nothing has moved it and coloured where something has. It is read-only and per-world, and it does not say *which* techs got it there.
-- Drone speed, grid reach and harvest yield are stats now, each with a tech that moves it, and each pushed where the simulation actually reads it - the drone manager, the grid's power flood, the harvest itself. What is still fixed in Rust is the dust *response* curve in `Building` (stall at 100, efficiency step at 25, speed at 50, leak at 75) and the collapse thresholds; neither is a stat, so no tech can soften either.
+## Content and progression
 
-## Content
-
-The first chain runs end to end and nothing teleports: a drill piles ore on its pad, its crew carries it to the nearest Smelter with room, the Smelter refines it and piles alloy on its own pad, and its own crew carries that to the Core. Both halves are the same code — a producer, a load, and whatever wants it — so a third link is data.
-
-- Alloy has a consumer: a Server Bank takes carried alloy and thinks harder for it, so the chain runs drill to Smelter to Server Bank and only the leftovers go to the Core. Routing picks it the same way it picks a Smelter, because it is now the same code for every resource.
-- A recipe may take one *carried* input plus any number from the global pool, because a building has one hopper. A recipe that needs two things carried to it still cannot be expressed.
-- Every producer's crew is one drone (two with `swarm_dispatch`), so a Smelter fed by three drills has the same collection capacity as one fed by one.
-- Two recipes, two products. Deeper chains and more processing buildings are still the content this unlocks — and a new building needs a sprite, which is the part that is not just data.
-- `RecipeDef` is maps of resource id to amount, in and out, with one input marked as the carried one. Outputs a drone can carry wait on the pad; Data goes straight to the pool, and is the one output the engine special-cases (it runs through the `data_generation` stat, because that is what the stat is named for).
-- Grow the building set beyond 15 across processing, logistics, and megastructure parts. Hazard counters, the Mass Driver and the Landing Pad exist now; nothing else on that list does.
-- Tier the resource set further. Alloy is the first refined product, and a Mass Driver will throw either it or raw ore at another world - but no world *needs* what another has, so shipping is a convenience rather than a strategy. Per-world scarcity is what would make the throw matter.
-- Larger and more varied maps with landmark features. Sizes are per-world data now (20x20 to 26x26), the generator lays regions rather than confetti, but it still has no notion of a *named* feature placed on purpose. A chasm can no longer wall the Core in: generation checks how much buildable ground is reachable from the landing site and clears the nearest barrier tiles until `min_start_region` of the world is, which is a floor rather than a bulldozer — Venus keeps its chasm because it never needed the help.
-- The directive set is data (`assets/directives.json`): seven standing orders with their own wording, targets, per-tier growth and rewards, cycling in declared order and asking for more on each lap. Power Surplus holds for its own `hold_seconds` rather than for however many watts it wants. A new directive that reuses an existing kind is a line of JSON; a new *kind* is still code, because the simulation has to know how to measure it. Achievements work the same way now (`assets/achievements.json`, 14 of them against the old 6, each declaring a condition the simulation can measure or `manual` for the two code announces). Achievements have a screen now — Records, on `A` or by clicking the count in the operations panel — listing the whole set earned or not, with how far along the ones worth counting are. Directives still have none: there is no way to see which standing orders have been met, only the one currently asking. The Records grid also stops drawing at the bottom of the screen rather than scrolling, so a set much past twenty needs a scroll area first.
-- The "indifferent optimizer" tone is in the arrival lines (`planets.json`), the Seed Ship stages, all 19 research descriptions, the directive wording and the achievement set. What is left without a voice: building descriptions and the tutorial steps.
+- [ ] Extend `RecipeDef` to support two or more carried inputs.
+- [ ] Add the required hopper and delivery state for multiple carried inputs.
+- [ ] Update routing and recipe completion logic for multiple carried inputs.
+- [ ] Add tests for partial delivery, missing inputs, and recipe completion with multiple carried inputs.
+- [ ] Scale producer collection capacity with crew size instead of giving every producer one fixed collection slot.
+- [ ] Verify that `swarm_dispatch` changes collection throughput without duplicating unrelated producer effects.
+- [ ] Add progress tracking for completed and expired directives to the Records screen.
+- [ ] Add scrolling to the Records achievement grid when its content exceeds the viewport.
+- [ ] Add descriptions for every buildable building in the building data.
+- [ ] Add tutorial copy for the remaining building and map-interaction steps.
 
 ## Simulation architecture
 
-The sim runs on a fixed 1/30s timestep with an accumulator (`PlanetState::advance`), capped at 6 catch-up steps; research and directives advance on exactly the time the planet simulated.
-
-- Offline catch-up still steps at a coarser 1s, because four hours at the live tick rate is 432,000 steps on load. Unify it when the offline model becomes an earnings report (see Save system).
-- Extend the deterministic snapshot tests past harvest throughput: power failure, research unlocks, and collapse thresholds still have no pinned numbers.
-- The upkeep loop is data: dust rate, sweeper rate and reach, the forest filter and pollution multipliers, the acid multiplier and the hazard counters all come from `upkeep` in `game_config.json`, and the dead `core_power_consumption` field is gone. What is still a Rust constant is the pad and hopper depth in `logistics` (`PAD_LOADS`, `HOPPER_LOADS`) and the notice timers on the campaign.
-- Validate the rest of the data at load the way research modifiers now are; `game_data().building(id)` still panics on a missing id with no context.
+- [ ] Replace per-second offline stepping with an aggregated deterministic earnings calculation.
+- [ ] Define the offline report fields for ore, alloy, Data, power, and elapsed world time.
+- [ ] Show the aggregated earnings report when a campaign resumes.
+- [ ] Add deterministic snapshot coverage for power failure and recovery.
+- [ ] Add deterministic snapshot coverage for research unlocks and modifiers.
+- [ ] Add deterministic snapshot coverage for collapse scaling and recovery.
+- [ ] Move pad depth and hopper depth from Rust constants into `logistics` in `game_config.json`.
+- [ ] Validate building and recipe references at data load.
+- [ ] Validate planet and terrain references at data load.
+- [ ] Validate directive and achievement references at data load.
+- [ ] Validate Seed Ship and Core stage references at data load.
+- [ ] Include the source file and identifier in missing-data errors instead of panicking without context.
+- [ ] Extract the generic seeded value-noise field into `macroquad-toolkit` and keep terrain vocabulary in this project.
+- [ ] Add deterministic stress fixtures for congested conduit networks and hundreds of drones.
+- [ ] Extend routing stress fixtures across interplanetary travel and background-world transitions.
+- [ ] Measure background simulation cost across all worlds during travel and menu transitions.
+- [ ] Measure routing and rendering cost on the largest supported map.
+- [ ] Add automated performance thresholds for the measured simulation and routing fixtures.
+- [ ] Add placement-rule tests for terrain, research, hazards, bridges, and banned buildings.
+- [ ] Wire the `mainmenu`, `research`, and `logistics` headless capture scenes into CI.
 
 ## Save system
 
-The campaign autosaves every minute of world time, on travel, on launch, and on the way to the menu, and says so in the bottom bar. Every save rotates the previous one into a backup, and a load that cannot read the main save falls back to it and says so. A failed write raises an alert rather than passing silently.
-
-- Nothing catches the window closing, so the last minute of an idle session is still lost if the player alt-F4s. macroquad has no close hook to hang this on; it may need a platform-specific one or a much shorter interval.
-- Recovery is one save deep. A campaign that has been quietly broken for several minutes has already rotated the good copy out.
-- The save is versioned (`SaveGame`, version 1) and reads the old unversioned single-planet save, but there is no migration *framework* — the next shape change needs a real per-version upgrade path rather than a second fallback branch.
-- Add multiple *player-visible* slots. Rotation and recovery exist (one backup, automatic), but there is still one campaign and no way to keep a second run or go back more than one save.
-- Persist the meta-state the campaign does not hold: settings and tutorial progress are still lost on reload.
-- Harden offline progress with a clock-tamper guard and hard caps, and turn the offline banner into an earnings report.
+- [ ] Investigate close/quit hooks for each supported target and document which targets can autosave on window close.
+- [ ] Add the supported target-specific close-save implementation where a reliable hook exists.
+- [ ] Increase recovery depth beyond one rotated backup.
+- [ ] Show which backup generation was used during recovery.
+- [ ] Create a per-version save migration registry and migration runner.
+- [ ] Move the current unversioned-save conversion into the migration runner.
+- [ ] Add player-visible campaign slots to the save model.
+- [ ] Add slot selection, creation, deletion, and switching to the menu UI.
+- [ ] Add tests proving that one slot cannot overwrite another slot's campaign.
+- [ ] Add an offline-clock tamper guard with a bounded fallback delta.
+- [ ] Add hard caps for offline elapsed time and offline resource gains.
+- [ ] Include elapsed time, capped time, and each resource gain in the offline report.
 
 ## UX and UI
 
-Space pauses, the bottom bar's speed buttons work, and both ride the fixed timestep: speed scales how much world time a second of real time buys, never how long a step is.
+- [ ] Persist a preferred simulation speed separately from the per-planet pause state.
+- [ ] Add a touch-visible speed control above 4× with an explicit maximum.
+- [ ] Define the next-interesting-event data needed for fast-forwarding.
+- [ ] Add a touch-visible control that advances to the next supported interesting event.
+- [ ] Implement BOX SELECT with a visible drag gesture.
+- [ ] Implement BUILD MENU with a visible tap target.
+- [ ] Wire the main-menu Quit action on supported desktop targets and remove it where the target cannot quit.
+- [ ] Highlight the map tiles or endpoints required by tutorial steps that involve drawing a route.
+- [ ] Store toast history per campaign rather than per world.
+- [ ] Persist toast history and restore it into the Records log.
+- [ ] Make the right-hand panel stack calculate height-aware layouts before adding another panel.
+- [ ] Remove or disable audio sliders until an audio backend is present so no settings control is inert.
+- [ ] Add key-remapping controls and persist the mappings.
+- [ ] Add plain-language explanations for each settings option.
+- [ ] Implement building relocation as a touch-completable action.
+- [ ] Implement saving a selected set of buildings as a blueprint stamp.
+- [ ] Implement placing a blueprint stamp with per-building validation and clear failures.
+- [ ] Add undo history for placement, relocation, and demolition.
+- [ ] Add power production and consumption series to the bottom-bar graph.
+- [ ] Add alloy production and consumption series to the bottom-bar graph.
+- [ ] Add Data production and consumption series to the bottom-bar graph.
+- [ ] Add production-versus-consumption series to the graph.
+- [ ] Persist graph samples in the campaign save and restore them on load.
 
-- Speed and pause are per-planet runtime state and reset on load, which is right for pause and arguably wrong for a preferred speed.
-- There is no fast-forward past four times, and no way to skip to the next interesting moment — an idle game eventually wants both.
-- Wire or remove what is still decoration: BOX SELECT (Shift+Drag) and BUILD MENU (B) do nothing, and the main-menu Quit button is a no-op. PAN, ZOOM, PAUSE and DEMOLISH all work now.
-The tutorial is five steps in `assets/tutorial.json`, each with a goal the simulation checks (build a thing, research a thing, connect a thing). It persists across saves, says what to do rather than which step you are on, highlights the building it is asking for in the palette, and toasts each step as it lands. The panel is the tutorial while it runs and the directive after.
+## Presentation and in-game assets
 
-- No gating: the tutorial suggests, it never blocks. That is probably right for this game, but it means a player who ignores it entirely gets no more help than one who follows it.
-- Nothing points at the *map*. A step that wants a conduit run drawn between two tiles can highlight the Conduit card but not the tiles.
-Toasts (the toolkit's `NotificationManager`) announce achievements, finished research, newly available buildings, and each Seed Ship stage. They fade in real time, so they keep fading while the world is paused.
+- [ ] Animate rotating drills without changing simulation timing.
+- [ ] Animate blinking servers without changing simulation timing.
+- [ ] Animate turbine spin without changing simulation timing.
+- [ ] Add collapse shake behind the reduced-motion setting.
+- [ ] Add harvest-impact effects behind the reduced-motion setting.
+- [ ] Add planet-specific atmosphere overlays driven by planet data.
+- [ ] Add an in-game version string to the main menu and bug-report payload.
 
-- A directive that is met says so and names its reward; one that runs out of time says that too. (The tutorial already toasted each step.)
-- Toasts have a history now: the manager keeps every message it raised (a `macroquad-toolkit` upgrade, since a toast that only exists while it is on screen is nobody's idea of a message system), and the Records screen reads it back as a scrolling log in the room the achievement grid does not want. Records draws no toasts of its own, because the log is already every message they would repeat. Two things it is not yet: the log belongs to the world it happened on rather than to the campaign, and it is not saved, so reloading starts the session with a blank one.
-- The right-hand panel stack is full at 720p — a fifth panel overflows the four existing ones, which is why the Seed Ship and Records both got their own screens. Any new readout needs the stack's internal layouts made height-aware first.
-- Toasts follow the player onto the research, ship and map screens, anchored where each of those screens actually has room. The main menu and the launch sequence still do not draw them, which is deliberate — neither is looking at a world.
-Settings load at startup, apply as they are changed, and are written to disk, so text scale, fullscreen and the FPS overlay survive a restart. The autosave cadence comes from `autosave_interval` rather than a constant.
+## Audio integration
 
-- The audio sliders still drive nothing; that waits on the audio system (see Audio).
-- Only display settings are applied live. There is no key remapping, and nothing in the settings screen explains what any of it does.
-- Add the rest of the genre-standard build tools: relocation, blueprint stamps, undo. Demolish mode and drag-demolish work (X or the palette button; drag tears down a run), but every demolition is final and refunds half.
-- The bottom-bar graph plots something real now: ore banked at the Core per second, sampled once per second of world time into the toolkit's `Series`, which keeps every spike as it decimates. It reads out the latest rate and the session peak. What is still missing is the rest of the picture — power, alloy and Data have no graph, nothing shows consumption against production, and the series is not saved, so a reloaded session starts its graph from nothing.
+- [ ] Evaluate `macroquad::audio` and `kira` against the project's WASM autoplay and latency constraints.
+- [ ] Add a data-driven audio event interface for gameplay and UI events.
+- [ ] Connect placement, demolition, harvest, and delivery events to the audio interface.
+- [ ] Connect research, directive, collapse, achievement, and UI events to the audio interface.
+- [ ] Add menu and gameplay music states driven by swarm scale and collapse state.
+- [ ] Add an ambient gameplay layer and connect the existing audio settings to its volume controls.
 
-## Audio
+## Release engineering
 
-- Build audio from zero: there is no audio system, no sound files, and no `macroquad::audio` import. Needs menu and gameplay music layers responding to swarm scale and collapse, an ambient bed, and SFX for placement, demolition, harvest, drone delivery, research, directives, the collapse alarm, achievements, and UI. Evaluate `macroquad::audio` against `kira` early given WASM autoplay and latency constraints.
-
-## Art and presentation
-
-- Animate the procedural sprite set: rotating drills, blinking servers, turbine spin — everything is static today.
-- Do a cohesive style and palette pass, add screen juice (collapse shake, harvest impact), and give each planet its own atmosphere.
-- Build core stages 3 and 4 visuals: the Space Elevator tether and the background Planetary Ring, the GDD's signature image. Both stages exist mechanically now and are reached through real milestones; there are only five sprites and the last two share one, so reaching the Ring looks like reaching the Elevator.
-- Produce marketing art: key art, logo, store capsules, trailer. Only `catalog_thumbnail.png` exists.
-
-## Engineering quality
-
-- Expand test coverage: research effects, save migration, and placement rules still have none. Wire the headless capture harness scenes (`mainmenu`, `research`, `logistics`) into CI.
-- Stress-test drone routing and conduit networks on congested maps and across interplanetary transitions.
-- `engine::terrain_gen` holds a general-purpose seeded value-noise field, which is a candidate to move into `macroquad-toolkit` — the primitive is not specific to this game, only the terrain vocabulary built on it is.
-- Add opt-in telemetry and crash reporting for balance funnels and errors beyond the manual bug-report widget.
-- Set performance budgets and profile for multi-planet background sim, larger maps, and hundreds of drones, especially on WASM.
-
-## Release
-
-Direction decided 2026-07-14: premium PC game at $5, itch.io first, Steam only if
-itch shows traction. Mobile is dropped, superseding the GDD's "PC & Mobile" framing.
-
-- itch.io release engineering: page setup, a `butler` push pipeline wired into `publish.ps1`, and in-game version stamping so bug reports are traceable.
-- Decide the free-web-build question — a free full WASM build on the WebHatchery portal undercuts a $5 price. Take it down, freeze it as a first-planet demo, or host the demo on the itch page.
-- Remove the Ko-fi widget and bug-report branding from the paid distribution.
-- Produce itch page assets: 630x500 cover, screenshots and GIFs, description copy, optionally a trailer.
-- Retune the 4-hour battery and hibernation model for desktop session patterns; it was designed for mobile check-in retention.
-- Externalise strings into a table before content expansion doubles their count; full localization can slip past the itch launch.
-- Accessibility: colourblind-safe shapes for state now encoded only in colour, working text scaling, a reduced-motion option, remappable keys.
-- Run a closed alpha and balance iteration loop; the game has never been balanced beyond the author's own play.
-- Define the QA matrix (Windows versions x GPUs, plus browsers if a web demo ships) and save-compat testing per patch.
-- Set up legal and payout basics: privacy policy once telemetry exists, EULA, itch tax setup.
-- Run an itch devlog cadence with GIF-forward social posts, and define up front the traction threshold that triggers the Steam decision.
-- Steam (contingent): Steamworks achievements, cloud saves, rich presence, store page and wishlist campaign, a Next Fest demo, and controller/Deck support.
+- [ ] Wire a `butler` push pipeline into `publish.ps1` without embedding credentials.
+- [ ] Stamp the build version into the game and generated release metadata.
+- [ ] Remove the Ko-fi widget and bug-report branding from paid-distribution builds.
+- [ ] Externalize player-facing strings into a table while preserving the current default language.
+- [ ] Add shape or pattern cues for all state indicators currently encoded only by color.
+- [ ] Verify text scaling at the supported minimum and maximum sizes.
+- [ ] Add a reduced-motion setting and honor it for animation, shake, and screen effects.
+- [ ] Add automated save-compatibility tests for every supported save version.
