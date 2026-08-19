@@ -27,25 +27,30 @@ impl Game {
         // scene must not leak into the next image.
         self.campaign.current_mut().focus_mode = false;
         self.campaign.current_mut().flow_overlay = false;
+        self.research_state.current_research = None;
+        self.research_state.research_progress = 0.0;
         match scene {
             "mainmenu" => self.phase = GamePhase::MainMenu,
             "research" => {
                 self.phase = GamePhase::Research;
                 // A node that both moves a stat and opens a building, so the
                 // panel shows everything it can say about one.
-                self.research_state.unlocked.push("power_grid".to_string());
-                self.research_state
-                    .unlocked
-                    .push("data_processing".to_string());
-                // Two techs that actually move numbers, so the swarm sheet
-                // shows changed lines and not only untouched ones.
-                self.research_state
-                    .unlocked
-                    .push("efficient_drills".to_string());
-                self.research_state
-                    .unlocked
-                    .push("drone_capacity".to_string());
-                self.research_state.current_research = Some("self_cleaning_servos".to_string());
+                // Open the path into the new processor branch while keeping
+                // the final capability in progress for the detail panel.
+                self.research_state.unlocked.extend(
+                    [
+                        "power_grid",
+                        "data_processing",
+                        "efficient_drills",
+                        "drone_capacity",
+                        "smelting",
+                        "advanced_research",
+                        "precision_assembly",
+                    ]
+                    .into_iter()
+                    .map(str::to_string),
+                );
+                self.research_state.current_research = Some("adaptive_clocking".to_string());
                 self.sync_research_to_planet();
                 // Meet the standing directive for real, so the toast on this
                 // screen is one the game actually raised.
@@ -363,6 +368,7 @@ impl Game {
                     "data_processing",
                     "advanced_research",
                     "precision_assembly",
+                    "adaptive_clocking",
                 ] {
                     if !self.research_state.unlocked.iter().any(|id| id == tech) {
                         self.research_state.unlocked.push(tech.to_string());

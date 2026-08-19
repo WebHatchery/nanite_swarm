@@ -163,6 +163,10 @@ fn try_convert_forest_to_filter_requires_forest_terrain() {
 #[test]
 fn processor_boost_is_touch_toggleable_and_changes_live_power_demand() {
     let mut state = state();
+    state
+        .research
+        .unlocked_techs
+        .push("adaptive_clocking".into());
     state.resources.minerals = 10_000.0;
     state.resources.energy = 10_000.0;
     state.config.resources.max_energy = 10_000.0;
@@ -198,4 +202,32 @@ fn processor_boost_is_touch_toggleable_and_changes_live_power_demand() {
             .unwrap()
             .overclocked
     );
+}
+
+#[test]
+fn processor_boost_waits_for_adaptive_clocking_research() {
+    let mut state = state();
+    let core = state.grid.find_core().unwrap();
+    let pos = GridPos::new(core.x + 1, core.y);
+    state.grid.reveal_around(pos, 2);
+    state.grid.get_mut(pos).unwrap().terrain = TerrainType::Empty;
+    state.grid.get_mut(pos).unwrap().building =
+        Some(crate::engine::Building::new(BuildingType::Smelter, pos));
+
+    assert!(!state.toggle_building_overclock(pos));
+    assert!(
+        !state
+            .grid
+            .get(pos)
+            .unwrap()
+            .building
+            .as_ref()
+            .unwrap()
+            .overclocked
+    );
+    assert!(state
+        .notifications
+        .get_notifications()
+        .iter()
+        .any(|notification| notification.message.contains("Adaptive Clocking")));
 }

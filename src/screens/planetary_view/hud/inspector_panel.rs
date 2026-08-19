@@ -45,6 +45,11 @@ pub(super) fn draw(
     let mut tile_heat = 0.0;
     let mut tile_overclocked = false;
     let mut tile_can_overclock = false;
+    let boost_unlocked = state
+        .research
+        .unlocked_techs
+        .iter()
+        .any(|tech| tech == "adaptive_clocking");
     let mut tile_harvest = None;
     let mut tile_bonus = None;
     if let Some(tile_pos) = display_pos {
@@ -267,8 +272,10 @@ pub(super) fn draw(
             if tile_can_overclock
                 && draw_hud_button(
                     theme,
-                    Rect::new(right_x + right_w - 158.0, inspector_y + 8.0, 70.0, 24.0),
-                    if tile_overclocked {
+                    Rect::new(right_x + right_w - 180.0, inspector_y + 8.0, 92.0, 24.0),
+                    if !boost_unlocked {
+                        "BOOST LOCKED"
+                    } else if tile_overclocked {
                         "BOOST ON"
                     } else {
                         "BOOST"

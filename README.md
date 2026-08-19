@@ -29,7 +29,7 @@ moving, its map key identifies the colour and silhouette of every live cargo.
 The bottom graph records observed ore, alloy, and parts flow; warning triangles
 and the Operations count identify powered processors that are missing a feed.
 Tap FLOW to trace live material routes and recipe-buffer health over the map.
-Select a processor and tap BOOST for 1.5x work at 1.75x power and 1.8x dust.
+Research Adaptive Clocking, then select a processor and tap BOOST for 1.5x work at 1.75x power and 1.8x dust.
 
 Keyboard shortcuts are optional:
 

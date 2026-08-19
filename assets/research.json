@@ -345,6 +345,19 @@
       ]
     },
     {
+      "id": "adaptive_clocking",
+      "name": "Adaptive Clocking",
+      "description": "Let processors outrun their cooling for urgent work: 1.5x output for 1.75x power and heavier wear.",
+      "data_cost": 110.0,
+      "prerequisites": [
+        "precision_assembly"
+      ],
+      "position": [
+        -3.5,
+        -5.0
+      ]
+    },
+    {
       "id": "storage_systems",
       "name": "Storage Systems",
       "description": "Production stops when there is nowhere to put it.",

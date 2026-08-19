@@ -408,6 +408,24 @@ impl PlanetState {
     }
 
     pub fn toggle_building_overclock(&mut self, pos: GridPos) -> bool {
+        let supports_overclock = self
+            .grid
+            .get(pos)
+            .and_then(|tile| tile.building.as_ref())
+            .is_some_and(|building| building.supports_overclock());
+        if !supports_overclock {
+            return false;
+        }
+        if !self
+            .research
+            .unlocked_techs
+            .iter()
+            .any(|tech| tech == "adaptive_clocking")
+        {
+            self.notifications
+                .warning("Research Adaptive Clocking to boost processors");
+            return false;
+        }
         let Some(building) = self
             .grid
             .get_mut(pos)
@@ -415,9 +433,6 @@ impl PlanetState {
         else {
             return false;
         };
-        if !building.supports_overclock() {
-            return false;
-        }
         building.overclocked = !building.overclocked;
         let enabled = building.overclocked;
         let name = building.building_type.name();
