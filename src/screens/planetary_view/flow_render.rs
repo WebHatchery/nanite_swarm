@@ -35,6 +35,7 @@ struct FactoryLedger {
     ore_rate: f32,
     alloy_rate: f32,
     components_rate: f32,
+    auto_clocking: bool,
 }
 
 pub(super) fn draw(state: &PlanetState, metrics: HudMetrics, theme: &UiTheme, time: f32) {
@@ -88,6 +89,11 @@ fn draw_factory_ledger(ledger: &FactoryLedger, metrics: HudMetrics, theme: &UiTh
     );
     draw_ui_text(&summary, area.x + 12.0, area.y + 50.0, 10.0, text);
 
+    let clock_mode = if ledger.auto_clocking {
+        "AUTO CLOCK"
+    } else {
+        "MANUAL CLOCK"
+    };
     let bottleneck = ledger
         .bottleneck
         .map(|resource| {
@@ -96,9 +102,9 @@ fn draw_factory_ledger(ledger: &FactoryLedger, metrics: HudMetrics, theme: &UiTh
             } else {
                 resource.id().to_uppercase()
             };
-            format!("BOTTLENECK // {}", label)
+            format!("{} // BOTTLENECK {}", clock_mode, label)
         })
-        .unwrap_or_else(|| "FLOW STABLE".to_string());
+        .unwrap_or_else(|| format!("{} // FLOW STABLE", clock_mode));
     draw_ui_text(
         &bottleneck,
         area.x + 12.0,
@@ -170,6 +176,7 @@ fn factory_ledger(state: &PlanetState) -> FactoryLedger {
         ore_rate: state.throughput.last().unwrap_or(0.0),
         alloy_rate: state.observed_alloy_rate(),
         components_rate: state.observed_components_rate(),
+        auto_clocking: state.auto_clocking,
     }
 }
 

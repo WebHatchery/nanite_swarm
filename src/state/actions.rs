@@ -313,6 +313,7 @@ impl PlanetState {
             return 0;
         }
         let selected = self.box_selected.clone();
+        self.auto_clocking = false;
         let mut changed = 0;
         for pos in selected {
             let Some(building) = self
@@ -472,14 +473,31 @@ impl PlanetState {
         else {
             return false;
         };
+        let manual_override = std::mem::replace(&mut self.auto_clocking, false);
         building.overclocked = !building.overclocked;
         let enabled = building.overclocked;
         let name = building.building_type.name();
         self.power_balance = self.net_power();
         self.notifications.info(if enabled {
-            format!("{} boost: 1.5x work, 1.75x power", name)
+            format!(
+                "{}{} boost: 1.5x work, 1.75x power",
+                if manual_override {
+                    "Auto Clock OFF; "
+                } else {
+                    ""
+                },
+                name
+            )
         } else {
-            format!("{} returned to normal output", name)
+            format!(
+                "{}{} returned to normal output",
+                if manual_override {
+                    "Auto Clock OFF; "
+                } else {
+                    ""
+                },
+                name
+            )
         });
         true
     }

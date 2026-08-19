@@ -318,6 +318,11 @@ pub struct PlanetState {
     /// Show recipe nodes and their intended network routes over the map.
     #[serde(default)]
     pub flow_overlay: bool,
+    /// Let the swarm boost healthy, fed processors only while power is spare.
+    #[serde(default)]
+    pub auto_clocking: bool,
+    #[serde(skip, default)]
+    pub auto_clock_timer: f32,
     #[serde(skip, default)]
     pub build_palette_scroll: ScrollArea,
     /// Where the Records screen's log is scrolled to.
@@ -495,6 +500,8 @@ impl PlanetState {
             show_help: false,
             focus_mode: false,
             flow_overlay: false,
+            auto_clocking: false,
+            auto_clock_timer: 0.0,
             build_palette_scroll: ScrollArea::new(),
             log_scroll: ScrollArea::new(),
             records_scroll: ScrollArea::new(),

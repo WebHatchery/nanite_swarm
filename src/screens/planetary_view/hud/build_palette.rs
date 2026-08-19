@@ -458,5 +458,30 @@ pub(super) fn draw(
         ) {
             state.set_selected_overclock(enable);
         }
+    } else {
+        let unlocked = state
+            .research
+            .unlocked_techs
+            .iter()
+            .any(|tech| tech == "adaptive_clocking");
+        let label = if !unlocked {
+            "AUTO LOCKED"
+        } else if state.auto_clocking {
+            "AUTO ON"
+        } else {
+            "AUTO CLOCK"
+        };
+        if draw_hud_button(
+            theme,
+            Rect::new(
+                sidebar_x + metrics.panel_padding + half_w + 8.0,
+                fifth_y,
+                half_w,
+                30.0,
+            ),
+            label,
+        ) {
+            state.toggle_auto_clocking();
+        }
     }
 }

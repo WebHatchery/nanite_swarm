@@ -32,6 +32,7 @@ Tap FLOW to trace live material routes and recipe-buffer health over the map.
 Research Adaptive Clocking, then select a processor and tap BOOST for 1.5x work at 1.75x power and 1.8x dust.
 Tap FLOW to open live supply routes and the factory ledger: processor health, the dominant missing input, and observed ore/alloy/components rates.
 Use BOX SELECT to mark a factory block, then tap BOOST N or NORMAL N to change every selected processor together.
+Tap AUTO CLOCK to let the swarm boost only fed processors with spare power and low dust, normalizing them when those margins disappear.
 
 Keyboard shortcuts are optional:
 

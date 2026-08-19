@@ -180,6 +180,7 @@ fn processor_operating_mode_survives_a_save_roundtrip() {
         .as_mut()
         .unwrap()
         .overclocked = true;
+    planet.auto_clocking = true;
 
     let json = save_to_json(&mut campaign).unwrap();
     let loaded = load_from_json(&json).unwrap();
@@ -195,6 +196,7 @@ fn processor_operating_mode_survives_a_save_roundtrip() {
             .unwrap()
             .overclocked
     );
+    assert!(loaded.current().auto_clocking);
 }
 
 #[test]

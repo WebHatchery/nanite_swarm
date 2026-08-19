@@ -7,6 +7,7 @@
 mod achievements;
 mod actions;
 mod audio;
+mod auto_clock;
 mod camera;
 mod campaign;
 mod core_stage;

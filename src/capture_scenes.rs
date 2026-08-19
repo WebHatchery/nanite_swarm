@@ -27,6 +27,7 @@ impl Game {
         // scene must not leak into the next image.
         self.campaign.current_mut().focus_mode = false;
         self.campaign.current_mut().flow_overlay = false;
+        self.campaign.current_mut().auto_clocking = false;
         self.research_state.current_research = None;
         self.research_state.research_progress = 0.0;
         match scene {
@@ -450,6 +451,14 @@ impl Game {
                 planet.box_selected = vec![assembler, smelter];
                 if scene == "flow" {
                     planet.box_selected.clear();
+                    planet.auto_clocking = true;
+                    if let Some(building) = planet
+                        .grid
+                        .get_mut(assembler)
+                        .and_then(|tile| tile.building.as_mut())
+                    {
+                        building.overclocked = false;
+                    }
                     planet.flow_overlay = true;
                     planet.focus_mode = true;
                     planet.camera.zoom = 1.45;

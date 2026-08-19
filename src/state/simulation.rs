@@ -67,6 +67,7 @@ impl PlanetState {
 
         self.time_played += sim_delta as f64;
 
+        self.update_auto_clocking(sim_delta);
         self.update_dust(sim_delta);
         self.update_heat(sim_delta);
 

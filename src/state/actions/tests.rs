@@ -167,6 +167,7 @@ fn processor_boost_is_touch_toggleable_and_changes_live_power_demand() {
         .research
         .unlocked_techs
         .push("adaptive_clocking".into());
+    state.auto_clocking = true;
     state.resources.minerals = 10_000.0;
     state.resources.energy = 10_000.0;
     state.config.resources.max_energy = 10_000.0;
@@ -180,6 +181,10 @@ fn processor_boost_is_touch_toggleable_and_changes_live_power_demand() {
     let normal = state.power_consumption();
 
     assert!(state.toggle_building_overclock(pos));
+    assert!(
+        !state.auto_clocking,
+        "manual control should disable the policy"
+    );
     assert!(
         state
             .grid
