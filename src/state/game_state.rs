@@ -386,6 +386,9 @@ pub struct PlanetState {
     pub box_select_start: Option<GridPos>,
     #[serde(skip, default)]
     pub box_selected: Vec<GridPos>,
+    /// A destructive pad purge needs the same visible tile tapped twice.
+    #[serde(skip, default)]
+    pub purge_armed: Option<GridPos>,
     #[serde(skip, default)]
     pub undo_history: Vec<UndoEntry>,
 }
@@ -527,6 +530,7 @@ impl PlanetState {
             box_select_mode: false,
             box_select_start: None,
             box_selected: Vec::new(),
+            purge_armed: None,
             undo_history: Vec::new(),
         };
         state.refresh_stats();

@@ -291,3 +291,30 @@ fn box_selection_changes_every_processor_without_touching_other_buildings() {
     );
     assert_eq!(state.set_selected_overclock(false), 2);
 }
+
+#[test]
+fn processor_pad_purge_requires_the_same_visible_control_twice() {
+    let mut state = state();
+    let core = state.grid.find_core().unwrap();
+    let pos = GridPos::new(core.x + 1, core.y);
+    state.grid.get_mut(pos).unwrap().building =
+        Some(crate::engine::Building::new(BuildingType::Assembler, pos));
+    state.input_hoppers.insert(
+        (pos.x, pos.y),
+        [(crate::engine::ResourceType::Minerals, 12.0)]
+            .into_iter()
+            .collect(),
+    );
+    state.output_buffers.insert((pos.x, pos.y), 30.0);
+
+    assert!(!state.request_processor_pad_purge(pos));
+    assert_eq!(state.purge_armed, Some(pos));
+    assert_eq!(state.output_buffers.get(&(pos.x, pos.y)), Some(&30.0));
+    assert!(state.request_processor_pad_purge(pos));
+    assert_eq!(state.purge_armed, None);
+    assert!(!state.output_buffers.contains_key(&(pos.x, pos.y)));
+    assert_eq!(
+        state.input_hoppers[&(pos.x, pos.y)][&crate::engine::ResourceType::Minerals],
+        12.0
+    );
+}

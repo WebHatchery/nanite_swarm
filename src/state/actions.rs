@@ -341,6 +341,37 @@ impl PlanetState {
         changed
     }
 
+    /// Two-tap recovery for a processor whose output cannot leave the pad.
+    pub fn request_processor_pad_purge(&mut self, pos: GridPos) -> bool {
+        let waiting = self
+            .output_buffers
+            .get(&(pos.x, pos.y))
+            .copied()
+            .unwrap_or(0.0);
+        let is_processor = self
+            .grid
+            .get(pos)
+            .and_then(|tile| tile.building.as_ref())
+            .is_some_and(|building| building.supports_overclock());
+        if !is_processor || waiting <= 0.001 {
+            self.purge_armed = None;
+            return false;
+        }
+        if self.purge_armed != Some(pos) {
+            self.purge_armed = Some(pos);
+            self.notifications.warning(format!(
+                "Tap PURGE AGAIN to discard {:.0} staged output",
+                waiting
+            ));
+            return false;
+        }
+        self.output_buffers.remove(&(pos.x, pos.y));
+        self.purge_armed = None;
+        self.notifications
+            .warning(format!("Purged {:.0} staged output", waiting));
+        true
+    }
+
     pub fn place_blueprint(&mut self, anchor: GridPos) -> usize {
         let blueprint = self.blueprint.clone();
         let mut placed = 0;

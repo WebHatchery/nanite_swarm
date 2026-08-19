@@ -45,6 +45,7 @@ pub(super) fn draw(
     let mut tile_heat = 0.0;
     let mut tile_overclocked = false;
     let mut tile_can_overclock = false;
+    let mut tile_output_full = false;
     let boost_unlocked = state
         .research
         .unlocked_techs
@@ -66,6 +67,12 @@ pub(super) fn draw(
                 tile_heat = building.heat;
                 tile_overclocked = building.overclocked;
                 tile_can_overclock = building.supports_overclock();
+                tile_output_full = state
+                    .output_buffers
+                    .get(&(tile_pos.x, tile_pos.y))
+                    .copied()
+                    .unwrap_or(0.0)
+                    >= state.processor_pad_capacity() - 0.001;
             }
         }
     }
@@ -273,7 +280,11 @@ pub(super) fn draw(
                 && draw_hud_button(
                     theme,
                     Rect::new(right_x + right_w - 180.0, inspector_y + 8.0, 92.0, 24.0),
-                    if !boost_unlocked {
+                    if tile_output_full && state.purge_armed == Some(tile_pos) {
+                        "PURGE AGAIN"
+                    } else if tile_output_full {
+                        "PURGE PAD"
+                    } else if !boost_unlocked {
                         "BOOST LOCKED"
                     } else if tile_overclocked {
                         "BOOST ON"
@@ -282,7 +293,11 @@ pub(super) fn draw(
                     },
                 )
             {
-                state.toggle_building_overclock(tile_pos);
+                if tile_output_full {
+                    state.request_processor_pad_purge(tile_pos);
+                } else {
+                    state.toggle_building_overclock(tile_pos);
+                }
             }
             if building_type != BuildingType::Core
                 && draw_hud_button(
