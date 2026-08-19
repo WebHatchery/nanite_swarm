@@ -1,0 +1,19 @@
+{
+  "title": "NANITE SWARM",
+  "subtitle": "Consume. Evolve. Expand.",
+  "briefing_title": "Mission Briefing",
+  "briefing_lines": [
+    "Build a self-sustaining nanite colony.",
+    "Expand power, automate drills, and research.",
+    "Short sprints. Clear milestones."
+  ],
+  "briefing_tip": "Tip: Tap a building card, then tap the grid.",
+  "command_menu": "Command Menu",
+  "new_game": "New Game",
+  "continue": "Continue",
+  "load": "Load",
+  "save": "Save",
+  "settings": "Settings",
+  "delete_slot": "Delete Slot",
+  "quit": "Quit"
+}

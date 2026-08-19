@@ -1,7 +1,7 @@
 //! The launch, drawn. A pure view over `LaunchSequence`: it reads the beat and
 //! how far into it, and returns whether the player asked to cut it short.
 
-use crate::state::{LaunchBeat, LaunchSequence};
+use crate::state::{LaunchBeat, LaunchSequence, PlanetState};
 use crate::ui::{color_from_rgba, draw_panel, Colors};
 use macroquad::prelude::*;
 use macroquad_toolkit::math::lerp;
@@ -16,7 +16,11 @@ pub enum LaunchAction {
 }
 
 /// Render one frame of the sequence.
-pub fn render_launch_view(sequence: &LaunchSequence, arrival_line: &str) -> LaunchAction {
+pub fn render_launch_view(
+    sequence: &LaunchSequence,
+    arrival_line: &str,
+    origin_state: Option<&PlanetState>,
+) -> LaunchAction {
     clear_background(Colors::BACKGROUND);
 
     let screen_w = screen_width();
@@ -46,6 +50,11 @@ pub fn render_launch_view(sequence: &LaunchSequence, arrival_line: &str) -> Laun
     };
     draw_world(origin, origin_radius, origin_color);
     draw_world(target, target_radius, target_color);
+    if matches!(beat, Some(LaunchBeat::Countdown | LaunchBeat::Ascent)) {
+        if let Some(state) = origin_state {
+            draw_departure_base(origin, origin_radius, state, fraction);
+        }
+    }
 
     match beat {
         Some(LaunchBeat::Countdown) => {
@@ -105,6 +114,43 @@ pub fn render_launch_view(sequence: &LaunchSequence, arrival_line: &str) -> Laun
     } else {
         LaunchAction::None
     }
+}
+
+fn draw_departure_base(origin: Vec2, radius: f32, state: &PlanetState, fraction: f32) {
+    let base_y = origin.y - radius * 0.94;
+    let count = state.grid.total_buildings().min(28);
+    for index in 0..count {
+        let x = origin.x - radius * 0.42 + index as f32 * 9.0;
+        let height = 8.0 + ((index * 17) % 24) as f32;
+        let fade = if fraction < 0.5 {
+            0.8
+        } else {
+            (1.0 - (fraction - 0.5) * 1.5).max(0.2)
+        };
+        draw_rectangle(
+            x,
+            base_y - height,
+            6.0,
+            height,
+            Color::new(0.2, 0.55, 0.65, fade),
+        );
+        draw_rectangle_lines(
+            x,
+            base_y - height,
+            6.0,
+            height,
+            1.0,
+            Color::new(0.65, 0.9, 1.0, fade),
+        );
+    }
+    draw_line(
+        origin.x - radius * 0.55,
+        base_y,
+        origin.x + radius * 0.55,
+        base_y,
+        2.0,
+        Colors::PRIMARY_SOFT,
+    );
 }
 
 /// The line for this beat, on a band across the lower third. The arrival beat

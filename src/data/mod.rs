@@ -7,11 +7,14 @@
 mod defs;
 mod game_config;
 mod loader;
+mod strings;
 mod ui_theme;
+mod validation;
 
 pub use defs::*;
 pub use game_config::*;
 pub use loader::*;
+pub use strings::*;
 pub use ui_theme::*;
 
 use std::path::PathBuf;

@@ -37,10 +37,16 @@ pub enum StatId {
     RepeaterRange,
     /// What harvesting a tile of terrain by hand is worth.
     HarvestYield,
+    CollapseShutdown,
+    CollapseDataLoss,
+    DustEfficiencyThreshold,
+    DustSpeedThreshold,
+    DustLeakThreshold,
+    DustStallThreshold,
 }
 
 impl StatId {
-    pub const ALL: [StatId; 13] = [
+    pub const ALL: [StatId; 19] = [
         StatId::DrillOutput,
         StatId::DroneCapacity,
         StatId::DronesPerDrill,
@@ -54,6 +60,12 @@ impl StatId {
         StatId::DroneSpeed,
         StatId::RepeaterRange,
         StatId::HarvestYield,
+        StatId::CollapseShutdown,
+        StatId::CollapseDataLoss,
+        StatId::DustEfficiencyThreshold,
+        StatId::DustSpeedThreshold,
+        StatId::DustLeakThreshold,
+        StatId::DustStallThreshold,
     ];
 
     pub fn id(self) -> &'static str {
@@ -71,6 +83,12 @@ impl StatId {
             StatId::DroneSpeed => "drone_speed",
             StatId::RepeaterRange => "repeater_range",
             StatId::HarvestYield => "harvest_yield",
+            StatId::CollapseShutdown => "collapse_shutdown",
+            StatId::CollapseDataLoss => "collapse_data_loss",
+            StatId::DustEfficiencyThreshold => "dust_efficiency_threshold",
+            StatId::DustSpeedThreshold => "dust_speed_threshold",
+            StatId::DustLeakThreshold => "dust_leak_threshold",
+            StatId::DustStallThreshold => "dust_stall_threshold",
         }
     }
 

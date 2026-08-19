@@ -236,6 +236,16 @@ pub(super) fn draw(
         theme.typography.small,
         dim,
     );
+    let (constraints_met, constraint_text) = state.planet_constraint_status();
+    if !constraints_met && !constraint_text.is_empty() {
+        draw_ui_text(
+            &format!("WORLD RULE: {}", constraint_text),
+            sidebar_x + metrics.panel_padding,
+            sidebar_y + 66.0,
+            9.0,
+            colors.warning,
+        );
+    }
 
     let mut building_defs: Vec<_> = data::game_data()
         .buildings
@@ -244,8 +254,8 @@ pub(super) fn draw(
         .collect();
     building_defs.sort_by_key(|def| def.build_menu_order);
 
-    let list_top = sidebar_y + 62.0;
-    let quick_actions_h = 106.0;
+    let list_top = sidebar_y + 78.0;
+    let quick_actions_h = 216.0;
     let list_bottom = sidebar_y + sidebar_h - quick_actions_h - metrics.panel_gap;
     let list_height = (list_bottom - list_top).max(0.0);
     let content_x = sidebar_x + metrics.panel_padding;
@@ -340,5 +350,64 @@ pub(super) fn draw(
         "HELP",
     ) {
         state.show_help = !state.show_help;
+    }
+    let third_y = second_y + 38.0;
+    if draw_hud_button(
+        theme,
+        Rect::new(sidebar_x + metrics.panel_padding, third_y, half_w, 30.0),
+        "UNDO",
+    ) {
+        state.undo_last_action();
+    }
+    if draw_hud_button(
+        theme,
+        Rect::new(
+            sidebar_x + metrics.panel_padding + half_w + 8.0,
+            third_y,
+            half_w,
+            30.0,
+        ),
+        "RELOCATE",
+    ) {
+        if let Some(tile) = state.selected_tile {
+            state.begin_relocation(tile);
+        }
+    }
+    let fourth_y = third_y + 38.0;
+    if draw_hud_button(
+        theme,
+        Rect::new(sidebar_x + metrics.panel_padding, fourth_y, half_w, 30.0),
+        "SAVE BP",
+    ) {
+        if let Some(tile) = state.selected_tile {
+            let positions = if state.box_selected.is_empty() {
+                vec![tile]
+            } else {
+                state.box_selected.clone()
+            };
+            state.save_blueprint(tile, &positions);
+        }
+    }
+    if draw_hud_button(
+        theme,
+        Rect::new(
+            sidebar_x + metrics.panel_padding + half_w + 8.0,
+            fourth_y,
+            half_w,
+            30.0,
+        ),
+        "STAMP",
+    ) {
+        if let Some(tile) = state.selected_tile {
+            state.place_blueprint(tile);
+        }
+    }
+    let fifth_y = fourth_y + 38.0;
+    if draw_hud_button(
+        theme,
+        Rect::new(sidebar_x + metrics.panel_padding, fifth_y, half_w, 30.0),
+        "BOX SELECT",
+    ) {
+        state.begin_box_select();
     }
 }

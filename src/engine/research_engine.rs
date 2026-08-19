@@ -11,6 +11,8 @@ pub struct ResearchNode {
     pub data_cost: f32,
     pub prerequisites: Vec<String>,
     pub position: (f32, f32), // Visual position in neural network
+    #[serde(default)]
+    pub planet_condition: Option<String>,
 }
 
 impl ResearchNode {
@@ -29,6 +31,7 @@ impl ResearchNode {
             data_cost: cost,
             prerequisites: prereqs.into_iter().map(|s| s.to_string()).collect(),
             position: pos,
+            planet_condition: None,
         }
     }
 }
@@ -76,6 +79,26 @@ impl ResearchTree {
         }
     }
 
+    /// The ordinary prerequisite/data check plus the active world's named
+    /// condition. A global branch has no condition and remains available on
+    /// every world.
+    pub fn can_research_on(
+        &self,
+        id: &str,
+        unlocked: &[String],
+        available_data: f32,
+        condition: Option<&str>,
+    ) -> bool {
+        let Some(node) = self.get_node(id) else {
+            return false;
+        };
+        let condition_met = node
+            .planet_condition
+            .as_deref()
+            .is_none_or(|required| condition.is_some_and(|active| active == required));
+        condition_met && self.can_research(id, unlocked, available_data)
+    }
+
     /// Check if a node can be selected for research (ignores current data)
     pub fn can_select(&self, id: &str, unlocked: &[String]) -> bool {
         if let Some(node) = self.get_node(id) {
@@ -89,6 +112,16 @@ impl ResearchTree {
         } else {
             false
         }
+    }
+
+    pub fn can_select_on(&self, id: &str, unlocked: &[String], condition: Option<&str>) -> bool {
+        let Some(node) = self.get_node(id) else {
+            return false;
+        };
+        node.planet_condition
+            .as_deref()
+            .is_none_or(|required| condition.is_some_and(|active| active == required))
+            && self.can_select(id, unlocked)
     }
 
     /// Get all nodes that are available for research

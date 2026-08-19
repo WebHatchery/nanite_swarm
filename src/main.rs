@@ -13,7 +13,9 @@ mod assets;
 mod capture_scenes;
 mod data;
 mod directives;
+mod display;
 mod engine;
+pub mod release;
 mod screens;
 mod state;
 mod ui;
@@ -53,6 +55,7 @@ pub struct Game {
     research_tree: ResearchTree,
     research_state: ResearchState,
     settings: GameSettings,
+    audio_mix: state::AudioMix,
     debug_overlay: DebugOverlay,
     has_save: bool,
     menu_notice: Option<String>,
@@ -68,9 +71,20 @@ pub struct Game {
     config: data::GameConfig,
     ui_theme: data::UiTheme,
     research_viewport: screens::ResearchViewport,
+    shipping_edit_world: usize,
+    active_slot: usize,
 }
 
 const SAVE_PATH: &str = "save.json";
+const SLOT_NAMES: [&str; 3] = ["slot_1", "slot_2", "slot_3"];
+
+fn slot_name(index: usize) -> &'static str {
+    SLOT_NAMES[index % SLOT_NAMES.len()]
+}
+
+fn save_path(index: usize) -> String {
+    format!("{}_{}", SAVE_PATH, slot_name(index))
+}
 
 impl Game {
     pub async fn new() -> Self {
@@ -101,16 +115,17 @@ impl Game {
         // in effect rather than snapping in when they visit the menu.
         let mut settings = GameSettings::load(GAME_NAME);
         settings.sanitize();
-        apply_display_settings(&settings, None);
+        display::apply_display_settings(&settings, None);
 
-        Self {
+        let mut game = Self {
             phase: GamePhase::MainMenu,
             campaign: Campaign::new(config.clone(), 42),
             research_tree: ResearchTree::default(),
             research_state: ResearchState::default(),
             settings,
+            audio_mix: state::AudioMix::default(),
             debug_overlay: DebugOverlay::new(),
-            has_save: save_exists(SAVE_PATH),
+            has_save: save_exists(&save_path(0)),
             menu_notice: None,
             ending_seen: false,
             launch: None,
@@ -119,7 +134,12 @@ impl Game {
             config,
             ui_theme,
             research_viewport: screens::ResearchViewport::default(),
-        }
+            shipping_edit_world: state::STARTING_PLANET,
+            active_slot: 0,
+        };
+        game.campaign
+            .apply_preferred_speed(game.settings.default_speed);
+        game
     }
 
     /// Check if mass driver technology is researched
@@ -130,16 +150,24 @@ impl Game {
     pub fn update(&mut self) {
         self.debug_overlay.record_frame(get_frame_time());
         self.debug_overlay.visible = self.settings.show_fps;
+        self.refresh_audio_mix();
 
         match self.phase {
             GamePhase::MainMenu => {
-                match render_main_menu(self.has_save, self.menu_notice.as_deref()) {
+                match render_main_menu(
+                    self.has_save,
+                    self.menu_notice.as_deref(),
+                    slot_name(self.active_slot),
+                ) {
                     MenuAction::NewGame => {
                         self.menu_notice = None;
                         self.campaign = Campaign::new(
                             self.config.clone(),
                             macroquad_toolkit::rng::random_u64(),
                         );
+                        self.campaign.set_slot_name(slot_name(self.active_slot));
+                        self.campaign
+                            .apply_preferred_speed(self.settings.default_speed);
                         self.research_state = ResearchState::default();
                         self.sync_research_to_planet();
                         self.sync_building_unlocks();
@@ -154,11 +182,25 @@ impl Game {
                     MenuAction::Save => {
                         self.save_campaign();
                     }
+                    MenuAction::CycleSlot => {
+                        self.active_slot = (self.active_slot + 1) % SLOT_NAMES.len();
+                        self.has_save = save_exists(&save_path(self.active_slot));
+                        self.menu_notice =
+                            Some(format!("Selected {}", slot_name(self.active_slot)));
+                    }
+                    MenuAction::Delete => {
+                        if state::delete_save(&save_path(self.active_slot)).is_ok() {
+                            self.has_save = false;
+                            self.menu_notice =
+                                Some(format!("Cleared {}", slot_name(self.active_slot)));
+                        }
+                    }
                     MenuAction::Settings => {
                         self.phase = GamePhase::Settings;
                     }
                     #[cfg(not(target_arch = "wasm32"))]
                     MenuAction::Quit => {
+                        self.save_campaign();
                         macroquad::miniquad::window::quit();
                     }
                     MenuAction::None => {}
@@ -172,7 +214,7 @@ impl Game {
                     // scale actually does, and written down so it is still
                     // true next session.
                     self.settings.sanitize();
-                    apply_display_settings(&self.settings, Some(&before));
+                    display::apply_display_settings(&self.settings, Some(&before));
                     let _ = self.settings.save(GAME_NAME);
                 }
                 if action == SettingsAction::Back {
@@ -183,20 +225,38 @@ impl Game {
                 self.advance_simulation();
 
                 let (planet, directive) = self.campaign.current_and_directive();
-                match render_planetary_view(planet, &self.textures, directive, &self.ui_theme) {
+                let action =
+                    render_planetary_view(planet, &self.textures, directive, &self.ui_theme);
+                self.remember_preferred_speed();
+                match action {
                     PlanetaryAction::OpenResearch => {
+                        self.campaign
+                            .current_mut()
+                            .emit_audio(state::AudioEvent::UiConfirm);
                         self.phase = GamePhase::Research;
                     }
                     PlanetaryAction::OpenSeedShip => {
+                        self.campaign
+                            .current_mut()
+                            .emit_audio(state::AudioEvent::UiConfirm);
                         self.phase = GamePhase::SeedShip;
                     }
                     PlanetaryAction::OpenInterplanetary => {
+                        self.campaign
+                            .current_mut()
+                            .emit_audio(state::AudioEvent::UiConfirm);
                         self.phase = GamePhase::Interplanetary;
                     }
                     PlanetaryAction::OpenRecords => {
+                        self.campaign
+                            .current_mut()
+                            .emit_audio(state::AudioEvent::UiConfirm);
                         self.phase = GamePhase::Records;
                     }
                     PlanetaryAction::OpenMenu => {
+                        self.campaign
+                            .current_mut()
+                            .emit_audio(state::AudioEvent::UiBack);
                         // Leaving the world is a good moment to write it down,
                         // and the menu used to only *claim* a save existed.
                         self.save_campaign();
@@ -214,17 +274,25 @@ impl Game {
                     self.campaign.current().resources.data,
                     self.campaign.current().research_lock_timer > 0.0,
                     &sheet,
+                    self.campaign.current().active_planet_condition(),
                     &mut self.research_viewport,
                 ) {
                     ResearchAction::Close => {
                         self.phase = GamePhase::Playing;
                     }
                     ResearchAction::StartResearch(tech_id) => {
-                        let _ = self.research_state.start_research(
+                        let condition = self.campaign.current().active_planet_condition();
+                        if self.research_tree.can_select_on(
                             &tech_id,
-                            &self.research_tree,
-                            self.campaign.current().resources.data,
-                        );
+                            &self.research_state.unlocked,
+                            condition,
+                        ) {
+                            let _ = self.research_state.start_research(
+                                &tech_id,
+                                &self.research_tree,
+                                self.campaign.current().resources.data,
+                            );
+                        }
                     }
                     ResearchAction::None => {}
                 }
@@ -245,11 +313,20 @@ impl Game {
                 // The world keeps running while the player reads what it has
                 // done, the same as the map and the research tree.
                 self.advance_simulation();
+                self.campaign.sync_notification_history();
+                let log = self.campaign.toast_history.clone();
+                let directive_history = self.campaign.directive_history.clone();
                 let planet = self.campaign.current_mut();
                 let records = planet.achievement_records();
                 let name = planet.name.clone();
-                let log = planet.notifications.history().to_vec();
-                let action = render_records_view(&name, &records, &log, &mut planet.log_scroll);
+                let action = render_records_view(
+                    &name,
+                    &records,
+                    &log,
+                    &directive_history,
+                    &mut planet.log_scroll,
+                    &mut planet.records_scroll,
+                );
                 if action == RecordsAction::Close {
                     self.phase = GamePhase::Playing;
                 }
@@ -276,6 +353,14 @@ impl Game {
                         .map(|planet| planet.landing_pads_online())
                         .unwrap_or(0)
                 });
+                let orders: [Option<state::ExportOrder>; state::PLANET_COUNT] =
+                    std::array::from_fn(|index| self.campaign.export_order_for(index));
+                let pending_pods: [usize; state::PLANET_COUNT] =
+                    std::array::from_fn(|index| self.campaign.pending_pod_count(index));
+                let pod_caps: [usize; state::PLANET_COUNT] =
+                    std::array::from_fn(|index| self.campaign.pending_pod_cap(index));
+                let overflow_pods: [usize; state::PLANET_COUNT] =
+                    std::array::from_fn(|index| self.campaign.overflow_pod_count(index));
                 let view = screens::MapView {
                     current_planet: self.campaign.current_index(),
                     has_mass_driver: self.has_mass_driver(),
@@ -287,6 +372,11 @@ impl Game {
                     export: self.campaign.export_order(),
                     pod_fraction: self.campaign.current().pod_fraction(),
                     shipments: self.campaign.shipments(),
+                    orders: &orders,
+                    pending_pods: &pending_pods,
+                    pod_caps: &pod_caps,
+                    overflow_pods: &overflow_pods,
+                    editing_world: self.shipping_edit_world,
                 };
                 match render_interplanetary_view(&view) {
                     InterplanetaryAction::Close => {
@@ -324,11 +414,53 @@ impl Game {
                     InterplanetaryAction::CycleExportTarget => {
                         self.campaign.cycle_export_target();
                     }
+                    InterplanetaryAction::CycleExportPad => {
+                        self.campaign.cycle_export_pad_for(self.shipping_edit_world);
+                    }
+                    InterplanetaryAction::CycleExportSchedule => {
+                        self.campaign
+                            .cycle_export_schedule_for(self.campaign.current_index());
+                    }
+                    InterplanetaryAction::CycleExportPriority => {
+                        self.campaign
+                            .cycle_export_priority_for(self.campaign.current_index());
+                    }
+                    InterplanetaryAction::ToggleExportSurplus => {
+                        self.campaign
+                            .toggle_export_surplus_for(self.campaign.current_index());
+                    }
+                    InterplanetaryAction::SelectOrderWorld(index) => {
+                        self.shipping_edit_world = index;
+                    }
+                    InterplanetaryAction::CycleRemoteExportCargo => {
+                        self.campaign
+                            .cycle_export_cargo_for(self.shipping_edit_world);
+                    }
+                    InterplanetaryAction::CycleRemoteExportTarget => {
+                        self.campaign
+                            .cycle_export_target_for(self.shipping_edit_world);
+                    }
+                    InterplanetaryAction::CycleRemoteExportSchedule => {
+                        self.campaign
+                            .cycle_export_schedule_for(self.shipping_edit_world);
+                    }
+                    InterplanetaryAction::CycleRemoteExportPriority => {
+                        self.campaign
+                            .cycle_export_priority_for(self.shipping_edit_world);
+                    }
+                    InterplanetaryAction::ToggleRemoteExportSurplus => {
+                        self.campaign
+                            .toggle_export_surplus_for(self.shipping_edit_world);
+                    }
                     InterplanetaryAction::None => {}
                 }
             }
             GamePhase::Launch => {
                 let arrival_line = self.campaign.current().arrival_line();
+                let origin_state = self
+                    .launch
+                    .as_ref()
+                    .and_then(|sequence| self.campaign.planet(sequence.origin()));
                 let Some(sequence) = self.launch.as_mut() else {
                     self.phase = GamePhase::Playing;
                     return;
@@ -336,7 +468,7 @@ impl Game {
                 if !self.capture_still {
                     sequence.advance(get_frame_time());
                 }
-                let action = render_launch_view(sequence, arrival_line);
+                let action = render_launch_view(sequence, arrival_line, origin_state);
                 if action == LaunchAction::Skip {
                     sequence.skip();
                 }
@@ -369,6 +501,26 @@ impl Game {
         self.debug_overlay.draw(&[]);
     }
 
+    fn refresh_audio_mix(&mut self) {
+        self.audio_mix = if self.phase == GamePhase::MainMenu {
+            state::AudioMix {
+                music_state: state::MusicState::Menu,
+                swarm_scale: 0.0,
+                sfx_volume: self.settings.effective_sfx_volume(),
+                music_volume: self.settings.effective_music_volume(),
+            }
+        } else {
+            state::AudioMix::for_planet(
+                self.campaign.current(),
+                self.settings.effective_sfx_volume(),
+                self.settings.effective_music_volume(),
+            )
+        };
+        // The interface is intentionally drained even before a sound backend
+        // is present, so events never grow without bound in long sessions.
+        self.campaign.current_mut().take_audio_events();
+    }
+
     /// Advance the world by whole simulation ticks. Research and directives run
     /// on exactly the time the planet simulated, so nothing drifts apart when
     /// the frame rate moves or a catch-up backlog is dropped.
@@ -384,6 +536,7 @@ impl Game {
         self.campaign.update_background(simulated);
         // And what they threw is still crossing the system.
         self.campaign.update_shipments(simulated);
+        self.campaign.sync_notification_history();
         self.check_campaign_complete();
         if self
             .campaign
@@ -415,7 +568,8 @@ impl Game {
     /// A silent failed save is worse than no autosave at all: the player would
     /// carry on believing their world was safe.
     fn save_campaign(&mut self) {
-        match save_to_file(&mut self.campaign, SAVE_PATH) {
+        self.campaign.set_slot_name(slot_name(self.active_slot));
+        match save_to_file(&mut self.campaign, &save_path(self.active_slot)) {
             Ok(()) => {
                 self.has_save = true;
                 self.campaign.mark_saved();
@@ -427,10 +581,27 @@ impl Game {
         }
     }
 
+    fn remember_preferred_speed(&mut self) {
+        let speed = self.campaign.current().time_scale;
+        let Some(index) = state::TIME_SCALES
+            .iter()
+            .position(|candidate| (*candidate - speed).abs() < 0.001)
+        else {
+            return;
+        };
+        let index = index as i32;
+        if self.settings.default_speed != index {
+            self.settings.default_speed = index;
+            let _ = self.settings.save(GAME_NAME);
+        }
+    }
+
     fn load_campaign(&mut self) {
-        match load_from_file(SAVE_PATH) {
+        match load_from_file(&save_path(self.active_slot)) {
             Ok((campaign, source)) => {
                 self.campaign = campaign;
+                self.campaign
+                    .apply_preferred_speed(self.settings.default_speed);
                 // A save written before research was campaign-wide keeps it
                 // on the planet; take it from there once.
                 self.campaign.adopt_planet_research();
@@ -438,13 +609,19 @@ impl Game {
                 self.sync_building_unlocks();
                 self.campaign.current_mut().restored_from_backup =
                     source == state::LoadSource::Backup;
+                if source == state::LoadSource::Backup {
+                    let generation = self.campaign.current().restored_from_backup_generation;
+                    self.menu_notice = Some(format!(
+                        "Recovered from backup generation {}",
+                        generation.max(1)
+                    ));
+                }
                 self.has_save = true;
-                self.menu_notice = None;
                 self.phase = GamePhase::Playing;
             }
             Err(error) => {
                 eprintln!("Could not load campaign: {error}");
-                self.has_save = save_exists(SAVE_PATH);
+                self.has_save = save_exists(&save_path(self.active_slot));
                 self.menu_notice = Some("Load failed: save is missing or corrupt.".to_string());
             }
         }
@@ -465,6 +642,20 @@ impl Game {
             self.sync_research_to_planet();
             return;
         };
+        if !self.research_tree.can_select_on(
+            &current_id,
+            &self.research_state.unlocked,
+            self.campaign.current().active_planet_condition(),
+        ) {
+            self.research_state.current_research = None;
+            self.research_state.research_progress = 0.0;
+            self.campaign
+                .current_mut()
+                .notifications
+                .warning("Research branch unavailable on this world");
+            self.sync_research_to_planet();
+            return;
+        }
 
         let remaining = (node.data_cost - self.research_state.research_progress).max(0.0);
         if remaining <= 0.0 {
@@ -503,10 +694,11 @@ impl Game {
     /// Finished research used to land with no more sign than a node changing
     /// colour on a screen the player was probably not looking at.
     fn announce_research(&mut self, name: &str) {
-        self.campaign
-            .current_mut()
+        let planet = self.campaign.current_mut();
+        planet
             .notifications
             .success(format!("Research complete: {}", name));
+        planet.emit_audio(state::AudioEvent::Research);
     }
 
     /// Take the campaign's research into the research screen's state.
@@ -562,29 +754,6 @@ impl Game {
                 planet.notifications.info(format!("Available: {}", name));
             }
         }
-    }
-}
-
-/// Push display settings at the window, touching only what actually changed.
-///
-/// `GameSettings::apply_display` sets fullscreen unconditionally, and asking
-/// miniquad for windowed mode when it is already windowed re-applies the window
-/// style: on Windows that shrinks the client area, which cost the bottom bar
-/// forty pixels the first time this was wired up.
-fn apply_display_settings(settings: &GameSettings, previous: Option<&GameSettings>) {
-    let scale_changed = previous.is_none_or(|old| old.ui_text_scale != settings.ui_text_scale);
-    if scale_changed {
-        macroquad_toolkit::ui::set_ui_text_scale(settings.ui_text_scale);
-    }
-
-    let fullscreen_changed = match previous {
-        Some(old) => old.fullscreen != settings.fullscreen,
-        // At startup there is nothing to undo, so only ask for fullscreen if
-        // that is what the player wants.
-        None => settings.fullscreen,
-    };
-    if fullscreen_changed {
-        set_fullscreen(settings.fullscreen);
     }
 }
 

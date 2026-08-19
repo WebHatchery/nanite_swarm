@@ -75,6 +75,16 @@ pub(super) fn handle_input(
     let activated_pos = touch_tap.or(hovered_pos);
     let primary_pressed =
         touch_tap.is_some() || (mouse_input && is_mouse_button_pressed(MouseButton::Left));
+    if state.box_select_mode
+        && mouse_input
+        && is_mouse_button_released(MouseButton::Left)
+        && state.box_select_start.is_some()
+    {
+        if let Some(pos) = hovered_pos {
+            state.finish_box_select(pos);
+            return PlanetaryAction::None;
+        }
+    }
     // Building hotkeys
     for def in &data::game_data().buildings {
         let Some(hotkey) = def.hotkey.as_ref().and_then(|key| key.chars().next()) else {
@@ -157,6 +167,16 @@ pub(super) fn handle_input(
     // Place building on click
     if primary_pressed {
         if let Some(pos) = activated_pos {
+            if state.box_select_mode {
+                state.finish_box_select(pos);
+                return PlanetaryAction::None;
+            }
+            if let Some(source) = state.relocation_source {
+                state.relocate_building(source, pos);
+                state.relocation_source = None;
+                state.selected_tile = Some(pos);
+                return PlanetaryAction::None;
+            }
             let mut placed = false;
             if let Some(building_type) = state.selected_building {
                 if state.grid.can_place_building(pos, building_type) {

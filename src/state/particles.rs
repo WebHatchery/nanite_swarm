@@ -24,6 +24,9 @@ impl PlanetState {
     }
 
     pub(super) fn spawn_resource_burst(&mut self) {
+        if macroquad_toolkit::settings::reduced_motion_enabled() {
+            return;
+        }
         let core_pos = match self.grid.find_core() {
             Some(pos) => pos,
             None => return,
@@ -42,6 +45,9 @@ impl PlanetState {
     }
 
     pub(super) fn spawn_place_burst(&mut self, pos: GridPos) {
+        if macroquad_toolkit::settings::reduced_motion_enabled() {
+            return;
+        }
         let origin = Vec2::new(pos.x as f32, pos.y as f32);
         let config = BurstConfig {
             speed: (0.6, 1.4),
@@ -55,8 +61,28 @@ impl PlanetState {
         self.particles.spawn_burst(origin, 10, &config);
     }
 
+    pub(super) fn spawn_harvest_burst(&mut self, pos: GridPos) {
+        if macroquad_toolkit::settings::reduced_motion_enabled() {
+            return;
+        }
+        let origin = Vec2::new(pos.x as f32, pos.y as f32);
+        let config = BurstConfig {
+            speed: (0.8, 1.8),
+            size: (2.0, 3.5),
+            life: (0.3, 0.7),
+            colors: vec![Color::new(1.0, 0.55, 0.12, 1.0)],
+            drag: 1.2,
+            shrink: true,
+            ..Default::default()
+        };
+        self.particles.spawn_burst(origin, 12, &config);
+    }
+
     /// A drone waving its error flag: the route under it just went away.
     pub(super) fn spawn_route_break_burst(&mut self, pos: GridPos) {
+        if macroquad_toolkit::settings::reduced_motion_enabled() {
+            return;
+        }
         let origin = Vec2::new(pos.x as f32, pos.y as f32);
         let config = BurstConfig {
             speed: (0.4, 1.0),

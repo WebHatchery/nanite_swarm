@@ -22,7 +22,7 @@ pub const TICK_SECONDS: f32 = 1.0 / 30.0;
 const MAX_CATCHUP_TICKS: u32 = 12;
 
 /// The speeds the player can pick between, slowest first.
-pub const TIME_SCALES: [f32; 4] = [0.5, 1.0, 2.0, 4.0];
+pub const TIME_SCALES: [f32; 5] = [0.5, 1.0, 2.0, 4.0, 8.0];
 
 impl PlanetState {
     /// Advance the world by real elapsed time, running whole [`TICK_SECONDS`]
@@ -68,6 +68,7 @@ impl PlanetState {
         self.time_played += sim_delta as f64;
 
         self.update_dust(sim_delta);
+        self.update_heat(sim_delta);
 
         self.update_biomass_harvesters(sim_delta);
         self.update_tutorial();
@@ -105,6 +106,7 @@ impl PlanetState {
                         ..
                     } => {
                         if Some(at) == core {
+                            self.emit_audio(super::audio::AudioEvent::Delivery);
                             match resource {
                                 crate::engine::ResourceType::Alloy => {
                                     self.resources.alloy += amount
@@ -115,6 +117,12 @@ impl PlanetState {
                             // Ore dropped at a processing building waits there
                             // until that building gets round to it.
                             *self.input_buffers.entry((at.x, at.y)).or_insert(0.0) += amount;
+                            *self
+                                .input_hoppers
+                                .entry((at.x, at.y))
+                                .or_default()
+                                .entry(resource)
+                                .or_insert(0.0) += amount;
                         }
                     }
                     crate::engine::DroneEvent::ReachedDrill { drone_id } => {
@@ -215,28 +223,21 @@ impl PlanetState {
     /// same shape as the drill buffer, and it keeps the numbers continuous for
     /// the fixed timestep.
     fn update_recipes(&mut self, delta_time: f32) {
+        let dust_response = self.resolved_dust_response();
         for (pos, recipe) in self.recipe_buildings() {
             let Some(building) = self.grid.get(pos).and_then(|tile| tile.building.as_ref()) else {
                 continue;
             };
-            if !building.powered || building.is_dust_stalled() {
+            if !building.powered || building.is_dust_stalled_with(&dust_response) {
                 continue;
             }
 
-            let carried = recipe
-                .carried
-                .as_deref()
-                .and_then(crate::engine::ResourceType::from_id);
-            let hopper = self
-                .input_buffers
-                .get(&(pos.x, pos.y))
-                .copied()
-                .unwrap_or(0.0);
+            let hoppers = self.input_hoppers.get(&(pos.x, pos.y));
 
             // How much of a second's work every input can actually cover. The
             // carried one comes out of this building's hopper; a building with
             // an empty hopper is idle however full the global pool is.
-            let mut scale = building.dust_efficiency() * delta_time;
+            let mut scale = building.dust_efficiency_with(&dust_response) * delta_time;
             for (id, rate) in &recipe.inputs {
                 if *rate <= 0.0 {
                     continue;
@@ -244,8 +245,20 @@ impl PlanetState {
                 let Some(resource) = crate::engine::ResourceType::from_id(id) else {
                     continue;
                 };
-                let available = if Some(resource) == carried {
-                    hopper
+                let available = if recipe.carried_ids().contains(&resource.id()) {
+                    hoppers
+                        .and_then(|bucket| bucket.get(&resource))
+                        .copied()
+                        .unwrap_or_else(|| {
+                            if recipe.carried.as_deref() == Some(resource.id()) {
+                                self.input_buffers
+                                    .get(&(pos.x, pos.y))
+                                    .copied()
+                                    .unwrap_or(0.0)
+                            } else {
+                                0.0
+                            }
+                        })
                 } else {
                     self.resources.get(resource)
                 };
@@ -260,7 +273,11 @@ impl PlanetState {
                     continue;
                 };
                 let taken = rate * scale;
-                if Some(resource) == carried {
+                if recipe.carried_ids().contains(&resource.id()) {
+                    let hoppers = self.input_hoppers.entry((pos.x, pos.y)).or_default();
+                    if let Some(buffer) = hoppers.get_mut(&resource) {
+                        *buffer = (*buffer - taken).max(0.0);
+                    }
                     if let Some(buffer) = self.input_buffers.get_mut(&(pos.x, pos.y)) {
                         *buffer = (*buffer - taken).max(0.0);
                     }
@@ -309,6 +326,7 @@ impl PlanetState {
 
     /// Update server bank data generation
     fn update_servers(&mut self, delta_time: f32) {
+        let dust_response = self.resolved_dust_response();
         let rate = self.stats.apply(
             StatId::DataGeneration,
             self.config.resources.server_data_rate,
@@ -318,10 +336,53 @@ impl PlanetState {
             let Some(building) = self.grid.get(server_pos).and_then(|t| t.building.as_ref()) else {
                 continue;
             };
-            if !building.powered || building.is_dust_stalled() {
+            if !building.powered || building.is_dust_stalled_with(&dust_response) {
                 continue;
             }
-            self.resources.data += rate * building.dust_efficiency() * delta_time;
+            let heat_efficiency =
+                if building.is_overheated(self.config.buildings.server_bank_heat_capacity) {
+                    self.config.buildings.overheat_penalty
+                } else {
+                    1.0
+                };
+            self.resources.data +=
+                rate * building.dust_efficiency_with(&dust_response) * heat_efficiency * delta_time;
+        }
+    }
+
+    fn update_heat(&mut self, delta_time: f32) {
+        let dust_response = self.resolved_dust_response();
+        let cooling = self.config.buildings.water_cooling_rate.max(0.0);
+        let capacity = self.config.buildings.server_bank_heat_capacity.max(1.0);
+        let water_tiles: Vec<_> = self
+            .grid
+            .iter_tiles()
+            .filter_map(|(pos, tile)| (tile.terrain == TerrainType::Water).then_some(pos))
+            .collect();
+        for (pos, tile) in self.grid.iter_tiles_mut() {
+            let Some(building) = tile.building.as_mut() else {
+                continue;
+            };
+            let def = crate::data::game_data().building(building.building_type.id());
+            let generated = if building.building_type == BuildingType::ServerBank
+                && building.powered
+                && !building.is_dust_stalled_with(&dust_response)
+            {
+                self.config.buildings.server_bank_heat_per_second
+            } else {
+                0.0
+            };
+            let water_cooling = if def.water_cooling
+                && water_tiles
+                    .iter()
+                    .any(|water| pos.distance(*water) as i32 <= 1)
+            {
+                cooling
+            } else {
+                0.0
+            };
+            building.heat =
+                (building.heat + (generated - water_cooling) * delta_time).clamp(0.0, capacity);
         }
     }
 
@@ -343,6 +404,7 @@ impl PlanetState {
         &self,
         building_type: BuildingType,
     ) -> Vec<crate::engine::GridPos> {
+        let dust_response = self.resolved_dust_response();
         self.grid
             .find_buildings(building_type)
             .into_iter()
@@ -350,7 +412,9 @@ impl PlanetState {
                 self.grid
                     .get(*pos)
                     .and_then(|tile| tile.building.as_ref())
-                    .is_some_and(|building| building.powered && !building.is_dust_stalled())
+                    .is_some_and(|building| {
+                        building.powered && !building.is_dust_stalled_with(&dust_response)
+                    })
             })
             .collect()
     }
@@ -361,7 +425,8 @@ impl PlanetState {
         // Acid eats the network specifically: a corroded conduit stalls, and a
         // stalled conduit stops carrying traffic, which is how a Venus run
         // fails rather than merely slowing.
-        let acid_rate = upkeep.dust_rate * self.acid_strength() * upkeep.acid_multiplier;
+        let acid_rate = upkeep.dust_rate * upkeep.acid_multiplier;
+        let acid_strength = self.acid_strength();
         let shields = self.powered_positions(BuildingType::ShieldGenerator);
         let sweeper_positions = self.grid.find_buildings(BuildingType::Sweeper);
         let powered_sweepers: Vec<_> = sweeper_positions
@@ -384,21 +449,35 @@ impl PlanetState {
             .iter_tiles()
             .filter_map(|(pos, tile)| if tile.forest_cleared { Some(pos) } else { None })
             .collect();
+        let acid_fields = crate::data::game_data()
+            .planet(self.planet_index)
+            .hazard_fields
+            .clone();
+        let grid_width = self.grid.width;
+        let grid_height = self.grid.height;
 
         for (pos, tile) in self.grid.iter_tiles_mut() {
             let Some(building) = tile.building.as_mut() else {
                 continue;
             };
             let mut rate = dust_rate;
+            let mut acid = 0.0;
             if acid_rate > 0.0 && building.transmits_power() {
                 let sheltered = shields
                     .iter()
                     .any(|shield| pos.distance(*shield) as i32 <= upkeep.hazard_counter_radius);
-                rate += if sheltered {
-                    acid_rate * (1.0 - upkeep.hazard_counter_strength)
-                } else {
-                    acid_rate
-                };
+                acid = acid_rate
+                    * super::progress::hazard_field_strength(
+                        pos,
+                        "acid",
+                        acid_strength,
+                        &acid_fields,
+                        grid_width,
+                        grid_height,
+                    );
+                if sheltered {
+                    acid *= 1.0 - upkeep.hazard_counter_strength;
+                }
             }
 
             if filter_positions
@@ -425,6 +504,7 @@ impl PlanetState {
 
             building.dust =
                 (building.dust + rate * delta_time - clean_rate * delta_time).clamp(0.0, 100.0);
+            building.acid_wear = (building.acid_wear + acid * delta_time).clamp(0.0, 100.0);
         }
     }
 
@@ -484,6 +564,27 @@ impl PlanetState {
             self.throughput_timer -= THROUGHPUT_SAMPLE_SECONDS;
             let rate = self.delivered_since_sample / THROUGHPUT_SAMPLE_SECONDS;
             self.throughput.push(rate);
+            let data_produced = self.config.resources.core_data_rate
+                + self.config.resources.server_data_rate
+                    * self.grid.find_buildings(BuildingType::ServerBank).len() as f32;
+            let data_consumed = self
+                .research
+                .current_research
+                .as_ref()
+                .map(|_| self.config.resources.research_rate)
+                .unwrap_or(0.0);
+            self.graph_samples.push(crate::state::GraphSample {
+                power_produced: self.power_generation().max(0.0),
+                power_consumed: self.power_consumption().max(0.0),
+                alloy_produced: self.alloy_rate().max(0.0),
+                alloy_consumed: self.grid.find_buildings(BuildingType::ServerBank).len() as f32
+                    * 0.5,
+                data_produced: data_produced.max(0.0),
+                data_consumed,
+            });
+            if self.graph_samples.len() > 120 {
+                self.graph_samples.remove(0);
+            }
             self.delivered_since_sample = 0.0;
         }
     }
@@ -498,17 +599,35 @@ impl PlanetState {
     /// Bring the grid down. Public because the screenshot harness stages one;
     /// the simulation reaches it through sustained negative power.
     pub fn trigger_power_collapse(&mut self) {
+        self.record_collapse_source();
+        if let Some(source) = self.latest_collapse_source().map(str::to_owned) {
+            self.notifications
+                .danger(format!("{} - collapse engaged", source));
+        }
+        self.emit_audio(super::audio::AudioEvent::Collapse);
         let collapse = self.config.collapse.clone();
         // A bigger swarm takes longer to bring back up and loses more of what
         // it was holding. Twenty flat seconds stung hardest exactly when the
         // player could least afford it and stopped registering later.
         let scale = self.collapse_scale();
-        let shutdown = lerp(
-            collapse.min_shutdown_seconds,
-            collapse.max_shutdown_seconds,
-            scale,
-        );
-        let loss = lerp(collapse.min_data_loss, collapse.max_data_loss, scale).clamp(0.0, 1.0);
+        let shutdown = self
+            .stats
+            .apply(
+                StatId::CollapseShutdown,
+                lerp(
+                    collapse.min_shutdown_seconds,
+                    collapse.max_shutdown_seconds,
+                    scale,
+                ),
+            )
+            .clamp(collapse.min_shutdown_seconds, collapse.max_shutdown_seconds);
+        let loss = self
+            .stats
+            .apply(
+                StatId::CollapseDataLoss,
+                lerp(collapse.min_data_loss, collapse.max_data_loss, scale),
+            )
+            .clamp(0.0, 1.0);
 
         self.power_negative_seconds = 0.0;
         self.power_collapse_cooldown = collapse.cooldown_seconds;
@@ -517,6 +636,7 @@ impl PlanetState {
         self.power_collapse_length = shutdown;
         self.research_lock_timer = shutdown * collapse.research_lock_ratio.max(0.0);
         self.collapse_notice_timer = collapse.notice_seconds;
+        self.network_revision = self.network_revision.wrapping_add(1);
 
         // Drones drop cargo and shut down
         for drone in self.drones.drones_mut() {
@@ -531,6 +651,39 @@ impl PlanetState {
         // Corrupt data and research progress
         self.resources.data *= 1.0 - loss;
         self.research.research_progress *= 1.0 - loss;
+    }
+
+    fn record_collapse_source(&mut self) {
+        let local = self.grid.iter_tiles().find_map(|(pos, tile)| {
+            let building = tile.building.as_ref()?;
+            (building.powered && (building.is_dust_stalled() || building.acid_wear >= 100.0))
+                .then_some((pos, building.building_type))
+        });
+        let (source, building, position) = if let Some((position, building)) = local {
+            (
+                format!("Local failure: {}", building.name()),
+                Some(building),
+                Some(position),
+            )
+        } else {
+            ("Broad grid collapse: power deficit".to_string(), None, None)
+        };
+        self.collapse_history.push(crate::state::CollapseRecord {
+            source,
+            building,
+            position,
+            world_time: self.time_played,
+        });
+        if self.collapse_history.len() > 32 {
+            let keep_from = self.collapse_history.len() - 32;
+            self.collapse_history.drain(..keep_from);
+        }
+    }
+
+    pub fn latest_collapse_source(&self) -> Option<&str> {
+        self.collapse_history
+            .last()
+            .map(|record| record.source.as_str())
     }
 }
 

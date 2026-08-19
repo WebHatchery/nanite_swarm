@@ -1,5 +1,10 @@
 use super::PlanetState;
+use crate::data::GameConfig;
 use crate::engine::BuildingType;
+
+fn state() -> PlanetState {
+    PlanetState::new(2, 7, GameConfig::default())
+}
 
 fn approx_eq(a: f32, b: f32, eps: f32) -> bool {
     (a - b).abs() <= eps
@@ -152,6 +157,28 @@ fn battery_time_left_converts_seconds_to_hours_and_minutes() {
         ..Default::default()
     };
     assert_eq!(state.battery_time_left(), (1, 1));
+}
+
+#[test]
+fn research_modifies_the_declared_dust_response_thresholds() {
+    let mut bare = state();
+    let mut researched = state();
+    researched
+        .research
+        .unlocked_techs
+        .push("self_cleaning_servos".to_string());
+    researched.refresh_stats();
+
+    let base = bare.resolved_dust_response();
+    let improved = researched.resolved_dust_response();
+    assert!(improved.efficiency_threshold > base.efficiency_threshold);
+    assert!(improved.speed_threshold > base.speed_threshold);
+    assert!(researched
+        .stat_sources(crate::engine::StatId::DustSpeedThreshold)
+        .iter()
+        .any(|source| source == "Self-Cleaning Servos"));
+    bare.config.upkeep.dust_response.efficiency_threshold = 80.0;
+    assert!(bare.resolved_dust_response().efficiency_threshold > 0.0);
 }
 
 #[test]

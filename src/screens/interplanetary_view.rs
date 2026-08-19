@@ -22,6 +22,16 @@ pub enum InterplanetaryAction {
     LaunchSeedShip(usize),
     CycleExportCargo,
     CycleExportTarget,
+    CycleExportPad,
+    CycleExportSchedule,
+    CycleExportPriority,
+    ToggleExportSurplus,
+    SelectOrderWorld(usize),
+    CycleRemoteExportCargo,
+    CycleRemoteExportTarget,
+    CycleRemoteExportSchedule,
+    CycleRemoteExportPriority,
+    ToggleRemoteExportSurplus,
 }
 
 /// Everything the map reads out of the campaign. One struct rather than a
@@ -41,6 +51,11 @@ pub struct MapView<'a> {
     pub export: Option<ExportOrder>,
     pub pod_fraction: f32,
     pub shipments: &'a [Shipment],
+    pub orders: &'a [Option<ExportOrder>],
+    pub pending_pods: &'a [usize],
+    pub pod_caps: &'a [usize],
+    pub overflow_pods: &'a [usize],
+    pub editing_world: usize,
 }
 
 /// Render the interplanetary solar system view

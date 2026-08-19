@@ -113,6 +113,30 @@ pub(super) fn draw_drones(state: &PlanetState, metrics: HudMetrics, time: f32) {
             draw_circle(drone_x, drone_y + fall * 6.0, 2.0, Colors::ERROR);
         }
     }
+
+    // A queue is drawn at the first reserved tile rather than hidden in a
+    // counter: numbered chevrons tell the player which drone will get the
+    // junction next.
+    for (key, queue) in &state.drone_queues {
+        let pos = GridPos::new(key.0, key.1);
+        let (x, y) = grid_to_screen(pos, metrics);
+        for (order, id) in queue.iter().enumerate().take(6) {
+            draw_circle(
+                x + metrics.tile_size * 0.18 + order as f32 * 7.0,
+                y + metrics.tile_size * 0.18,
+                4.0,
+                with_alpha(Colors::ACCENT, 0.75),
+            );
+            macroquad_toolkit::ui::draw_ui_text(
+                &format!("{}", order + 1),
+                x + metrics.tile_size * 0.18 - 2.0 + order as f32 * 7.0,
+                y + metrics.tile_size * 0.18 + 3.0,
+                7.0,
+                Colors::BACKGROUND,
+            );
+            let _ = id;
+        }
+    }
 }
 
 /// Outline the network tiles carrying more traffic than they can pass, so a

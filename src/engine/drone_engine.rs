@@ -4,7 +4,7 @@ use super::GridPos;
 use serde::{Deserialize, Serialize};
 
 /// Resource types that can be gathered and transported
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ResourceType {
     Minerals,
     Energy,

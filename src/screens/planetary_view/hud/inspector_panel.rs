@@ -38,6 +38,8 @@ pub(super) fn draw(
     let mut tile_terrain = None;
     let mut tile_powered = false;
     let mut tile_dust = 0.0;
+    let mut tile_acid = 0.0;
+    let mut tile_heat = 0.0;
     let mut tile_harvest = None;
     let mut tile_bonus = None;
     if let Some(tile_pos) = display_pos {
@@ -50,6 +52,8 @@ pub(super) fn draw(
                 tile_pos_with_building = Some(tile_pos);
                 tile_powered = building.powered;
                 tile_dust = building.dust;
+                tile_acid = building.acid_wear;
+                tile_heat = building.heat;
             }
         }
     }
@@ -167,6 +171,23 @@ pub(super) fn draw(
             if waiting_out >= 1.0 {
                 status_text = format!("{} - {:.0} out", status_text, waiting_out);
             }
+            let queued = state
+                .drone_queues
+                .values()
+                .filter(|queue| {
+                    queue.iter().any(|id| {
+                        state
+                            .drones
+                            .drones()
+                            .iter()
+                            .any(|drone| drone.id == *id && drone.home == pos)
+                    })
+                })
+                .map(Vec::len)
+                .sum::<usize>();
+            if queued > 0 {
+                status_text = format!("{} - queue {}", status_text, queued);
+            }
         }
         // What a driver is throwing and what a pad is holding both matter more
         // than the word "Powered" does, and the Power row above already says
@@ -177,6 +198,15 @@ pub(super) fn draw(
                 BuildingType::LandingPad => status_text = state.pad_summary(tile_pos),
                 _ => {}
             }
+        }
+        if tile_acid > 0.0 {
+            status_text = format!("{} - acid {:.0}%", status_text, tile_acid);
+        }
+        if tile_heat > 0.0 {
+            status_text = format!(
+                "{} - heat {:.0}/{:.0}",
+                status_text, tile_heat, state.config.buildings.server_bank_heat_capacity
+            );
         }
         let status_color = if tile_building.is_some() && !tile_powered {
             error

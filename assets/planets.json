@@ -13,7 +13,10 @@
       "hazards": { "acid_rain": 0.0, "freeze": 0.0 },
       "terrain": { "mountain": 0.30, "forest": 0.0, "water": 0.0, "void": 0.10 },
       "banned_buildings": ["biomass_harvester"],
-      "arrival": "No water, no growth, no argument. The crust is ore that has not been collected yet."
+      "arrival": "No water, no growth, no argument. The crust is ore that has not been collected yet.",
+      "pending_pod_cap": 4,
+      "features": [{"id":"iron_belt","name":"Iron Belt","description":"A deterministic seam of dense metal.","width":0.28,"height":0.08,"seed_offset":11}],
+      "constraints": {"required_buildings": ["mass_driver"], "minimum_power_generation": 8.0}
     },
     {
       "id": "venus",
@@ -28,7 +31,10 @@
       "hazards": { "acid_rain": 1.0, "freeze": 0.0 },
       "terrain": { "mountain": 0.10, "forest": 0.0, "water": 0.0, "void": 0.28 },
       "banned_buildings": ["wind_turbine", "biomass_harvester"],
-      "arrival": "The sky is opaque and the ground is broken. Neither is a problem worth solving, only routing around."
+      "arrival": "The sky is opaque and the ground is broken. Neither is a problem worth solving, only routing around.",
+      "pending_pod_cap": 3,
+      "features": [{"id":"acid_sea","name":"Acid Sea","description":"A corrosive basin traced by the field seed.","width":0.32,"height":0.20,"seed_offset":19}],
+      "hazard_fields": [{"id":"storm_front","name":"Storm Front","hazard":"acid","center":[0.68,0.30],"radius":0.25,"strength":1.0}]
     },
     {
       "id": "mars",
@@ -43,7 +49,9 @@
       "hazards": { "acid_rain": 0.0, "freeze": 0.0 },
       "terrain": { "mountain": 0.15, "forest": 0.15, "water": 0.05, "void": 0.05 },
       "banned_buildings": [],
-      "arrival": "Iron oxide, thin wind, and nothing that objects. A reasonable place to start."
+      "arrival": "Iron oxide, thin wind, and nothing that objects. A reasonable place to start.",
+      "pending_pod_cap": 6,
+      "features": [{"id":"landing_crater","name":"Landing Crater","description":"The first impact and the first foothold.","width":0.20,"height":0.20,"seed_offset":29}]
     },
     {
       "id": "jupiter",
@@ -58,7 +66,10 @@
       "hazards": { "acid_rain": 0.0, "freeze": 0.35 },
       "terrain": { "mountain": 0.08, "forest": 0.05, "water": 0.20, "void": 0.15 },
       "banned_buildings": [],
-      "arrival": "A moon, strictly. The distinction matters to astronomers and to nobody here."
+      "arrival": "A moon, strictly. The distinction matters to astronomers and to nobody here.",
+      "pending_pod_cap": 5,
+      "features": [{"id":"ice_rift","name":"Ice Rift","description":"A cold seam where water tiles cluster.","width":0.24,"height":0.12,"seed_offset":37}],
+      "hazard_fields": [{"id":"polar_cold","name":"Polar Cold","hazard":"cold","center":[0.30,0.72],"radius":0.28,"strength":0.7}]
     },
     {
       "id": "saturn",
@@ -73,7 +84,11 @@
       "hazards": { "acid_rain": 0.0, "freeze": 0.6 },
       "terrain": { "mountain": 0.10, "forest": 0.20, "water": 0.15, "void": 0.10 },
       "banned_buildings": ["wind_turbine"],
-      "arrival": "Cold enough that the machinery complains. The complaints are logged and ignored."
+      "arrival": "Cold enough that the machinery complains. The complaints are logged and ignored.",
+      "pending_pod_cap": 4,
+      "features": [{"id":"ring_shadow","name":"Ring Shadow","description":"A long shadow under the orbital debris.","width":0.40,"height":0.08,"seed_offset":43}],
+      "hazard_fields": [{"id":"ring_cold","name":"Ring Cold","hazard":"cold","center":[0.62,0.62],"radius":0.35,"strength":0.9}],
+      "constraints": {"required_buildings": ["heater_node"], "minimum_power_generation": 10.0}
     }
   ]
 }

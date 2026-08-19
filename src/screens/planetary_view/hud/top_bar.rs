@@ -198,7 +198,7 @@ pub(super) fn draw(
         let (off_h, off_m) = format_hours_minutes(state.last_offline_seconds);
         let (sim_h, sim_m) = format_hours_minutes(state.last_offline_simulated);
         let banner_w = 440.0;
-        let banner_h = 36.0;
+        let banner_h = 48.0;
         let banner_x = (screen_w - banner_w) * 0.5;
         let banner_y = metrics.top_bar_height + 6.0;
         draw_hud_panel(
@@ -206,15 +206,40 @@ pub(super) fn draw(
             Rect::new(banner_x, banner_y, banner_w, banner_h),
             None,
         );
+        let capped_note = if state.last_offline_report.capped_seconds
+            < state.last_offline_report.elapsed_seconds
+        {
+            " | capped"
+        } else {
+            ""
+        };
+        let clock_note = if state.last_offline_report.tamper_guarded {
+            " | clock check"
+        } else {
+            ""
+        };
         let banner_text = format!(
-            "Offline {}h {}m | Simulated {}h {}m",
-            off_h, off_m, sim_h, sim_m
+            "Offline {}h {}m | Simulated {}h {}m{}{}",
+            off_h, off_m, sim_h, sim_m, capped_note, clock_note
         );
         draw_ui_text(
             &banner_text,
             banner_x + 16.0,
-            banner_y + 24.0,
-            14.0,
+            banner_y + 18.0,
+            12.0,
+            success,
+        );
+        draw_ui_text(
+            &format!(
+                "Gains: +{:.0} ore  +{:.0} alloy  +{:.0} data  power {:+.0}",
+                state.last_offline_report.minerals_gained,
+                state.last_offline_report.alloy_gained,
+                state.last_offline_report.data_gained,
+                state.last_offline_report.power_gained
+            ),
+            banner_x + 16.0,
+            banner_y + 36.0,
+            11.0,
             success,
         );
     }
@@ -250,13 +275,17 @@ pub(super) fn draw(
         );
         // The shutdown scales with the size of what collapsed, so the banner
         // has to say how long rather than leave the player guessing.
+        let source = state
+            .latest_collapse_source()
+            .map(|source| format!(" | {}", source))
+            .unwrap_or_default();
         let notice = if state.power_collapse_shutdown > 0.0 {
             format!(
-                "POWER COLLAPSE: drones offline for {:.0}s, data corrupted, research locked",
-                state.power_collapse_shutdown
+                "POWER COLLAPSE: drones offline for {:.0}s, data corrupted, research locked{}",
+                state.power_collapse_shutdown, source
             )
         } else {
-            "POWER COLLAPSE: data corrupted, research locked".to_string()
+            format!("POWER COLLAPSE: data corrupted, research locked{}", source)
         };
         draw_ui_text(&notice, banner_x + 16.0, banner_y + 24.0, 13.0, error);
     }

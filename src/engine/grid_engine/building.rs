@@ -1,6 +1,7 @@
 //! A building instance placed on the grid
 
 use crate::data;
+use crate::data::DustResponseConfig;
 
 use super::building_type::BuildingType;
 use super::grid_pos::GridPos;
@@ -16,6 +17,10 @@ pub struct Building {
     pub connected_to_core: bool, // For logistics validation
     #[serde(default)]
     pub dust: f32, // 0.0 to 100.0
+    #[serde(default)]
+    pub acid_wear: f32,
+    #[serde(default)]
+    pub heat: f32,
 }
 
 impl Building {
@@ -28,6 +33,8 @@ impl Building {
             efficiency: 1.0,
             connected_to_core: is_core,
             dust: 0.0,
+            acid_wear: 0.0,
+            heat: 0.0,
         }
     }
 
@@ -69,9 +76,27 @@ impl Building {
         }
     }
 
+    pub fn dust_efficiency_with(&self, response: &DustResponseConfig) -> f32 {
+        if self.dust >= response.stall_threshold {
+            0.0
+        } else if self.dust >= response.efficiency_threshold {
+            response.efficiency
+        } else {
+            1.0
+        }
+    }
+
     pub fn dust_drone_speed_multiplier(&self) -> f32 {
         if self.dust >= 50.0 {
             0.7
+        } else {
+            1.0
+        }
+    }
+
+    pub fn dust_drone_speed_multiplier_with(&self, response: &DustResponseConfig) -> f32 {
+        if self.dust >= response.speed_threshold {
+            response.speed_multiplier
         } else {
             1.0
         }
@@ -105,8 +130,24 @@ impl Building {
         }
     }
 
+    pub fn dust_power_leak_with(&self, response: &DustResponseConfig) -> f32 {
+        if self.dust >= response.leak_threshold && self.transmits_power() {
+            response.leak
+        } else {
+            0.0
+        }
+    }
+
     pub fn is_dust_stalled(&self) -> bool {
         self.dust >= 100.0
+    }
+
+    pub fn is_dust_stalled_with(&self, response: &DustResponseConfig) -> bool {
+        self.dust >= response.stall_threshold
+    }
+
+    pub fn is_overheated(&self, limit: f32) -> bool {
+        self.heat >= limit.max(0.0)
     }
 }
 

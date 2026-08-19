@@ -6,14 +6,18 @@
 
 mod achievements;
 mod actions;
+mod audio;
 mod camera;
 mod campaign;
 mod core_stage;
 mod game_state;
 mod launch;
 mod logistics;
+mod migrations;
 mod milestone;
 mod particles;
+#[cfg(test)]
+mod performance;
 mod persistence;
 mod progress;
 mod seed_ship;
@@ -23,6 +27,7 @@ mod stat_sheet;
 mod tutorial;
 
 pub use achievements::*;
+pub use audio::*;
 pub use camera::*;
 pub use campaign::*;
 pub use core_stage::*;

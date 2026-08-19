@@ -60,7 +60,7 @@ fn from_json_strings_falls_back_to_empty_on_malformed_json() {
 }
 
 #[test]
-#[should_panic(expected = "Missing building def")]
+#[should_panic(expected = "assets/buildings.json")]
 fn building_panics_for_unknown_id() {
     let data = sample_data();
     data.building("nonexistent");
@@ -72,4 +72,13 @@ fn research_tree_converts_node_defs_into_tree_nodes() {
     let tree = data.research_tree();
     assert_eq!(tree.nodes.len(), 1);
     assert_eq!(tree.nodes[0].id, "core");
+}
+
+#[test]
+fn recipes_can_name_more_than_one_carried_input() {
+    let recipe: RecipeDef = serde_json::from_str(
+        r#"{"inputs":{"minerals":2.0,"alloy":1.0},"carried_inputs":["minerals","alloy"],"carried":"alloy"}"#,
+    )
+    .unwrap();
+    assert_eq!(recipe.carried_ids(), ["minerals", "alloy"]);
 }

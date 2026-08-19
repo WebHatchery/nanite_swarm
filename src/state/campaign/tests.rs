@@ -1,6 +1,8 @@
 use super::*;
 use crate::engine::{BuildingType, GridPos};
 
+mod directives;
+
 fn campaign() -> Campaign {
     Campaign::new(GameConfig::default(), 42)
 }
@@ -143,11 +145,18 @@ fn venus_corrodes_the_network_and_leaves_everything_else_alone() {
         venus.step(1.0, false);
     }
 
-    let dust_at = |state: &PlanetState, pos: GridPos| {
-        state.grid.get(pos).unwrap().building.as_ref().unwrap().dust
+    let acid_at = |state: &PlanetState, pos: GridPos| {
+        state
+            .grid
+            .get(pos)
+            .unwrap()
+            .building
+            .as_ref()
+            .unwrap()
+            .acid_wear
     };
     // The conduit carries the network, so the acid goes for it.
-    assert!(dust_at(&venus, conduit) > dust_at(&venus, drill));
+    assert!(acid_at(&venus, conduit) > acid_at(&venus, drill));
 }
 
 #[test]
@@ -180,12 +189,21 @@ fn a_shield_generator_protects_the_run_beside_it_and_not_the_far_one() {
         venus.step(1.0, false);
     }
 
-    let dust_at = |pos: GridPos| venus.grid.get(pos).unwrap().building.as_ref().unwrap().dust;
+    let acid_at = |pos: GridPos| {
+        venus
+            .grid
+            .get(pos)
+            .unwrap()
+            .building
+            .as_ref()
+            .unwrap()
+            .acid_wear
+    };
     assert!(
-        dust_at(sheltered) < dust_at(exposed),
+        acid_at(sheltered) < acid_at(exposed),
         "sheltered conduit took {} , exposed took {}",
-        dust_at(sheltered),
-        dust_at(exposed)
+        acid_at(sheltered),
+        acid_at(exposed)
     );
 }
 
@@ -226,12 +244,21 @@ fn the_drawn_coverage_radius_is_the_one_the_acid_respects() {
         venus.step(1.0, false);
     }
 
-    let dust_at = |pos: GridPos| venus.grid.get(pos).unwrap().building.as_ref().unwrap().dust;
+    let acid_at = |pos: GridPos| {
+        venus
+            .grid
+            .get(pos)
+            .unwrap()
+            .building
+            .as_ref()
+            .unwrap()
+            .acid_wear
+    };
     assert!(
-        dust_at(inside) < dust_at(outside),
+        acid_at(inside) < acid_at(outside),
         "the tile at exactly the drawn radius took {} and the one past it took {}",
-        dust_at(inside),
-        dust_at(outside)
+        acid_at(inside),
+        acid_at(outside)
     );
 }
 
@@ -729,50 +756,4 @@ fn a_launch_at_an_already_colonized_world_is_refused() {
     assert!(!campaign.launch_seed_ship(STARTING_PLANET));
     // The ship is still on the pad.
     assert!(campaign.current().seed_ship.is_ready_to_launch());
-}
-
-#[test]
-fn a_completed_directive_pays_out_and_rotates() {
-    let mut campaign = campaign();
-    campaign.directive.completed = true;
-    campaign.directive.reward_data = 25.0;
-    let before = campaign.current().resources.data;
-
-    campaign.update_directive(0.1);
-
-    assert_eq!(campaign.current().resources.data, before + 25.0);
-    assert!(!campaign.directive.completed);
-    assert_eq!(campaign.directive_tier, 1);
-}
-
-#[test]
-fn a_directive_that_is_met_says_so_instead_of_rotating_in_silence() {
-    let mut campaign = campaign();
-    campaign.directive.completed = true;
-    campaign.directive.reward_data = 25.0;
-    let goal = campaign.directive.description.clone();
-
-    campaign.update_directive(0.1);
-
-    let announced = campaign.current().notifications.get_notifications();
-    assert_eq!(announced.len(), 1, "the directive rotated in silence");
-    assert!(
-        announced[0].message.contains(&goal),
-        "the toast did not say which directive: {}",
-        announced[0].message
-    );
-    assert!(announced[0].message.contains("25"), "no reward mentioned");
-}
-
-#[test]
-fn a_directive_that_runs_out_of_time_is_reported_as_a_loss() {
-    let mut campaign = campaign();
-    let goal = campaign.directive.description.clone();
-    // Push it past its window without ever meeting it.
-    campaign.update_directive(crate::directives::rotation_seconds() + 1.0);
-
-    let announced = campaign.current().notifications.get_notifications();
-    assert_eq!(announced.len(), 1);
-    assert!(announced[0].message.contains("lapsed"));
-    assert!(announced[0].message.contains(&goal));
 }

@@ -12,6 +12,10 @@ impl PlanetState {
             if !self.is_building_unlocked(building_type) {
                 return false;
             }
+            if !self.constraints_allow_building(building_type) {
+                self.notifications.warning("Planet constraint not met");
+                return false;
+            }
             let (mineral_cost, energy_cost) = building_type.cost();
 
             if !self.resources.can_afford(mineral_cost, energy_cost) {
@@ -32,14 +36,30 @@ impl PlanetState {
 
                 // Update power grid
                 self.grid.update_power_grid();
+                self.network_revision = self.network_revision.wrapping_add(1);
                 self.power_balance = self.net_power();
                 self.update_achievements();
+                if matches!(
+                    building_type,
+                    BuildingType::Drill | BuildingType::Smelter | BuildingType::MassDriver
+                ) && self
+                    .grid
+                    .find_core()
+                    .and_then(|core| crate::engine::route_over_network(&self.grid, pos, core))
+                    .is_none()
+                {
+                    self.notifications
+                        .warning("Producer placed on open ground - connect a conduit route");
+                }
 
                 self.placement_anims.push(PlacementAnim {
                     position: pos,
                     timer: 0.3,
                 });
                 self.spawn_place_burst(pos);
+                self.emit_audio(super::audio::AudioEvent::Placement);
+                self.undo_history
+                    .push(super::game_state::UndoEntry::Placed(pos));
 
                 return true;
             }
@@ -77,6 +97,8 @@ impl PlanetState {
             if self.grid.place_building(pos, BuildingType::Conduit) {
                 self.resources.spend(mineral_cost, energy_cost);
                 self.grid.reveal_around(pos, 3);
+                self.undo_history
+                    .push(super::game_state::UndoEntry::Placed(pos));
                 placed_any = true;
             }
         }
@@ -84,6 +106,7 @@ impl PlanetState {
         if placed_any {
             self.grid.update_power_grid();
             self.power_balance = self.net_power();
+            self.network_revision = self.network_revision.wrapping_add(1);
         }
 
         placed_any
@@ -113,14 +136,24 @@ impl PlanetState {
             // thing built here inherits a stranger's cargo.
             self.output_buffers.remove(&(pos.x, pos.y));
             self.input_buffers.remove(&(pos.x, pos.y));
+            self.input_hoppers.remove(&(pos.x, pos.y));
             self.pod_loads.remove(&(pos.x, pos.y));
             self.pad_cargo.remove(&(pos.x, pos.y));
+            self.drone_queues.retain(|_, queue| {
+                queue.retain(|id| self.drones.drones().iter().any(|drone| drone.id == *id));
+                true
+            });
+            self.route_reservations.clear();
 
             self.resources.minerals += mineral_cost * refund_ratio;
             self.resources.energy += energy_cost * refund_ratio;
 
             self.grid.update_power_grid();
             self.power_balance = self.net_power();
+            self.network_revision = self.network_revision.wrapping_add(1);
+            self.emit_audio(super::audio::AudioEvent::Demolition);
+            self.undo_history
+                .push(super::game_state::UndoEntry::Removed(building_type, pos));
             return true;
         }
 
@@ -159,6 +192,13 @@ impl PlanetState {
 
             self.resources.minerals += minerals;
             self.resources.biomass += biomass;
+            self.spawn_harvest_burst(pos);
+            self.emit_audio(super::audio::AudioEvent::Harvest);
+
+            self.notifications.info(format!(
+                "Harvested {:.0} minerals and {:.0} biomass",
+                minerals, biomass
+            ));
 
             true
         } else {
@@ -194,6 +234,137 @@ impl PlanetState {
         }
 
         false
+    }
+
+    pub fn save_blueprint(&mut self, anchor: GridPos, positions: &[GridPos]) -> bool {
+        let entries: Vec<_> = positions
+            .iter()
+            .filter_map(|pos| {
+                self.grid
+                    .get(*pos)
+                    .and_then(|tile| tile.building.as_ref())
+                    .map(|building| super::game_state::BlueprintEntry {
+                        offset: (pos.x - anchor.x, pos.y - anchor.y),
+                        building_type: building.building_type,
+                    })
+            })
+            .collect();
+        if entries.is_empty() {
+            return false;
+        }
+        self.blueprint = entries;
+        self.notifications.info("Blueprint saved");
+        true
+    }
+
+    pub fn begin_box_select(&mut self) {
+        self.box_select_mode = true;
+        self.box_select_start = None;
+        self.box_selected.clear();
+        self.notifications
+            .info("Drag across the grid, or tap two opposite corners");
+    }
+
+    pub fn finish_box_select(&mut self, end: GridPos) {
+        let Some(start) = self.box_select_start.take() else {
+            self.box_select_start = Some(end);
+            self.notifications.info("Tap the opposite corner");
+            return;
+        };
+        let min_x = start.x.min(end.x);
+        let max_x = start.x.max(end.x);
+        let min_y = start.y.min(end.y);
+        let max_y = start.y.max(end.y);
+        self.box_selected = self
+            .grid
+            .iter_tiles()
+            .filter_map(|(pos, tile)| {
+                (pos.x >= min_x
+                    && pos.x <= max_x
+                    && pos.y >= min_y
+                    && pos.y <= max_y
+                    && tile.building.is_some())
+                .then_some(pos)
+            })
+            .collect();
+        self.box_select_mode = false;
+        self.selected_tile = self.box_selected.first().copied();
+        self.notifications
+            .info(format!("Selected {} buildings", self.box_selected.len()));
+    }
+
+    pub fn place_blueprint(&mut self, anchor: GridPos) -> usize {
+        let blueprint = self.blueprint.clone();
+        let mut placed = 0;
+        for entry in blueprint {
+            let pos = GridPos::new(anchor.x + entry.offset.0, anchor.y + entry.offset.1);
+            self.select_building(entry.building_type);
+            if self.try_place_building(pos) {
+                placed += 1;
+            }
+        }
+        if placed < self.blueprint.len() {
+            self.notifications.warning(format!(
+                "Blueprint placed {}/{}; invalid or unaffordable entries skipped",
+                placed,
+                self.blueprint.len()
+            ));
+        }
+        placed
+    }
+
+    pub fn begin_relocation(&mut self, source: GridPos) -> bool {
+        if self
+            .grid
+            .get(source)
+            .and_then(|tile| tile.building.as_ref())
+            .is_none()
+        {
+            return false;
+        }
+        self.relocation_source = Some(source);
+        self.notifications
+            .info("Relocation armed - tap a destination tile");
+        true
+    }
+
+    pub fn relocate_building(&mut self, source: GridPos, destination: GridPos) -> bool {
+        let Some(building_type) = self
+            .grid
+            .get(source)
+            .and_then(|tile| tile.building.as_ref())
+            .map(|building| building.building_type)
+        else {
+            return false;
+        };
+        if !self.grid.can_place_building(destination, building_type) {
+            self.notifications
+                .warning("Relocation destination is invalid");
+            return false;
+        }
+        if !self.try_sell_building(source) {
+            return false;
+        }
+        self.select_building(building_type);
+        self.try_place_building(destination)
+    }
+
+    pub fn undo_last_action(&mut self) -> bool {
+        let Some(action) = self.undo_history.pop() else {
+            return false;
+        };
+        let success = match action {
+            super::game_state::UndoEntry::Placed(pos) => self.try_sell_building(pos),
+            super::game_state::UndoEntry::Removed(kind, pos) => {
+                self.select_building(kind);
+                self.try_place_building(pos)
+            }
+        };
+        if success {
+            self.undo_history.pop();
+            self.notifications.info("Last placement action undone");
+        }
+        success
     }
 }
 

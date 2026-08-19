@@ -40,6 +40,44 @@ pub struct PlacementAnim {
     pub position: GridPos,
     pub timer: f32,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlanetFeature {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub bounds: (f32, f32, f32, f32),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CollapseRecord {
+    pub source: String,
+    pub building: Option<BuildingType>,
+    pub position: Option<GridPos>,
+    pub world_time: f64,
+}
+
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+pub struct GraphSample {
+    pub power_produced: f32,
+    pub power_consumed: f32,
+    pub alloy_produced: f32,
+    pub alloy_consumed: f32,
+    pub data_produced: f32,
+    pub data_consumed: f32,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct BlueprintEntry {
+    pub offset: (i32, i32),
+    pub building_type: BuildingType,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum UndoEntry {
+    Placed(GridPos),
+    Removed(BuildingType, GridPos),
+}
 /// Resources held by the player
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Resources {
@@ -120,6 +158,8 @@ pub struct PlanetState {
     /// Which campaign slot this world is, so it can find its own definition.
     #[serde(default = "default_planet_index")]
     pub planet_index: usize,
+    #[serde(default)]
+    pub map_seed: u64,
     pub resources: Resources,
     pub grid: Grid,
     pub drones: DroneManager,
@@ -150,6 +190,8 @@ pub struct PlanetState {
     /// What this world does to the machinery standing on it.
     #[serde(default)]
     pub hazards: PlanetHazards,
+    #[serde(default)]
+    pub features: Vec<PlanetFeature>,
     /// The megastructure this world is being converted into.
     #[serde(default)]
     pub seed_ship: SeedShip,
@@ -157,6 +199,8 @@ pub struct PlanetState {
     /// the swarm leaves: a world left behind keeps feeding the one it left for.
     #[serde(default)]
     pub export: Option<super::shipping::ExportOrder>,
+    #[serde(default)]
+    pub export_cooldown: f32,
     /// How much each driver has loaded into the pod it is filling.
     #[serde(default)]
     pub pod_loads: std::collections::HashMap<(i32, i32), f32>,
@@ -212,6 +256,8 @@ pub struct PlanetState {
     #[serde(skip, default)]
     pub restored_from_backup: bool,
     #[serde(skip, default)]
+    pub restored_from_backup_generation: u8,
+    #[serde(skip, default)]
     pub forest_harvested_count: i32,
     /// Persisted: a tutorial that restarts every time the game is loaded is
     /// worse than none.
@@ -257,6 +303,8 @@ pub struct PlanetState {
     /// Where the Records screen's log is scrolled to.
     #[serde(skip, default)]
     pub log_scroll: ScrollArea,
+    #[serde(skip, default)]
+    pub records_scroll: ScrollArea,
     /// Things worth telling the player about as they happen. Achievements,
     /// finished research and Seed Ship stages all used to land silently.
     #[serde(skip, default)]
@@ -273,9 +321,44 @@ pub struct PlanetState {
     // Ore delivered to a processing building and not yet consumed
     #[serde(default)]
     pub input_buffers: std::collections::HashMap<(i32, i32), f32>,
+    /// Per-resource hopper state. `input_buffers` remains as a total for
+    /// readable legacy saves and compact inspector summaries.
+    #[serde(default)]
+    pub input_hoppers:
+        std::collections::HashMap<(i32, i32), std::collections::HashMap<ResourceType, f32>>,
     // Drones currently crossing each network tile, rebuilt every tick
     #[serde(skip)]
     pub traffic: std::collections::HashMap<(i32, i32), u32>,
+    /// Incremented only when the network topology changes. Path caches and
+    /// reservations use this instead of invalidating on every simulation tick.
+    #[serde(default)]
+    pub network_revision: u64,
+    #[serde(skip, default)]
+    pub route_cache_revision: u64,
+    #[serde(skip, default)]
+    pub drone_queues: std::collections::HashMap<(i32, i32), Vec<u32>>,
+    #[serde(skip, default)]
+    pub route_reservations: std::collections::HashMap<(i32, i32), f32>,
+    #[serde(default)]
+    pub collapse_history: Vec<CollapseRecord>,
+    #[serde(default)]
+    pub graph_samples: Vec<GraphSample>,
+    #[serde(skip, default)]
+    pub last_offline_report: super::progress::OfflineReport,
+    #[serde(skip, default)]
+    pub audio_events: Vec<super::audio::AudioEvent>,
+    #[serde(default)]
+    pub blueprint: Vec<BlueprintEntry>,
+    #[serde(skip, default)]
+    pub relocation_source: Option<GridPos>,
+    #[serde(skip, default)]
+    pub box_select_mode: bool,
+    #[serde(skip, default)]
+    pub box_select_start: Option<GridPos>,
+    #[serde(skip, default)]
+    pub box_selected: Vec<GridPos>,
+    #[serde(skip, default)]
+    pub undo_history: Vec<UndoEntry>,
 }
 
 impl PlanetState {
@@ -311,6 +394,7 @@ impl PlanetState {
         let mut state = Self {
             name: name.to_string(),
             planet_index,
+            map_seed: seed,
             resources: Resources {
                 energy: config.resources.starting_energy,
                 minerals: config.resources.starting_minerals,
@@ -353,6 +437,7 @@ impl PlanetState {
             save_notice_timer: 0.0,
             save_failed: false,
             restored_from_backup: false,
+            restored_from_backup_generation: 0,
             forest_harvested_count: 0,
             tutorial_step: 0,
             tutorial_hidden: false,
@@ -364,8 +449,10 @@ impl PlanetState {
                 .filter_map(|id| BuildingType::from_id(id))
                 .collect(),
             hazards: def.hazards,
+            features: generated_features(def, seed),
             seed_ship: SeedShip::default(),
             export: None,
+            export_cooldown: 0.0,
             pod_loads: std::collections::HashMap::new(),
             launched_pods: Vec::new(),
             pad_cargo: std::collections::HashMap::new(),
@@ -383,17 +470,54 @@ impl PlanetState {
             show_help: false,
             build_palette_scroll: ScrollArea::new(),
             log_scroll: ScrollArea::new(),
+            records_scroll: ScrollArea::new(),
             notifications: NotificationManager::default(),
             particles: ParticleSystem::new(),
             particle_timer: 0.0,
             placement_anims: Vec::new(),
             output_buffers: std::collections::HashMap::new(),
             input_buffers: std::collections::HashMap::new(),
+            input_hoppers: std::collections::HashMap::new(),
             traffic: std::collections::HashMap::new(),
+            network_revision: 0,
+            route_cache_revision: 0,
+            drone_queues: std::collections::HashMap::new(),
+            route_reservations: std::collections::HashMap::new(),
+            collapse_history: Vec::new(),
+            graph_samples: Vec::new(),
+            last_offline_report: super::progress::OfflineReport::default(),
+            audio_events: Vec::new(),
+            blueprint: Vec::new(),
+            relocation_source: None,
+            box_select_mode: false,
+            box_select_start: None,
+            box_selected: Vec::new(),
+            undo_history: Vec::new(),
         };
         state.refresh_stats();
         state
     }
+}
+
+fn generated_features(def: &crate::data::PlanetDef, seed: u64) -> Vec<PlanetFeature> {
+    def.features
+        .iter()
+        .map(|feature| {
+            let x = macroquad_toolkit::noise::seeded_value(seed ^ feature.seed_offset, 3, 7, 5.0);
+            let y = macroquad_toolkit::noise::seeded_value(seed ^ feature.seed_offset, 11, 13, 5.0);
+            PlanetFeature {
+                id: feature.id.clone(),
+                name: feature.name.clone(),
+                description: feature.description.clone(),
+                bounds: (
+                    (x * (1.0 - feature.width)).clamp(0.0, 1.0 - feature.width),
+                    (y * (1.0 - feature.height)).clamp(0.0, 1.0 - feature.height),
+                    feature.width,
+                    feature.height,
+                ),
+            }
+        })
+        .collect()
 }
 
 impl PlanetState {
@@ -410,6 +534,10 @@ impl PlanetState {
 
     /// Open up every building whose prerequisite research is done.
     pub fn refresh_building_unlocks(&mut self) {
+        // This is deliberately a rebuild, not an additive sync. Removing a
+        // research unlock in a migrated/debug campaign must not leave a stale
+        // building selectable on every world forever.
+        self.unlocked_buildings.clear();
         for def in &crate::data::game_data().buildings {
             let Some(building_type) = BuildingType::from_id(&def.id) else {
                 continue;

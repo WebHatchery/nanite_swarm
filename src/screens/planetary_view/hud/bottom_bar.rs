@@ -2,7 +2,7 @@
 
 use crate::data::UiTheme;
 use crate::state::PlanetState;
-use crate::ui::{color_from_rgba, draw_hud_button, draw_hud_panel};
+use crate::ui::{color_from_rgba, draw_hud_button, draw_hud_panel, Colors};
 use macroquad::prelude::*;
 use macroquad_toolkit::colors::with_alpha;
 use macroquad_toolkit::ui::draw_ui_text;
@@ -18,6 +18,7 @@ pub(super) enum ClockAction {
     TogglePause,
     Faster,
     Slower,
+    NextEvent,
 }
 
 #[must_use]
@@ -144,7 +145,8 @@ pub(super) fn draw(
             ("PAUSE", "Tap II"),
         ]
     };
-    let slot_w = controls_w / controls.len() as f32;
+    let text_controls_w = (controls_w - 70.0).max(120.0);
+    let slot_w = text_controls_w / controls.len() as f32;
     for (index, (label, hint)) in controls.iter().enumerate() {
         let x = controls_x + index as f32 * slot_w + 12.0;
         draw_ui_text(label, x, control_y, 10.0, text);
@@ -160,6 +162,18 @@ pub(super) fn draw(
                 color_from_rgba(&theme.colors.border),
             );
         }
+    }
+    let mut clock = ClockAction::None;
+    let next_event = state.next_interesting_event();
+    let next_label = next_event
+        .map(|event| format!("NEXT {:.0}s", event.seconds))
+        .unwrap_or_else(|| "NEXT".to_string());
+    if draw_hud_button(
+        theme,
+        Rect::new(controls_x + controls_w - 60.0, bottom_y + 10.0, 52.0, 22.0),
+        &next_label,
+    ) {
+        clock = ClockAction::NextEvent;
     }
 
     draw_hud_panel(
@@ -196,7 +210,6 @@ pub(super) fn draw(
         16.0,
         text,
     );
-    let mut clock = ClockAction::None;
     let speed_x = status_x + status_w * 0.36;
     draw_ui_text("GAME SPEED", speed_x, bottom_y + 27.0, 9.0, dim);
     // The readout sits between the two buttons, so a long word has to come
@@ -204,7 +217,15 @@ pub(super) fn draw(
     let (speed_label, speed_color, speed_size) = if state.paused {
         ("PAUSED".to_string(), colors.warning, 12.0)
     } else {
-        (format!("{:.1}x", state.time_scale), text, 16.0)
+        (
+            if state.time_scale >= 8.0 {
+                "8.0x MAX".to_string()
+            } else {
+                format!("{:.1}x", state.time_scale)
+            },
+            text,
+            16.0,
+        )
     };
     draw_ui_text(
         &speed_label,
@@ -363,7 +384,26 @@ fn draw_throughput(state: &PlanetState, area: Rect, line: Color, text: Color) {
 
     // Always measured against zero, so a flat line at the bottom reads as
     // "nothing is arriving" rather than being stretched to fill the box.
-    let peak = state.throughput.max().unwrap_or(0.0).max(0.001);
+    let graph_peak = state
+        .graph_samples
+        .iter()
+        .flat_map(|sample| {
+            [
+                sample.power_produced,
+                sample.power_consumed,
+                sample.alloy_produced,
+                sample.alloy_consumed,
+                sample.data_produced,
+                sample.data_consumed,
+            ]
+        })
+        .fold(0.0, f32::max);
+    let peak = state
+        .throughput
+        .max()
+        .unwrap_or(0.0)
+        .max(graph_peak)
+        .max(0.001);
     let plot_h = area.h - 10.0;
     let step = area.w / buckets.len().max(2) as f32;
 
@@ -383,10 +423,76 @@ fn draw_throughput(state: &PlanetState, area: Rect, line: Color, text: Color) {
 
     let latest = state.throughput.last().unwrap_or(0.0);
     draw_ui_text(
-        &format!("{:.1} ORE/S  PEAK {:.1}", latest, peak),
+        &format!(
+            "O {:.1}  P {:.1}  A {:.1}  D {:.1}",
+            latest,
+            state.power_balance,
+            state.alloy_rate(),
+            state.config.resources.core_data_rate
+        ),
         area.x + 4.0,
         area.y + 9.0,
         9.0,
         text,
+    );
+    if !state.graph_samples.is_empty() {
+        draw_graph_series(state, area, peak, line);
+    }
+    let legend = [
+        ("P+", Colors::PRIMARY_SOFT),
+        ("P-", Colors::ERROR),
+        ("A+", Colors::ACCENT),
+        ("A-", Colors::WARNING),
+        ("D+", Colors::PRIMARY),
+        ("D-", Colors::TEXT_DIM),
+    ];
+    for (index, (label, color)) in legend.into_iter().enumerate() {
+        draw_ui_text(
+            label,
+            area.x + 4.0 + index as f32 * 23.0,
+            area.bottom() - 3.0,
+            8.0,
+            color,
+        );
+    }
+}
+
+fn draw_graph_series(state: &PlanetState, area: Rect, peak: f32, line: Color) {
+    let count = state.graph_samples.len().max(2) as f32;
+    let step = area.w / count;
+    let series = [
+        (0usize, Colors::PRIMARY_SOFT),
+        (1, Colors::ERROR),
+        (2, Colors::ACCENT),
+        (3, Colors::WARNING),
+        (4, Colors::PRIMARY),
+        (5, Colors::TEXT_DIM),
+    ];
+    for (kind, color) in series {
+        for (index, pair) in state.graph_samples.windows(2).enumerate() {
+            let x0 = area.x + index as f32 * step;
+            let x1 = x0 + step;
+            let read = |sample: &crate::state::GraphSample| match kind {
+                0 => sample.power_produced,
+                1 => sample.power_consumed,
+                2 => sample.alloy_produced,
+                3 => sample.alloy_consumed,
+                4 => sample.data_produced,
+                _ => sample.data_consumed,
+            };
+            let y0 =
+                area.y + area.h - 2.0 - (read(&pair[0]) / peak).clamp(0.0, 1.0) * (area.h - 10.0);
+            let y1 =
+                area.y + area.h - 2.0 - (read(&pair[1]) / peak).clamp(0.0, 1.0) * (area.h - 10.0);
+            draw_line(x0, y0, x1, y1, 0.7, with_alpha(color, 0.55));
+        }
+    }
+    draw_line(
+        area.x + 4.0,
+        area.bottom() - 5.0,
+        area.x + 14.0,
+        area.bottom() - 5.0,
+        1.0,
+        line,
     );
 }

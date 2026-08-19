@@ -5,6 +5,7 @@
 //! arrival: it lives in its slot for the whole campaign, and travelling only
 //! changes which slot is in front of the player.
 
+use macroquad_toolkit::notifications::LoggedNotification;
 use serde::{Deserialize, Serialize};
 
 use crate::data::GameConfig;
@@ -15,6 +16,14 @@ use super::game_state::{PlanetState, ResearchProgress};
 pub const PLANET_COUNT: usize = 5;
 /// Mars, per the GDD's Zone 1.
 pub const STARTING_PLANET: usize = 2;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DirectiveRecord {
+    pub description: String,
+    pub completed: bool,
+    pub reward_data: f32,
+    pub tier: i32,
+}
 
 /// Step length for worlds the player is not looking at. Coarse on purpose: a
 /// left-behind world only has to keep producing, not animate.
@@ -30,10 +39,16 @@ const SAVE_NOTICE_SECONDS: f32 = 3.0;
 /// Every planet the swarm holds, plus which one it is currently standing on.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Campaign {
+    /// Player-visible save slot. The campaign owns this label so a save can
+    /// never silently change slots when loaded by another menu state.
+    #[serde(default = "default_slot_name")]
+    pub slot_name: String,
     pub(super) planets: [Option<PlanetState>; PLANET_COUNT],
     current: usize,
     seed: u64,
     pub directive: Directive,
+    #[serde(default)]
+    pub directive_history: Vec<DirectiveRecord>,
     /// What the swarm knows. One copy for the whole campaign: research is the
     /// swarm's, not a world's, and a world left behind was simulating with a
     /// stale stat sheet while this lived on each planet separately.
@@ -50,22 +65,36 @@ pub struct Campaign {
     /// Everything a Mass Driver has thrown and nothing has caught yet.
     #[serde(default)]
     pub(super) shipments: Vec<super::shipping::Shipment>,
+    /// One recoverable log for the campaign, regardless of which world raised
+    /// the event. It survives travel and save/load with the campaign itself.
+    #[serde(default)]
+    pub toast_history: Vec<LoggedNotification>,
+    #[serde(skip, default)]
+    notification_cursors: [usize; PLANET_COUNT],
+}
+
+fn default_slot_name() -> String {
+    "slot_1".to_string()
 }
 
 impl Campaign {
     /// Start a campaign: one colonized world, the rest untouched.
     pub fn new(config: GameConfig, seed: u64) -> Self {
         let mut campaign = Self {
+            slot_name: default_slot_name(),
             planets: std::array::from_fn(|_| None),
             current: STARTING_PLANET,
             seed,
             directive: pick_directive(0),
+            directive_history: Vec::new(),
             research: ResearchProgress::default(),
             directive_timer: 0.0,
             directive_tier: 0,
             since_save: 0.0,
             background_accumulator: 0.0,
             shipments: Vec::new(),
+            toast_history: Vec::new(),
+            notification_cursors: [0; PLANET_COUNT],
         };
         campaign.planets[STARTING_PLANET] = Some(campaign.generate(STARTING_PLANET, &config));
         campaign
@@ -77,16 +106,20 @@ impl Campaign {
         let mut planets: [Option<PlanetState>; PLANET_COUNT] = std::array::from_fn(|_| None);
         planets[STARTING_PLANET] = Some(planet);
         Self {
+            slot_name: default_slot_name(),
             planets,
             current: STARTING_PLANET,
             seed,
             directive: pick_directive(0),
+            directive_history: Vec::new(),
             research: ResearchProgress::default(),
             directive_timer: 0.0,
             directive_tier: 0,
             since_save: 0.0,
             background_accumulator: 0.0,
             shipments: Vec::new(),
+            toast_history: Vec::new(),
+            notification_cursors: [0; PLANET_COUNT],
         }
     }
 
@@ -99,6 +132,25 @@ impl Campaign {
         let research = self.research.clone();
         for planet in self.planets.iter_mut().flatten() {
             planet.adopt_research(&research);
+        }
+    }
+
+    /// Merge each world's event stream into the campaign log. The cursors are
+    /// transient because a loaded campaign starts by replaying only entries
+    /// raised after load; the durable copy is `toast_history`.
+    pub fn sync_notification_history(&mut self) {
+        for (index, slot) in self.planets.iter().enumerate() {
+            let Some(planet) = slot.as_ref() else {
+                continue;
+            };
+            let history = planet.notifications.history();
+            let cursor = self.notification_cursors[index].min(history.len());
+            self.toast_history.extend(history[cursor..].iter().cloned());
+            self.notification_cursors[index] = history.len();
+        }
+        if self.toast_history.len() > 400 {
+            let trim = self.toast_history.len() - 400;
+            self.toast_history.drain(0..trim);
         }
     }
 
@@ -185,6 +237,18 @@ impl Campaign {
 
     pub fn current_index(&self) -> usize {
         self.current
+    }
+
+    pub fn set_slot_name(&mut self, slot_name: impl Into<String>) {
+        self.slot_name = slot_name.into();
+    }
+
+    pub fn apply_preferred_speed(&mut self, speed_index: i32) {
+        let index = speed_index.clamp(0, (super::TIME_SCALES.len() - 1) as i32) as usize;
+        let speed = super::TIME_SCALES[index];
+        for planet in self.planets.iter_mut().flatten() {
+            planet.time_scale = speed;
+        }
     }
 
     pub fn current(&self) -> &PlanetState {
@@ -336,8 +400,18 @@ impl Campaign {
                 None
             };
             let completed = self.directive.completed;
+            self.directive_history.push(DirectiveRecord {
+                description: self.directive.description.clone(),
+                completed,
+                reward_data: reward,
+                tier: self.directive_tier,
+            });
+            if self.directive_history.len() > 100 {
+                self.directive_history.remove(0);
+            }
             if let Some(message) = announcement {
                 let planet = self.current_mut();
+                planet.emit_audio(super::audio::AudioEvent::Directive);
                 if completed {
                     planet.notifications.success(message);
                 } else {

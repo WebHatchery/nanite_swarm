@@ -8,6 +8,9 @@
 use crate::state::{Campaign, LaunchSequence};
 use crate::{data, engine, state, Game, GamePhase};
 
+#[allow(dead_code)]
+pub const REQUIRED_CAPTURE_SCENES: [&str; 3] = ["mainmenu", "research", "logistics"];
+
 impl Game {
     /// Seed a specific scene for the screenshot harness.
     pub fn begin_capture_scene(&mut self, scene: &str) {
@@ -527,6 +530,7 @@ impl Game {
         planet.export = Some(state::ExportOrder {
             target,
             cargo: ResourceType::Minerals,
+            ..state::ExportOrder::default()
         });
         let capacity = planet.config.mass_driver.pod_capacity;
         planet
@@ -547,6 +551,9 @@ impl Game {
                 amount: capacity,
                 remaining: transit * (1.0 - spent),
                 transit,
+                target_pad: None,
+                overflow: false,
+                priority: 0,
             });
         }
         // Something on the far end to catch them, or the panel is a warning
@@ -614,3 +621,6 @@ impl Game {
         state.grid.update_power_grid();
     }
 }
+
+#[cfg(test)]
+mod tests;

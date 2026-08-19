@@ -17,9 +17,6 @@ use super::game_state::PlanetState;
 /// a multiple of a drone load. Past this it simply stops producing: a building
 /// that outruns its logistics is the pressure, not free storage.
 const PAD_LOADS: f32 = 3.0;
-/// How many drone loads a processing building will let pile up in its hopper
-/// before drones start taking ore elsewhere.
-const HOPPER_LOADS: f32 = 3.0;
 
 impl PlanetState {
     /// Run one logistics tick: re-check live routes, then dispatch drills.
@@ -41,6 +38,11 @@ impl PlanetState {
         self.update_drills(delta_time);
         self.dispatch_producers(core);
         self.update_traffic();
+        for remaining in self.route_reservations.values_mut() {
+            *remaining = (*remaining - delta_time).max(0.0);
+        }
+        self.route_reservations
+            .retain(|_, remaining| *remaining > 0.0);
     }
 
     /// Whether a part-full pad is worth a trip.
@@ -49,9 +51,33 @@ impl PlanetState {
     /// holds a worthwhile share of a load — otherwise a crew would trickle out
     /// single grains of ore.
     fn worth_a_partial_load(&self, carried: f32, load: f32, route_len: usize) -> bool {
-        let config = &self.config.buildings;
-        route_len as f32 >= config.partial_load_min_route
-            && carried >= load * config.partial_load_min_share
+        if carried <= 0.0 || load <= 0.0 {
+            return false;
+        }
+        // Keep the old data field as an explicit "never partial" switch for
+        // compatibility with balance fixtures; ordinary gameplay uses the
+        // derived timing below and does not compare against a tile threshold.
+        if self.config.buildings.partial_load_min_route >= 1_000.0 {
+            return false;
+        }
+        let drill_rate = self.drill_output_rate().max(0.001);
+        let fill_time = load / drill_rate;
+        // Include the pickup/drop-off hop in the route estimate. The path
+        // stores network tiles, while a real trip also leaves the producer
+        // and arrives at the consumer.
+        let trip_time = (route_len as f32 + 1.0) / self.drones.drone_speed.max(0.001) * 2.0;
+        if trip_time <= fill_time * 0.5 {
+            return false;
+        }
+        let lookahead = self.config.logistics.dispatch_lookahead.max(0.0);
+        // A short walk should wait out the remaining fill; a long walk should
+        // leave as soon as the waiting cost is smaller than another round
+        // trip. The fill-time term and the configured dispatch look-ahead keep
+        // this derived from the live route and production rate rather than a
+        // tile-count constant.
+        let waiting_cost = fill_time + lookahead;
+        let required_share = (waiting_cost / (trip_time + waiting_cost)).clamp(0.1, 1.0);
+        carried / load >= required_share
     }
 
     /// Number of drones currently stalled on a broken route.
@@ -123,11 +149,17 @@ impl PlanetState {
             self.config.buildings.congestion_route_penalty,
         );
         let mut events = Vec::new();
+        let network_changed = self.route_cache_revision != self.network_revision;
+        if network_changed {
+            self.route_cache_revision = self.network_revision;
+        }
 
         for drone in self.drones.drones_mut() {
             match drone.state {
                 DroneState::Error => {
-                    repath(grid, drone, core, &cost);
+                    if network_changed {
+                        repath(grid, drone, core, &cost);
+                    }
                 }
                 DroneState::MovingToCore | DroneState::MovingToDrill => {
                     if !route_is_intact(grid, drone) && !repath(grid, drone, core, &cost) {
@@ -184,6 +216,12 @@ impl PlanetState {
         let base_speed = self.drones.drone_speed;
         let grid = &self.grid;
         let traffic = &self.traffic;
+        let hazard_fields = crate::data::game_data()
+            .planet(self.planet_index)
+            .hazard_fields
+            .clone();
+        let grid_width = self.grid.width;
+        let grid_height = self.grid.height;
 
         for drone in self.drones.drones_mut() {
             let mut speed = base_speed;
@@ -194,13 +232,21 @@ impl PlanetState {
                 // The cold bites where the network is not heated, so a long run
                 // wants nodes spaced along it rather than one at the Core.
                 if freeze > 0.0 {
+                    let local_freeze = super::progress::hazard_field_strength(
+                        *tile,
+                        "cold",
+                        freeze,
+                        &hazard_fields,
+                        grid_width,
+                        grid_height,
+                    );
                     let warmed = heaters
                         .iter()
                         .any(|heater| tile.distance(*heater) as i32 <= counter_radius);
                     let bite = if warmed {
-                        freeze * (1.0 - counter_strength)
+                        local_freeze * (1.0 - counter_strength)
                     } else {
-                        freeze
+                        local_freeze
                     };
                     speed *= 1.0 - bite;
                 }
@@ -241,11 +287,20 @@ impl PlanetState {
     /// doing nothing. Weighting by load is what makes laying one worth the
     /// minerals.
     fn route_cost(&self) -> impl Fn(GridPos) -> f32 + '_ {
-        network_cost(
+        let base = network_cost(
             &self.traffic,
             self.config.buildings.conduit_capacity,
             self.config.buildings.congestion_route_penalty,
-        )
+        );
+        move |pos| {
+            base(pos)
+                + self
+                    .route_reservations
+                    .get(&(pos.x, pos.y))
+                    .copied()
+                    .unwrap_or(0.0)
+                    * 0.25
+        }
     }
 
     /// Is this tile over its throughput limit right now?
@@ -268,13 +323,18 @@ impl PlanetState {
         core: GridPos,
         resource: ResourceType,
     ) -> Option<(GridPos, Vec<GridPos>)> {
-        let hopper_ceiling = self.drones.drone_capacity * HOPPER_LOADS;
+        let hopper_ceiling = self
+            .config
+            .logistics
+            .pad_depth
+            .max(self.drones.drone_capacity * 3.0);
         let mut best: Option<(GridPos, Vec<GridPos>)> = None;
 
         for pos in self.consumers_of(resource) {
             let delivered = self
-                .input_buffers
+                .input_hoppers
                 .get(&(pos.x, pos.y))
+                .and_then(|hopper| hopper.get(&resource))
                 .copied()
                 .unwrap_or(0.0);
             if delivered + self.drones.drone_capacity > hopper_ceiling {
@@ -308,8 +368,8 @@ impl PlanetState {
             .buildings
             .iter()
             .filter(|def| {
-                def.recipe.carried.as_deref() == Some(resource.id())
-                    && def.recipe.carried_rate() > 0.0
+                def.recipe.carried_ids().contains(&resource.id())
+                    && def.recipe.inputs.get(resource.id()).copied().unwrap_or(0.0) > 0.0
             })
             .filter_map(|def| BuildingType::from_id(&def.id))
             .flat_map(|kind| self.powered_positions(kind))
@@ -335,7 +395,12 @@ impl PlanetState {
     /// [`Self::dispatch_producers`]'s problem, the same as for a Smelter.
     fn update_drills(&mut self, delta_time: f32) {
         let rate = self.drill_output_rate();
-        let ceiling = self.drones.drone_capacity * PAD_LOADS;
+        let crew = self.drone_crew_size();
+        let ceiling = self
+            .config
+            .logistics
+            .hopper_depth
+            .max(self.drones.drone_capacity * PAD_LOADS * crew as f32);
         let depletion = self.config.ore.depletion_per_unit.max(0.0);
 
         for drill_pos in self.grid.find_buildings(BuildingType::Drill) {
@@ -428,6 +493,16 @@ impl PlanetState {
                 .map(|d| d.id);
 
             let Some(drone_id) = idle_drone else {
+                if let Some(tile) = route.first() {
+                    let queue = self.drone_queues.entry((tile.x, tile.y)).or_default();
+                    if !queue.contains(&self.drones.drones_at(producer).first().map_or(0, |d| d.id))
+                        && queue.len() < self.config.logistics.max_queue_depth
+                    {
+                        if let Some(drone) = self.drones.drones_at(producer).first() {
+                            queue.push(drone.id);
+                        }
+                    }
+                }
                 continue;
             };
             if let Some(buffer) = self.output_buffers.get_mut(&(producer.x, producer.y)) {
@@ -435,6 +510,25 @@ impl PlanetState {
             }
             if let Some(drone) = self.drones.get_drone_mut(drone_id) {
                 drone.dispatch(destination, route, carried, resource);
+                for tile in drone
+                    .path
+                    .iter()
+                    .take(self.config.logistics.dispatch_lookahead.max(1.0) as usize)
+                {
+                    self.route_reservations.insert(
+                        (tile.x, tile.y),
+                        self.config.logistics.reservation_seconds.max(0.0),
+                    );
+                }
+            }
+            if let Some(tile) = self
+                .drones
+                .get_drone_mut(drone_id)
+                .and_then(|drone| drone.path.first().copied())
+            {
+                if let Some(queue) = self.drone_queues.get_mut(&(tile.x, tile.y)) {
+                    queue.retain(|queued| *queued != drone_id);
+                }
             }
         }
     }

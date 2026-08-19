@@ -1,14 +1,18 @@
 //! Neural network research interface
 
-use crate::engine::{describe_modifier, ResearchState, ResearchTree};
-use crate::state::{StatReading, StatUnit};
+use crate::engine::{ResearchState, ResearchTree};
+use crate::state::StatReading;
 use crate::ui::{draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::math::pulse01;
 use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text, truncate_text_to_width, Pointer};
 
+mod effects;
 mod layout;
+mod sheet;
+use effects::node_effects;
 use layout::{ResearchLayout, TreeLayout};
+use sheet::draw_swarm_sheet;
 
 const HEADER_HEIGHT: f32 = 72.0;
 
@@ -44,6 +48,7 @@ pub fn render_research_view(
     data_available: f32,
     research_locked: bool,
     sheet: &[StatReading],
+    active_condition: Option<&str>,
     viewport: &mut ResearchViewport,
 ) -> ResearchAction {
     clear_background(Colors::BACKGROUND);
@@ -269,9 +274,14 @@ pub fn render_research_view(
         }
 
         let is_unlocked = research_state.is_unlocked(&node.id);
-        let can_select = research_tree.can_select(&node.id, &research_state.unlocked);
-        let can_research_now =
-            research_tree.can_research(&node.id, &research_state.unlocked, data_available);
+        let can_select =
+            research_tree.can_select_on(&node.id, &research_state.unlocked, active_condition);
+        let can_research_now = research_tree.can_research_on(
+            &node.id,
+            &research_state.unlocked,
+            data_available,
+            active_condition,
+        );
         let is_current = research_state.current_research.as_ref() == Some(&node.id);
 
         let target_radius = node_radius.max(22.0);
@@ -422,6 +432,7 @@ pub fn render_research_view(
                     left_text_y,
                     left_panel_w,
                     data_available,
+                    active_condition,
                 );
             } else {
                 draw_ui_text(
@@ -459,11 +470,16 @@ pub fn render_research_view(
                     draw_ui_text(&cost_text, left_panel_x + 12.0, y, 12.0, Colors::ACCENT);
                     y += 18.0;
 
-                    if research_tree.can_select(node_id, &research_state.unlocked) {
-                        if research_tree.can_research(
+                    if research_tree.can_select_on(
+                        node_id,
+                        &research_state.unlocked,
+                        active_condition,
+                    ) {
+                        if research_tree.can_research_on(
                             node_id,
                             &research_state.unlocked,
                             data_available,
+                            active_condition,
                         ) {
                             draw_ui_text(
                                 "Tap node to research",
@@ -592,7 +608,7 @@ pub fn render_research_view(
     }
 
     if let Some(node_id) = activated_node {
-        if research_tree.can_select(node_id, &research_state.unlocked) {
+        if research_tree.can_select_on(node_id, &research_state.unlocked, active_condition) {
             return ResearchAction::StartResearch(node_id.to_string());
         }
     }
@@ -686,6 +702,7 @@ fn draw_compact_node_info(
     y: f32,
     panel_w: f32,
     data_available: f32,
+    active_condition: Option<&str>,
 ) {
     let Some(node) = research_tree.get_node(node_id) else {
         return;
@@ -719,82 +736,36 @@ fn draw_compact_node_info(
         11.0,
         Colors::ACCENT,
     );
-    let status = if !node
+    let status = if node
+        .planet_condition
+        .as_deref()
+        .is_some_and(|required| active_condition != Some(required))
+    {
+        (
+            format!(
+                "Requires {} world",
+                node.planet_condition.as_deref().unwrap_or("matching")
+            ),
+            Colors::ERROR,
+        )
+    } else if !node
         .prerequisites
         .iter()
         .all(|prerequisite| research_state.is_unlocked(prerequisite))
     {
-        ("Prerequisites not met", Colors::ERROR)
-    } else if research_tree.can_research(node_id, &research_state.unlocked, data_available) {
-        ("Tap node to research", Colors::SUCCESS)
+        ("Prerequisites not met".to_string(), Colors::ERROR)
+    } else if research_tree.can_research_on(
+        node_id,
+        &research_state.unlocked,
+        data_available,
+        active_condition,
+    ) {
+        ("Tap node to research".to_string(), Colors::SUCCESS)
     } else {
-        ("Tap node to select (insufficient Data)", Colors::WARNING)
+        (
+            "Tap node to select (insufficient Data)".to_string(),
+            Colors::WARNING,
+        )
     };
-    draw_ui_text(status.0, split_x, detail_y + 18.0, 11.0, status.1);
-}
-
-/// What a node does, as lines for the hover panel: every stat it moves, then
-/// anything it lets the swarm build.
-///
-/// A node with neither says so rather than showing nothing, because "no
-/// effect" and "the panel forgot to draw" look identical otherwise.
-fn node_effects(node_id: &str) -> Vec<(String, Color)> {
-    let data = crate::data::game_data();
-    let mut lines = Vec::new();
-
-    if let Some(def) = data.research.nodes.iter().find(|node| node.id == node_id) {
-        for modifier in &def.modifiers {
-            let Some(summary) = describe_modifier(modifier) else {
-                continue;
-            };
-            let color = if summary.is_gain {
-                Colors::SUCCESS
-            } else {
-                Colors::WARNING
-            };
-            lines.push((format!("{} {}", summary.label, summary.change), color));
-        }
-    }
-
-    for building in &data.buildings {
-        if building.unlocked_by.as_deref() == Some(node_id) {
-            lines.push((format!("Unlocks {}", building.name), Colors::PRIMARY));
-        }
-    }
-
-    if lines.is_empty() {
-        lines.push(("No direct effect".to_string(), Colors::TEXT_DIM));
-    }
-    lines
-}
-
-/// The swarm's stat sheet: what every stat is actually worth on this world,
-/// and what it started at where something has moved it.
-///
-/// This is the other half of the node panel. That says what a tech would add;
-/// this says what the additions have come to.
-fn draw_swarm_sheet(sheet: &[StatReading], panel_x: f32, panel_y: f32, panel_w: f32) {
-    draw_ui_text("Swarm", panel_x + 12.0, panel_y, 14.0, Colors::PRIMARY);
-    let mut y = panel_y + 24.0;
-    for reading in sheet {
-        let unit = StatUnit::of(reading.stat);
-        let color = if !reading.is_changed() {
-            Colors::TEXT_DIM
-        } else if reading.is_gain() {
-            Colors::SUCCESS
-        } else {
-            Colors::WARNING
-        };
-        draw_ui_text(
-            reading.stat.label(),
-            panel_x + 12.0,
-            y,
-            11.0,
-            Colors::TEXT_DIM,
-        );
-        let value = unit.format(reading.value);
-        let width = measure_ui_text(&value, None, 11, 1.0).width;
-        draw_ui_text(&value, panel_x + panel_w - 12.0 - width, y, 11.0, color);
-        y += 17.0;
-    }
+    draw_ui_text(&status.0, split_x, detail_y + 18.0, 11.0, status.1);
 }

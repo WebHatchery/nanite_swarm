@@ -335,11 +335,11 @@ fn the_fastest_speed_is_not_capped_away_by_the_catch_up_limit() {
     for _ in 0..3 {
         state.change_speed(true);
     }
-    assert_eq!(state.time_scale, 4.0);
+    assert_eq!(state.time_scale, 8.0);
 
     // A slow frame at top speed still buys everything it should.
     let ticks = state.advance(1.0 / 30.0, false);
-    let expected = (4.0 / 30.0 / TICK_SECONDS).floor() as u32;
+    let expected = (8.0 / 30.0 / TICK_SECONDS).floor() as u32;
     assert_eq!(ticks, expected, "fast-forward lost time to the tick cap");
 }
 
@@ -439,6 +439,24 @@ fn trigger_power_collapse_drops_drone_cargo_and_corrupts_progress() {
     );
     assert_eq!(state.research.research_progress, kept);
     assert_eq!(state.power_collapse_cooldown, collapse.cooldown_seconds);
+}
+
+#[test]
+fn research_reduces_collapse_shutdown_and_data_loss_deterministically() {
+    let mut bare = PlanetState::new(3, 7, GameConfig::default());
+    let mut improved = PlanetState::new(3, 7, GameConfig::default());
+    improved
+        .research
+        .unlocked_techs
+        .extend(["thermal_sinks".to_string(), "advanced_research".to_string()]);
+    improved.refresh_stats();
+
+    bare.resources.data = 100.0;
+    improved.resources.data = 100.0;
+    bare.trigger_power_collapse();
+    improved.trigger_power_collapse();
+    assert!(improved.power_collapse_shutdown < bare.power_collapse_shutdown);
+    assert!(improved.resources.data > bare.resources.data);
 }
 
 #[test]

@@ -11,13 +11,14 @@ use crate::engine::StatId;
 use super::game_state::PlanetState;
 
 /// One line of the sheet: where the stat started and where it is now.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct StatReading {
     pub stat: StatId,
     /// The value with nothing unlocked and nothing built for it.
     pub base: f32,
     /// The value the simulation is using.
     pub value: f32,
+    pub sources: Vec<String>,
 }
 
 impl StatReading {
@@ -90,9 +91,50 @@ impl PlanetState {
             .into_iter()
             .map(|stat| {
                 let (base, value) = self.stat_reading(stat);
-                StatReading { stat, base, value }
+                let sources = self.stat_sources(stat);
+                StatReading {
+                    stat,
+                    base,
+                    value,
+                    sources,
+                }
             })
             .collect()
+    }
+
+    /// Names of research and earned stages that contribute to a resolved stat.
+    /// The inspector can show provenance without duplicating modifier folding.
+    pub fn stat_sources(&self, stat: StatId) -> Vec<String> {
+        let mut sources = Vec::new();
+        for node in &crate::data::game_data().research.nodes {
+            if self.research.unlocked_techs.iter().any(|id| id == &node.id)
+                && node
+                    .modifiers
+                    .iter()
+                    .any(|modifier| modifier.stat == stat.id())
+            {
+                sources.push(node.name.clone());
+            }
+        }
+        for stage in self.seed_ship.standing_stages() {
+            if stage
+                .modifiers
+                .iter()
+                .any(|modifier| modifier.stat == stat.id())
+            {
+                sources.push(stage.name.clone());
+            }
+        }
+        for stage in self.core_stages_reached() {
+            if stage
+                .modifiers
+                .iter()
+                .any(|modifier| modifier.stat == stat.id())
+            {
+                sources.push(format!("Core: {}", stage.name));
+            }
+        }
+        sources
     }
 
     /// The base and the resolved value for one stat. Several of these have a
@@ -117,6 +159,14 @@ impl PlanetState {
             // A multiplier on whatever the terrain declares, so the base is
             // "what the ground is worth" and the sheet reads it as a share.
             StatId::HarvestYield => 1.0,
+            StatId::CollapseShutdown => self.config.collapse.max_shutdown_seconds,
+            StatId::CollapseDataLoss => self.config.collapse.max_data_loss,
+            StatId::DustEfficiencyThreshold => {
+                self.config.upkeep.dust_response.efficiency_threshold
+            }
+            StatId::DustSpeedThreshold => self.config.upkeep.dust_response.speed_threshold,
+            StatId::DustLeakThreshold => self.config.upkeep.dust_response.leak_threshold,
+            StatId::DustStallThreshold => self.config.upkeep.dust_response.stall_threshold,
         };
         // The hazards are not scaled from a base, they are eaten into: a
         // counter reduces how much of the world still reaches the swarm.

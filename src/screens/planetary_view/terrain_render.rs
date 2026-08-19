@@ -13,7 +13,12 @@ use macroquad_toolkit::ui::draw_ui_text;
 use super::format::hash01;
 use super::metrics::{grid_to_screen, HudMetrics};
 
-pub(super) fn draw_planetary_background(screen_w: f32, screen_h: f32, time: f32) {
+pub(super) fn draw_planetary_background(
+    screen_w: f32,
+    screen_h: f32,
+    time: f32,
+    state: &PlanetState,
+) {
     // Subtle star field
     for i in 0..80u32 {
         let star_x = hash01(i) * screen_w;
@@ -30,6 +35,124 @@ pub(super) fn draw_planetary_background(screen_w: f32, screen_h: f32, time: f32)
     draw_circle(planet_x, planet_y, 220.0, Color::new(0.0, 0.2, 0.35, 0.12));
     draw_circle(planet_x, planet_y, 170.0, Color::new(0.0, 0.3, 0.45, glow));
     draw_circle(planet_x, planet_y, 120.0, Color::new(0.0, 0.25, 0.4, 0.25));
+    let planet = data::game_data().planet(state.planet_index);
+    let atmosphere = if state.acid_strength() > 0.0 {
+        Color::new(0.8, 0.28, 0.14, 0.16)
+    } else if state.freeze_strength() > 0.0 {
+        Color::new(0.35, 0.65, 1.0, 0.16)
+    } else {
+        Color::new(planet.color[0], planet.color[1], planet.color[2], 0.10)
+    };
+    draw_circle_lines(planet_x, planet_y, 132.0, 3.0, atmosphere);
+    draw_circle_lines(planet_x, planet_y, 184.0, 1.0, with_alpha(atmosphere, 0.55));
+}
+
+pub(super) fn draw_collapse_shake(state: &PlanetState, screen_w: f32, screen_h: f32, time: f32) {
+    if state.collapse_notice_timer <= 0.0 || macroquad_toolkit::settings::reduced_motion_enabled() {
+        return;
+    }
+    let offset = (time * 48.0).sin() * 3.0;
+    draw_rectangle_lines(
+        offset,
+        0.0,
+        screen_w - offset * 2.0,
+        screen_h,
+        3.0,
+        with_alpha(Colors::ERROR, 0.65),
+    );
+}
+
+pub(super) fn draw_planet_features(state: &PlanetState, metrics: HudMetrics) {
+    for feature in &state.features {
+        let (x, y, w, h) = feature.bounds;
+        let origin = GridPos::new(
+            (x * state.grid.width as f32) as i32,
+            (y * state.grid.height as f32) as i32,
+        );
+        let end = GridPos::new(
+            ((x + w) * state.grid.width as f32) as i32,
+            ((y + h) * state.grid.height as f32) as i32,
+        );
+        let (sx, sy) = grid_to_screen(origin, metrics);
+        let (ex, ey) = grid_to_screen(end, metrics);
+        draw_rectangle_lines(
+            sx,
+            sy,
+            (ex - sx).max(metrics.tile_size),
+            (ey - sy).max(metrics.tile_size),
+            1.0,
+            with_alpha(Colors::ACCENT, 0.55),
+        );
+        draw_ui_text(&feature.name, sx + 4.0, sy + 14.0, 9.0, Colors::ACCENT);
+    }
+}
+
+pub(super) fn draw_tutorial_route_hint(state: &PlanetState, metrics: HudMetrics, time: f32) {
+    let Some(step) = state.tutorial_current() else {
+        return;
+    };
+    if step.goal.kind != "connect" {
+        return;
+    }
+    let (Some(core), Some(drill)) = (
+        state.grid.find_core(),
+        state
+            .grid
+            .find_buildings(BuildingType::Drill)
+            .first()
+            .copied(),
+    ) else {
+        return;
+    };
+    let center = |pos: GridPos| {
+        let (x, y) = grid_to_screen(pos, metrics);
+        vec2(x + metrics.tile_size * 0.5, y + metrics.tile_size * 0.5)
+    };
+    let from = center(core);
+    let to = center(drill);
+    let distance = from.distance(to).max(1.0);
+    let direction = (to - from) / distance;
+    let dash = (metrics.tile_size * 0.65).max(8.0);
+    let mut travelled = 0.0;
+    while travelled < distance {
+        let start = from + direction * travelled;
+        let end = from + direction * (travelled + dash * 0.55).min(distance);
+        draw_line(
+            start.x,
+            start.y,
+            end.x,
+            end.y,
+            2.0,
+            with_alpha(Colors::WARNING, 0.8),
+        );
+        travelled += dash;
+    }
+    let pulse = if macroquad_toolkit::settings::reduced_motion_enabled() {
+        0.0
+    } else {
+        pulse01_at(time as f64, 1.5) * 3.0
+    };
+    draw_circle_lines(
+        from.x,
+        from.y,
+        metrics.tile_size * 0.35 + pulse,
+        2.0,
+        Colors::WARNING,
+    );
+    draw_circle_lines(
+        to.x,
+        to.y,
+        metrics.tile_size * 0.35 + pulse,
+        2.0,
+        Colors::WARNING,
+    );
+    draw_ui_text(
+        "ROUTE: CORE -> DRILL",
+        from.x + 8.0,
+        from.y - 8.0,
+        10.0,
+        Colors::WARNING,
+    );
 }
 
 /// Get color for terrain type with subtle variation
@@ -188,12 +311,30 @@ fn draw_core_visual(px: f32, py: f32, size: f32, state: &PlanetState, textures: 
     let center_y = py + size * 0.5;
     let pulse = pulse01_at(state.time_played, 2.0);
 
-    let texture = match stage {
-        0 => &textures.buildings.core_stage_1a,
-        1 => &textures.buildings.core_stage_1b,
-        2 => &textures.buildings.core_stage_1c,
-        3 => &textures.buildings.core_stage_2a,
-        _ => &textures.buildings.core_stage_2b,
+    let sprite = state
+        .core_stage_def()
+        .and_then(|definition| definition.sprite.as_deref());
+    let texture = match sprite.unwrap_or("") {
+        "core_stage_1a" => &textures.buildings.core_stage_1a,
+        "core_stage_1b" => &textures.buildings.core_stage_1b,
+        "core_stage_1c" => &textures.buildings.core_stage_1c,
+        "core_stage_2a" => &textures.buildings.core_stage_2a,
+        "core_stage_2b" => &textures.buildings.core_stage_2b,
+        "core_stage_3a" => &textures.buildings.core_stage_3a,
+        "core_stage_3b" => &textures.buildings.core_stage_3b,
+        "core_stage_4a" => &textures.buildings.core_stage_4a,
+        "core_stage_4b" => &textures.buildings.core_stage_4b,
+        _ => match stage {
+            0 => &textures.buildings.core_stage_1a,
+            1 => &textures.buildings.core_stage_1b,
+            2 => &textures.buildings.core_stage_1c,
+            3 => &textures.buildings.core_stage_2a,
+            4 => &textures.buildings.core_stage_2b,
+            5 => &textures.buildings.core_stage_3a,
+            6 => &textures.buildings.core_stage_3b,
+            7 => &textures.buildings.core_stage_4a,
+            _ => &textures.buildings.core_stage_4b,
+        },
     };
 
     draw_texture_ex(
@@ -260,6 +401,34 @@ pub(super) fn draw_grid_tiles(
     let min_y = min_y.max(0);
     let max_x = max_x.min(state.grid.width as i32 - 1);
     let max_y = max_y.min(state.grid.height as i32 - 1);
+
+    for selected in &state.box_selected {
+        let (sx, sy) = grid_to_screen(*selected, metrics);
+        draw_rectangle_lines(
+            sx,
+            sy,
+            metrics.tile_size - 1.0,
+            metrics.tile_size - 1.0,
+            2.0,
+            Colors::ACCENT,
+        );
+    }
+    if state.box_select_mode {
+        if let (Some(start), Some(end)) = (state.box_select_start, hovered_pos) {
+            let min = GridPos::new(start.x.min(end.x), start.y.min(end.y));
+            let max = GridPos::new(start.x.max(end.x), start.y.max(end.y));
+            let (sx, sy) = grid_to_screen(min, metrics);
+            let (ex, ey) = grid_to_screen(
+                GridPos::new(
+                    (max.x + 1).min(state.grid.width as i32 - 1),
+                    (max.y + 1).min(state.grid.height as i32 - 1),
+                ),
+                metrics,
+            );
+            draw_rectangle(sx, sy, ex - sx, ey - sy, Color::new(0.0, 0.85, 1.0, 0.12));
+            draw_rectangle_lines(sx, sy, ex - sx, ey - sy, 2.0, Colors::PRIMARY);
+        }
+    }
 
     for y in min_y..=max_y {
         for x in min_x..=max_x {
@@ -332,6 +501,21 @@ pub(super) fn draw_grid_tiles(
                     scar_color,
                 );
             }
+            if tile.terrain == TerrainType::Mountain && tile.revealed {
+                let richness = tile.ore_richness;
+                let deposit_color = if richness > 1.01 {
+                    Colors::ACCENT
+                } else {
+                    Colors::TEXT_DIM
+                };
+                draw_circle_lines(
+                    px + metrics.tile_size * 0.5,
+                    py + metrics.tile_size * 0.5,
+                    metrics.tile_size * (0.20 + (richness.min(2.0) - 1.0).max(0.0) * 0.08),
+                    1.0,
+                    with_alpha(deposit_color, 0.7),
+                );
+            }
 
             // Draw building if present
             if let Some(ref building) = tile.building {
@@ -352,6 +536,36 @@ pub(super) fn draw_grid_tiles(
 
                     if building.building_type == BuildingType::Conduit {
                         draw_conduit_tile(px, py, pos, state, brightness, textures, metrics);
+                    } else if building.building_type == BuildingType::Bridge {
+                        let texture = building_texture(building.building_type, textures);
+                        draw_texture_ex(
+                            texture,
+                            box_x,
+                            box_y,
+                            tint,
+                            DrawTextureParams {
+                                dest_size: Some(vec2(size, size)),
+                                ..Default::default()
+                            },
+                        );
+                        if matches!(tile.terrain, TerrainType::Void | TerrainType::Water) {
+                            draw_line(
+                                px + 2.0,
+                                py + metrics.tile_size - 4.0,
+                                px + metrics.tile_size - 2.0,
+                                py + 4.0,
+                                2.0,
+                                Colors::ACCENT,
+                            );
+                            draw_line(
+                                px + 2.0,
+                                py + 4.0,
+                                px + metrics.tile_size - 2.0,
+                                py + metrics.tile_size - 4.0,
+                                1.0,
+                                with_alpha(Colors::TEXT, 0.7),
+                            );
+                        }
                     } else {
                         let texture = building_texture(building.building_type, textures);
                         draw_texture_ex(
@@ -376,6 +590,13 @@ pub(super) fn draw_grid_tiles(
                             Color::new(0.0, 0.85, 1.0, 0.28),
                         );
                     }
+                    draw_building_motion(
+                        building.building_type,
+                        center_x,
+                        center_y,
+                        metrics.tile_size,
+                        state.time_played,
+                    );
                 }
 
                 // Unpowered indicator
@@ -435,6 +656,17 @@ pub(super) fn draw_grid_tiles(
                                 invalid_color,
                             );
                         }
+                        if building_type == BuildingType::Bridge
+                            && matches!(tile.terrain, TerrainType::Void | TerrainType::Water)
+                        {
+                            draw_ui_text(
+                                "BRIDGE GAP - TAP TO SPAN",
+                                px,
+                                py - 4.0,
+                                9.0,
+                                Colors::ACCENT,
+                            );
+                        }
                     }
 
                     // Show harvest preview
@@ -452,5 +684,62 @@ pub(super) fn draw_grid_tiles(
                 }
             }
         }
+    }
+}
+
+fn draw_building_motion(
+    building_type: BuildingType,
+    center_x: f32,
+    center_y: f32,
+    tile_size: f32,
+    world_time: f64,
+) {
+    let motion = if macroquad_toolkit::settings::reduced_motion_enabled() {
+        0.0
+    } else {
+        world_time as f32
+    };
+    match building_type {
+        BuildingType::Drill => {
+            let angle = motion * 4.0;
+            let tip = vec2(
+                center_x + angle.cos() * tile_size * 0.28,
+                center_y + angle.sin() * tile_size * 0.28,
+            );
+            draw_line(center_x, center_y, tip.x, tip.y, 1.5, Colors::TEXT);
+        }
+        BuildingType::ServerBank => {
+            let blink = if (motion * 2.0).sin() > 0.0 {
+                1.0
+            } else {
+                0.35
+            };
+            draw_circle(
+                center_x - tile_size * 0.18,
+                center_y,
+                2.0,
+                with_alpha(Colors::SUCCESS, blink),
+            );
+            draw_circle(
+                center_x + tile_size * 0.18,
+                center_y,
+                2.0,
+                with_alpha(Colors::PRIMARY, 1.0 - blink * 0.5),
+            );
+        }
+        BuildingType::WindTurbine => {
+            for spoke in 0..3 {
+                let angle = motion * 3.0 + spoke as f32 * std::f32::consts::TAU / 3.0;
+                draw_line(
+                    center_x,
+                    center_y,
+                    center_x + angle.cos() * tile_size * 0.32,
+                    center_y + angle.sin() * tile_size * 0.32,
+                    1.0,
+                    Colors::PRIMARY,
+                );
+            }
+        }
+        _ => {}
     }
 }

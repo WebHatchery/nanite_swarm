@@ -5,7 +5,8 @@
       "name": "Crash-Lander",
       "description": "What survived the descent, and nothing more.",
       "requires": [],
-      "modifiers": []
+      "modifiers": [],
+      "sprite": "core_stage_1a"
     },
     {
       "id": "foundry",
@@ -15,7 +16,8 @@
         { "kind": "structures", "target": 10 },
         { "kind": "network_tiles", "target": 6 }
       ],
-      "modifiers": [{ "stat": "mineral_capacity", "op": "add", "value": 50.0 }]
+      "modifiers": [{ "stat": "mineral_capacity", "op": "add", "value": 50.0 }],
+      "sprite": "core_stage_1b"
     },
     {
       "id": "fortress",
@@ -25,7 +27,8 @@
         { "kind": "structures", "target": 25 },
         { "kind": "technologies", "target": 6 }
       ],
-      "modifiers": [{ "stat": "power_consumption", "op": "percent", "value": -0.1 }]
+      "modifiers": [{ "stat": "power_consumption", "op": "percent", "value": -0.1 }],
+      "sprite": "core_stage_2a"
     },
     {
       "id": "space_elevator",
@@ -35,14 +38,16 @@
         { "kind": "technologies", "target": 10 },
         { "kind": "seed_ship_stages", "target": 2 }
       ],
-      "modifiers": [{ "stat": "data_generation", "op": "percent", "value": 0.25 }]
+      "modifiers": [{ "stat": "data_generation", "op": "percent", "value": 0.25 }],
+      "sprite": "core_stage_3a"
     },
     {
       "id": "planetary_ring",
       "name": "Planetary Ring",
       "description": "The world is now mostly structure. It was always going to be.",
       "requires": [{ "kind": "seed_ship_stages", "target": 4 }],
-      "modifiers": [{ "stat": "drill_output", "op": "percent", "value": 0.2 }]
+      "modifiers": [{ "stat": "drill_output", "op": "percent", "value": 0.2 }],
+      "sprite": "core_stage_4a"
     }
   ]
 }

@@ -65,21 +65,13 @@ impl RightStackLayout {
         let right_h = screen_h - right_y - metrics.bottom_bar_height - metrics.panel_gap;
 
         let stack_gap = metrics.panel_gap;
-        let available_stack = (right_h - stack_gap * 3.0).max(360.0);
-        let compact_stack = available_stack < 520.0;
-        let (inspector_h, power_h, ops_h) = if compact_stack {
-            (
-                available_stack * 0.34,
-                available_stack * 0.25,
-                available_stack * 0.18,
-            )
-        } else {
-            (
-                (available_stack * 0.33).clamp(174.0, 228.0),
-                (available_stack * 0.23).clamp(118.0, 148.0),
-                (available_stack * 0.19).clamp(96.0, 132.0),
-            )
-        };
+        let available_stack = (right_h - stack_gap * 3.0).max(0.0);
+        // Allocate the stack from the actual viewport first. Fixed minimums
+        // made the directive panel run underneath the bottom bar on short
+        // browser windows, exactly where touch users need the compact layout.
+        let inspector_h = available_stack * 0.36;
+        let power_h = available_stack * 0.24;
+        let ops_h = available_stack * 0.18;
         let directive_h = available_stack - inspector_h - power_h - ops_h;
         let inspector_y = right_y;
         let power_y = inspector_y + inspector_h + stack_gap;
@@ -126,6 +118,9 @@ pub(super) fn draw_ui_panels(
         bottom_bar::ClockAction::TogglePause => state.toggle_pause(),
         bottom_bar::ClockAction::Faster => state.change_speed(true),
         bottom_bar::ClockAction::Slower => state.change_speed(false),
+        bottom_bar::ClockAction::NextEvent => {
+            state.fast_forward_to_next_event();
+        }
         bottom_bar::ClockAction::None => {}
     }
 

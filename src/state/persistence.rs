@@ -3,7 +3,9 @@
 use super::campaign::Campaign;
 use super::PlanetState;
 use macroquad::miniquad;
-use macroquad_toolkit::persistence::{json_key_exists, load_string_key, save_string_key};
+use macroquad_toolkit::persistence::{
+    delete_json_key, json_key_exists, load_string_key, save_string_key,
+};
 use serde::{Deserialize, Serialize};
 use std::io;
 
@@ -12,7 +14,7 @@ pub const GAME_NAME: &str = "nanite_swarm";
 
 /// Bumped whenever the shape below changes. Version 0 is the unversioned save
 /// that held a single bare `PlanetState`.
-const SAVE_VERSION: u32 = 1;
+pub(crate) const SAVE_VERSION: u32 = 2;
 
 /// What actually goes on disk.
 #[derive(Debug, Serialize, Deserialize)]
@@ -37,38 +39,39 @@ pub fn save_to_json(campaign: &mut Campaign) -> Result<String, serde_json::Error
 
 /// Deserialize a campaign, accepting saves written before the campaign existed.
 pub fn load_from_json(json: &str) -> Result<Campaign, serde_json::Error> {
-    let mut campaign = match serde_json::from_str::<SaveGame>(json) {
-        Ok(save) => save.campaign,
-        Err(envelope_error) => {
-            // Version 0: a single planet, no campaign around it.
-            match serde_json::from_str::<PlanetState>(json) {
-                Ok(planet) => Campaign::from_single_planet(planet, planet_seed_fallback()),
-                Err(_) => return Err(envelope_error),
-            }
-        }
-    };
-
-    let planet = campaign.current_mut();
-    planet
-        .achievements
-        .sync_definitions(super::game_state::achievement_definitions());
-    // The stat sheet is derived, not saved: rebuild it before the offline
-    // catch-up runs, or the save loads with every research effect switched off.
-    planet.refresh_stats();
+    let mut campaign = crate::state::migrations::migrate(json)?.campaign;
 
     let now = unix_seconds_now();
-    if planet.last_saved_unix > 0 && now > planet.last_saved_unix {
-        let offline_seconds = (now - planet.last_saved_unix) as f32;
-        planet.apply_offline_progress(offline_seconds);
+    for planet in campaign.planets.iter_mut().flatten() {
+        planet
+            .achievements
+            .sync_definitions(super::game_state::achievement_definitions());
+        // The stat sheet is derived, not saved: rebuild it before the
+        // aggregated offline calculation runs.
+        planet.refresh_stats();
+        if planet.last_saved_unix > 0 {
+            let delta = now - planet.last_saved_unix;
+            let offline_seconds = if delta >= 0 {
+                delta as f32
+            } else {
+                planet.config.offline.fallback_delta_seconds
+            };
+            planet.apply_offline_progress(offline_seconds);
+            planet.last_offline_report.tamper_guarded = delta < 0;
+        }
+        planet.last_saved_unix = now;
     }
-    planet.last_saved_unix = now;
+
+    // Older saves kept histories beside each world. Fold those into the new
+    // campaign stream during migration so Records does not appear empty.
+    campaign.sync_notification_history();
 
     Ok(campaign)
 }
 
 /// A migrated save has no campaign seed of its own; give it a stable one so
 /// the worlds it goes on to colonize are at least reproducible from here.
-fn planet_seed_fallback() -> u64 {
+pub(super) fn planet_seed_fallback() -> u64 {
     0x5EED_0000_0000_0001
 }
 
@@ -99,8 +102,12 @@ pub enum LoadSource {
     Backup,
 }
 
-fn backup_key(key: &str) -> String {
-    format!("{}_backup", key)
+fn backup_key(key: &str, generation: usize) -> String {
+    if generation == 1 {
+        format!("{}_backup", key)
+    } else {
+        format!("{}_backup_{}", key, generation)
+    }
 }
 
 /// Write the campaign, keeping the previous save as a backup first.
@@ -118,7 +125,12 @@ fn save_campaign(
     if let Some(previous) = store.read(key) {
         // A failed rotation is not worth losing the new save over, but it does
         // mean the backup is stale, so it is not silently ignored either.
-        store.write(&backup_key(key), &previous)?;
+        for generation in (2..=3).rev() {
+            if let Some(older) = store.read(&backup_key(key, generation - 1)) {
+                store.write(&backup_key(key, generation), &older)?;
+            }
+        }
+        store.write(&backup_key(key, 1), &previous)?;
     }
     store.write(key, &json)
 }
@@ -134,13 +146,16 @@ fn load_campaign(store: &dyn SaveStore, key: &str) -> Result<(Campaign, LoadSour
         None => "no save found".to_string(),
     };
 
-    match store.read(&backup_key(key)) {
-        Some(json) => match load_from_json(&json) {
-            Ok(campaign) => Ok((campaign, LoadSource::Backup)),
-            Err(_) => Err(primary_error),
-        },
-        None => Err(primary_error),
+    for generation in 1..=3 {
+        let Some(json) = store.read(&backup_key(key, generation)) else {
+            continue;
+        };
+        if let Ok(mut campaign) = load_from_json(&json) {
+            campaign.current_mut().restored_from_backup_generation = generation as u8;
+            return Ok((campaign, LoadSource::Backup));
+        }
     }
+    Err(primary_error)
 }
 
 pub fn save_to_file(campaign: &mut Campaign, path: &str) -> Result<(), io::Error> {
@@ -153,7 +168,17 @@ pub fn load_from_file(path: &str) -> Result<(Campaign, LoadSource), io::Error> {
 
 /// Whether either recoverable copy of a save exists.
 pub fn save_exists(path: &str) -> bool {
-    json_key_exists(GAME_NAME, path) || json_key_exists(GAME_NAME, &backup_key(path))
+    json_key_exists(GAME_NAME, path)
+        || (1..=3).any(|generation| json_key_exists(GAME_NAME, &backup_key(path, generation)))
+}
+
+/// Delete one visible campaign slot, including all recovery generations.
+pub fn delete_save(path: &str) -> Result<(), String> {
+    delete_json_key(GAME_NAME, path)?;
+    for generation in 1..=3 {
+        delete_json_key(GAME_NAME, &backup_key(path, generation))?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]

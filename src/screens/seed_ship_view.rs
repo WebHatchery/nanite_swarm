@@ -176,12 +176,21 @@ fn draw_stage(
     } else {
         None
     };
-    let status = match (built, active, waiting_on) {
-        (true, _, _) => "BUILT".to_string(),
+    let sealed_requirement = stage.requires.as_deref().and_then(|id| {
+        crate::data::game_data()
+            .research
+            .nodes
+            .iter()
+            .find(|node| node.id == id)
+            .map(|node| node.name.as_str())
+    });
+    let status = match (built, active, waiting_on, sealed_requirement) {
+        (true, _, _, _) => "BUILT".to_string(),
         // A stage nobody knows how to build yet says so rather than showing a
         // cost the player cannot pay towards.
-        (_, true, Some(tech)) => format!("NEEDS RESEARCH: {}", tech),
-        (_, true, None) => cost_summary(state, stage),
+        (_, true, Some(tech), _) => format!("NEEDS RESEARCH: {}", tech),
+        (_, true, None, _) => cost_summary(state, stage),
+        (_, false, _, Some(tech)) => format!("SEALED - REQUIRES {}", tech),
         _ => "SEALED".to_string(),
     };
     let status_color = if built {

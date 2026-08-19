@@ -119,10 +119,12 @@
       "generates_power": false,
       "consumes_power": true,
       "uses_efficiency": false,
+      "water_cooling": true,
       "recipe": {
         "inputs": { "alloy": 0.5 },
         "outputs": { "data": 1.5 },
-        "carried": "alloy"
+        "carried": "alloy",
+        "carried_inputs": ["alloy"]
       }
     },
     {
@@ -207,7 +209,8 @@
       "recipe": {
         "inputs": { "minerals": 6.0 },
         "outputs": { "alloy": 1.0 },
-        "carried": "minerals"
+        "carried": "minerals",
+        "carried_inputs": ["minerals"]
       }
     },
     {

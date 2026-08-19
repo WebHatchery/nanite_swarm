@@ -72,6 +72,42 @@
       "id": "harvest_yield",
       "label": "Harvest yield",
       "unit": "share"
+    },
+    {
+      "id": "collapse_shutdown",
+      "label": "Collapse downtime",
+      "lower_is_better": true,
+      "unit": "flat"
+    },
+    {
+      "id": "collapse_data_loss",
+      "label": "Collapse data loss",
+      "lower_is_better": true,
+      "unit": "share"
+    },
+    {
+      "id": "dust_efficiency_threshold",
+      "label": "Dust efficiency threshold",
+      "lower_is_better": false,
+      "unit": "flat"
+    },
+    {
+      "id": "dust_speed_threshold",
+      "label": "Dust speed threshold",
+      "lower_is_better": false,
+      "unit": "flat"
+    },
+    {
+      "id": "dust_leak_threshold",
+      "label": "Dust leak threshold",
+      "lower_is_better": false,
+      "unit": "flat"
+    },
+    {
+      "id": "dust_stall_threshold",
+      "label": "Dust stall threshold",
+      "lower_is_better": false,
+      "unit": "flat"
     }
   ],
   "nodes": [
@@ -235,6 +271,16 @@
           "stat": "dust_accumulation",
           "op": "percent",
           "value": -0.4
+        },
+        {
+          "stat": "dust_efficiency_threshold",
+          "op": "percent",
+          "value": 0.1
+        },
+        {
+          "stat": "dust_speed_threshold",
+          "op": "percent",
+          "value": 0.1
         }
       ]
     },
@@ -347,6 +393,11 @@
           "stat": "data_generation",
           "op": "percent",
           "value": 0.5
+        },
+        {
+          "stat": "collapse_data_loss",
+          "op": "percent",
+          "value": -0.2
         }
       ]
     },
@@ -448,6 +499,32 @@
           "op": "add",
           "value": 3.0
         }
+      ]
+    },
+    {
+      "id": "thermal_sinks",
+      "name": "Thermal Sinks",
+      "description": "Cold worlds become a coolant instead of a tax.",
+      "data_cost": 70.0,
+      "prerequisites": ["heater_nodes"],
+      "position": [2.8, -4.0],
+      "planet_condition": "cold",
+      "modifiers": [
+        {"stat": "freeze_resistance", "op": "percent", "value": -0.35}
+        ,{"stat": "collapse_shutdown", "op": "percent", "value": -0.25}
+      ]
+    },
+    {
+      "id": "acid_neutralizers",
+      "name": "Acid Neutralizers",
+      "description": "Corrosion is chemistry with a solvable answer.",
+      "data_cost": 70.0,
+      "prerequisites": ["ceramic_plating"],
+      "position": [3.2, -3.2],
+      "planet_condition": "acid",
+      "modifiers": [
+        {"stat": "acid_resistance", "op": "percent", "value": -0.35},
+        {"stat": "dust_stall_threshold", "op": "percent", "value": 0.1}
       ]
     }
   ]

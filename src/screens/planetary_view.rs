@@ -42,8 +42,13 @@ pub fn render_planetary_view(
 
     let screen_w = screen_width();
     let screen_h = screen_height();
-    let pulse = pulse01_at(state.time_played, 2.5);
-    let global_pulse = lerp(0.8, 1.0, pulse01_at(state.time_played, 2.0));
+    let motion = if macroquad_toolkit::settings::reduced_motion_enabled() {
+        0.0
+    } else {
+        1.0
+    };
+    let pulse = pulse01_at(state.time_played, 2.5) * motion;
+    let global_pulse = lerp(0.8, 1.0, pulse01_at(state.time_played, 2.0) * motion);
     let time = state.time_played as f32;
 
     // Move the camera first, then lay out the frame around where it ended up,
@@ -85,12 +90,17 @@ pub fn render_planetary_view(
         state.touch_gesture_routed = false;
     }
 
-    terrain_render::draw_planetary_background(screen_w, screen_h, time);
+    terrain_render::draw_planetary_background(screen_w, screen_h, time, state);
+    terrain_render::draw_collapse_shake(state, screen_w, screen_h, time);
     terrain_render::draw_grid_tiles(state, textures, metrics, hovered_pos, pulse, global_pulse);
+    terrain_render::draw_planet_features(state, metrics);
+    terrain_render::draw_tutorial_route_hint(state, metrics, time);
+    upkeep_render::draw_hazard_fields(state, metrics);
     // Under the wear tint and the drones: it is a property of the ground.
     ore_render::draw_ore(state, metrics);
     upkeep_render::draw_wear(state, metrics, time);
     upkeep_render::draw_coverage(state, metrics, hovered_pos);
+    upkeep_render::draw_uncovered_hazards(state, metrics);
     upkeep_render::draw_severed_network(state, metrics, time);
     entity_render::draw_congestion(state, metrics, time);
     // Over the tiles and under the drones: the ship is the tallest thing on

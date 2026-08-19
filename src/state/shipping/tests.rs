@@ -103,7 +103,11 @@ fn run(campaign: &mut Campaign, seconds: f32) {
 }
 
 fn set_route(campaign: &mut Campaign, target: usize, cargo: ResourceType) {
-    campaign.current_mut().export = Some(ExportOrder { target, cargo });
+    campaign.current_mut().export = Some(ExportOrder {
+        target,
+        cargo,
+        ..ExportOrder::default()
+    });
 }
 
 #[test]
@@ -245,9 +249,9 @@ fn a_pad_holds_one_cargo_at_a_time() {
     let pad = pad_on(&mut campaign, MARS);
     let planet = campaign.current_mut();
 
-    assert!(planet.accept_pod(ResourceType::Minerals, 20.0));
+    assert!(planet.accept_pod(ResourceType::Minerals, 20.0, None));
     assert!(
-        !planet.accept_pod(ResourceType::Alloy, 20.0),
+        !planet.accept_pod(ResourceType::Alloy, 20.0, None),
         "a pad piled with ore is not a place to put alloy"
     );
     assert_eq!(
@@ -257,7 +261,7 @@ fn a_pad_holds_one_cargo_at_a_time() {
 
     // Once it has been carried off, the pad will take anything again.
     planet.output_buffers.insert((pad.x, pad.y), 0.0);
-    assert!(planet.accept_pod(ResourceType::Alloy, 20.0));
+    assert!(planet.accept_pod(ResourceType::Alloy, 20.0, None));
     assert_eq!(
         planet.pad_cargo.get(&(pad.x, pad.y)),
         Some(&ResourceType::Alloy)
@@ -271,10 +275,10 @@ fn a_full_pad_turns_a_pod_away() {
     let capacity = campaign.current().config.mass_driver.pad_capacity;
     let planet = campaign.current_mut();
 
-    assert!(planet.accept_pod(ResourceType::Minerals, capacity * 0.5));
-    assert!(planet.accept_pod(ResourceType::Minerals, capacity * 0.5));
+    assert!(planet.accept_pod(ResourceType::Minerals, capacity * 0.5, None));
+    assert!(planet.accept_pod(ResourceType::Minerals, capacity * 0.5, None));
     assert!(
-        !planet.accept_pod(ResourceType::Minerals, capacity * 0.5),
+        !planet.accept_pod(ResourceType::Minerals, capacity * 0.5, None),
         "the pad took what it could hold and no more"
     );
     assert_eq!(
@@ -305,6 +309,9 @@ fn a_pod_that_finds_the_pad_full_stays_up_until_it_is_cleared() {
         amount: 20.0,
         remaining: flight,
         transit: flight,
+        target_pad: None,
+        overflow: false,
+        priority: 0,
     });
 
     run(&mut campaign, flight + 2.0);
@@ -428,7 +435,7 @@ fn the_inspector_reads_a_driver_and_a_pad_out_in_words() {
 
     campaign
         .current_mut()
-        .accept_pod(ResourceType::Minerals, 30.0);
+        .accept_pod(ResourceType::Minerals, 30.0, None);
     let held = campaign.current().pad_summary(pad);
     assert!(held.contains("Minerals"), "{held}");
     assert!(held.contains("30"), "{held}");
@@ -497,6 +504,22 @@ fn cargo_cycles_through_what_the_drivers_accept() {
         campaign.export_order().map(|order| order.cargo),
         Some(ResourceType::Minerals)
     );
+}
+
+#[test]
+fn standing_orders_cycle_schedule_priority_and_surplus_policy() {
+    let mut campaign = two_world_campaign();
+    campaign.cycle_export_target();
+    assert_eq!(campaign.export_order().unwrap().schedule_seconds, 0.0);
+
+    campaign.cycle_export_schedule_for(MARS);
+    campaign.cycle_export_priority_for(MARS);
+    campaign.toggle_export_surplus_for(MARS);
+    let order = campaign.export_order().unwrap();
+    assert_eq!(order.schedule_seconds, 2.0);
+    assert_eq!(order.priority, 1);
+    assert!(order.surplus_only);
+    assert_eq!(order.reserve_source, 100.0);
 }
 
 #[test]

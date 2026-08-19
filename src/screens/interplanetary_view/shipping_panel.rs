@@ -20,8 +20,9 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
     draw_panel(x, y, w, h);
     draw_ui_text("Shipping", x + 12.0, y + 26.0, 16.0, Colors::PRIMARY);
 
-    let home = crate::data::game_data().planet(view.current_planet);
-    if !view.has_mass_driver {
+    let home = crate::data::game_data().planet(view.editing_world);
+    let edited_order = view.orders.get(view.editing_world).copied().flatten();
+    if !view.has_mass_driver && edited_order.is_none() {
         draw_ui_text(
             "Requires: Mass Driver",
             x + 12.0,
@@ -43,11 +44,11 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
     draw_ui_text(&status, x + 12.0, y + 48.0, 11.0, status_color);
 
     let button_w = w - 24.0;
-    let cargo_label = match view.export {
+    let cargo_label = match edited_order {
         Some(order) => format!("Cargo: {}", cargo_name(order.cargo)),
         None => "Cargo: --".to_string(),
     };
-    let target_label = match view.export {
+    let target_label = match edited_order {
         Some(order) => format!(
             "Target: {}",
             crate::data::game_data().planet(order.target).name
@@ -57,15 +58,103 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
 
     let mut action = InterplanetaryAction::None;
     if draw_button_sized(x + 12.0, y + 60.0, button_w, 28.0, &cargo_label) {
-        action = InterplanetaryAction::CycleExportCargo;
+        action = if view.editing_world == view.current_planet {
+            InterplanetaryAction::CycleExportCargo
+        } else {
+            InterplanetaryAction::CycleRemoteExportCargo
+        };
     }
     if draw_button_sized(x + 12.0, y + 94.0, button_w, 28.0, &target_label) {
-        action = InterplanetaryAction::CycleExportTarget;
+        action = if view.editing_world == view.current_planet {
+            InterplanetaryAction::CycleExportTarget
+        } else {
+            InterplanetaryAction::CycleRemoteExportTarget
+        };
+    }
+    if draw_button_sized(
+        x + 12.0,
+        y + 128.0,
+        button_w,
+        28.0,
+        &format!(
+            "Landing pad: {}",
+            edited_order
+                .and_then(|order| order.target_pad)
+                .map(|_| "specific")
+                .unwrap_or("any")
+        ),
+    ) {
+        action = InterplanetaryAction::CycleExportPad;
+    }
+
+    if draw_button_sized(
+        x + 12.0,
+        y + 162.0,
+        button_w,
+        28.0,
+        &format!(
+            "Cooldown: {:.0}s",
+            edited_order
+                .map(|order| order.schedule_seconds)
+                .unwrap_or(0.0)
+        ),
+    ) {
+        action = if view.editing_world == view.current_planet {
+            InterplanetaryAction::CycleExportSchedule
+        } else {
+            InterplanetaryAction::CycleRemoteExportSchedule
+        };
+    }
+    if draw_button_sized(
+        x + 12.0,
+        y + 196.0,
+        button_w,
+        28.0,
+        &format!(
+            "Priority: {}   {}",
+            edited_order.map(|order| order.priority + 1).unwrap_or(1),
+            if edited_order.is_some_and(|order| order.surplus_only) {
+                "SURPLUS"
+            } else {
+                "ALL STOCK"
+            }
+        ),
+    ) {
+        action = if view.editing_world == view.current_planet {
+            InterplanetaryAction::CycleExportPriority
+        } else {
+            InterplanetaryAction::CycleRemoteExportPriority
+        };
+    }
+    if draw_button_sized(
+        x + 12.0,
+        y + 230.0,
+        button_w,
+        28.0,
+        &format!(
+            "Shipping reserve: {}",
+            if edited_order.is_some_and(|order| order.surplus_only) {
+                format!(
+                    "{:.0}",
+                    edited_order
+                        .map(|order| order.reserve_source)
+                        .unwrap_or(0.0)
+                )
+            } else {
+                "off".to_string()
+            }
+        ),
+    ) {
+        action = if view.editing_world == view.current_planet {
+            InterplanetaryAction::ToggleExportSurplus
+        } else {
+            InterplanetaryAction::ToggleRemoteExportSurplus
+        };
     }
 
     // A route to a world with nothing to catch a pod is not an error, but the
     // pods will circle it until one gets built, so say so where it is set.
-    if let Some(order) = view.export {
+    if let Some(order) = edited_order {
         if view.pads.get(order.target).copied().unwrap_or(0) == 0 {
             draw_ui_text(
                 &format!(
@@ -73,16 +162,59 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
                     crate::data::game_data().planet(order.target).name
                 ),
                 x + 12.0,
-                y + 128.0,
+                y + 264.0,
+                10.0,
+                Colors::ERROR,
+            );
+        } else if view.pending_pods.get(order.target).copied().unwrap_or(0)
+            >= view.pod_caps.get(order.target).copied().unwrap_or(1)
+        {
+            draw_ui_text(
+                "Destination queue full - pods hold in orbit",
+                x + 12.0,
+                y + 264.0,
                 10.0,
                 Colors::WARNING,
             );
         }
+        if view.overflow_pods.get(order.target).copied().unwrap_or(0) > 0 {
+            draw_ui_text(
+                "OVERFLOW: landing capacity is exhausted",
+                x + 12.0,
+                y + 276.0,
+                10.0,
+                Colors::ERROR,
+            );
+        }
     }
-
+    if view.orders.iter().any(Option::is_some) {
+        draw_ui_text(
+            "Remote standing orders",
+            x + 12.0,
+            y + 300.0,
+            10.0,
+            Colors::PRIMARY,
+        );
+        let mut row_y = y + 318.0;
+        for (world, order) in view.orders.iter().enumerate() {
+            if world == view.editing_world || order.is_none() {
+                continue;
+            }
+            if draw_button_sized(
+                x + 12.0,
+                row_y - 12.0,
+                button_w,
+                22.0,
+                crate::data::game_data().planet(world).name.as_str(),
+            ) {
+                action = InterplanetaryAction::SelectOrderWorld(world);
+            }
+            row_y += 26.0;
+        }
+    }
     // The pod being loaded, so a route that is set but starved reads as
     // starved rather than as broken.
-    let bar_y = y + 144.0;
+    let bar_y = y + 340.0;
     draw_rectangle(x + 12.0, bar_y, button_w, 8.0, Colors::SURFACE_DARK);
     draw_rectangle(
         x + 12.0,
@@ -91,7 +223,7 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
         8.0,
         Colors::ACCENT,
     );
-    let pod_text = if view.export.is_none() {
+    let pod_text = if view.editing_world != view.current_planet || view.export.is_none() {
         "No route set".to_string()
     } else if view.pod_fraction <= 0.0 {
         "Pod empty - route cargo to the driver".to_string()

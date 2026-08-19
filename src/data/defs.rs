@@ -27,6 +27,8 @@ pub struct RecipeDef {
     /// One, because a building has one hopper; the rest come from the pool.
     #[serde(default)]
     pub carried: Option<String>,
+    #[serde(default)]
+    pub carried_inputs: Vec<String>,
 }
 
 impl RecipeDef {
@@ -41,6 +43,16 @@ impl RecipeDef {
             .and_then(|id| self.inputs.get(id))
             .copied()
             .unwrap_or(0.0)
+    }
+
+    pub fn carried_ids(&self) -> Vec<&str> {
+        let mut ids: Vec<&str> = self.carried_inputs.iter().map(String::as_str).collect();
+        if let Some(id) = self.carried.as_deref() {
+            if !ids.contains(&id) {
+                ids.push(id);
+            }
+        }
+        ids
     }
 }
 
@@ -68,6 +80,8 @@ pub struct BuildingDef {
     pub generates_power: bool,
     pub consumes_power: bool,
     pub uses_efficiency: bool,
+    #[serde(default)]
+    pub water_cooling: bool,
     /// Present on processing buildings; absent means the building makes
     /// nothing out of anything.
     #[serde(default)]
@@ -112,6 +126,8 @@ pub struct ResearchNodeDef {
     pub position: (f32, f32),
     #[serde(default)]
     pub modifiers: Vec<ModifierDef>,
+    #[serde(default)]
+    pub planet_condition: Option<String>,
 }
 
 impl ResearchNodeDef {
@@ -123,6 +139,7 @@ impl ResearchNodeDef {
             data_cost: self.data_cost,
             prerequisites: self.prerequisites.clone(),
             position: self.position,
+            planet_condition: self.planet_condition.clone(),
         }
     }
 }
@@ -252,6 +269,49 @@ pub struct PlanetDef {
     #[serde(default)]
     pub banned_buildings: Vec<String>,
     pub arrival: String,
+    #[serde(default)]
+    pub pending_pod_cap: usize,
+    #[serde(default)]
+    pub features: Vec<PlanetFeatureDef>,
+    #[serde(default)]
+    pub hazard_fields: Vec<HazardFieldDef>,
+    #[serde(default)]
+    pub constraints: PlanetConstraintsDef,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct PlanetFeatureDef {
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+    pub width: f32,
+    pub height: f32,
+    #[serde(default)]
+    pub seed_offset: u64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct HazardFieldDef {
+    pub id: String,
+    pub name: String,
+    pub hazard: String,
+    pub center: [f32; 2],
+    pub radius: f32,
+    #[serde(default)]
+    pub strength: f32,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct PlanetConstraintsDef {
+    #[serde(default)]
+    pub required_buildings: Vec<String>,
+    #[serde(default)]
+    pub required_research: Vec<String>,
+    #[serde(default)]
+    pub minimum_power_generation: f32,
+    #[serde(default)]
+    pub minimum_power_balance: f32,
 }
 
 /// What finishes a tutorial step. `kind` is checked at load, so a typo is a
@@ -330,6 +390,8 @@ pub struct CoreStageDef {
     pub requires: Vec<AchievementConditionDef>,
     #[serde(default)]
     pub modifiers: Vec<ModifierDef>,
+    #[serde(default)]
+    pub sprite: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -581,7 +643,7 @@ impl GameData {
             terrain_by_id.insert(def.id.clone(), def.clone());
         }
 
-        Self {
+        let data = Self {
             buildings: building_file.buildings,
             buildings_by_id,
             terrain: terrain_file.terrain,
@@ -593,26 +655,34 @@ impl GameData {
             directives,
             achievements: achievement_file.achievements,
             core_stages: core_stage_file.stages,
+        };
+        if !data.buildings.is_empty() || !data.research.nodes.is_empty() {
+            data.validate()
+                .unwrap_or_else(|error| panic!("game data validation failed: {error}"));
         }
+        data
     }
 
     pub fn building(&self, id: &str) -> &BuildingDef {
-        self.buildings_by_id
-            .get(id)
-            .unwrap_or_else(|| panic!("Missing building def for id: {}", id))
+        self.buildings_by_id.get(id).unwrap_or_else(|| {
+            panic!(
+                "assets/buildings.json: missing building identifier \"{}\"",
+                id
+            )
+        })
     }
 
     /// The world at this campaign slot.
     pub fn planet(&self, index: usize) -> &PlanetDef {
         self.planets
             .get(index)
-            .unwrap_or_else(|| panic!("Missing planet def for index: {}", index))
+            .unwrap_or_else(|| panic!("assets/planets.json: missing planet index {}", index))
     }
 
     pub fn terrain(&self, id: &str) -> &TerrainDef {
         self.terrain_by_id
             .get(id)
-            .unwrap_or_else(|| panic!("Missing terrain def for id: {}", id))
+            .unwrap_or_else(|| panic!("assets/terrain.json: missing terrain identifier \"{}\"", id))
     }
 
     pub fn research_tree(&self) -> ResearchTree {

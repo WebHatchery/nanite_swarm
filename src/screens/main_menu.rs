@@ -13,13 +13,15 @@ pub enum MenuAction {
     Continue,
     Load,
     Save,
+    CycleSlot,
+    Delete,
     Settings,
     #[cfg(not(target_arch = "wasm32"))]
     Quit,
 }
 
 /// Render the main menu and return any action taken
-pub fn render_main_menu(has_save: bool, notice: Option<&str>) -> MenuAction {
+pub fn render_main_menu(has_save: bool, notice: Option<&str>, slot: &str) -> MenuAction {
     clear_background(Colors::BACKGROUND);
 
     let screen_w = screen_width();
@@ -41,15 +43,26 @@ pub fn render_main_menu(has_save: bool, notice: Option<&str>) -> MenuAction {
     );
 
     // Title
-    let title = "NANITE SWARM";
-    let _title_size = measure_ui_text(title, None, 48, 1.0);
-    draw_ui_text(title, 40.0, 80.0 + float_y, 48.0, Colors::PRIMARY);
+    let strings = crate::data::player_strings();
+    let _title_size = measure_ui_text(&strings.title, None, 48, 1.0);
+    draw_ui_text(&strings.title, 40.0, 80.0 + float_y, 48.0, Colors::PRIMARY);
+    draw_ui_text(
+        &format!("v{}", crate::release::BUILD_VERSION),
+        42.0,
+        132.0 + float_y * 0.4,
+        10.0,
+        Colors::TEXT_DIM,
+    );
 
     // Subtitle
-    let subtitle = "Consume. Evolve. Expand.";
-    let _sub_size = measure_ui_text(subtitle, None, Dimensions::FONT_SIZE_NORMAL as u16, 1.0);
+    let _sub_size = measure_ui_text(
+        &strings.subtitle,
+        None,
+        Dimensions::FONT_SIZE_NORMAL as u16,
+        1.0,
+    );
     draw_ui_text(
-        subtitle,
+        &strings.subtitle,
         40.0,
         110.0 + float_y * 0.5,
         Dimensions::FONT_SIZE_NORMAL,
@@ -63,35 +76,47 @@ pub fn render_main_menu(has_save: bool, notice: Option<&str>) -> MenuAction {
     let briefing_y = 160.0;
     draw_panel(briefing_x, briefing_y, briefing_w, briefing_h);
     draw_ui_text(
-        "Mission Briefing",
+        &strings.briefing_title,
         briefing_x + 16.0,
         briefing_y + 28.0,
         18.0,
         Colors::PRIMARY,
     );
     draw_ui_text(
-        "Build a self-sustaining nanite colony.",
+        strings
+            .briefing_lines
+            .first()
+            .map(String::as_str)
+            .unwrap_or("Build a self-sustaining nanite colony."),
         briefing_x + 16.0,
         briefing_y + 58.0,
         13.0,
         Colors::TEXT,
     );
     draw_ui_text(
-        "Expand power, automate drills, and research.",
+        strings
+            .briefing_lines
+            .get(1)
+            .map(String::as_str)
+            .unwrap_or("Expand power, automate drills, and research."),
         briefing_x + 16.0,
         briefing_y + 78.0,
         12.0,
         Colors::TEXT_DIM,
     );
     draw_ui_text(
-        "Short sprints. Clear milestones.",
+        strings
+            .briefing_lines
+            .get(2)
+            .map(String::as_str)
+            .unwrap_or("Short sprints. Clear milestones."),
         briefing_x + 16.0,
         briefing_y + 98.0,
         12.0,
         Colors::TEXT_DIM,
     );
     draw_ui_text(
-        "Tip: Tap a building card, then tap the grid.",
+        &strings.briefing_tip,
         briefing_x + 16.0,
         briefing_y + 130.0,
         11.0,
@@ -105,7 +130,7 @@ pub fn render_main_menu(has_save: bool, notice: Option<&str>) -> MenuAction {
     let panel_y = screen_h * 0.3 + float_y * 0.2;
     draw_panel(panel_x, panel_y, panel_w, panel_h);
     draw_ui_text(
-        "Command Menu",
+        &strings.command_menu,
         panel_x + 18.0,
         panel_y + 30.0,
         18.0,
@@ -125,35 +150,56 @@ pub fn render_main_menu(has_save: bool, notice: Option<&str>) -> MenuAction {
     let btn_w = panel_w - 40.0;
     let btn_x = panel_x + 20.0;
     let mut btn_y = panel_y + 60.0;
-    let btn_spacing = 46.0;
+    let btn_spacing = 38.0;
 
-    if draw_button_sized(btn_x, btn_y, btn_w, 36.0, "New Game") {
+    if draw_button_sized(
+        btn_x,
+        btn_y,
+        btn_w,
+        30.0,
+        &format!("Slot: {}  (tap to switch)", slot),
+    ) {
+        return MenuAction::CycleSlot;
+    }
+    btn_y += btn_spacing;
+
+    if draw_button_sized(btn_x, btn_y, btn_w, 30.0, &strings.new_game) {
         return MenuAction::NewGame;
     }
     btn_y += btn_spacing;
 
-    if has_save && draw_button_sized(btn_x, btn_y, btn_w, 36.0, "Continue") {
+    if has_save && draw_button_sized(btn_x, btn_y, btn_w, 30.0, &strings.r#continue) {
         return MenuAction::Continue;
     }
     btn_y += btn_spacing;
 
-    if draw_button_sized(btn_x, btn_y, btn_w, 36.0, "Load") {
+    if draw_button_sized(btn_x, btn_y, btn_w, 30.0, &strings.load) {
         return MenuAction::Load;
     }
     btn_y += btn_spacing;
 
-    if has_save && draw_button_sized(btn_x, btn_y, btn_w, 36.0, "Save") {
+    if has_save && draw_button_sized(btn_x, btn_y, btn_w, 30.0, &strings.save) {
         return MenuAction::Save;
     }
     btn_y += btn_spacing;
 
-    if draw_button_sized(btn_x, btn_y, btn_w, 36.0, "Settings") {
+    if draw_button_sized(btn_x, btn_y, btn_w, 30.0, &strings.settings) {
         return MenuAction::Settings;
+    }
+    if has_save
+        && draw_button_sized(
+            btn_x,
+            btn_y + btn_spacing,
+            btn_w,
+            30.0,
+            &strings.delete_slot,
+        )
+    {
+        return MenuAction::Delete;
     }
     #[cfg(not(target_arch = "wasm32"))]
     {
-        btn_y += btn_spacing;
-        if draw_button_sized(btn_x, btn_y, btn_w, 36.0, "Quit") {
+        if draw_button_sized(btn_x, btn_y + btn_spacing * 2.0, btn_w, 30.0, &strings.quit) {
             return MenuAction::Quit;
         }
     }

@@ -18,6 +18,10 @@ pub struct BuildingTextures {
     pub core_stage_1c: Texture2D,
     pub core_stage_2a: Texture2D,
     pub core_stage_2b: Texture2D,
+    pub core_stage_3a: Texture2D,
+    pub core_stage_3b: Texture2D,
+    pub core_stage_4a: Texture2D,
+    pub core_stage_4b: Texture2D,
     pub conduit_straight_h: Texture2D,
     pub conduit_straight_v: Texture2D,
     pub conduit_corner_ne: Texture2D,
@@ -113,6 +117,30 @@ impl GameTextures {
                 asset_pack.as_ref(),
                 "assets/tiles/buildings/building_core_stage_2b.png",
                 "building_core_stage_2b",
+            )
+            .await,
+            core_stage_3a: load_required_texture(
+                asset_pack.as_ref(),
+                "assets/tiles/buildings/building_core_stage_3a.png",
+                "building_core_stage_3a",
+            )
+            .await,
+            core_stage_3b: load_required_texture(
+                asset_pack.as_ref(),
+                "assets/tiles/buildings/building_core_stage_3b.png",
+                "building_core_stage_3b",
+            )
+            .await,
+            core_stage_4a: load_required_texture(
+                asset_pack.as_ref(),
+                "assets/tiles/buildings/building_core_stage_4a.png",
+                "building_core_stage_4a",
+            )
+            .await,
+            core_stage_4b: load_required_texture(
+                asset_pack.as_ref(),
+                "assets/tiles/buildings/building_core_stage_4b.png",
+                "building_core_stage_4b",
             )
             .await,
             conduit_straight_h: load_required_texture(
@@ -224,6 +252,10 @@ fn set_filter_nearest_buildings(buildings: &BuildingTextures) {
     buildings.core_stage_1c.set_filter(FilterMode::Nearest);
     buildings.core_stage_2a.set_filter(FilterMode::Nearest);
     buildings.core_stage_2b.set_filter(FilterMode::Nearest);
+    buildings.core_stage_3a.set_filter(FilterMode::Nearest);
+    buildings.core_stage_3b.set_filter(FilterMode::Nearest);
+    buildings.core_stage_4a.set_filter(FilterMode::Nearest);
+    buildings.core_stage_4b.set_filter(FilterMode::Nearest);
     buildings.conduit_straight_h.set_filter(FilterMode::Nearest);
     buildings.conduit_straight_v.set_filter(FilterMode::Nearest);
     buildings.conduit_corner_ne.set_filter(FilterMode::Nearest);

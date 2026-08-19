@@ -19,6 +19,10 @@ pub fn generate_tiles() {
     save_building_with_icon("building_core_stage_1c", create_core_stage_1c());
     save_building_with_icon("building_core_stage_2a", create_core_stage_2a());
     save_building_with_icon("building_core_stage_2b", create_core_stage_2b());
+    save_building_with_icon("building_core_stage_3a", create_core_stage_3a());
+    save_building_with_icon("building_core_stage_3b", create_core_stage_3b());
+    save_building_with_icon("building_core_stage_4a", create_core_stage_4a());
+    save_building_with_icon("building_core_stage_4b", create_core_stage_4b());
     save_building_with_icon("building_drill", create_drill());
     save_building_with_icon(
         "building_conduit_straight_h",
@@ -279,6 +283,44 @@ fn create_core_stage_2b() -> RgbaImage {
     draw_rect(&mut img, 8, 2, 4, 8, Rgba([140, 150, 160, 255]));
     draw_rect(&mut img, 20, 2, 4, 10, Rgba([140, 150, 160, 255]));
     draw_rect(&mut img, 12, 20, 8, 6, Rgba([90, 110, 130, 255]));
+    img
+}
+
+fn create_core_stage_3a() -> RgbaImage {
+    let mut img = create_core_stage_2b();
+    // A wider command ring and four orbital pylons.
+    draw_circle(&mut img, 16, 16, 14, Rgba([40, 180, 205, 255]));
+    draw_circle(&mut img, 16, 16, 10, Rgba([20, 55, 80, 255]));
+    for (x, y) in [(3, 3), (25, 3), (3, 25), (25, 25)] {
+        draw_rect(&mut img, x, y, 4, 4, Rgba([195, 160, 60, 255]));
+    }
+    img
+}
+
+fn create_core_stage_3b() -> RgbaImage {
+    let mut img = create_core_stage_3a();
+    draw_rect(&mut img, 13, 1, 6, 8, Rgba([220, 230, 235, 255]));
+    draw_rect(&mut img, 13, 23, 6, 8, Rgba([220, 230, 235, 255]));
+    draw_circle(&mut img, 16, 16, 4, Rgba([240, 250, 255, 255]));
+    img
+}
+
+fn create_core_stage_4a() -> RgbaImage {
+    let mut img = create_core_stage_3b();
+    draw_circle(&mut img, 16, 16, 15, Rgba([125, 75, 210, 255]));
+    draw_circle(&mut img, 16, 16, 12, Rgba([25, 35, 70, 255]));
+    for i in 0..8 {
+        let x = 5 + (i * 7) % 22;
+        let y = 4 + (i * 11) % 22;
+        draw_rect(&mut img, x, y, 2, 2, Rgba([100, 220, 255, 255]));
+    }
+    img
+}
+
+fn create_core_stage_4b() -> RgbaImage {
+    let mut img = create_core_stage_4a();
+    draw_circle(&mut img, 16, 16, 6, Rgba([225, 250, 255, 255]));
+    draw_circle(&mut img, 16, 16, 2, Rgba([255, 255, 255, 255]));
     img
 }
 

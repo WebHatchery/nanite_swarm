@@ -6,6 +6,7 @@ use crate::state::PlanetState;
 use crate::ui::Colors;
 use macroquad::prelude::*;
 use macroquad_toolkit::colors::with_alpha;
+use macroquad_toolkit::ui::draw_ui_text;
 
 use super::metrics::{grid_to_screen, HudMetrics};
 
@@ -61,19 +62,30 @@ pub(super) fn draw_wear(state: &PlanetState, metrics: HudMetrics, time: f32) {
         let Some(building) = tile.building.as_ref() else {
             continue;
         };
-        if building.dust < WEAR_VISIBLE_AT {
+        if building.dust < WEAR_VISIBLE_AT && building.acid_wear < WEAR_VISIBLE_AT {
             continue;
         }
 
         let severity =
             ((building.dust - WEAR_VISIBLE_AT) / (100.0 - WEAR_VISIBLE_AT)).clamp(0.0, 1.0);
+        let acid_severity =
+            ((building.acid_wear - WEAR_VISIBLE_AT) / (100.0 - WEAR_VISIBLE_AT)).clamp(0.0, 1.0);
         let (screen_x, screen_y) = grid_to_screen(pos, metrics);
-        let color = if building.is_dust_stalled() {
+        let color = if building.acid_wear >= 100.0 {
+            with_alpha(Color::new(0.75, 0.2, 0.9, 1.0), 0.35 + acid_severity * 0.3)
+        } else if building.is_dust_stalled() {
             // Stalled is a different state, not just more wear: this building
             // has stopped, and if it carried the network the run is cut.
             with_alpha(Colors::ERROR, 0.30 + (time * 3.0).sin().abs() * 0.25)
         } else {
-            with_alpha(Colors::WARNING, 0.10 + severity * 0.30)
+            with_alpha(
+                if acid_severity > severity {
+                    Color::new(0.75, 0.2, 0.9, 1.0)
+                } else {
+                    Colors::WARNING
+                },
+                0.10 + severity.max(acid_severity) * 0.30,
+            )
         };
         draw_rectangle(
             screen_x + 1.0,
@@ -118,6 +130,102 @@ pub(super) fn draw_coverage(state: &PlanetState, metrics: HudMetrics, hovered: O
 
     for (center, radius, emphasised) in shown {
         draw_coverage_area(center, radius, emphasised, metrics);
+    }
+}
+
+/// Mark network and upkeep buildings outside the nearest hazard counter. The
+/// outline is intentionally patterned and not just a color wash, so it stays
+/// legible for color-blind players and in screenshots.
+pub(super) fn draw_uncovered_hazards(state: &PlanetState, metrics: HudMetrics) {
+    if !state.hazards.any() {
+        return;
+    }
+    let counters: Vec<_> = state
+        .grid
+        .find_buildings(crate::engine::BuildingType::ShieldGenerator)
+        .into_iter()
+        .chain(
+            state
+                .grid
+                .find_buildings(crate::engine::BuildingType::HeaterNode),
+        )
+        .collect();
+    let radius = state.config.upkeep.hazard_counter_radius;
+    for (pos, tile) in state.grid.iter_tiles() {
+        let Some(building) = tile.building.as_ref() else {
+            continue;
+        };
+        if !building.transmits_power() && !building.consumes_power() {
+            continue;
+        }
+        if counters
+            .iter()
+            .any(|counter| pos.distance(*counter) as i32 <= radius)
+        {
+            continue;
+        }
+        let (x, y) = grid_to_screen(pos, metrics);
+        let edge = if state.acid_strength() > 0.0 {
+            Color::new(0.85, 0.25, 0.85, 0.8)
+        } else {
+            Color::new(0.35, 0.75, 1.0, 0.8)
+        };
+        draw_rectangle_lines(
+            x + 2.0,
+            y + 2.0,
+            metrics.tile_size - 4.0,
+            metrics.tile_size - 4.0,
+            1.5,
+            edge,
+        );
+        draw_line(
+            x + 4.0,
+            y + 4.0,
+            x + metrics.tile_size - 4.0,
+            y + metrics.tile_size - 4.0,
+            1.0,
+            edge,
+        );
+    }
+}
+
+/// Render authored spatial hazard regions and a compact legend.
+pub(super) fn draw_hazard_fields(state: &PlanetState, metrics: HudMetrics) {
+    let def = crate::data::game_data().planet(state.planet_index);
+    let width = state.grid.width as f32;
+    let height = state.grid.height as f32;
+    for field in &def.hazard_fields {
+        let center = GridPos::new(
+            (field.center[0] * width) as i32,
+            (field.center[1] * height) as i32,
+        );
+        let radius = (field.radius * width.min(height)).max(1.0) as i32;
+        let color = if field.hazard == "acid" {
+            Color::new(0.8, 0.15, 0.75, 0.12)
+        } else {
+            Color::new(0.2, 0.65, 1.0, 0.12)
+        };
+        for dx in -radius..=radius {
+            for dy in -radius..=radius {
+                let pos = GridPos::new(center.x + dx, center.y + dy);
+                if !pos.in_bounds(state.grid.width, state.grid.height)
+                    || center.distance(pos) as i32 > radius
+                {
+                    continue;
+                }
+                let (x, y) = grid_to_screen(pos, metrics);
+                draw_rectangle(x, y, metrics.tile_size, metrics.tile_size, color);
+            }
+        }
+    }
+    if !def.hazard_fields.is_empty() {
+        draw_ui_text(
+            "HAZARDS  //  purple ACID  //  blue COLD",
+            metrics.base_offset_x() + 8.0,
+            metrics.base_offset_y() + 18.0,
+            9.0,
+            Colors::TEXT_DIM,
+        );
     }
 }
 

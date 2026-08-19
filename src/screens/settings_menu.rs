@@ -28,7 +28,7 @@ pub fn render_settings_menu(settings: &mut GameSettings) -> SettingsAction {
     }
 
     let panel_w = 320.0;
-    let panel_h = 240.0;
+    let panel_h = 400.0;
     let panel_y = screen_h * 0.3;
     let display_x = screen_w * 0.5 - panel_w * 0.5;
     let row_w = panel_w - 32.0;
@@ -63,8 +63,59 @@ pub fn render_settings_menu(settings: &mut GameSettings) -> SettingsAction {
     );
     toggle_row(fps_row, "Show FPS", &mut settings.show_fps);
 
+    let motion_row = Rect::new(
+        display_x + 16.0,
+        panel_y + 54.0 + (row_h + row_gap) * 2.0,
+        row_w,
+        row_h,
+    );
+    toggle_row(motion_row, "Reduced motion", &mut settings.reduced_motion);
     draw_ui_text(
-        "Tap Back to return",
+        "Stops pulses and impact particles; rules still run.",
+        display_x + 16.0,
+        motion_row.y + row_h + 12.0,
+        10.0,
+        Colors::TEXT_DIM,
+    );
+
+    let key_row = Rect::new(display_x + 16.0, motion_row.y + row_h + 30.0, row_w, row_h);
+    if draw_button_sized(
+        key_row.x,
+        key_row.y,
+        key_row.w,
+        key_row.h,
+        &format!(
+            "Pause key: {} (tap to cycle)",
+            settings
+                .key_bindings
+                .get("pause")
+                .map(String::as_str)
+                .unwrap_or("Unassigned")
+        ),
+    ) {
+        let next = match settings.key_bindings.get("pause").map(String::as_str) {
+            Some("Space") => "P",
+            Some("P") => "Enter",
+            _ => "Space",
+        };
+        settings
+            .key_bindings
+            .insert("pause".to_string(), next.to_string());
+    }
+
+    let speed_row = Rect::new(display_x + 16.0, key_row.y + row_h + 30.0, row_w, row_h);
+    let scales = ["0.5x", "1x", "2x", "4x", "8x MAX"];
+    let speed_index = settings.default_speed.clamp(0, 4) as usize;
+    if stepper_row(speed_row, "Initial game speed", scales[speed_index]) != 0 {
+        settings.default_speed = if settings.default_speed >= 4 {
+            0
+        } else {
+            settings.default_speed + 1
+        };
+    }
+
+    draw_ui_text(
+        "Tap Back to return. Initial speed is separate from each world's pause state.",
         20.0,
         screen_h - 20.0,
         Dimensions::FONT_SIZE_SMALL,

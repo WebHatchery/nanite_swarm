@@ -46,6 +46,10 @@
     {
       "label": "Platform",
       "value": "Browser, Windows"
+    },
+    {
+      "label": "Version",
+      "value": "0.1.0"
     }
   ],
   "download": {

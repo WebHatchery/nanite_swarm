@@ -16,6 +16,10 @@ pub struct GameConfig {
     pub mass_driver: MassDriverConfig,
     #[serde(default = "UpkeepConfig::default")]
     pub upkeep: UpkeepConfig,
+    #[serde(default)]
+    pub logistics: LogisticsConfig,
+    #[serde(default)]
+    pub offline: OfflineConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -146,6 +150,8 @@ pub struct UpkeepConfig {
     /// hazard it holds off inside that.
     pub hazard_counter_radius: i32,
     pub hazard_counter_strength: f32,
+    #[serde(default)]
+    pub dust_response: DustResponseConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -164,6 +170,10 @@ pub struct BuildingConfig {
     pub partial_load_min_route: f32,
     /// The least a partial load may be, as a share of a full one.
     pub partial_load_min_share: f32,
+    pub server_bank_heat_per_second: f32,
+    pub server_bank_heat_capacity: f32,
+    pub water_cooling_rate: f32,
+    pub overheat_penalty: f32,
 }
 
 fn default_repeater_range() -> u32 {
@@ -206,11 +216,17 @@ impl Default for GameConfig {
                 congestion_route_penalty: 1.5,
                 partial_load_min_route: 6.0,
                 partial_load_min_share: 0.5,
+                server_bank_heat_per_second: 0.8,
+                server_bank_heat_capacity: 100.0,
+                water_cooling_rate: 2.0,
+                overheat_penalty: 0.5,
             },
             collapse: CollapseConfig::default(),
             ore: OreConfig::default(),
             mass_driver: MassDriverConfig::default(),
             upkeep: UpkeepConfig::default(),
+            logistics: LogisticsConfig::default(),
+            offline: OfflineConfig::default(),
         }
     }
 }
@@ -228,6 +244,74 @@ impl Default for UpkeepConfig {
             acid_multiplier: 4.0,
             hazard_counter_radius: 4,
             hazard_counter_strength: 0.9,
+            dust_response: DustResponseConfig::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DustResponseConfig {
+    pub efficiency_threshold: f32,
+    pub efficiency: f32,
+    pub speed_threshold: f32,
+    pub speed_multiplier: f32,
+    pub leak_threshold: f32,
+    pub leak: f32,
+    pub stall_threshold: f32,
+}
+
+impl Default for DustResponseConfig {
+    fn default() -> Self {
+        Self {
+            efficiency_threshold: 25.0,
+            efficiency: 0.9,
+            speed_threshold: 50.0,
+            speed_multiplier: 0.7,
+            leak_threshold: 75.0,
+            leak: 0.5,
+            stall_threshold: 100.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LogisticsConfig {
+    pub pad_depth: f32,
+    pub hopper_depth: f32,
+    pub reservation_seconds: f32,
+    pub dispatch_lookahead: f32,
+    pub max_queue_depth: usize,
+    pub path_validation_budget_ms: f32,
+}
+
+impl Default for LogisticsConfig {
+    fn default() -> Self {
+        Self {
+            pad_depth: 30.0,
+            hopper_depth: 30.0,
+            reservation_seconds: 1.5,
+            dispatch_lookahead: 3.0,
+            max_queue_depth: 64,
+            path_validation_budget_ms: 4.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OfflineConfig {
+    pub max_elapsed_seconds: f32,
+    pub max_resource_gain: f32,
+    pub clock_tamper_tolerance_seconds: f32,
+    pub fallback_delta_seconds: f32,
+}
+
+impl Default for OfflineConfig {
+    fn default() -> Self {
+        Self {
+            max_elapsed_seconds: 86_400.0,
+            max_resource_gain: 10_000.0,
+            clock_tamper_tolerance_seconds: 300.0,
+            fallback_delta_seconds: 60.0,
         }
     }
 }

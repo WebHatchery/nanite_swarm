@@ -16,7 +16,9 @@ use macroquad_toolkit::pathfinding::{find_path_with, Heuristic, Pos};
 pub fn tile_carries_traffic(grid: &Grid, pos: GridPos) -> bool {
     grid.get(pos)
         .and_then(|tile| tile.building.as_ref())
-        .map(|building| building.carries_traffic() && !building.is_dust_stalled())
+        .map(|building| {
+            building.carries_traffic() && !building.is_dust_stalled() && building.acid_wear < 100.0
+        })
         .unwrap_or(false)
 }
 

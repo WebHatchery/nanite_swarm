@@ -5,7 +5,7 @@
 //! toast that faded. This is the list: what has been earned, what has not, and
 //! how close the ones that are counted actually are.
 
-use crate::state::AchievementRecord;
+use crate::state::{AchievementRecord, DirectiveRecord};
 use crate::ui::{draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::notifications::{LoggedNotification, NotificationType};
@@ -36,7 +36,9 @@ pub fn render_records_view(
     world: &str,
     records: &[AchievementRecord],
     log: &[LoggedNotification],
+    directives: &[DirectiveRecord],
     scroll: &mut ScrollArea,
+    records_scroll: &mut ScrollArea,
 ) -> RecordsAction {
     clear_background(Colors::BACKGROUND);
 
@@ -69,22 +71,44 @@ pub fn render_records_view(
 
     let rows = records.len().div_ceil(columns);
     let grid_h = rows as f32 * (CARD_H + CARD_GAP);
+    let grid_view = Rect::new(
+        area_x,
+        area_y,
+        area_w,
+        (screen_h - area_y - LOG_MIN_H - 24.0).max(CARD_H),
+    );
+    records_scroll.update(grid_view, grid_h);
+    let grid_offset = records_scroll.offset();
     for (index, record) in records.iter().enumerate() {
         let column = index % columns;
         let row = index / columns;
         let x = area_x + (card_w + CARD_GAP) * column as f32;
-        let y = area_y + (CARD_H + CARD_GAP) * row as f32;
+        let y = area_y + (CARD_H + CARD_GAP) * row as f32 - grid_offset;
         // A set that outgrows the screen is a scrolling problem, not a reason
         // to draw over the footer.
-        if y + CARD_H > screen_h - 40.0 {
-            break;
+        if y + CARD_H < area_y || y > grid_view.bottom() {
+            continue;
         }
         draw_record(record, x, y, card_w);
     }
+    records_scroll.draw_scrollbar(grid_view, grid_h);
+
+    let completed_directives = directives.iter().filter(|record| record.completed).count();
+    draw_ui_text(
+        &format!(
+            "Directives: {} completed / {} expired",
+            completed_directives,
+            directives.len().saturating_sub(completed_directives)
+        ),
+        area_x,
+        area_y + grid_view.h + 14.0,
+        10.0,
+        Colors::TEXT_DIM,
+    );
 
     // The log takes the room the grid does not want. Two halves of the same
     // question: what the swarm has done, and what it has been told.
-    let log_y = area_y + grid_h + 6.0;
+    let log_y = area_y + grid_h + 28.0;
     let log_h = screen_h - log_y - 36.0;
     if log_h >= LOG_MIN_H {
         draw_log(log, scroll, Rect::new(area_x, log_y, area_w, log_h));

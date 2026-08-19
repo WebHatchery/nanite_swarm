@@ -1,12 +1,78 @@
+use crate::data::DustResponseConfig;
 use crate::engine::{BuildingType, GridPos, StatId};
 
 use super::game_state::PlanetState;
 
-/// Offline catch-up step. Coarser than the live tick by design — see
-/// [`apply_offline_progress`](PlanetState::apply_offline_progress).
-const OFFLINE_TICK_SECONDS: f32 = 1.0;
+#[derive(Debug, Clone, Copy, Default, serde::Serialize, serde::Deserialize)]
+pub struct OfflineReport {
+    pub elapsed_seconds: f32,
+    pub capped_seconds: f32,
+    pub tamper_guarded: bool,
+    pub minerals_gained: f32,
+    pub alloy_gained: f32,
+    pub data_gained: f32,
+    pub power_gained: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct NextEvent {
+    pub label: &'static str,
+    pub seconds: f32,
+}
+
+pub(crate) fn hazard_field_strength(
+    pos: GridPos,
+    hazard: &str,
+    broad: f32,
+    fields: &[crate::data::HazardFieldDef],
+    width: u32,
+    height: u32,
+) -> f32 {
+    let width = width.max(1) as f32;
+    let height = height.max(1) as f32;
+    let x = pos.x as f32 / width;
+    let y = pos.y as f32 / height;
+    let field = fields
+        .iter()
+        .filter(|field| field.hazard == hazard && field.radius > 0.0)
+        .map(|field| {
+            let dx = (x - field.center[0]) * width;
+            let dy = (y - field.center[1]) * height;
+            let distance = (dx * dx + dy * dy).sqrt();
+            (field.strength * (1.0 - distance / (field.radius * width.min(height)))).max(0.0)
+        })
+        .fold(0.0, f32::max);
+    broad.max(field)
+}
 
 impl PlanetState {
+    /// Research can move the response points without changing the data file
+    /// that describes ordinary upkeep. Keeping this resolver on the state
+    /// makes every simulation consumer read the same values.
+    pub fn resolved_dust_response(&self) -> DustResponseConfig {
+        let base = &self.config.upkeep.dust_response;
+        DustResponseConfig {
+            efficiency_threshold: self
+                .stats
+                .apply(StatId::DustEfficiencyThreshold, base.efficiency_threshold)
+                .max(0.0),
+            efficiency: base.efficiency,
+            speed_threshold: self
+                .stats
+                .apply(StatId::DustSpeedThreshold, base.speed_threshold)
+                .max(0.0),
+            speed_multiplier: base.speed_multiplier,
+            leak_threshold: self
+                .stats
+                .apply(StatId::DustLeakThreshold, base.leak_threshold)
+                .max(0.0),
+            leak: base.leak,
+            stall_threshold: self
+                .stats
+                .apply(StatId::DustStallThreshold, base.stall_threshold)
+                .max(0.0),
+        }
+    }
     /// Select a building type for placement.
     pub fn select_building(&mut self, building_type: BuildingType) {
         if self.is_building_unlocked(building_type) {
@@ -39,6 +105,112 @@ impl PlanetState {
     pub fn is_building_researched(&self, building_type: BuildingType) -> bool {
         matches!(building_type, BuildingType::Core)
             || self.unlocked_buildings.contains(&building_type)
+    }
+
+    pub fn active_planet_condition(&self) -> Option<&'static str> {
+        if self.hazards.acid_rain > 0.0
+            || crate::data::game_data()
+                .planet(self.planet_index)
+                .hazard_fields
+                .iter()
+                .any(|field| field.hazard == "acid")
+        {
+            Some("acid")
+        } else if self.hazards.freeze > 0.0
+            || crate::data::game_data()
+                .planet(self.planet_index)
+                .hazard_fields
+                .iter()
+                .any(|field| field.hazard == "cold")
+        {
+            Some("cold")
+        } else {
+            None
+        }
+    }
+
+    /// Strength of a named spatial field at a tile, including the world's
+    /// broad hazard value. Radial falloff keeps field edges readable and lets
+    /// one definition work on every supported map size.
+    pub fn hazard_strength_at(&self, pos: GridPos, hazard: &str) -> f32 {
+        let broad = match hazard {
+            "acid" => self.acid_strength(),
+            "cold" => self.freeze_strength(),
+            _ => 0.0,
+        };
+        let def = crate::data::game_data().planet(self.planet_index);
+        hazard_field_strength(
+            pos,
+            hazard,
+            broad,
+            &def.hazard_fields,
+            self.grid.width,
+            self.grid.height,
+        )
+    }
+
+    pub fn planet_constraint_status(&self) -> (bool, String) {
+        let constraints = &crate::data::game_data()
+            .planet(self.planet_index)
+            .constraints;
+        let missing: Vec<_> = constraints
+            .required_buildings
+            .iter()
+            .filter(|id| {
+                BuildingType::from_id(id)
+                    .is_none_or(|kind| self.grid.find_buildings(kind).is_empty())
+            })
+            .cloned()
+            .collect();
+        let generation_ok = self.power_generation() >= constraints.minimum_power_generation;
+        let balance_ok = self.power_balance >= constraints.minimum_power_balance;
+        let mut reasons = Vec::new();
+        if !missing.is_empty() {
+            reasons.push(format!("needs {}", missing.join(", ")));
+        }
+        if !generation_ok {
+            reasons.push(format!(
+                "needs {:.0} power generation",
+                constraints.minimum_power_generation
+            ));
+        }
+        if !balance_ok {
+            reasons.push(format!(
+                "needs {:.0} power surplus",
+                constraints.minimum_power_balance
+            ));
+        }
+        (reasons.is_empty(), reasons.join("; "))
+    }
+
+    /// Positive world rules gate the infrastructure that makes a campaign-wide
+    /// route meaningful. Ordinary infrastructure must remain placeable while
+    /// the player is satisfying that rule; only the gated Mass Driver checks
+    /// the world's prerequisite buildings and power floor.
+    pub fn constraints_allow_building(&self, building_type: BuildingType) -> bool {
+        let constraints = &crate::data::game_data()
+            .planet(self.planet_index)
+            .constraints;
+        if !constraints.required_research.iter().all(|required| {
+            self.research
+                .unlocked_techs
+                .iter()
+                .any(|known| known == required)
+        }) {
+            return false;
+        }
+        if building_type == BuildingType::MassDriver {
+            let required_buildings_met = constraints.required_buildings.iter().all(|required| {
+                BuildingType::from_id(required).is_none_or(|kind| {
+                    kind == building_type || !self.grid.find_buildings(kind).is_empty()
+                })
+            });
+            let power_floor_met = self.power_generation() >= constraints.minimum_power_generation;
+            if !required_buildings_met || !power_floor_met {
+                return false;
+            }
+        }
+        true
     }
 
     /// This world refuses the building outright, however much research the
@@ -139,6 +311,28 @@ impl PlanetState {
         self.time_scale = scales[next];
     }
 
+    pub fn next_interesting_event(&self) -> Option<NextEvent> {
+        [
+            (self.power_collapse_shutdown, "Power recovery"),
+            (self.power_collapse_cooldown, "Collapse recovery"),
+            (self.research_lock_timer, "Research unlock"),
+            (self.export_cooldown, "Mass Driver ready"),
+        ]
+        .into_iter()
+        .filter(|(seconds, _)| *seconds > 0.01 && seconds.is_finite())
+        .min_by(|left, right| left.0.total_cmp(&right.0))
+        .map(|(seconds, label)| NextEvent { label, seconds })
+    }
+
+    pub fn fast_forward_to_next_event(&mut self) -> bool {
+        let Some(event) = self.next_interesting_event() else {
+            return false;
+        };
+        self.step(event.seconds, false);
+        self.sim_accumulator = 0.0;
+        true
+    }
+
     /// A short label for whatever this world is doing to the machinery, for
     /// the HUD. Empty when the world is merely somewhere to build.
     pub fn hazard_label(&self) -> String {
@@ -174,21 +368,43 @@ impl PlanetState {
             return;
         }
 
-        // Catch-up runs whole steps like the live loop, just coarser ones:
-        // four hours at the live tick rate would be 432,000 steps on load.
-        let steps = (offline_seconds / OFFLINE_TICK_SECONDS).floor() as u64;
-        for _ in 0..steps {
-            self.step(OFFLINE_TICK_SECONDS, false);
-        }
-        let remainder = offline_seconds - steps as f32 * OFFLINE_TICK_SECONDS;
-        if remainder > 0.0 {
-            self.step(remainder, false);
-        }
-
+        let capped = offline_seconds.min(self.config.offline.max_elapsed_seconds.max(0.0));
+        let active_seconds = capped.min(self.battery_seconds.max(0.0));
+        let hibernation_seconds = (capped - active_seconds).max(0.0) * 0.1;
+        let simulated = active_seconds + hibernation_seconds;
+        let drill_count = self.powered_positions(BuildingType::Drill).len() as f32;
+        let mineral_rate = drill_count * self.drill_output_rate();
+        let alloy_rate = self.alloy_rate();
+        let data_rate = self.stats.apply(
+            StatId::DataGeneration,
+            self.config.resources.core_data_rate
+                + self.config.resources.server_data_rate
+                    * self.grid.find_buildings(BuildingType::ServerBank).len() as f32,
+        );
+        let power_rate = self.net_power();
+        let cap = self.config.offline.max_resource_gain.max(0.0);
+        let minerals = (mineral_rate * simulated).clamp(-cap, cap);
+        let alloy = (alloy_rate * simulated).clamp(0.0, cap);
+        let data = (data_rate * simulated).clamp(0.0, cap);
+        let power = (power_rate * simulated).clamp(-cap, cap);
+        self.resources.minerals = (self.resources.minerals + minerals).min(self.mineral_capacity());
+        self.resources.alloy = (self.resources.alloy + alloy).min(cap.max(1000.0));
+        self.resources.data = (self.resources.data + data).min(1000.0);
+        self.resources.energy =
+            (self.resources.energy + power).clamp(0.0, self.config.resources.max_energy);
+        self.time_played += simulated as f64;
+        self.battery_seconds = (self.battery_seconds - capped).max(0.0);
+        self.last_offline_report = OfflineReport {
+            elapsed_seconds: offline_seconds,
+            capped_seconds: capped,
+            tamper_guarded: false,
+            minerals_gained: minerals,
+            alloy_gained: alloy,
+            data_gained: data,
+            power_gained: power,
+        };
         self.last_offline_seconds = offline_seconds;
-        let full_speed = offline_seconds.min(4.0 * 60.0 * 60.0);
-        let hibernation = (offline_seconds - full_speed).max(0.0) * 0.1;
-        self.last_offline_simulated = full_speed + hibernation;
+        self.last_offline_simulated = simulated;
         self.offline_notice_timer = 8.0;
     }
 
@@ -197,6 +413,9 @@ impl PlanetState {
     }
 
     pub fn placement_scale(&self, pos: GridPos) -> f32 {
+        if macroquad_toolkit::settings::reduced_motion_enabled() {
+            return 1.0;
+        }
         let Some(anim) = self
             .placement_anims
             .iter()
@@ -222,6 +441,7 @@ impl PlanetState {
             .get(id)
             .map(|achievement| achievement.name.clone())
             .unwrap_or_else(|| id.to_string());
+        self.emit_audio(super::audio::AudioEvent::Achievement);
         self.notifications.success(format!("Achievement: {}", name));
     }
 }

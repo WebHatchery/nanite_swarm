@@ -58,6 +58,37 @@ fn saving_keeps_the_previous_save_as_the_backup() {
 }
 
 #[test]
+fn save_slots_keep_their_worlds_isolated() {
+    let mut store = MapStore::default();
+    let mut first = campaign();
+    first.current_mut().resources.biomass = 11.0;
+    save_campaign(&mut store, "slot_1", &mut first).unwrap();
+
+    let mut second = campaign();
+    second.current_mut().resources.biomass = 22.0;
+    save_campaign(&mut store, "slot_2", &mut second).unwrap();
+
+    assert_eq!(
+        load_campaign(&store, "slot_1")
+            .unwrap()
+            .0
+            .current()
+            .resources
+            .biomass,
+        11.0
+    );
+    assert_eq!(
+        load_campaign(&store, "slot_2")
+            .unwrap()
+            .0
+            .current()
+            .resources
+            .biomass,
+        22.0
+    );
+}
+
+#[test]
 fn a_corrupt_save_is_recovered_from_the_backup() {
     let mut store = MapStore::default();
     let mut good = campaign();
@@ -181,6 +212,35 @@ fn an_unversioned_single_planet_save_still_loads() {
         super::super::campaign::STARTING_PLANET
     );
     assert_eq!(loaded.colonized_flags(), [false, false, true, false, false]);
+}
+
+#[test]
+fn every_supported_save_version_has_a_migration_path() {
+    assert_eq!(
+        super::super::migrations::SUPPORTED_SAVE_VERSIONS,
+        &[0, 1, 2]
+    );
+    let planet = PlanetState::new(2, 3, GameConfig::default());
+    let legacy = serde_json::to_string(&planet).unwrap();
+    assert!(load_from_json(&legacy).is_ok());
+
+    let mut campaign = campaign();
+    let mut value = serde_json::to_value(SaveGame {
+        version: 1,
+        campaign: campaign.clone(),
+    })
+    .unwrap();
+    let object = value
+        .get_mut("campaign")
+        .and_then(serde_json::Value::as_object_mut)
+        .unwrap();
+    object.remove("slot_name");
+    object.remove("directive_history");
+    object.remove("toast_history");
+    object.remove("shipments");
+    assert!(load_from_json(&serde_json::to_string(&value).unwrap()).is_ok());
+    campaign.current_mut().resources.biomass = 7.0;
+    assert!(load_from_json(&save_to_json(&mut campaign).unwrap()).is_ok());
 }
 
 #[test]
