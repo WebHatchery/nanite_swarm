@@ -238,6 +238,52 @@ fn processor_operating_mode_survives_a_save_roundtrip() {
 }
 
 #[test]
+fn saves_from_before_processor_policies_load_as_standard_running_lines() {
+    fn strip_policy_fields(value: &mut serde_json::Value) {
+        match value {
+            serde_json::Value::Object(object) => {
+                object.remove("input_priority");
+                object.remove("standby");
+                for child in object.values_mut() {
+                    strip_policy_fields(child);
+                }
+            }
+            serde_json::Value::Array(values) => {
+                for child in values {
+                    strip_policy_fields(child);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let mut campaign = campaign();
+    let core = campaign.current().grid.find_core().unwrap();
+    let pos = GridPos::new(core.x + 1, core.y);
+    let planet = campaign.current_mut();
+    planet.grid.get_mut(pos).unwrap().terrain = crate::engine::TerrainType::Empty;
+    assert!(planet.grid.place_building(pos, BuildingType::Smelter));
+    let building = planet.grid.get_mut(pos).unwrap().building.as_mut().unwrap();
+    building.input_priority = true;
+    building.standby = true;
+
+    let json = save_to_json(&mut campaign).unwrap();
+    let mut legacy: serde_json::Value = serde_json::from_str(&json).unwrap();
+    strip_policy_fields(&mut legacy);
+    let loaded = load_from_json(&serde_json::to_string(&legacy).unwrap()).unwrap();
+    let building = loaded
+        .current()
+        .grid
+        .get(pos)
+        .unwrap()
+        .building
+        .as_ref()
+        .unwrap();
+    assert!(!building.input_priority);
+    assert!(!building.standby);
+}
+
+#[test]
 fn json_roundtrip_preserves_every_colonized_world() {
     let mut campaign = campaign();
     campaign.colonize(0);
