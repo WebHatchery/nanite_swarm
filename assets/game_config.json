@@ -87,7 +87,7 @@
     "seconds_per_orbit_unit": 0.6,
     "min_transit_seconds": 20.0,
     "pad_capacity": 120.0,
-    "cargo": ["minerals", "alloy"]
+    "cargo": ["minerals", "alloy", "components"]
   },
   "ore": {
     "rich_chance": 0.18,

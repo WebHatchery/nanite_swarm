@@ -1,5 +1,5 @@
 {
-  "intake_per_second": { "minerals": 12.0, "data": 3.0, "biomass": 6.0, "alloy": 2.0 },
+  "intake_per_second": { "minerals": 12.0, "data": 3.0, "biomass": 6.0, "alloy": 2.0, "components": 1.0 },
   "launch": {
     "countdown_seconds": 3.0,
     "ascent_seconds": 3.0,
@@ -37,7 +37,7 @@
       "name": "Nanite Payload",
       "requires": "advanced_research",
       "description": "A compressed copy of this swarm, folded small enough to survive transit.",
-      "cost": { "minerals": 400.0, "data": 80.0, "biomass": 60.0, "alloy": 60.0 },
+      "cost": { "minerals": 400.0, "data": 80.0, "biomass": 60.0, "alloy": 40.0, "components": 24.0 },
       "boon": "Folding a swarm small teaches the swarm to think.",
       "modifiers": [
         { "stat": "data_generation", "op": "percent", "value": 0.5 }
@@ -48,7 +48,7 @@
       "name": "Ignition Charge",
       "requires": "mass_driver",
       "description": "The last of this world, spent on leaving it.",
-      "cost": { "minerals": 600.0, "data": 150.0, "biomass": 0.0, "alloy": 140.0 }
+      "cost": { "minerals": 600.0, "data": 150.0, "biomass": 0.0, "alloy": 100.0, "components": 60.0 }
     }
   ]
 }

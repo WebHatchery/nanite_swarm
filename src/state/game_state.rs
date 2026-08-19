@@ -89,6 +89,9 @@ pub struct Resources {
     /// swarm cannot dig straight out of the ground.
     #[serde(default)]
     pub alloy: f32,
+    /// Precision assemblies produced from more than one routed factory input.
+    #[serde(default)]
+    pub components: f32,
 }
 
 impl Resources {
@@ -101,6 +104,7 @@ impl Resources {
             ResourceType::Data => self.data,
             ResourceType::Biomass => self.biomass,
             ResourceType::Alloy => self.alloy,
+            ResourceType::Components => self.components,
         }
     }
 
@@ -111,6 +115,7 @@ impl Resources {
             ResourceType::Data => self.data += amount,
             ResourceType::Biomass => self.biomass += amount,
             ResourceType::Alloy => self.alloy += amount,
+            ResourceType::Components => self.components += amount,
         }
     }
 }
@@ -401,6 +406,7 @@ impl PlanetState {
                 data: 0.0,
                 biomass: 0.0,
                 alloy: 0.0,
+                components: 0.0,
             },
             grid,
             drones: DroneManager::new(

@@ -9,7 +9,7 @@ use crate::state::{Campaign, LaunchSequence};
 use crate::{data, engine, state, Game, GamePhase};
 
 #[allow(dead_code)]
-pub const REQUIRED_CAPTURE_SCENES: [&str; 3] = ["mainmenu", "research", "logistics"];
+pub const REQUIRED_CAPTURE_SCENES: [&str; 4] = ["mainmenu", "research", "logistics", "assembly"];
 
 impl Game {
     /// Seed a specific scene for the screenshot harness.
@@ -299,6 +299,51 @@ impl Game {
                 }
                 planet.selected_tile = Some(smelter);
             }
+            "assembly" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                let planet = self.campaign.current_mut();
+                let Some(core) = planet.grid.find_core() else {
+                    return;
+                };
+                planet.unlock_building(engine::BuildingType::Assembler);
+                planet.unlock_building(engine::BuildingType::WindTurbine);
+
+                let assembler = engine::GridPos::new(core.x + 2, core.y - 1);
+                if let Some(tile) = planet.grid.get_mut(assembler) {
+                    tile.terrain = engine::TerrainType::Empty;
+                    tile.building = None;
+                }
+                planet.select_building(engine::BuildingType::Assembler);
+                planet.try_place_building(assembler);
+
+                for offset in [(-1, 0), (-1, -1), (0, -1)] {
+                    let pos = engine::GridPos::new(core.x + offset.0, core.y + offset.1);
+                    if let Some(tile) = planet.grid.get_mut(pos) {
+                        tile.terrain = engine::TerrainType::Empty;
+                        tile.building = None;
+                    }
+                    planet.select_building(engine::BuildingType::WindTurbine);
+                    planet.try_place_building(pos);
+                }
+                planet.grid.update_power_grid();
+                let key = (assembler.x, assembler.y);
+                planet.input_hoppers.insert(
+                    key,
+                    [
+                        (engine::ResourceType::Minerals, 20.0),
+                        (engine::ResourceType::Alloy, 10.0),
+                    ]
+                    .into_iter()
+                    .collect(),
+                );
+                planet.input_buffers.insert(key, 30.0);
+                for _ in 0..60 {
+                    planet.step(state::TICK_SECONDS, false);
+                }
+                planet.select_building(engine::BuildingType::Assembler);
+                planet.selected_tile = Some(assembler);
+            }
             "paused" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();
@@ -360,6 +405,7 @@ impl Game {
                     planet.resources.data = 100_000.0;
                     planet.resources.biomass = 100_000.0;
                     planet.resources.alloy = 100_000.0;
+                    planet.resources.components = 100_000.0;
                     if !planet.seed_ship.committed {
                         planet.toggle_seed_ship_commitment();
                     }
@@ -476,6 +522,7 @@ impl Game {
                 planet.resources.data = 100_000.0;
                 planet.resources.biomass = 100_000.0;
                 planet.resources.alloy = 100_000.0;
+                planet.resources.components = 100_000.0;
                 planet.toggle_seed_ship_commitment();
                 for _ in 0..2_000 {
                     planet.update_seed_ship(1.0);

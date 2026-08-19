@@ -111,6 +111,9 @@ impl PlanetState {
                                 crate::engine::ResourceType::Alloy => {
                                     self.resources.alloy += amount
                                 }
+                                crate::engine::ResourceType::Components => {
+                                    self.resources.components += amount
+                                }
                                 _ => delivered_total += amount,
                             }
                         } else {
@@ -202,6 +205,7 @@ impl PlanetState {
         self.resources.data = self.resources.data.min(1000.0);
         self.resources.biomass = self.resources.biomass.min(1000.0);
         self.resources.alloy = self.resources.alloy.min(1000.0);
+        self.resources.components = self.resources.components.min(1000.0);
 
         self.update_achievements();
         self.update_core_stage();

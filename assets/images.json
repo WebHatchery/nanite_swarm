@@ -78,6 +78,12 @@
     "height": 32
   },
   {
+    "id": "building_assembler",
+    "prompt": "Top-down pixel art of a precision robotic assembler, paired cyan tool arms closing over a gold machine component on an industrial base",
+    "width": 32,
+    "height": 32
+  },
+  {
     "id": "drone_worker",
     "prompt": "Pixel art worker drone, small hovering bot with cyan lights, top-down view",
     "width": 16,

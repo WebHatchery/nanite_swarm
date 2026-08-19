@@ -11,6 +11,7 @@ pub enum ResourceType {
     Data,
     Biomass,
     Alloy,
+    Components,
 }
 
 impl ResourceType {
@@ -21,15 +22,17 @@ impl ResourceType {
             ResourceType::Data => "data",
             ResourceType::Biomass => "biomass",
             ResourceType::Alloy => "alloy",
+            ResourceType::Components => "components",
         }
     }
 
-    pub const ALL: [ResourceType; 5] = [
+    pub const ALL: [ResourceType; 6] = [
         ResourceType::Minerals,
         ResourceType::Energy,
         ResourceType::Data,
         ResourceType::Biomass,
         ResourceType::Alloy,
+        ResourceType::Components,
     ];
 
     pub fn from_id(id: &str) -> Option<Self> {
@@ -41,7 +44,10 @@ impl ResourceType {
     pub fn is_physical(self) -> bool {
         matches!(
             self,
-            ResourceType::Minerals | ResourceType::Biomass | ResourceType::Alloy
+            ResourceType::Minerals
+                | ResourceType::Biomass
+                | ResourceType::Alloy
+                | ResourceType::Components
         )
     }
 }

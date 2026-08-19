@@ -9,6 +9,7 @@ fn state() -> PlanetState {
     state.resources.data = 10_000.0;
     state.resources.biomass = 10_000.0;
     state.resources.alloy = 10_000.0;
+    state.resources.components = 10_000.0;
     state
 }
 
@@ -189,6 +190,7 @@ fn the_last_stages_of_the_ship_cannot_be_paid_without_alloy() {
         biomass: 100_000.0,
         energy: 0.0,
         alloy: 0.0,
+        components: 100_000.0,
     };
     for _ in 0..stages.len() {
         ship.absorb(&mut resources, intake(), 10_000.0);
@@ -198,6 +200,39 @@ fn the_last_stages_of_the_ship_cannot_be_paid_without_alloy() {
     assert!(ship.stage().unwrap().cost.alloy > 0.0);
 
     resources.alloy = 100_000.0;
+    for _ in 0..stages.len() {
+        ship.absorb(&mut resources, intake(), 10_000.0);
+    }
+    assert!(ship.is_complete());
+}
+
+#[test]
+fn flight_stages_cannot_be_paid_without_factory_components() {
+    let stages = &crate::data::game_data().seed_ship.stages;
+    assert!(
+        stages
+            .iter()
+            .filter(|stage| stage.cost.components > 0.0)
+            .count()
+            >= 2
+    );
+
+    let mut ship = SeedShip::default();
+    let mut resources = Resources {
+        minerals: 100_000.0,
+        data: 100_000.0,
+        biomass: 100_000.0,
+        energy: 0.0,
+        alloy: 100_000.0,
+        components: 0.0,
+    };
+    for _ in 0..stages.len() {
+        ship.absorb(&mut resources, intake(), 10_000.0);
+    }
+    assert!(!ship.is_complete());
+    assert!(ship.stage().unwrap().cost.components > 0.0);
+
+    resources.components = 100_000.0;
     for _ in 0..stages.len() {
         ship.absorb(&mut resources, intake(), 10_000.0);
     }
@@ -416,6 +451,7 @@ fn a_stage_completes_only_once_every_resource_is_paid() {
         biomass: 0.0,
         energy: 0.0,
         alloy: 0.0,
+        components: 0.0,
     };
 
     // One very long step: intake is capped by what the stage still needs.

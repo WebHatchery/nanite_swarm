@@ -324,7 +324,11 @@ impl Default for MassDriverConfig {
             seconds_per_orbit_unit: 0.6,
             min_transit_seconds: 20.0,
             pad_capacity: 120.0,
-            cargo: vec!["minerals".to_string(), "alloy".to_string()],
+            cargo: vec![
+                "minerals".to_string(),
+                "alloy".to_string(),
+                "components".to_string(),
+            ],
         }
     }
 }

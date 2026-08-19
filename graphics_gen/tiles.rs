@@ -78,6 +78,7 @@ pub fn generate_tiles() {
     save_building_with_icon("building_heater_node", create_heater_node());
     save_building_with_icon("building_shield_generator", create_shield_generator());
     save_building_with_icon("building_smelter", create_smelter());
+    save_building_with_icon("building_assembler", create_assembler());
     save_building_with_icon("building_mass_driver", create_mass_driver());
     save_building_with_icon("building_landing_pad", create_landing_pad());
 }
@@ -609,6 +610,29 @@ fn create_smelter() -> RgbaImage {
     draw_circle(&mut img, 21, 4, 2, Rgba([120, 115, 110, 200]));
     // Poured ingot
     draw_rect(&mut img, 8, 26, 7, 3, Rgba([210, 150, 80, 255]));
+    add_edge_darkening(&mut img, 2, 8);
+    img
+}
+
+fn create_assembler() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([30, 39, 48, 255]));
+    add_noise(&mut img, 5, 2626);
+
+    // Heavy bed and two opposed tool carriages make it visually distinct
+    // from the furnace and server racks at map scale.
+    draw_rect(&mut img, 5, 22, 22, 6, Rgba([72, 82, 94, 255]));
+    draw_rect(&mut img, 6, 8, 6, 15, Rgba([58, 82, 96, 255]));
+    draw_rect(&mut img, 20, 8, 6, 15, Rgba([58, 82, 96, 255]));
+    draw_line(&mut img, 9, 11, 14, 16, Rgba([40, 205, 235, 255]));
+    draw_line(&mut img, 23, 11, 18, 16, Rgba([40, 205, 235, 255]));
+    draw_circle(&mut img, 9, 10, 2, Rgba([155, 235, 250, 255]));
+    draw_circle(&mut img, 23, 10, 2, Rgba([155, 235, 250, 255]));
+
+    // The finished hexagonal component sits between the paired tools.
+    draw_circle(&mut img, 16, 18, 5, Rgba([198, 142, 68, 255]));
+    draw_circle(&mut img, 16, 18, 2, Rgba([250, 220, 150, 255]));
+    draw_rect(&mut img, 14, 5, 4, 5, Rgba([90, 105, 120, 255]));
+    draw_rect(&mut img, 15, 6, 2, 2, Rgba([30, 220, 190, 255]));
     add_edge_darkening(&mut img, 2, 8);
     img
 }

@@ -10,6 +10,7 @@ pub struct OfflineReport {
     pub tamper_guarded: bool,
     pub minerals_gained: f32,
     pub alloy_gained: f32,
+    pub components_gained: f32,
     pub data_gained: f32,
     pub power_gained: f32,
 }
@@ -269,11 +270,20 @@ impl PlanetState {
 
     /// Alloy the working smelters would produce per second, for the readout.
     pub fn alloy_rate(&self) -> f32 {
+        self.physical_output_rate("alloy")
+    }
+
+    /// Components the working assemblers would produce per second.
+    pub fn components_rate(&self) -> f32 {
+        self.physical_output_rate("components")
+    }
+
+    fn physical_output_rate(&self, resource_id: &str) -> f32 {
         crate::data::game_data()
             .buildings
             .iter()
             .filter_map(|def| {
-                let out = def.recipe.outputs.get("alloy").copied().unwrap_or(0.0);
+                let out = def.recipe.outputs.get(resource_id).copied().unwrap_or(0.0);
                 (out > 0.0).then_some((def, out))
             })
             .filter_map(|(def, out)| BuildingType::from_id(&def.id).map(|kind| (kind, out)))
@@ -375,6 +385,7 @@ impl PlanetState {
         let drill_count = self.powered_positions(BuildingType::Drill).len() as f32;
         let mineral_rate = drill_count * self.drill_output_rate();
         let alloy_rate = self.alloy_rate();
+        let components_rate = self.components_rate();
         let data_rate = self.stats.apply(
             StatId::DataGeneration,
             self.config.resources.core_data_rate
@@ -385,10 +396,12 @@ impl PlanetState {
         let cap = self.config.offline.max_resource_gain.max(0.0);
         let minerals = (mineral_rate * simulated).clamp(-cap, cap);
         let alloy = (alloy_rate * simulated).clamp(0.0, cap);
+        let components = (components_rate * simulated).clamp(0.0, cap);
         let data = (data_rate * simulated).clamp(0.0, cap);
         let power = (power_rate * simulated).clamp(-cap, cap);
         self.resources.minerals = (self.resources.minerals + minerals).min(self.mineral_capacity());
         self.resources.alloy = (self.resources.alloy + alloy).min(cap.max(1000.0));
+        self.resources.components = (self.resources.components + components).min(cap.max(1000.0));
         self.resources.data = (self.resources.data + data).min(1000.0);
         self.resources.energy =
             (self.resources.energy + power).clamp(0.0, self.config.resources.max_energy);
@@ -400,6 +413,7 @@ impl PlanetState {
             tamper_guarded: false,
             minerals_gained: minerals,
             alloy_gained: alloy,
+            components_gained: components,
             data_gained: data,
             power_gained: power,
         };

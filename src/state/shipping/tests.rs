@@ -502,6 +502,11 @@ fn cargo_cycles_through_what_the_drivers_accept() {
     campaign.cycle_export_cargo();
     assert_eq!(
         campaign.export_order().map(|order| order.cargo),
+        Some(ResourceType::Components)
+    );
+    campaign.cycle_export_cargo();
+    assert_eq!(
+        campaign.export_order().map(|order| order.cargo),
         Some(ResourceType::Minerals)
     );
 }

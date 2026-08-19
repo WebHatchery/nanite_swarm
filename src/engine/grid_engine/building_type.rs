@@ -17,6 +17,7 @@ pub enum BuildingType {
     Storage,          // Increases mineral storage capacity
     BiomassHarvester, // Consumes forest biomass for power
     Smelter,          // Refines minerals into alloy
+    Assembler,        // Turns routed ore and alloy into precision components
     HeaterNode,       // Thaws the network nearby on frozen worlds
     ShieldGenerator,  // Holds acid off everything nearby
     MassDriver,       // Throws cargo at another world
@@ -37,6 +38,7 @@ impl BuildingType {
             BuildingType::Storage => "storage",
             BuildingType::BiomassHarvester => "biomass_harvester",
             BuildingType::Smelter => "smelter",
+            BuildingType::Assembler => "assembler",
             BuildingType::HeaterNode => "heater_node",
             BuildingType::ShieldGenerator => "shield_generator",
             BuildingType::MassDriver => "mass_driver",
@@ -57,6 +59,7 @@ impl BuildingType {
             "storage" => Some(BuildingType::Storage),
             "biomass_harvester" => Some(BuildingType::BiomassHarvester),
             "smelter" => Some(BuildingType::Smelter),
+            "assembler" => Some(BuildingType::Assembler),
             "heater_node" => Some(BuildingType::HeaterNode),
             "shield_generator" => Some(BuildingType::ShieldGenerator),
             "mass_driver" => Some(BuildingType::MassDriver),

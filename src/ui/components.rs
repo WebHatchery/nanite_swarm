@@ -226,6 +226,17 @@ fn draw_metric_icon(kind: &str, rect: Rect, color: Color) {
             );
             draw_line(cx - w, cy + h + 2.0, cx + w, cy + h + 2.0, 1.2, WHITE);
         }
+        "components" => {
+            // Interlocked precision rings: readable independently of colour.
+            let radius = rect.w * 0.18;
+            draw_poly(cx - 4.0, cy, 6, radius, 0.0, color);
+            draw_poly_lines(cx - 4.0, cy, 6, radius, 0.0, 1.2, WHITE);
+            draw_poly(cx + 5.0, cy, 6, radius, 30.0, color);
+            draw_poly_lines(cx + 5.0, cy, 6, radius, 30.0, 1.2, WHITE);
+            let cutout = Color::new(0.006, 0.025, 0.035, 1.0);
+            draw_circle(cx - 4.0, cy, radius * 0.42, cutout);
+            draw_circle(cx + 5.0, cy, radius * 0.42, cutout);
+        }
         "biomass" => {
             draw_ellipse(
                 cx - 5.0,

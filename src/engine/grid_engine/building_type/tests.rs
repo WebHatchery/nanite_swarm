@@ -1,6 +1,6 @@
 use super::BuildingType;
 
-const ALL: [BuildingType; 15] = [
+const ALL: [BuildingType; 16] = [
     BuildingType::Core,
     BuildingType::Drill,
     BuildingType::Conduit,
@@ -12,6 +12,7 @@ const ALL: [BuildingType; 15] = [
     BuildingType::Storage,
     BuildingType::BiomassHarvester,
     BuildingType::Smelter,
+    BuildingType::Assembler,
     BuildingType::HeaterNode,
     BuildingType::ShieldGenerator,
     BuildingType::MassDriver,

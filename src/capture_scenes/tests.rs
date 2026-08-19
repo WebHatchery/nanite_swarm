@@ -4,6 +4,6 @@ use super::*;
 fn required_capture_scenes_are_registered() {
     assert_eq!(
         REQUIRED_CAPTURE_SCENES,
-        ["mainmenu", "research", "logistics"]
+        ["mainmenu", "research", "logistics", "assembly"]
     );
 }

@@ -562,6 +562,7 @@ pub fn cargo_name(cargo: ResourceType) -> &'static str {
         ResourceType::Data => "Data",
         ResourceType::Biomass => "Biomass",
         ResourceType::Alloy => "Alloy",
+        ResourceType::Components => "Components",
     }
 }
 

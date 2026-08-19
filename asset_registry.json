@@ -2,6 +2,7 @@
   "version": 1,
   "assets": [
     "assets/tiles/buildings/building_biomass_harvester.png",
+    "assets/tiles/buildings/building_assembler.png",
     "assets/tiles/buildings/building_bridge.png",
     "assets/tiles/buildings/building_conduit_corner_ne.png",
     "assets/tiles/buildings/building_conduit_corner_nw.png",
@@ -41,6 +42,7 @@
     "assets/tiles/terrain_void.png",
     "assets/tiles/terrain_water.png",
     "assets/ui/buildings/ui_building_biomass_harvester.png",
+    "assets/ui/buildings/ui_building_assembler.png",
     "assets/ui/buildings/ui_building_bridge.png",
     "assets/ui/buildings/ui_building_conduit_straight_h.png",
     "assets/ui/buildings/ui_building_core_stage_1a.png",

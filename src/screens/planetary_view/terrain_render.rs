@@ -256,23 +256,10 @@ fn conduit_connections(state: &PlanetState, pos: GridPos) -> [bool; 4] {
 
     let mut connections = [false; 4];
     for (index, neighbor) in dirs.iter().enumerate() {
-        if let Some(tile) = state.grid.get(*neighbor) {
-            if let Some(ref building) = tile.building {
-                connections[index] = matches!(
-                    building.building_type,
-                    BuildingType::Conduit
-                        | BuildingType::Bridge
-                        | BuildingType::Core
-                        | BuildingType::Drill
-                        | BuildingType::PowerNode
-                        | BuildingType::WindTurbine
-                        | BuildingType::ServerBank
-                        | BuildingType::Sweeper
-                        | BuildingType::Storage
-                        | BuildingType::BiomassHarvester
-                );
-            }
-        }
+        connections[index] = state
+            .grid
+            .get(*neighbor)
+            .is_some_and(|tile| tile.building.is_some());
     }
     connections
 }
@@ -739,6 +726,33 @@ fn draw_building_motion(
                     Colors::PRIMARY,
                 );
             }
+        }
+        BuildingType::Assembler => {
+            let phase = (motion * 3.0).sin() * 0.5 + 0.5;
+            let reach = tile_size * (0.08 + phase * 0.11);
+            let outer = tile_size * 0.28;
+            draw_line(
+                center_x - outer,
+                center_y - tile_size * 0.14,
+                center_x - reach,
+                center_y,
+                1.4,
+                Colors::PRIMARY,
+            );
+            draw_line(
+                center_x + outer,
+                center_y - tile_size * 0.14,
+                center_x + reach,
+                center_y,
+                1.4,
+                Colors::PRIMARY,
+            );
+            draw_circle(
+                center_x,
+                center_y,
+                1.5 + phase,
+                with_alpha(Colors::WARNING, 0.35 + phase * 0.55),
+            );
         }
         _ => {}
     }

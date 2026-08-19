@@ -331,6 +331,20 @@
       ]
     },
     {
+      "id": "precision_assembly",
+      "name": "Precision Assembly",
+      "description": "Ore supplies the bulk. Alloy supplies the tolerances. The ship needs both.",
+      "data_cost": 85.0,
+      "prerequisites": [
+        "smelting",
+        "advanced_research"
+      ],
+      "position": [
+        -2.4,
+        -4.1
+      ]
+    },
+    {
       "id": "storage_systems",
       "name": "Storage Systems",
       "description": "Production stops when there is nowhere to put it.",

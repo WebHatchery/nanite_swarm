@@ -21,6 +21,8 @@ pub struct StageProgress {
     pub biomass: f32,
     #[serde(default)]
     pub alloy: f32,
+    #[serde(default)]
+    pub components: f32,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -99,14 +101,15 @@ impl SeedShip {
             return 1.0;
         };
         let cost = stage.cost;
-        let required = cost.minerals + cost.data + cost.biomass + cost.alloy;
+        let required = cost.minerals + cost.data + cost.biomass + cost.alloy + cost.components;
         if required <= 0.0 {
             return 1.0;
         }
         let paid = self.progress.minerals
             + self.progress.data
             + self.progress.biomass
-            + self.progress.alloy;
+            + self.progress.alloy
+            + self.progress.components;
         (paid / required).clamp(0.0, 1.0)
     }
 
@@ -185,11 +188,18 @@ impl SeedShip {
             cost.alloy,
             intake.alloy,
         );
+        take(
+            &mut resources.components,
+            &mut self.progress.components,
+            cost.components,
+            intake.components,
+        );
 
         let paid = self.progress.minerals >= cost.minerals
             && self.progress.data >= cost.data
             && self.progress.biomass >= cost.biomass
-            && self.progress.alloy >= cost.alloy;
+            && self.progress.alloy >= cost.alloy
+            && self.progress.components >= cost.components;
         if paid {
             self.stage += 1;
             self.progress = StageProgress::default();

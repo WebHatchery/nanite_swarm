@@ -70,7 +70,7 @@ pub(super) fn draw(
     let actions_w = (screen_w * 0.25).clamp(304.0, 448.0);
     let action_x = screen_w - actions_w - 8.0;
     let card_area_w = (action_x - cards_x - metrics.panel_gap).max(0.0);
-    let card_w = ((card_area_w - card_gap * 4.0) / 5.0).max(56.0);
+    let card_w = ((card_area_w - card_gap * 5.0) / 6.0).max(52.0);
     let card_h = if compact_top { 62.0 } else { 68.0 };
     let energy_value = format!("{:.0}", state.resources.energy);
     let energy_rate = format_power_delta(state.power_balance);
@@ -83,6 +83,8 @@ pub(super) fn draw(
     let biomass_rate = format!("+{:.1}/s", state.biomass_power_bonus.max(0.0));
     let alloy_value = format!("{:.0}", state.resources.alloy);
     let alloy_rate = format!("+{:.1}/s", state.alloy_rate());
+    let components_value = format!("{:.0}", state.resources.components);
+    let components_rate = format!("+{:.1}/s", state.components_rate());
 
     draw_metric_card(
         theme,
@@ -133,6 +135,16 @@ pub(super) fn draw(
         &alloy_rate,
         Some("/ 1000"),
         color_from_rgba(&theme.colors.alloy),
+    );
+    draw_metric_card(
+        theme,
+        Rect::new(cards_x + 5.0 * (card_w + card_gap), cards_y, card_w, card_h),
+        "components",
+        if compact_top { "PARTS" } else { "COMPONENTS" },
+        &components_value,
+        &components_rate,
+        Some("/ 1000"),
+        color_from_rgba(&theme.colors.components),
     );
 
     let button_y = 10.0;
@@ -197,7 +209,7 @@ pub(super) fn draw(
     if state.offline_notice_timer > 0.0 && state.last_offline_seconds > 0.0 {
         let (off_h, off_m) = format_hours_minutes(state.last_offline_seconds);
         let (sim_h, sim_m) = format_hours_minutes(state.last_offline_simulated);
-        let banner_w = 440.0;
+        let banner_w = 520.0;
         let banner_h = 48.0;
         let banner_x = (screen_w - banner_w) * 0.5;
         let banner_y = metrics.top_bar_height + 6.0;
@@ -231,9 +243,10 @@ pub(super) fn draw(
         );
         draw_ui_text(
             &format!(
-                "Gains: +{:.0} ore  +{:.0} alloy  +{:.0} data  power {:+.0}",
+                "Gains: +{:.0} ore  +{:.0} alloy  +{:.0} parts  +{:.0} data  power {:+.0}",
                 state.last_offline_report.minerals_gained,
                 state.last_offline_report.alloy_gained,
+                state.last_offline_report.components_gained,
                 state.last_offline_report.data_gained,
                 state.last_offline_report.power_gained
             ),

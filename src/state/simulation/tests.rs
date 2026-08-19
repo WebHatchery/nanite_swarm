@@ -177,6 +177,49 @@ fn a_recipe_with_an_empty_hopper_does_nothing_however_full_the_pool_is() {
 }
 
 #[test]
+fn the_assembler_needs_both_routed_inputs_before_it_makes_components() {
+    let (mut state, pos) = processing_world(BuildingType::Assembler, 10.0);
+    state.input_hoppers.insert(
+        (pos.x, pos.y),
+        [(crate::engine::ResourceType::Alloy, 10.0)]
+            .into_iter()
+            .collect(),
+    );
+
+    state.update_recipes(1.0);
+    assert_eq!(
+        state
+            .output_buffers
+            .get(&(pos.x, pos.y))
+            .copied()
+            .unwrap_or(0.0),
+        0.0,
+        "alloy alone should not satisfy the ore hopper"
+    );
+
+    state
+        .input_hoppers
+        .get_mut(&(pos.x, pos.y))
+        .unwrap()
+        .insert(crate::engine::ResourceType::Minerals, 10.0);
+    state.update_recipes(1.0);
+
+    assert_eq!(
+        state
+            .output_buffers
+            .get(&(pos.x, pos.y))
+            .copied()
+            .unwrap_or(0.0),
+        0.5,
+        "one second should produce the declared component rate"
+    );
+    assert_eq!(
+        state.resources.components, 0.0,
+        "components must wait for a drone"
+    );
+}
+
+#[test]
 fn an_output_nothing_can_carry_goes_straight_into_the_pool() {
     // A Server Bank turns carried alloy into Data, and nothing carries Data.
     let (mut state, pos) = processing_world(BuildingType::ServerBank, 10.0);

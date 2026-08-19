@@ -165,10 +165,21 @@ pub(super) fn draw(
             let key = (pos.x, pos.y);
             let waiting_in = state.input_buffers.get(&key).copied().unwrap_or(0.0);
             let waiting_out = state.output_buffers.get(&key).copied().unwrap_or(0.0);
-            if waiting_in >= 1.0 {
+            if let Some(flow) = recipe_flow_summary(state, pos, building_type) {
+                status_text = if tile_powered {
+                    flow
+                } else {
+                    format!("No power - {}", flow)
+                };
+            } else if waiting_in >= 1.0 {
                 status_text = format!("{} - {:.0} in", status_text, waiting_in);
             }
-            if waiting_out >= 1.0 {
+            if waiting_out >= 1.0
+                && crate::data::game_data()
+                    .building(building_type.id())
+                    .recipe
+                    .is_empty()
+            {
                 status_text = format!("{} - {:.0} out", status_text, waiting_out);
             }
             let queued = state
@@ -308,6 +319,54 @@ pub(super) fn draw(
                 dim,
             );
         }
+    }
+}
+
+fn recipe_flow_summary(
+    state: &PlanetState,
+    pos: GridPos,
+    building_type: BuildingType,
+) -> Option<String> {
+    let recipe = &crate::data::game_data().building(building_type.id()).recipe;
+    if recipe.is_empty() {
+        return None;
+    }
+
+    let hoppers = state.input_hoppers.get(&(pos.x, pos.y));
+    let inputs = recipe
+        .carried_ids()
+        .into_iter()
+        .filter_map(|id| {
+            let resource = crate::engine::ResourceType::from_id(id)?;
+            let amount = hoppers
+                .and_then(|values| values.get(&resource))
+                .copied()
+                .unwrap_or(0.0);
+            Some(format!("{} {:.0}", flow_resource_name(resource), amount))
+        })
+        .collect::<Vec<_>>();
+    let (output_id, _) = recipe.outputs.iter().find(|(_, rate)| **rate > 0.0)?;
+    let output = crate::engine::ResourceType::from_id(output_id)
+        .map(flow_resource_name)
+        .unwrap_or(output_id.as_str());
+    let waiting = state
+        .output_buffers
+        .get(&(pos.x, pos.y))
+        .copied()
+        .unwrap_or(0.0);
+    Some(format!(
+        "{} > {} {:.0}",
+        inputs.join(" + "),
+        output,
+        waiting
+    ))
+}
+
+fn flow_resource_name(resource: crate::engine::ResourceType) -> &'static str {
+    match resource {
+        crate::engine::ResourceType::Minerals => "Ore",
+        crate::engine::ResourceType::Components => "Parts",
+        _ => crate::state::cargo_name(resource),
     }
 }
 

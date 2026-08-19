@@ -41,7 +41,10 @@ impl PlanetState {
                 self.update_achievements();
                 if matches!(
                     building_type,
-                    BuildingType::Drill | BuildingType::Smelter | BuildingType::MassDriver
+                    BuildingType::Drill
+                        | BuildingType::Smelter
+                        | BuildingType::Assembler
+                        | BuildingType::MassDriver
                 ) && self
                     .grid
                     .find_core()

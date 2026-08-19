@@ -176,6 +176,8 @@ pub struct SeedShipCost {
     pub biomass: f32,
     #[serde(default)]
     pub alloy: f32,
+    #[serde(default)]
+    pub components: f32,
 }
 
 #[derive(Debug, Clone, Deserialize)]
