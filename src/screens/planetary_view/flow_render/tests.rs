@@ -57,6 +57,38 @@ fn a_drill_flow_falls_back_to_the_core_when_no_processor_wants_it() {
         .expect("drill supply route");
     assert_eq!(ore.path.first(), Some(&drill));
     assert_eq!(ore.path.last(), Some(&core));
+    assert_eq!(ore.peak_load, 0);
+}
+
+#[test]
+fn flow_links_report_the_busiest_tile_on_their_route() {
+    let mut state = PlanetState::new(2, 42, GameConfig::default());
+    let core = state.grid.find_core().unwrap();
+    state.grid.reveal_around(core, 12);
+    state.resources.minerals = 10_000.0;
+    state.resources.energy = 10_000.0;
+    state.config.resources.max_energy = 10_000.0;
+    state.unlock_building(BuildingType::Conduit);
+
+    for step in 1..=3 {
+        let pos = GridPos::new(core.x + step, core.y);
+        state.grid.get_mut(pos).unwrap().terrain = TerrainType::Empty;
+        state.select_building(BuildingType::Conduit);
+        assert!(state.try_place_building(pos));
+        state.traffic.insert((pos.x, pos.y), step as u32 + 4);
+    }
+    let drill = GridPos::new(core.x + 4, core.y);
+    state.grid.get_mut(drill).unwrap().terrain = TerrainType::Empty;
+    state.select_building(BuildingType::Drill);
+    assert!(state.try_place_building(drill));
+    state.grid.update_power_grid();
+
+    let ore = factory_flow_links(&state)
+        .into_iter()
+        .find(|link| link.resource == ResourceType::Minerals)
+        .expect("drill supply route");
+    assert_eq!(ore.peak_load, 7);
+    assert_eq!(ore.capacity, state.config.buildings.conduit_capacity);
 }
 
 #[test]

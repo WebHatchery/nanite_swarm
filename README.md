@@ -40,6 +40,7 @@ Research Buffer Lattices after Precision Assembly and Storage Optimization to ex
 Records now reward scaling the factory systems themselves: three simultaneous boosted processors earn Redline Cluster, while fifty staged units of refined output earn Freight Yard.
 When a selected processor pad is full, tap PURGE PAD and then PURGE AGAIN to discard only its staged output and recover the machine without accidental one-tap loss.
 FLOW recipe nodes use separate gauges: the bottom bar is input readiness, while the right edge rises with output pressure and turns red at a full dispatch pad.
+FLOW routes now thicken as live traffic approaches conduit capacity, pulse amber when saturated, and slow their packet animation to mirror the drones caught in that lane.
 
 Keyboard shortcuts are optional:
 

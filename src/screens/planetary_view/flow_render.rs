@@ -14,6 +14,8 @@ use super::metrics::{grid_to_screen, HudMetrics};
 struct FlowLink {
     resource: ResourceType,
     path: Vec<GridPos>,
+    peak_load: u32,
+    capacity: f32,
 }
 
 #[derive(Debug, Clone)]
@@ -34,6 +36,9 @@ struct FactoryLedger {
     starved: usize,
     blocked: usize,
     boosted: usize,
+    congested: usize,
+    peak_network_load: u32,
+    network_capacity: f32,
     bottleneck: Option<ResourceType>,
     ore_rate: f32,
     alloy_rate: f32,
@@ -153,6 +158,11 @@ fn draw_factory_ledger(ledger: &FactoryLedger, metrics: HudMetrics, theme: &UiTh
         .unwrap_or_else(|| {
             if ledger.blocked > 0 {
                 format!("{} // DISPATCH PAD FULL", clock_mode)
+            } else if ledger.congested > 0 {
+                format!(
+                    "{} // NETWORK SATURATED {}/{}",
+                    clock_mode, ledger.peak_network_load, ledger.network_capacity as u32
+                )
             } else {
                 format!("{} // FLOW STABLE", clock_mode)
             }
@@ -162,7 +172,7 @@ fn draw_factory_ledger(ledger: &FactoryLedger, metrics: HudMetrics, theme: &UiTh
         area.x + 12.0,
         area.y + 71.0,
         9.0,
-        if ledger.bottleneck.is_some() || ledger.blocked > 0 {
+        if ledger.bottleneck.is_some() || ledger.blocked > 0 || ledger.congested > 0 {
             warning
         } else {
             success
@@ -227,6 +237,9 @@ fn factory_ledger(state: &PlanetState) -> FactoryLedger {
         starved: starved.len(),
         blocked: blocked.len(),
         boosted,
+        congested: state.congested_tiles(),
+        peak_network_load: state.traffic.values().copied().max().unwrap_or(0),
+        network_capacity: state.config.buildings.conduit_capacity.max(1.0),
         bottleneck: factory_bottleneck(state, &starved),
         ore_rate: state.throughput.last().unwrap_or(0.0),
         alloy_rate: state.observed_alloy_rate(),
@@ -270,7 +283,17 @@ fn draw_link(link: &FlowLink, metrics: HudMetrics, theme: &UiTheme, time: f32) {
     if link.path.len() < 2 {
         return;
     }
-    let color = resource_color(theme, link.resource);
+    let resource = resource_color(theme, link.resource);
+    let saturation = link.peak_load as f32 / link.capacity.max(1.0);
+    let congested = saturation > 1.0;
+    let color = if congested {
+        color_from_rgba(&theme.colors.warning)
+    } else {
+        resource
+    };
+    let pressure = saturation.clamp(0.0, 1.0);
+    let route_width = 1.2 + pressure * 1.8;
+    let pulse = 0.55 + (time * 4.0).sin().abs() * 0.3;
     for pair in link.path.windows(2) {
         let from = tile_center(pair[0], metrics);
         let to = tile_center(pair[1], metrics);
@@ -282,11 +305,30 @@ fn draw_link(link: &FlowLink, metrics: HudMetrics, theme: &UiTheme, time: f32) {
             4.0,
             with_alpha(Colors::BACKGROUND, 0.8),
         );
-        draw_line(from.x, from.y, to.x, to.y, 1.4, with_alpha(color, 0.62));
+        if congested {
+            draw_line(
+                from.x,
+                from.y,
+                to.x,
+                to.y,
+                5.0,
+                with_alpha(color, 0.12 * pulse),
+            );
+        }
+        draw_line(
+            from.x,
+            from.y,
+            to.x,
+            to.y,
+            route_width,
+            with_alpha(color, 0.44 + pressure * 0.38),
+        );
     }
 
-    let travel = (time * 1.8 + link.path[0].x as f32 * 0.17 + link.path[0].y as f32 * 0.11)
-        .rem_euclid((link.path.len() - 1) as f32);
+    let packet_speed = 1.8 / saturation.max(1.0);
+    let travel =
+        (time * packet_speed + link.path[0].x as f32 * 0.17 + link.path[0].y as f32 * 0.11)
+            .rem_euclid((link.path.len() - 1) as f32);
     let index = travel.floor() as usize;
     let progress = travel.fract();
     let from = tile_center(link.path[index], metrics);
@@ -296,7 +338,7 @@ fn draw_link(link: &FlowLink, metrics: HudMetrics, theme: &UiTheme, time: f32) {
     draw_resource_icon(
         link.resource,
         Rect::new(packet.x - 4.0, packet.y - 4.0, 8.0, 8.0),
-        color,
+        resource,
     );
 }
 
@@ -466,7 +508,18 @@ fn factory_flow_links(state: &PlanetState) -> Vec<FlowLink> {
             if path.first() != Some(&source) {
                 path.insert(0, source);
             }
-            links.push(FlowLink { resource, path });
+            let peak_load = path
+                .iter()
+                .filter_map(|pos| state.traffic.get(&(pos.x, pos.y)))
+                .copied()
+                .max()
+                .unwrap_or(0);
+            links.push(FlowLink {
+                resource,
+                path,
+                peak_load,
+                capacity: state.config.buildings.conduit_capacity.max(1.0),
+            });
         }
     }
     links
