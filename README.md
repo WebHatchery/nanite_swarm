@@ -48,6 +48,7 @@ Processor floor art now carries its operating policy: priority machines pulse a 
 Selected processors can enter STANDBY without demolition: production and base power demand stop, freight ignores the paused line, and both input and output buffers remain intact for RESUME.
 Box-selected production districts can be paused or resumed together, and standby processors are excluded from starvation/backpressure alerts while the FLOW ledger reports their count separately.
 When selected processors have full dispatch pads, the reselect control becomes PURGE N and then PURGE AGAIN; only blocked selected outputs are discarded, while every input hopper and unselected pad is preserved.
+Records now recognize factory policy itself: Command Lattice rewards three priority processors, and Dark Shift records three lines held in standby together.
 
 Keyboard shortcuts are optional:
 

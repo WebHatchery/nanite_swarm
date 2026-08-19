@@ -25,6 +25,8 @@ pub enum Milestone {
     ComponentsHeld,
     ComponentsRate,
     BoostedProcessors,
+    PriorityProcessors,
+    StandbyProcessors,
     ProcessorOutputHeld,
     Technologies,
     ForestsHarvested,
@@ -47,6 +49,8 @@ impl Milestone {
             Milestone::ComponentsHeld => "components_held",
             Milestone::ComponentsRate => "components_rate",
             Milestone::BoostedProcessors => "boosted_processors",
+            Milestone::PriorityProcessors => "priority_processors",
+            Milestone::StandbyProcessors => "standby_processors",
             Milestone::ProcessorOutputHeld => "processor_output_held",
             Milestone::Technologies => "technologies",
             Milestone::ForestsHarvested => "forests_harvested",
@@ -55,7 +59,7 @@ impl Milestone {
         }
     }
 
-    pub const ALL: [Milestone; 17] = [
+    pub const ALL: [Milestone; 19] = [
         Milestone::Manual,
         Milestone::Drills,
         Milestone::ServerBanks,
@@ -68,6 +72,8 @@ impl Milestone {
         Milestone::ComponentsHeld,
         Milestone::ComponentsRate,
         Milestone::BoostedProcessors,
+        Milestone::PriorityProcessors,
+        Milestone::StandbyProcessors,
         Milestone::ProcessorOutputHeld,
         Milestone::Technologies,
         Milestone::ForestsHarvested,
@@ -110,6 +116,24 @@ impl PlanetState {
                     tile.building.as_ref().is_some_and(|building| {
                         building.supports_overclock() && building.overclocked
                     })
+                })
+                .count() as f32,
+            Milestone::PriorityProcessors => self
+                .grid
+                .iter_tiles()
+                .filter(|(_, tile)| {
+                    tile.building.as_ref().is_some_and(|building| {
+                        building.supports_overclock() && building.input_priority
+                    })
+                })
+                .count() as f32,
+            Milestone::StandbyProcessors => self
+                .grid
+                .iter_tiles()
+                .filter(|(_, tile)| {
+                    tile.building
+                        .as_ref()
+                        .is_some_and(|building| building.supports_overclock() && building.standby)
                 })
                 .count() as f32,
             Milestone::ProcessorOutputHeld => crate::data::game_data()

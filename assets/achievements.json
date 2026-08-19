@@ -67,6 +67,18 @@
       "condition": { "kind": "processor_output_held", "target": 50 }
     },
     {
+      "id": "command_lattice",
+      "name": "Command Lattice",
+      "description": "Give three processors priority freight orders at once.",
+      "condition": { "kind": "priority_processors", "target": 3 }
+    },
+    {
+      "id": "dark_shift",
+      "name": "Dark Shift",
+      "description": "Hold three processors in standby at once.",
+      "condition": { "kind": "standby_processors", "target": 3 }
+    },
+    {
       "id": "stockpile",
       "name": "Stockpile",
       "description": "Hold 500 minerals at once.",

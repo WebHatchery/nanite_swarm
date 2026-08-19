@@ -85,14 +85,10 @@ fn scaled_processor_modes_have_records_payoffs() {
         let pos = GridPos::new(core.x + step as i32 + 1, core.y);
         state.grid.get_mut(pos).unwrap().terrain = crate::engine::TerrainType::Empty;
         assert!(state.grid.place_building(pos, kind));
-        state
-            .grid
-            .get_mut(pos)
-            .unwrap()
-            .building
-            .as_mut()
-            .unwrap()
-            .overclocked = true;
+        let building = state.grid.get_mut(pos).unwrap().building.as_mut().unwrap();
+        building.overclocked = true;
+        building.input_priority = true;
+        building.standby = true;
         state.output_buffers.insert((pos.x, pos.y), 20.0);
     }
 
@@ -100,6 +96,8 @@ fn scaled_processor_modes_have_records_payoffs() {
 
     assert!(state.achievements.is_unlocked("redline_cluster"));
     assert!(state.achievements.is_unlocked("freight_yard"));
+    assert!(state.achievements.is_unlocked("command_lattice"));
+    assert!(state.achievements.is_unlocked("dark_shift"));
 }
 
 #[test]
