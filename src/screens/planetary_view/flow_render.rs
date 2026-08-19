@@ -3,7 +3,7 @@
 use crate::data::{RecipeDef, UiTheme};
 use crate::engine::{route_over_network, BuildingType, GridPos, ResourceType};
 use crate::state::PlanetState;
-use crate::ui::{color_from_rgba, draw_resource_icon, resource_color, Colors};
+use crate::ui::{color_from_rgba, draw_hud_panel, draw_resource_icon, resource_color, Colors};
 use macroquad::prelude::*;
 use macroquad_toolkit::colors::with_alpha;
 use macroquad_toolkit::ui::draw_ui_text;
@@ -25,6 +25,18 @@ struct FlowNode {
     powered: bool,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+struct FactoryLedger {
+    processors: usize,
+    active: usize,
+    starved: usize,
+    boosted: usize,
+    bottleneck: Option<ResourceType>,
+    ore_rate: f32,
+    alloy_rate: f32,
+    components_rate: f32,
+}
+
 pub(super) fn draw(state: &PlanetState, metrics: HudMetrics, theme: &UiTheme, time: f32) {
     if !state.flow_overlay {
         return;
@@ -40,6 +52,8 @@ pub(super) fn draw(state: &PlanetState, metrics: HudMetrics, theme: &UiTheme, ti
         draw_node(&node, starved.contains(&node.pos), metrics, theme);
     }
 
+    draw_factory_ledger(&factory_ledger(state), metrics, theme);
+
     draw_ui_text(
         "FACTORY FLOW // LIVE ROUTES",
         metrics.base_offset_x() + 12.0,
@@ -47,6 +61,147 @@ pub(super) fn draw(state: &PlanetState, metrics: HudMetrics, theme: &UiTheme, ti
         10.0,
         color_from_rgba(&theme.colors.primary_soft),
     );
+}
+
+fn draw_factory_ledger(ledger: &FactoryLedger, metrics: HudMetrics, theme: &UiTheme) {
+    let grid_room = screen_width() - metrics.base_offset_x() - metrics.right_panel_width - 14.0;
+    let x = metrics.base_offset_x() + if grid_room >= 500.0 { 170.0 } else { 8.0 };
+    let width = (screen_width() - x - metrics.right_panel_width - 14.0)
+        .max(250.0)
+        .min(520.0);
+    let compact = width < 400.0;
+    let area = Rect::new(
+        x,
+        metrics.base_offset_y() + 8.0,
+        width,
+        if compact { 108.0 } else { 88.0 },
+    );
+    draw_hud_panel(theme, area, Some("FACTORY LEDGER"));
+
+    let text = color_from_rgba(&theme.colors.text);
+    let dim = color_from_rgba(&theme.colors.text_dim);
+    let warning = color_from_rgba(&theme.colors.warning);
+    let success = color_from_rgba(&theme.colors.success);
+    let summary = format!(
+        "PROCESSORS {}   ACTIVE {}   STARVED {}   BOOST {}",
+        ledger.processors, ledger.active, ledger.starved, ledger.boosted
+    );
+    draw_ui_text(&summary, area.x + 12.0, area.y + 50.0, 10.0, text);
+
+    let bottleneck = ledger
+        .bottleneck
+        .map(|resource| {
+            let label = if resource == ResourceType::Minerals {
+                "ORE".to_string()
+            } else {
+                resource.id().to_uppercase()
+            };
+            format!("BOTTLENECK // {}", label)
+        })
+        .unwrap_or_else(|| "FLOW STABLE".to_string());
+    draw_ui_text(
+        &bottleneck,
+        area.x + 12.0,
+        area.y + 71.0,
+        9.0,
+        if ledger.bottleneck.is_some() {
+            warning
+        } else {
+            success
+        },
+    );
+
+    let rates = [
+        (ResourceType::Minerals, "IN", ledger.ore_rate),
+        (ResourceType::Alloy, "A", ledger.alloy_rate),
+        (ResourceType::Components, "C", ledger.components_rate),
+    ];
+    let start_x = if compact {
+        area.x + 12.0
+    } else {
+        area.x + area.w - 224.0
+    };
+    let rate_y = if compact {
+        area.y + 82.0
+    } else {
+        area.y + 59.0
+    };
+    for (index, (resource, label, rate)) in rates.into_iter().enumerate() {
+        let chip_x = start_x + index as f32 * 74.0;
+        draw_resource_icon(
+            resource,
+            Rect::new(chip_x, rate_y, 10.0, 10.0),
+            resource_color(theme, resource),
+        );
+        draw_ui_text(
+            &format!("{} {:.1}/s", label, rate),
+            chip_x + 14.0,
+            rate_y + 10.0,
+            8.0,
+            dim,
+        );
+    }
+}
+
+fn factory_ledger(state: &PlanetState) -> FactoryLedger {
+    let nodes = factory_flow_nodes(state);
+    let starved: std::collections::HashSet<GridPos> =
+        state.starved_factories().into_iter().collect();
+    let active = nodes
+        .iter()
+        .filter(|node| node.powered && node.readiness > 0.001)
+        .count();
+    let boosted = nodes
+        .iter()
+        .filter(|node| {
+            state
+                .grid
+                .get(node.pos)
+                .and_then(|tile| tile.building.as_ref())
+                .is_some_and(|building| building.overclocked)
+        })
+        .count();
+    FactoryLedger {
+        processors: nodes.len(),
+        active,
+        starved: starved.len(),
+        boosted,
+        bottleneck: factory_bottleneck(state, &starved),
+        ore_rate: state.throughput.last().unwrap_or(0.0),
+        alloy_rate: state.observed_alloy_rate(),
+        components_rate: state.observed_components_rate(),
+    }
+}
+
+fn factory_bottleneck(
+    state: &PlanetState,
+    starved: &std::collections::HashSet<GridPos>,
+) -> Option<ResourceType> {
+    let mut missing = Vec::<(ResourceType, usize)>::new();
+    for pos in starved {
+        let Some(kind) = state
+            .grid
+            .get(*pos)
+            .and_then(|tile| tile.building.as_ref())
+            .map(|building| building.building_type)
+        else {
+            continue;
+        };
+        let recipe = &crate::data::game_data().building(kind.id()).recipe;
+        for resource in ordered_resources(recipe.inputs.keys().map(String::as_str)) {
+            if input_available(state, *pos, recipe, resource) <= 0.001 {
+                if let Some((_, count)) = missing.iter_mut().find(|(item, _)| *item == resource) {
+                    *count += 1;
+                } else {
+                    missing.push((resource, 1));
+                }
+            }
+        }
+    }
+    missing
+        .into_iter()
+        .max_by_key(|(_, count)| *count)
+        .map(|(resource, _)| resource)
 }
 
 fn draw_link(link: &FlowLink, metrics: HudMetrics, theme: &UiTheme, time: f32) {
@@ -233,36 +388,44 @@ fn factory_flow_links(state: &PlanetState) -> Vec<FlowLink> {
 }
 
 fn recipe_readiness(state: &PlanetState, pos: GridPos, recipe: &RecipeDef) -> f32 {
-    let carried = recipe.carried_ids();
     recipe
         .inputs
         .iter()
         .filter(|(_, rate)| **rate > 0.0)
         .filter_map(|(id, rate)| {
             let resource = ResourceType::from_id(id)?;
-            let available = if carried.contains(&resource.id()) {
-                state
-                    .input_hoppers
-                    .get(&(pos.x, pos.y))
-                    .and_then(|hopper| hopper.get(&resource))
-                    .copied()
-                    .unwrap_or_else(|| {
-                        if recipe.carried.as_deref() == Some(resource.id()) {
-                            state
-                                .input_buffers
-                                .get(&(pos.x, pos.y))
-                                .copied()
-                                .unwrap_or(0.0)
-                        } else {
-                            0.0
-                        }
-                    })
-            } else {
-                state.resources.get(resource)
-            };
+            let available = input_available(state, pos, recipe, resource);
             Some((available / (*rate * 5.0)).clamp(0.0, 1.0))
         })
         .fold(1.0, f32::min)
+}
+
+fn input_available(
+    state: &PlanetState,
+    pos: GridPos,
+    recipe: &RecipeDef,
+    resource: ResourceType,
+) -> f32 {
+    if recipe.carried_ids().contains(&resource.id()) {
+        state
+            .input_hoppers
+            .get(&(pos.x, pos.y))
+            .and_then(|hopper| hopper.get(&resource))
+            .copied()
+            .unwrap_or_else(|| {
+                if recipe.carried.as_deref() == Some(resource.id()) {
+                    state
+                        .input_buffers
+                        .get(&(pos.x, pos.y))
+                        .copied()
+                        .unwrap_or(0.0)
+                } else {
+                    0.0
+                }
+            })
+    } else {
+        state.resources.get(resource)
+    }
 }
 
 fn ordered_resources<'a>(ids: impl Iterator<Item = &'a str>) -> Vec<ResourceType> {

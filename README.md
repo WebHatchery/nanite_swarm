@@ -30,6 +30,7 @@ The bottom graph records observed ore, alloy, and parts flow; warning triangles
 and the Operations count identify powered processors that are missing a feed.
 Tap FLOW to trace live material routes and recipe-buffer health over the map.
 Research Adaptive Clocking, then select a processor and tap BOOST for 1.5x work at 1.75x power and 1.8x dust.
+Tap FLOW to open live supply routes and the factory ledger: processor health, the dominant missing input, and observed ore/alloy/components rates.
 
 Keyboard shortcuts are optional:
 

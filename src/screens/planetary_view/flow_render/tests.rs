@@ -71,3 +71,25 @@ fn recipe_icons_follow_resource_order_not_hash_map_order() {
         ]
     );
 }
+
+#[test]
+fn factory_ledger_names_the_missing_input_and_boosted_processor() {
+    let mut state = PlanetState::new(2, 42, GameConfig::default());
+    let pos = state.grid.find_core().unwrap();
+    state.grid.get_mut(pos).unwrap().building =
+        Some(crate::engine::Building::new(BuildingType::Assembler, pos));
+    let building = state.grid.get_mut(pos).unwrap().building.as_mut().unwrap();
+    building.powered = true;
+    building.overclocked = true;
+    state.input_hoppers.insert(
+        (pos.x, pos.y),
+        [(ResourceType::Alloy, 8.0)].into_iter().collect(),
+    );
+
+    let ledger = factory_ledger(&state);
+    assert_eq!(ledger.processors, 1);
+    assert_eq!(ledger.active, 0);
+    assert_eq!(ledger.starved, 1);
+    assert_eq!(ledger.boosted, 1);
+    assert_eq!(ledger.bottleneck, Some(ResourceType::Minerals));
+}
