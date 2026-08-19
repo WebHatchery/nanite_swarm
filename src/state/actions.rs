@@ -343,6 +343,34 @@ impl PlanetState {
         changed
     }
 
+    /// Change the input tier of every recipe building in the current box.
+    pub fn set_selected_input_priority(&mut self, enabled: bool) -> usize {
+        let positions = self.box_selected.clone();
+        let mut changed = 0;
+        for pos in positions {
+            let Some(building) = self
+                .grid
+                .get_mut(pos)
+                .and_then(|tile| tile.building.as_mut())
+            else {
+                continue;
+            };
+            if building.supports_overclock() && building.input_priority != enabled {
+                building.input_priority = enabled;
+                changed += 1;
+            }
+        }
+        if changed > 0 {
+            self.notifications.info(format!(
+                "{} processor{} set to {} input",
+                changed,
+                if changed == 1 { "" } else { "s" },
+                if enabled { "priority" } else { "standard" }
+            ));
+        }
+        changed
+    }
+
     /// Two-tap recovery for a processor whose output cannot leave the pad.
     pub fn request_processor_pad_purge(&mut self, pos: GridPos) -> bool {
         let waiting = self

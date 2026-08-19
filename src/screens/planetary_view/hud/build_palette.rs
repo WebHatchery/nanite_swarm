@@ -458,6 +458,43 @@ pub(super) fn draw(
         ) {
             state.set_selected_overclock(enable);
         }
+
+        let selected_priority: Vec<bool> = state
+            .box_selected
+            .iter()
+            .filter_map(|pos| {
+                state
+                    .grid
+                    .get(*pos)
+                    .and_then(|tile| tile.building.as_ref())
+                    .filter(|building| building.supports_overclock())
+                    .map(|building| building.input_priority)
+            })
+            .collect();
+        let prioritize = selected_priority.iter().any(|priority| !priority);
+        let label = if prioritize {
+            format!(
+                "PRIORITIZE {}",
+                selected_priority
+                    .iter()
+                    .filter(|priority| !**priority)
+                    .count()
+            )
+        } else {
+            format!("STANDARDIZE {}", selected_priority.len())
+        };
+        if draw_hud_button(
+            theme,
+            Rect::new(
+                sidebar_x + metrics.panel_padding,
+                fifth_y + 36.0,
+                sidebar_w - metrics.panel_padding * 2.0,
+                24.0,
+            ),
+            &label,
+        ) {
+            state.set_selected_input_priority(prioritize);
+        }
     } else {
         let unlocked = state
             .research

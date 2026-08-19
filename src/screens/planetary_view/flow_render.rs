@@ -27,6 +27,7 @@ struct FlowNode {
     powered: bool,
     blocked: bool,
     output_pressure: f32,
+    priority: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -110,6 +111,20 @@ fn draw_node_key(metrics: HudMetrics, theme: &UiTheme) {
         "OUTPUT",
         x + 122.0,
         y,
+        8.0,
+        color_from_rgba(&theme.colors.text_dim),
+    );
+    draw_circle(
+        x + 58.0,
+        y + 8.0,
+        4.0,
+        color_from_rgba(&theme.colors.primary),
+    );
+    draw_ui_text("P", x + 56.0, y + 11.0, 7.0, Colors::BACKGROUND);
+    draw_ui_text(
+        "PRIORITY",
+        x + 65.0,
+        y + 12.0,
         8.0,
         color_from_rgba(&theme.colors.text_dim),
     );
@@ -432,6 +447,15 @@ fn draw_node(node: &FlowNode, starved: bool, metrics: HudMetrics, theme: &UiThem
                 .unwrap_or(Colors::TEXT_DIM)
         },
     );
+    if node.priority {
+        draw_circle(
+            x + 3.0,
+            y + 3.0,
+            4.0,
+            color_from_rgba(&theme.colors.primary),
+        );
+        draw_ui_text("P", x + 1.0, y + 6.0, 7.0, Colors::BACKGROUND);
+    }
 }
 
 fn factory_flow_nodes(state: &PlanetState) -> Vec<FlowNode> {
@@ -462,6 +486,11 @@ fn factory_flow_nodes(state: &PlanetState) -> Vec<FlowNode> {
                     .unwrap_or(0.0)
                     / state.processor_pad_capacity())
                 .clamp(0.0, 1.0),
+                priority: state
+                    .grid
+                    .get(pos)
+                    .and_then(|tile| tile.building.as_ref())
+                    .is_some_and(|building| building.input_priority),
             });
         }
     }
