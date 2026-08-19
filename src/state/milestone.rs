@@ -24,6 +24,8 @@ pub enum Milestone {
     AlloyHeld,
     ComponentsHeld,
     ComponentsRate,
+    BoostedProcessors,
+    ProcessorOutputHeld,
     Technologies,
     ForestsHarvested,
     PowerSurplus,
@@ -44,6 +46,8 @@ impl Milestone {
             Milestone::AlloyHeld => "alloy_held",
             Milestone::ComponentsHeld => "components_held",
             Milestone::ComponentsRate => "components_rate",
+            Milestone::BoostedProcessors => "boosted_processors",
+            Milestone::ProcessorOutputHeld => "processor_output_held",
             Milestone::Technologies => "technologies",
             Milestone::ForestsHarvested => "forests_harvested",
             Milestone::PowerSurplus => "power_surplus",
@@ -51,7 +55,7 @@ impl Milestone {
         }
     }
 
-    pub const ALL: [Milestone; 15] = [
+    pub const ALL: [Milestone; 17] = [
         Milestone::Manual,
         Milestone::Drills,
         Milestone::ServerBanks,
@@ -63,6 +67,8 @@ impl Milestone {
         Milestone::AlloyHeld,
         Milestone::ComponentsHeld,
         Milestone::ComponentsRate,
+        Milestone::BoostedProcessors,
+        Milestone::ProcessorOutputHeld,
         Milestone::Technologies,
         Milestone::ForestsHarvested,
         Milestone::PowerSurplus,
@@ -97,6 +103,34 @@ impl PlanetState {
             Milestone::AlloyHeld => self.resources.alloy,
             Milestone::ComponentsHeld => self.resources.components,
             Milestone::ComponentsRate => self.observed_components_rate(),
+            Milestone::BoostedProcessors => self
+                .grid
+                .iter_tiles()
+                .filter(|(_, tile)| {
+                    tile.building.as_ref().is_some_and(|building| {
+                        building.supports_overclock() && building.overclocked
+                    })
+                })
+                .count() as f32,
+            Milestone::ProcessorOutputHeld => crate::data::game_data()
+                .buildings
+                .iter()
+                .filter(|def| {
+                    def.recipe.outputs.iter().any(|(id, rate)| {
+                        *rate > 0.0
+                            && crate::engine::ResourceType::from_id(id)
+                                .is_some_and(crate::engine::ResourceType::is_physical)
+                    })
+                })
+                .filter_map(|def| BuildingType::from_id(&def.id))
+                .flat_map(|kind| self.grid.find_buildings(kind))
+                .map(|pos| {
+                    self.output_buffers
+                        .get(&(pos.x, pos.y))
+                        .copied()
+                        .unwrap_or(0.0)
+                })
+                .sum(),
             Milestone::Technologies => self.research.unlocked_techs.len() as f32,
             Milestone::ForestsHarvested => self.forest_harvested_count as f32,
             Milestone::PowerSurplus => self.power_balance.max(0.0),

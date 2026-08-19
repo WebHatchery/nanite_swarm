@@ -55,6 +55,18 @@
       "condition": { "kind": "components_rate", "target": 0.5 }
     },
     {
+      "id": "redline_cluster",
+      "name": "Redline Cluster",
+      "description": "Run three processors in boost mode at once.",
+      "condition": { "kind": "boosted_processors", "target": 3 }
+    },
+    {
+      "id": "freight_yard",
+      "name": "Freight Yard",
+      "description": "Stage fifty units of refined output across processor pads.",
+      "condition": { "kind": "processor_output_held", "target": 50 }
+    },
+    {
       "id": "stockpile",
       "name": "Stockpile",
       "description": "Hold 500 minerals at once.",

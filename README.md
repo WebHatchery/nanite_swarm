@@ -37,6 +37,7 @@ Processor tiles carry their own live art: colored intake tanks show separate rec
 Drone dispatch counts stock already in each hopper plus cargo still in flight, feeding the leanest processor before using route distance as a tie-breaker.
 Processor dispatch pads are finite: a full alloy or components stack pauses that recipe without consuming more inputs, and appears as a blocked factory in the HUD and FLOW ledger.
 Research Buffer Lattices after Precision Assembly and Storage Optimization to expand every processor dispatch pad by 50%.
+Records now reward scaling the factory systems themselves: three simultaneous boosted processors earn Redline Cluster, while fifty staged units of refined output earn Freight Yard.
 
 Keyboard shortcuts are optional:
 

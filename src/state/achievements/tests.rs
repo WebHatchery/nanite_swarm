@@ -71,6 +71,38 @@ fn precision_parts_reward_both_stockpiling_and_a_stable_line() {
 }
 
 #[test]
+fn scaled_processor_modes_have_records_payoffs() {
+    let mut state = state();
+    let core = state.grid.find_core().unwrap();
+    for (step, kind) in [
+        BuildingType::Smelter,
+        BuildingType::Smelter,
+        BuildingType::Assembler,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let pos = GridPos::new(core.x + step as i32 + 1, core.y);
+        state.grid.get_mut(pos).unwrap().terrain = crate::engine::TerrainType::Empty;
+        assert!(state.grid.place_building(pos, kind));
+        state
+            .grid
+            .get_mut(pos)
+            .unwrap()
+            .building
+            .as_mut()
+            .unwrap()
+            .overclocked = true;
+        state.output_buffers.insert((pos.x, pos.y), 20.0);
+    }
+
+    state.update_achievements();
+
+    assert!(state.achievements.is_unlocked("redline_cluster"));
+    assert!(state.achievements.is_unlocked("freight_yard"));
+}
+
+#[test]
 fn laying_network_is_counted_by_the_tiles_that_carry_drones() {
     let mut state = state();
     let core = state.grid.find_core().unwrap();
