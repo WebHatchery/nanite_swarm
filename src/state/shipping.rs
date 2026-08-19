@@ -419,9 +419,7 @@ impl Campaign {
         if let Some(planet) = self.planet_mut(world) {
             planet.export = Some(ExportOrder {
                 surplus_only: !order.surplus_only,
-                reserve_source: if order.surplus_only {
-                    order.reserve_source
-                } else if order.reserve_source > 0.0 {
+                reserve_source: if order.surplus_only || order.reserve_source > 0.0 {
                     order.reserve_source
                 } else {
                     100.0

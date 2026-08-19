@@ -18,6 +18,8 @@ use super::game_state::PlanetState;
 /// that outruns its logistics is the pressure, not free storage.
 const PAD_LOADS: f32 = 3.0;
 
+type DeliveryChoice = ((bool, i32, usize, i32, i32), GridPos, Vec<GridPos>);
+
 impl PlanetState {
     /// Run one logistics tick: re-check live routes, then dispatch drills.
     pub(super) fn update_logistics(&mut self, delta_time: f32, allow_visuals: bool) {
@@ -324,7 +326,7 @@ impl PlanetState {
         resource: ResourceType,
     ) -> Option<(GridPos, Vec<GridPos>)> {
         let hopper_ceiling = self.processor_pad_capacity();
-        let mut best: Option<((bool, i32, usize, i32, i32), GridPos, Vec<GridPos>)> = None;
+        let mut best: Option<DeliveryChoice> = None;
 
         for pos in self.consumers_of(resource) {
             let delivered = self

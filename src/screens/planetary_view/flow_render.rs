@@ -138,9 +138,7 @@ fn draw_node_key(metrics: HudMetrics, theme: &UiTheme) {
 fn draw_factory_ledger(ledger: &FactoryLedger, metrics: HudMetrics, theme: &UiTheme) {
     let grid_room = screen_width() - metrics.base_offset_x() - metrics.right_panel_width - 14.0;
     let x = metrics.base_offset_x() + if grid_room >= 500.0 { 210.0 } else { 8.0 };
-    let width = (screen_width() - x - metrics.right_panel_width - 14.0)
-        .max(250.0)
-        .min(520.0);
+    let width = (screen_width() - x - metrics.right_panel_width - 14.0).clamp(250.0, 520.0);
     let compact = width < 400.0;
     let area = Rect::new(
         x,
