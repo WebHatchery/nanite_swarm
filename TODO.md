@@ -9,6 +9,8 @@ intentionally out of scope.
 
 ## Core loop and win condition
 
+- [ ] Show the research requirement for every sealed Seed Ship stage in the ship-screen tech tree.
+- [ ] Render the launch departure over the current base, including the ship clearing the world before transit.
 - [ ] Record the source of each collapse, including the building or network failure that caused it.
 - [ ] Show the collapse source in the warning banner and post-collapse summary.
 - [ ] Apply source-specific collapse feedback when a local building failure differs from a broad grid collapse.
