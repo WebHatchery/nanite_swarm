@@ -36,6 +36,11 @@
       "unit": "flat"
     },
     {
+      "id": "processor_pad_capacity",
+      "label": "Processor pad storage",
+      "unit": "flat"
+    },
+    {
       "id": "power_consumption",
       "label": "Power draw",
       "lower_is_better": true,
@@ -355,6 +360,27 @@
       "position": [
         -3.5,
         -5.0
+      ]
+    },
+    {
+      "id": "buffer_lattices",
+      "name": "Buffer Lattices",
+      "description": "A wider dispatch apron buys the drones time without pretending the cargo has vanished.",
+      "data_cost": 75.0,
+      "prerequisites": [
+        "precision_assembly",
+        "storage_optimization"
+      ],
+      "position": [
+        -4.2,
+        -4.2
+      ],
+      "modifiers": [
+        {
+          "stat": "processor_pad_capacity",
+          "op": "percent",
+          "value": 0.5
+        }
       ]
     },
     {

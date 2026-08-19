@@ -296,10 +296,12 @@ impl PlanetState {
 
     /// The finite dispatch apron shared by every physical-output processor.
     pub fn processor_pad_capacity(&self) -> f32 {
-        self.config
+        let base = self
+            .config
             .logistics
             .pad_depth
-            .max(self.drones.drone_capacity * 3.0)
+            .max(self.drones.drone_capacity * 3.0);
+        self.stats.apply(StatId::ProcessorPadCapacity, base)
     }
 
     /// Powered processors that cannot work because their dispatch pad is full.

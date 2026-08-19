@@ -23,6 +23,8 @@ pub enum StatId {
     DustAccumulation,
     /// Ceiling on stored minerals.
     MineralCapacity,
+    /// Physical output waiting on one processor's dispatch pad.
+    ProcessorPadCapacity,
     /// Power drawn by every consumer.
     PowerConsumption,
     /// Data spent on the current research per second.
@@ -46,13 +48,14 @@ pub enum StatId {
 }
 
 impl StatId {
-    pub const ALL: [StatId; 19] = [
+    pub const ALL: [StatId; 20] = [
         StatId::DrillOutput,
         StatId::DroneCapacity,
         StatId::DronesPerDrill,
         StatId::DataGeneration,
         StatId::DustAccumulation,
         StatId::MineralCapacity,
+        StatId::ProcessorPadCapacity,
         StatId::PowerConsumption,
         StatId::ResearchRate,
         StatId::AcidResistance,
@@ -76,6 +79,7 @@ impl StatId {
             StatId::DataGeneration => "data_generation",
             StatId::DustAccumulation => "dust_accumulation",
             StatId::MineralCapacity => "mineral_capacity",
+            StatId::ProcessorPadCapacity => "processor_pad_capacity",
             StatId::PowerConsumption => "power_consumption",
             StatId::ResearchRate => "research_rate",
             StatId::AcidResistance => "acid_resistance",

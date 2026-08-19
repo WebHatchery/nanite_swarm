@@ -74,6 +74,15 @@ fn researching_storage_optimization_raises_the_mineral_cap() {
 }
 
 #[test]
+fn buffer_lattices_widen_every_processor_dispatch_pad() {
+    let mut state = PlanetState::default();
+    let before = state.processor_pad_capacity();
+    state.research.unlocked_techs.push("buffer_lattices".into());
+    state.refresh_stats();
+    assert_eq!(state.processor_pad_capacity(), before * 1.5);
+}
+
+#[test]
 fn researching_power_efficiency_lowers_consumption() {
     let mut state = PlanetState::default();
     let core = state.grid.find_core().unwrap();

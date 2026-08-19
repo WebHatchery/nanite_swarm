@@ -150,6 +150,11 @@ impl PlanetState {
             StatId::DataGeneration => resources.server_data_rate,
             StatId::DustAccumulation => self.config.upkeep.dust_rate,
             StatId::MineralCapacity => self.built_mineral_capacity(),
+            StatId::ProcessorPadCapacity => self
+                .config
+                .logistics
+                .pad_depth
+                .max(self.drones.drone_capacity * 3.0),
             StatId::PowerConsumption => self.grid.total_power_consumption(),
             StatId::ResearchRate => resources.research_rate,
             StatId::AcidResistance => self.hazards.acid_rain,
