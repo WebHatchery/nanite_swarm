@@ -164,6 +164,40 @@ fn json_roundtrip_preserves_grid_and_resources() {
 }
 
 #[test]
+fn processor_operating_mode_survives_a_save_roundtrip() {
+    let mut campaign = campaign();
+    let core = campaign.current().grid.find_core().unwrap();
+    let pos = GridPos::new(core.x + 1, core.y);
+    let planet = campaign.current_mut();
+    planet.grid.reveal_around(pos, 1);
+    planet.grid.get_mut(pos).unwrap().terrain = crate::engine::TerrainType::Empty;
+    assert!(planet.grid.place_building(pos, BuildingType::Assembler));
+    planet
+        .grid
+        .get_mut(pos)
+        .unwrap()
+        .building
+        .as_mut()
+        .unwrap()
+        .overclocked = true;
+
+    let json = save_to_json(&mut campaign).unwrap();
+    let loaded = load_from_json(&json).unwrap();
+
+    assert!(
+        loaded
+            .current()
+            .grid
+            .get(pos)
+            .unwrap()
+            .building
+            .as_ref()
+            .unwrap()
+            .overclocked
+    );
+}
+
+#[test]
 fn json_roundtrip_preserves_every_colonized_world() {
     let mut campaign = campaign();
     campaign.colonize(0);

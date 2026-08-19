@@ -156,7 +156,11 @@ impl PlanetState {
             self.network_revision = self.network_revision.wrapping_add(1);
             self.emit_audio(super::audio::AudioEvent::Demolition);
             self.undo_history
-                .push(super::game_state::UndoEntry::Removed(building_type, pos));
+                .push(super::game_state::UndoEntry::Removed(
+                    building_type,
+                    pos,
+                    removed.overclocked,
+                ));
             return true;
         }
 
@@ -249,6 +253,7 @@ impl PlanetState {
                     .map(|building| super::game_state::BlueprintEntry {
                         offset: (pos.x - anchor.x, pos.y - anchor.y),
                         building_type: building.building_type,
+                        overclocked: building.overclocked,
                     })
             })
             .collect();
@@ -303,9 +308,19 @@ impl PlanetState {
             let pos = GridPos::new(anchor.x + entry.offset.0, anchor.y + entry.offset.1);
             self.select_building(entry.building_type);
             if self.try_place_building(pos) {
+                if entry.overclocked {
+                    if let Some(building) = self
+                        .grid
+                        .get_mut(pos)
+                        .and_then(|tile| tile.building.as_mut())
+                    {
+                        building.overclocked = building.supports_overclock();
+                    }
+                }
                 placed += 1;
             }
         }
+        self.power_balance = self.net_power();
         if placed < self.blueprint.len() {
             self.notifications.warning(format!(
                 "Blueprint placed {}/{}; invalid or unaffordable entries skipped",
@@ -332,11 +347,11 @@ impl PlanetState {
     }
 
     pub fn relocate_building(&mut self, source: GridPos, destination: GridPos) -> bool {
-        let Some(building_type) = self
+        let Some((building_type, overclocked)) = self
             .grid
             .get(source)
             .and_then(|tile| tile.building.as_ref())
-            .map(|building| building.building_type)
+            .map(|building| (building.building_type, building.overclocked))
         else {
             return false;
         };
@@ -349,7 +364,18 @@ impl PlanetState {
             return false;
         }
         self.select_building(building_type);
-        self.try_place_building(destination)
+        let placed = self.try_place_building(destination);
+        if placed && overclocked {
+            if let Some(building) = self
+                .grid
+                .get_mut(destination)
+                .and_then(|tile| tile.building.as_mut())
+            {
+                building.overclocked = building.supports_overclock();
+            }
+            self.power_balance = self.net_power();
+        }
+        placed
     }
 
     pub fn undo_last_action(&mut self) -> bool {
@@ -358,9 +384,20 @@ impl PlanetState {
         };
         let success = match action {
             super::game_state::UndoEntry::Placed(pos) => self.try_sell_building(pos),
-            super::game_state::UndoEntry::Removed(kind, pos) => {
+            super::game_state::UndoEntry::Removed(kind, pos, overclocked) => {
                 self.select_building(kind);
-                self.try_place_building(pos)
+                let restored = self.try_place_building(pos);
+                if restored && overclocked {
+                    if let Some(building) = self
+                        .grid
+                        .get_mut(pos)
+                        .and_then(|tile| tile.building.as_mut())
+                    {
+                        building.overclocked = building.supports_overclock();
+                    }
+                    self.power_balance = self.net_power();
+                }
+                restored
             }
         };
         if success {
@@ -368,6 +405,29 @@ impl PlanetState {
             self.notifications.info("Last placement action undone");
         }
         success
+    }
+
+    pub fn toggle_building_overclock(&mut self, pos: GridPos) -> bool {
+        let Some(building) = self
+            .grid
+            .get_mut(pos)
+            .and_then(|tile| tile.building.as_mut())
+        else {
+            return false;
+        };
+        if !building.supports_overclock() {
+            return false;
+        }
+        building.overclocked = !building.overclocked;
+        let enabled = building.overclocked;
+        let name = building.building_type.name();
+        self.power_balance = self.net_power();
+        self.notifications.info(if enabled {
+            format!("{} boost: 1.5x work, 1.75x power", name)
+        } else {
+            format!("{} returned to normal output", name)
+        });
+        true
     }
 }
 

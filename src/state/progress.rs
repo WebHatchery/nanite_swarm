@@ -364,7 +364,7 @@ impl PlanetState {
                     .into_iter()
                     .filter_map(|pos| self.grid.get(pos).and_then(|tile| tile.building.as_ref()))
                     .filter(|building| building.powered && !building.is_dust_stalled())
-                    .map(|building| out * building.dust_efficiency())
+                    .map(|building| out * building.dust_efficiency() * building.work_multiplier())
                     .sum::<f32>()
             })
             .sum()

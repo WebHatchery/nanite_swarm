@@ -242,6 +242,41 @@ fn graph_samples_measure_factory_work_that_really_happened() {
 }
 
 #[test]
+fn overclocked_assembler_pays_for_half_again_as_much_real_work() {
+    let (mut state, pos) = processing_world(BuildingType::Assembler, 0.0);
+    state.input_hoppers.insert(
+        (pos.x, pos.y),
+        [
+            (crate::engine::ResourceType::Minerals, 20.0),
+            (crate::engine::ResourceType::Alloy, 20.0),
+        ]
+        .into_iter()
+        .collect(),
+    );
+    state
+        .grid
+        .get_mut(pos)
+        .unwrap()
+        .building
+        .as_mut()
+        .unwrap()
+        .overclocked = true;
+
+    state.update_recipes(1.0);
+
+    assert_eq!(state.output_buffers.get(&(pos.x, pos.y)), Some(&0.75));
+    let hoppers = state.input_hoppers.get(&(pos.x, pos.y)).unwrap();
+    assert_eq!(
+        hoppers.get(&crate::engine::ResourceType::Minerals),
+        Some(&17.0)
+    );
+    assert_eq!(
+        hoppers.get(&crate::engine::ResourceType::Alloy),
+        Some(&18.5)
+    );
+}
+
+#[test]
 fn starvation_marks_only_powered_processors_with_a_missing_input() {
     let (mut state, pos) = processing_world(BuildingType::Smelter, 0.0);
     assert_eq!(state.starved_factories(), [pos]);

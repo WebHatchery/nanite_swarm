@@ -77,12 +77,14 @@ pub struct GraphSample {
 pub struct BlueprintEntry {
     pub offset: (i32, i32),
     pub building_type: BuildingType,
+    #[serde(default)]
+    pub overclocked: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub enum UndoEntry {
     Placed(GridPos),
-    Removed(BuildingType, GridPos),
+    Removed(BuildingType, GridPos, bool),
 }
 /// Resources held by the player
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

@@ -159,3 +159,43 @@ fn try_convert_forest_to_filter_requires_forest_terrain() {
     // Already converted: no longer forest, so a second attempt fails.
     assert!(!state.try_convert_forest_to_filter(pos));
 }
+
+#[test]
+fn processor_boost_is_touch_toggleable_and_changes_live_power_demand() {
+    let mut state = state();
+    state.resources.minerals = 10_000.0;
+    state.resources.energy = 10_000.0;
+    state.config.resources.max_energy = 10_000.0;
+    let core = state.grid.find_core().unwrap();
+    let pos = GridPos::new(core.x + 1, core.y);
+    state.grid.reveal_around(pos, 2);
+    state.grid.get_mut(pos).unwrap().terrain = TerrainType::Empty;
+    state.unlock_building(BuildingType::Smelter);
+    state.select_building(BuildingType::Smelter);
+    assert!(state.try_place_building(pos));
+    let normal = state.power_consumption();
+
+    assert!(state.toggle_building_overclock(pos));
+    assert!(
+        state
+            .grid
+            .get(pos)
+            .unwrap()
+            .building
+            .as_ref()
+            .unwrap()
+            .overclocked
+    );
+    assert!(state.power_consumption() > normal);
+    assert!(state.toggle_building_overclock(pos));
+    assert!(
+        !state
+            .grid
+            .get(pos)
+            .unwrap()
+            .building
+            .as_ref()
+            .unwrap()
+            .overclocked
+    );
+}

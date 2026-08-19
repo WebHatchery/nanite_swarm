@@ -21,6 +21,9 @@ pub struct Building {
     pub acid_wear: f32,
     #[serde(default)]
     pub heat: f32,
+    /// Player-selected high-throughput mode for recipe buildings.
+    #[serde(default)]
+    pub overclocked: bool,
 }
 
 impl Building {
@@ -35,6 +38,7 @@ impl Building {
             dust: 0.0,
             acid_wear: 0.0,
             heat: 0.0,
+            overclocked: false,
         }
     }
 
@@ -148,6 +152,37 @@ impl Building {
 
     pub fn is_overheated(&self, limit: f32) -> bool {
         self.heat >= limit.max(0.0)
+    }
+
+    pub fn supports_overclock(&self) -> bool {
+        !data::game_data()
+            .building(self.building_type.id())
+            .recipe
+            .is_empty()
+    }
+
+    pub fn work_multiplier(&self) -> f32 {
+        if self.overclocked && self.supports_overclock() {
+            1.5
+        } else {
+            1.0
+        }
+    }
+
+    pub fn power_demand_multiplier(&self) -> f32 {
+        if self.overclocked && self.supports_overclock() {
+            1.75
+        } else {
+            1.0
+        }
+    }
+
+    pub fn dust_accumulation_multiplier(&self) -> f32 {
+        if self.overclocked && self.supports_overclock() {
+            1.8
+        } else {
+            1.0
+        }
     }
 }
 

@@ -153,7 +153,7 @@ impl Grid {
                 let def = data::game_data().building(b.building_type.id());
                 let base = def.power_consumption;
                 let leak = b.dust_power_leak();
-                (base * b.dust_power_consumption_multiplier()) + leak
+                (base * b.dust_power_consumption_multiplier() * b.power_demand_multiplier()) + leak
             })
             .sum()
     }

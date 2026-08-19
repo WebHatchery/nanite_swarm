@@ -235,7 +235,9 @@ impl PlanetState {
             // How much of a second's work every input can actually cover. The
             // carried one comes out of this building's hopper; a building with
             // an empty hopper is idle however full the global pool is.
-            let mut scale = building.dust_efficiency_with(&dust_response) * delta_time;
+            let mut scale = building.dust_efficiency_with(&dust_response)
+                * building.work_multiplier()
+                * delta_time;
             for (id, rate) in &recipe.inputs {
                 if *rate <= 0.0 {
                     continue;
@@ -367,8 +369,11 @@ impl PlanetState {
                 } else {
                     1.0
                 };
-            self.resources.data +=
-                rate * building.dust_efficiency_with(&dust_response) * heat_efficiency * delta_time;
+            self.resources.data += rate
+                * building.dust_efficiency_with(&dust_response)
+                * building.work_multiplier()
+                * heat_efficiency
+                * delta_time;
         }
     }
 
@@ -390,7 +395,7 @@ impl PlanetState {
                 && building.powered
                 && !building.is_dust_stalled_with(&dust_response)
             {
-                self.config.buildings.server_bank_heat_per_second
+                self.config.buildings.server_bank_heat_per_second * building.work_multiplier()
             } else {
                 0.0
             };
@@ -514,6 +519,7 @@ impl PlanetState {
             {
                 rate *= upkeep.pollution_multiplier;
             }
+            rate *= building.dust_accumulation_multiplier();
 
             // Apply sweeper cleaning if nearby powered sweeper exists
             let mut clean_rate = 0.0;

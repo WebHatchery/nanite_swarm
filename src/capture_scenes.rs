@@ -385,6 +385,13 @@ impl Game {
                 }
                 planet.select_building(engine::BuildingType::Assembler);
                 planet.try_place_building(assembler);
+                if let Some(building) = planet
+                    .grid
+                    .get_mut(assembler)
+                    .and_then(|tile| tile.building.as_mut())
+                {
+                    building.overclocked = true;
+                }
 
                 let smelter = engine::GridPos::new(core.x + 4, core.y - 1);
                 if let Some(tile) = planet.grid.get_mut(smelter) {
