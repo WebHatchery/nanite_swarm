@@ -1,6 +1,7 @@
 //! Main grid gameplay screen
 
 mod entity_render;
+mod factory_render;
 mod flow_render;
 mod format;
 mod hud;
@@ -106,6 +107,7 @@ pub fn render_planetary_view(
     upkeep_render::draw_uncovered_hazards(state, metrics);
     upkeep_render::draw_severed_network(state, metrics, time);
     entity_render::draw_congestion(state, metrics, time);
+    factory_render::draw_processor_buffers(state, metrics, theme, time);
     flow_render::draw(state, metrics, theme, time);
     entity_render::draw_factory_warnings(state, metrics, theme, time);
     // Over the tiles and under the drones: the ship is the tallest thing on

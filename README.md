@@ -33,6 +33,7 @@ Research Adaptive Clocking, then select a processor and tap BOOST for 1.5x work 
 Tap FLOW to open live supply routes and the factory ledger: processor health, the dominant missing input, and observed ore/alloy/components rates.
 Use BOX SELECT to mark a factory block, then tap BOOST N or NORMAL N to change every selected processor together.
 Tap AUTO CLOCK to let the swarm boost only fed processors with spare power and low dust, normalizing them when those margins disappear.
+Processor tiles carry their own live art: colored intake tanks show separate recipe inputs, moving packets show active work, and output crates stack on the dispatch pad.
 
 Keyboard shortcuts are optional:
 
