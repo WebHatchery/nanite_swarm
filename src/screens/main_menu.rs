@@ -1,5 +1,7 @@
 //! Main menu screen
 
+mod hero_art;
+
 use crate::ui::{draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::math::bob;
@@ -27,20 +29,7 @@ pub fn render_main_menu(has_save: bool, notice: Option<&str>, slot: &str) -> Men
     let screen_w = screen_width();
     let screen_h = screen_height();
     let float_y = bob(1.2, 6.0);
-
-    // Ambient glow
-    draw_circle(
-        screen_w * 0.2,
-        screen_h * 0.8,
-        220.0,
-        Color::new(0.0, 0.3, 0.4, 0.1),
-    );
-    draw_circle(
-        screen_w * 0.75,
-        screen_h * 0.25,
-        160.0,
-        Color::new(0.0, 0.2, 0.35, 0.12),
-    );
+    hero_art::draw(screen_w, screen_h, get_time() as f32);
 
     // Title
     let strings = crate::data::player_strings();
@@ -70,7 +59,7 @@ pub fn render_main_menu(has_save: bool, notice: Option<&str>, slot: &str) -> Men
     );
 
     // Briefing panel
-    let briefing_w = 360.0;
+    let briefing_w = (screen_w * 0.3).clamp(300.0, 360.0);
     let briefing_h = 220.0;
     let briefing_x = 40.0;
     let briefing_y = 160.0;
@@ -124,10 +113,31 @@ pub fn render_main_menu(has_save: bool, notice: Option<&str>, slot: &str) -> Men
     );
 
     // Menu panel
+    let mut buttons = vec![
+        (
+            format!("Slot: {}  (tap to switch)", slot),
+            MenuAction::CycleSlot,
+        ),
+        (strings.new_game.clone(), MenuAction::NewGame),
+    ];
+    if has_save {
+        buttons.push((strings.r#continue.clone(), MenuAction::Continue));
+    }
+    buttons.push((strings.load.clone(), MenuAction::Load));
+    if has_save {
+        buttons.push((strings.save.clone(), MenuAction::Save));
+    }
+    buttons.push((strings.settings.clone(), MenuAction::Settings));
+    if has_save {
+        buttons.push((strings.delete_slot.clone(), MenuAction::Delete));
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    buttons.push((strings.quit.clone(), MenuAction::Quit));
+
     let panel_w = 320.0;
-    let panel_h = 340.0;
-    let panel_x = screen_w - panel_w - 60.0;
-    let panel_y = screen_h * 0.3 + float_y * 0.2;
+    let panel_h = 78.0 + buttons.len() as f32 * 38.0;
+    let panel_x = screen_w - panel_w - 40.0;
+    let panel_y = ((screen_h - panel_h) * 0.5 + float_y * 0.2).max(88.0);
     draw_panel(panel_x, panel_y, panel_w, panel_h);
     draw_ui_text(
         &strings.command_menu,
@@ -146,61 +156,15 @@ pub fn render_main_menu(has_save: bool, notice: Option<&str>, slot: &str) -> Men
         );
     }
 
-    // Buttons
+    // Buttons form one dense touch stack. Hidden save actions no longer leave
+    // dead gaps that make the command panel look unfinished.
     let btn_w = panel_w - 40.0;
     let btn_x = panel_x + 20.0;
-    let mut btn_y = panel_y + 60.0;
     let btn_spacing = 38.0;
-
-    if draw_button_sized(
-        btn_x,
-        btn_y,
-        btn_w,
-        30.0,
-        &format!("Slot: {}  (tap to switch)", slot),
-    ) {
-        return MenuAction::CycleSlot;
-    }
-    btn_y += btn_spacing;
-
-    if draw_button_sized(btn_x, btn_y, btn_w, 30.0, &strings.new_game) {
-        return MenuAction::NewGame;
-    }
-    btn_y += btn_spacing;
-
-    if has_save && draw_button_sized(btn_x, btn_y, btn_w, 30.0, &strings.r#continue) {
-        return MenuAction::Continue;
-    }
-    btn_y += btn_spacing;
-
-    if draw_button_sized(btn_x, btn_y, btn_w, 30.0, &strings.load) {
-        return MenuAction::Load;
-    }
-    btn_y += btn_spacing;
-
-    if has_save && draw_button_sized(btn_x, btn_y, btn_w, 30.0, &strings.save) {
-        return MenuAction::Save;
-    }
-    btn_y += btn_spacing;
-
-    if draw_button_sized(btn_x, btn_y, btn_w, 30.0, &strings.settings) {
-        return MenuAction::Settings;
-    }
-    if has_save
-        && draw_button_sized(
-            btn_x,
-            btn_y + btn_spacing,
-            btn_w,
-            30.0,
-            &strings.delete_slot,
-        )
-    {
-        return MenuAction::Delete;
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        if draw_button_sized(btn_x, btn_y + btn_spacing * 2.0, btn_w, 30.0, &strings.quit) {
-            return MenuAction::Quit;
+    for (index, (label, action)) in buttons.iter().enumerate() {
+        let y = panel_y + 60.0 + index as f32 * btn_spacing;
+        if draw_button_sized(btn_x, y, btn_w, 30.0, label) {
+            return *action;
         }
     }
 

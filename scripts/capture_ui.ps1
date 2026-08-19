@@ -20,6 +20,7 @@ param(
     [int]$WindowWidth = 0,
     [int]$WindowHeight = 0,
     [string]$OutputDir = "docs\verification",
+    [switch]$UpdateCatalogThumbnail,
     [switch]$SkipBuild
 )
 
@@ -28,3 +29,12 @@ $gameDir = Split-Path -Parent $PSScriptRoot
 $shared = Join-Path (Split-Path -Parent $gameDir) "macroquad-toolkit\scripts\capture_ui.ps1"
 
 & $shared -GameDir $gameDir -Scenes $Scenes -Frames $Frames -WindowWidth $WindowWidth -WindowHeight $WindowHeight -OutputDir $OutputDir -SkipBuild:$SkipBuild
+
+if ($UpdateCatalogThumbnail) {
+    $mainMenuCapture = Join-Path $gameDir (Join-Path $OutputDir "ui_mainmenu.png")
+    if (-not (Test-Path -LiteralPath $mainMenuCapture)) {
+        throw "Catalog update requested, but mainmenu was not captured: $mainMenuCapture"
+    }
+    Copy-Item -LiteralPath $mainMenuCapture -Destination (Join-Path $gameDir "catalog_thumbnail.png") -Force
+    Write-Host "Catalog thumbnail refreshed from the title-screen capture."
+}
