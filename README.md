@@ -28,27 +28,26 @@ sidebars for route planning, then tap PANELS to restore them. When freight is
 moving, its map key identifies the colour and silhouette of every live cargo.
 The bottom graph records observed ore, alloy, and parts flow; warning triangles
 and the Operations count identify powered processors that are missing a feed.
-Tap FLOW to trace live material routes and recipe-buffer health over the map.
-Research Adaptive Clocking, then select a processor and tap BOOST for 1.5x work at 1.75x power and 1.8x dust.
-Tap FLOW to open live supply routes and the factory ledger: processor health, the dominant missing input, and observed ore/alloy/components rates.
-Use BOX SELECT to mark a factory block, then tap BOOST N or NORMAL N to change every selected processor together.
-Tap AUTO CLOCK to let the swarm boost only fed processors with spare power and low dust, normalizing them when those margins disappear.
-Processor tiles carry their own live art: colored intake tanks show separate recipe inputs, moving packets show active work, and output crates stack on the dispatch pad.
-Drone dispatch counts stock already in each hopper plus cargo still in flight, feeding the leanest processor before using route distance as a tie-breaker.
-Processor dispatch pads are finite: a full alloy or components stack pauses that recipe without consuming more inputs, and appears as a blocked factory in the HUD and FLOW ledger.
-Research Buffer Lattices after Precision Assembly and Storage Optimization to expand every processor dispatch pad by 50%.
-Records now reward scaling the factory systems themselves: three simultaneous boosted processors earn Redline Cluster, while fifty staged units of refined output earn Freight Yard.
-When a selected processor pad is full, tap PURGE PAD and then PURGE AGAIN to discard only its staged output and recover the machine without accidental one-tap loss.
-FLOW recipe nodes use separate gauges: the bottom bar is input readiness, while the right edge rises with output pressure and turns red at a full dispatch pad.
-FLOW routes now thicken as live traffic approaches conduit capacity, pulse amber when saturated, and slow their packet animation to mirror the drones caught in that lane.
-Selected processors expose a STANDARD / PRIORITY touch control beside their live recipe flow; priority lines claim scarce routed inputs before standard lines while still balancing demand among equal peers.
-Box-select a production district to prioritize or standardize every processor together; priority nodes carry a cyan P badge in FLOW so the policy stays visible at map scale.
-The FLOW ledger compares observed alloy and parts output with installed processor capacity and draws utilization bars, making underused factory depth visible alongside starvation and backpressure.
-Processor floor art now carries its operating policy: priority machines pulse a cyan beacon, boosted lines move twin product packets faster, and full output pads close red warning shutters over their crate dock.
-Selected processors can enter STANDBY without demolition: production and base power demand stop, freight ignores the paused line, and both input and output buffers remain intact for RESUME.
-Box-selected production districts can be paused or resumed together, and standby processors are excluded from starvation/backpressure alerts while the FLOW ledger reports their count separately.
-When selected processors have full dispatch pads, the reselect control becomes PURGE N and then PURGE AGAIN; only blocked selected outputs are discarded, while every input hopper and unselected pad is preserved.
-Records now recognize factory policy itself: Command Lattice rewards three priority processors, and Dark Shift records three lines held in standby together.
+
+Factory controls:
+
+- Tap FLOW for live routes, recipe-buffer gauges, bottlenecks, installed
+  capacity, utilization, priority badges, and traffic saturation.
+- Research Adaptive Clocking, then tap BOOST for 1.5x work at 1.75x power
+  and 1.8x dust, or tap AUTO CLOCK to manage healthy lines automatically.
+- Use BOX SELECT to boost, prioritize, pause, resume, or safely purge a
+  production district with visible touch controls.
+- Tap STANDARD / PRIORITY to give one line first claim on routed inputs while
+  preserving demand balancing among equal peers.
+- Tap STANDBY to stop a line's production and base power draw without losing
+  either buffer; tap RESUME to restart it.
+- A full dispatch pad stops its recipe without consuming inputs. Tap PURGE PAD
+  then PURGE AGAIN, or use the equivalent two-tap district purge.
+- Processor floor art shows intake fill, product stacks, active packets,
+  priority beacons, boost cadence, and red backpressure shutters.
+- Research Buffer Lattices to expand every processor dispatch pad by 50%.
+- Records reward boosted clusters, staged freight, priority lattices, and
+  districts held in standby.
 
 Keyboard shortcuts are optional:
 
