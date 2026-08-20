@@ -36,7 +36,7 @@ impl GridPos {
     }
 
     /// Convert to array index for flat storage
-    pub fn to_index(&self, width: u32) -> usize {
+    pub fn to_index(self, width: u32) -> usize {
         (self.y as u32 * width + self.x as u32) as usize
     }
 

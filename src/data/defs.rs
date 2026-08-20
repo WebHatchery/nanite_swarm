@@ -4,7 +4,6 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use crate::data::load_json;
 use crate::engine::{ResearchNode, ResearchTree};
 
 #[derive(Debug, Clone, Deserialize)]
@@ -34,15 +33,6 @@ pub struct RecipeDef {
 impl RecipeDef {
     pub fn is_empty(&self) -> bool {
         self.inputs.is_empty() && self.outputs.is_empty()
-    }
-
-    /// How much of the carried resource one second of work needs, if any.
-    pub fn carried_rate(&self) -> f32 {
-        self.carried
-            .as_ref()
-            .and_then(|id| self.inputs.get(id))
-            .copied()
-            .unwrap_or(0.0)
     }
 
     pub fn carried_ids(&self) -> Vec<&str> {
@@ -513,6 +503,7 @@ impl GameData {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn from_json_strings(
         buildings_json: &str,
         terrain_json: &str,
@@ -525,10 +516,15 @@ impl GameData {
         core_stages_json: &str,
     ) -> Self {
         let building_file: BuildingDataFile =
-            load_json(buildings_json).unwrap_or_else(|_| BuildingDataFile { buildings: vec![] });
+            macroquad_toolkit::data_loader::load_embedded_json(buildings_json)
+                .unwrap_or_else(|_| BuildingDataFile { buildings: vec![] });
         let terrain_file: TerrainDataFile =
-            load_json(terrain_json).unwrap_or_else(|_| TerrainDataFile { terrain: vec![] });
-        let research: ResearchData = load_json(research_json).unwrap_or_else(|_| ResearchData {
+            macroquad_toolkit::data_loader::load_embedded_json(terrain_json)
+                .unwrap_or_else(|_| TerrainDataFile { terrain: vec![] });
+        let research: ResearchData = macroquad_toolkit::data_loader::load_embedded_json(
+            research_json,
+        )
+        .unwrap_or_else(|_| ResearchData {
             starting_unlocked: vec!["core".to_string(), "basic_mining".to_string()],
             nodes: vec![],
             stats: vec![],
@@ -560,7 +556,10 @@ impl GameData {
                 }
             }
         }
-        let seed_ship: SeedShipData = load_json(seed_ship_json).unwrap_or_else(|_| SeedShipData {
+        let seed_ship: SeedShipData = macroquad_toolkit::data_loader::load_embedded_json(
+            seed_ship_json,
+        )
+        .unwrap_or_else(|_| SeedShipData {
             intake_per_second: SeedShipCost::default(),
             stages: vec![],
             launch: LaunchSequenceDef::default(),
@@ -574,10 +573,12 @@ impl GameData {
         }
 
         let planet_file: PlanetDataFile =
-            load_json(planets_json).unwrap_or_else(|_| PlanetDataFile { planets: vec![] });
+            macroquad_toolkit::data_loader::load_embedded_json(planets_json)
+                .unwrap_or_else(|_| PlanetDataFile { planets: vec![] });
 
         let tutorial_file: TutorialDataFile =
-            load_json(tutorial_json).unwrap_or_else(|_| TutorialDataFile { steps: vec![] });
+            macroquad_toolkit::data_loader::load_embedded_json(tutorial_json)
+                .unwrap_or_else(|_| TutorialDataFile { steps: vec![] });
         // A step whose goal cannot be read is a step nobody can finish, which
         // would strand the player rather than merely doing nothing.
         for step in &tutorial_file.steps {
@@ -589,11 +590,13 @@ impl GameData {
             }
         }
 
-        let directives: DirectiveDataFile =
-            load_json(directives_json).unwrap_or_else(|_| DirectiveDataFile {
-                rotation_seconds: 600.0,
-                directives: vec![],
-            });
+        let directives: DirectiveDataFile = macroquad_toolkit::data_loader::load_embedded_json(
+            directives_json,
+        )
+        .unwrap_or_else(|_| DirectiveDataFile {
+            rotation_seconds: 600.0,
+            directives: vec![],
+        });
         // A directive nobody can evaluate would stand forever and never
         // complete, which reads to a player as the game forgetting about them.
         for def in &directives.directives {
@@ -603,9 +606,11 @@ impl GameData {
         }
 
         let achievement_file: AchievementDataFile =
-            load_json(achievements_json).unwrap_or_else(|_| AchievementDataFile {
-                achievements: vec![],
-            });
+            macroquad_toolkit::data_loader::load_embedded_json(achievements_json).unwrap_or_else(
+                |_| AchievementDataFile {
+                    achievements: vec![],
+                },
+            );
         // An achievement whose condition cannot be read would never fire, and
         // would sit in the count forever making the set look unfinished.
         for def in &achievement_file.achievements {
@@ -618,7 +623,8 @@ impl GameData {
         }
 
         let core_stage_file: CoreStageDataFile =
-            load_json(core_stages_json).unwrap_or_else(|_| CoreStageDataFile { stages: vec![] });
+            macroquad_toolkit::data_loader::load_embedded_json(core_stages_json)
+                .unwrap_or_else(|_| CoreStageDataFile { stages: vec![] });
         for stage in &core_stage_file.stages {
             for requirement in &stage.requires {
                 if crate::state::Milestone::from_id(&requirement.kind).is_none() {

@@ -78,9 +78,7 @@ pub fn render_planetary_view(
     );
 
     let metrics = HudMetrics::for_screen(theme, screen_w, screen_h, state.camera, state.focus_mode);
-    let hovered_pos = if cursor_over_ui {
-        None
-    } else if state.factory_deck_open {
+    let hovered_pos = if cursor_over_ui || state.factory_deck_open {
         None
     } else {
         screen_to_grid(mouse_x, mouse_y, metrics)

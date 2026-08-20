@@ -16,6 +16,7 @@ pub struct PlayerStrings {
     pub save: String,
     pub settings: String,
     pub delete_slot: String,
+    #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     pub quit: String,
 }
 
@@ -29,6 +30,7 @@ pub fn player_strings() -> &'static PlayerStrings {
             macroquad_toolkit::include_json_str!("../../assets/strings.json"),
         )
         .expect("player strings data source");
-        crate::data::load_json(&json).expect("assets/strings.json is valid")
+        macroquad_toolkit::data_loader::load_embedded_json(&json)
+            .expect("assets/strings.json is valid")
     })
 }

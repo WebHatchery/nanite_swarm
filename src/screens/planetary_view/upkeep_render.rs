@@ -219,8 +219,15 @@ pub(super) fn draw_hazard_fields(state: &PlanetState, metrics: HudMetrics) {
         }
     }
     if !def.hazard_fields.is_empty() {
+        let field_names = def
+            .hazard_fields
+            .iter()
+            .map(|field| field.name.as_str())
+            .collect::<Vec<_>>()
+            .join(" // ");
+        let legend = format!("HAZARDS  //  purple ACID  //  blue COLD  //  {field_names}");
         draw_ui_text(
-            "HAZARDS  //  purple ACID  //  blue COLD",
+            &legend,
             metrics.base_offset_x() + 8.0,
             metrics.base_offset_y() + 18.0,
             9.0,
