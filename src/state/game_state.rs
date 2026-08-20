@@ -1,6 +1,7 @@
 //! Current planetary state
 
 use super::camera::Camera;
+use super::factory::FactoryFocus;
 use super::seed_ship::SeedShip;
 use crate::data::{GameConfig, PlanetHazards};
 use crate::engine::{BuildingType, DroneManager, Grid, GridPos, ResourceType, Stats};
@@ -325,6 +326,12 @@ pub struct PlanetState {
     /// Let the swarm boost healthy, fed processors only while power is spare.
     #[serde(default)]
     pub auto_clocking: bool,
+    /// The production deck currently receiving extra scheduling attention.
+    #[serde(default)]
+    pub factory_focus: FactoryFocus,
+    /// Whether the in-world factory control deck is expanded.
+    #[serde(default)]
+    pub factory_deck_open: bool,
     #[serde(skip, default)]
     pub auto_clock_timer: f32,
     #[serde(skip, default)]
@@ -511,6 +518,8 @@ impl PlanetState {
             focus_mode: false,
             flow_overlay: false,
             auto_clocking: false,
+            factory_focus: FactoryFocus::Balanced,
+            factory_deck_open: false,
             auto_clock_timer: 0.0,
             build_palette_scroll: ScrollArea::new(),
             log_scroll: ScrollArea::new(),

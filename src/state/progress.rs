@@ -250,7 +250,7 @@ impl PlanetState {
         self.stats.apply(
             StatId::PowerConsumption,
             self.grid.total_power_consumption(),
-        )
+        ) + self.factory_focus_power_tax()
     }
 
     pub fn net_power(&self) -> f32 {
@@ -404,7 +404,11 @@ impl PlanetState {
                     .into_iter()
                     .filter_map(|pos| self.grid.get(pos).and_then(|tile| tile.building.as_ref()))
                     .filter(|building| building.powered && !building.is_dust_stalled())
-                    .map(|building| out * building.dust_efficiency() * building.work_multiplier())
+                    .map(|building| {
+                        out * building.dust_efficiency()
+                            * building.work_multiplier()
+                            * self.factory_focus_multiplier(building.building_type)
+                    })
                     .sum::<f32>()
             })
             .sum()

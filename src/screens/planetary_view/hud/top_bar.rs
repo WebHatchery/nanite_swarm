@@ -70,7 +70,9 @@ pub(super) fn draw(
     let actions_w = (screen_w * 0.25).clamp(304.0, 448.0);
     let action_x = screen_w - actions_w - 8.0;
     let card_area_w = (action_x - cards_x - metrics.panel_gap).max(0.0);
-    let card_w = ((card_area_w - card_gap * 5.0) / 6.0).max(52.0);
+    let visible_card_count = if compact_top { 4.0 } else { 6.0 };
+    let card_w =
+        ((card_area_w - card_gap * (visible_card_count - 1.0)) / visible_card_count).max(52.0);
     let card_h = if compact_top { 62.0 } else { 68.0 };
     let energy_value = format!("{:.0}", state.resources.energy);
     let energy_rate = format_power_delta(state.power_balance);
@@ -116,36 +118,49 @@ pub(super) fn draw(
         None,
         color_from_rgba(&theme.colors.data),
     );
-    draw_metric_card(
-        theme,
-        Rect::new(cards_x + 3.0 * (card_w + card_gap), cards_y, card_w, card_h),
-        "biomass",
-        "BIOMASS",
-        &biomass_value,
-        &biomass_rate,
-        Some("/ 1000"),
-        color_from_rgba(&theme.colors.biomass),
-    );
-    draw_metric_card(
-        theme,
-        Rect::new(cards_x + 4.0 * (card_w + card_gap), cards_y, card_w, card_h),
-        "alloy",
-        "ALLOY",
-        &alloy_value,
-        &alloy_rate,
-        Some("/ 1000"),
-        color_from_rgba(&theme.colors.alloy),
-    );
-    draw_metric_card(
-        theme,
-        Rect::new(cards_x + 5.0 * (card_w + card_gap), cards_y, card_w, card_h),
-        "components",
-        if compact_top { "PARTS" } else { "COMPONENTS" },
-        &components_value,
-        &components_rate,
-        Some("/ 1000"),
-        color_from_rgba(&theme.colors.components),
-    );
+    if compact_top {
+        draw_metric_card(
+            theme,
+            Rect::new(cards_x + 3.0 * (card_w + card_gap), cards_y, card_w, card_h),
+            "components",
+            "PARTS",
+            &components_value,
+            &components_rate,
+            Some("/ 1000"),
+            color_from_rgba(&theme.colors.components),
+        );
+    } else {
+        draw_metric_card(
+            theme,
+            Rect::new(cards_x + 3.0 * (card_w + card_gap), cards_y, card_w, card_h),
+            "biomass",
+            "BIOMASS",
+            &biomass_value,
+            &biomass_rate,
+            Some("/ 1000"),
+            color_from_rgba(&theme.colors.biomass),
+        );
+        draw_metric_card(
+            theme,
+            Rect::new(cards_x + 4.0 * (card_w + card_gap), cards_y, card_w, card_h),
+            "alloy",
+            "ALLOY",
+            &alloy_value,
+            &alloy_rate,
+            Some("/ 1000"),
+            color_from_rgba(&theme.colors.alloy),
+        );
+        draw_metric_card(
+            theme,
+            Rect::new(cards_x + 5.0 * (card_w + card_gap), cards_y, card_w, card_h),
+            "components",
+            "COMPONENTS",
+            &components_value,
+            &components_rate,
+            Some("/ 1000"),
+            color_from_rgba(&theme.colors.components),
+        );
+    }
 
     let button_y = 10.0;
     let button_gap = 6.0;
@@ -194,6 +209,21 @@ pub(super) fn draw(
         62.0,
         theme.typography.small,
         primary_soft,
+    );
+    draw_ui_text(
+        &format!(
+            "{} / {}",
+            state.factory_depth_label(),
+            state.factory_focus.short_label()
+        ),
+        action_x + actions_w * 0.62,
+        62.0,
+        theme.typography.small,
+        if state.factory_focus == crate::state::FactoryFocus::Balanced {
+            dim
+        } else {
+            primary
+        },
     );
     if state.battery_seconds <= 0.0 {
         draw_ui_text(

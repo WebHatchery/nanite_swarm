@@ -11,7 +11,8 @@ fn required_capture_scenes_are_registered() {
             "assembly",
             "focus",
             "freight",
-            "flow"
+            "flow",
+            "factory_deck"
         ]
     );
 }

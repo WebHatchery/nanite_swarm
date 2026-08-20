@@ -241,6 +241,7 @@ impl PlanetState {
             // an empty hopper is idle however full the global pool is.
             let mut scale = building.dust_efficiency_with(&dust_response)
                 * building.work_multiplier()
+                * self.factory_focus_multiplier(building.building_type)
                 * delta_time;
             let physical_output_rate: f32 = recipe
                 .outputs
@@ -397,6 +398,7 @@ impl PlanetState {
             self.resources.data += rate
                 * building.dust_efficiency_with(&dust_response)
                 * building.work_multiplier()
+                * self.factory_focus_multiplier(BuildingType::ServerBank)
                 * heat_efficiency
                 * delta_time;
         }
@@ -406,6 +408,7 @@ impl PlanetState {
         let dust_response = self.resolved_dust_response();
         let cooling = self.config.buildings.water_cooling_rate.max(0.0);
         let capacity = self.config.buildings.server_bank_heat_capacity.max(1.0);
+        let server_focus_multiplier = self.factory_focus_multiplier(BuildingType::ServerBank);
         let water_tiles: Vec<_> = self
             .grid
             .iter_tiles()
@@ -420,7 +423,9 @@ impl PlanetState {
                 && building.powered
                 && !building.is_dust_stalled_with(&dust_response)
             {
-                self.config.buildings.server_bank_heat_per_second * building.work_multiplier()
+                self.config.buildings.server_bank_heat_per_second
+                    * building.work_multiplier()
+                    * server_focus_multiplier
             } else {
                 0.0
             };

@@ -1,6 +1,7 @@
 //! Main grid gameplay screen
 
 mod entity_render;
+mod factory_deck;
 mod factory_render;
 mod flow_render;
 mod format;
@@ -79,13 +80,15 @@ pub fn render_planetary_view(
     let metrics = HudMetrics::for_screen(theme, screen_w, screen_h, state.camera, state.focus_mode);
     let hovered_pos = if cursor_over_ui {
         None
+    } else if state.factory_deck_open {
+        None
     } else {
         screen_to_grid(mouse_x, mouse_y, metrics)
             .filter(|pos| pos.in_bounds(state.grid.width, state.grid.height))
     };
     let touch_tap = touch
         .tap
-        .filter(|_| touch_camera_active)
+        .filter(|_| touch_camera_active && !state.factory_deck_open)
         .and_then(|position| screen_to_grid(position.x, position.y, metrics))
         .filter(|pos| pos.in_bounds(state.grid.width, state.grid.height));
     if !touch.active {
@@ -109,6 +112,7 @@ pub fn render_planetary_view(
     entity_render::draw_congestion(state, metrics, time);
     factory_render::draw_processor_buffers(state, metrics, theme, time);
     flow_render::draw(state, metrics, theme, time);
+    factory_deck::draw_factory_depth_art(state, metrics, theme, time);
     entity_render::draw_factory_warnings(state, metrics, theme, time);
     // Over the tiles and under the drones: the ship is the tallest thing on
     // the world, but the swarm still crawls in front of it.
@@ -126,6 +130,8 @@ pub fn render_planetary_view(
         theme,
         metrics,
     );
+
+    factory_deck::draw_factory_depth_overlay(state, metrics, theme);
 
     upkeep_render::draw_notifications(state, metrics, screen_w);
 

@@ -21,6 +21,7 @@ pub(super) enum ClockAction {
     NextEvent,
     ToggleFocus,
     ToggleFlow,
+    ToggleDeck,
 }
 
 #[must_use]
@@ -194,7 +195,7 @@ pub(super) fn draw(
     }
     if draw_hud_button(
         theme,
-        Rect::new(controls_x + controls_w - 180.0, bottom_y + 10.0, 54.0, 22.0),
+        Rect::new(controls_x + controls_w - 240.0, bottom_y + 10.0, 54.0, 22.0),
         if state.flow_overlay {
             "FLOW ON"
         } else {
@@ -202,6 +203,23 @@ pub(super) fn draw(
         },
     ) {
         clock = ClockAction::ToggleFlow;
+    }
+    let deck_offset = if controls_w >= 360.0 { 300.0 } else { 180.0 };
+    if draw_hud_button(
+        theme,
+        Rect::new(
+            controls_x + controls_w - deck_offset,
+            bottom_y + 10.0,
+            54.0,
+            22.0,
+        ),
+        if state.factory_deck_open {
+            "DECK ON"
+        } else {
+            "DECK"
+        },
+    ) {
+        clock = ClockAction::ToggleDeck;
     }
 
     draw_hud_panel(

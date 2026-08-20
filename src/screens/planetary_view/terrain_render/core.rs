@@ -83,4 +83,44 @@ pub(super) fn draw_core_visual(
             with_alpha(Colors::PRIMARY, 0.2 + pulse * 0.2),
         );
     }
+
+    // The Core now reflects the physical depth of the factory, not only its
+    // abstract evolution milestone. Each opened deck adds a thin animated
+    // ring, making a growing production chain readable even when the HUD is
+    // collapsed for route planning.
+    let depth = state.factory_depth();
+    for deck in 0..depth {
+        let radius = 14.0 + deck as f32 * 4.5;
+        let phase = state.time_played as f32 * (1.2 + deck as f32 * 0.18);
+        let start = phase + deck as f32 * 1.7;
+        let end = start + std::f32::consts::PI * (0.7 + pulse * 0.2);
+        draw_depth_arc(
+            center_x,
+            center_y,
+            radius,
+            start,
+            end,
+            with_alpha(Colors::PRIMARY, 0.55),
+        );
+        draw_depth_arc(
+            center_x,
+            center_y,
+            radius,
+            start + std::f32::consts::PI,
+            end + std::f32::consts::PI,
+            with_alpha(Colors::ACCENT, 0.35),
+        );
+    }
+}
+
+fn draw_depth_arc(cx: f32, cy: f32, radius: f32, start: f32, end: f32, color: Color) {
+    let segments = 10;
+    let mut previous = vec2(cx + start.cos() * radius, cy + start.sin() * radius);
+    for index in 1..=segments {
+        let ratio = index as f32 / segments as f32;
+        let angle = start + (end - start) * ratio;
+        let next = vec2(cx + angle.cos() * radius, cy + angle.sin() * radius);
+        draw_line(previous.x, previous.y, next.x, next.y, 1.0, color);
+        previous = next;
+    }
 }

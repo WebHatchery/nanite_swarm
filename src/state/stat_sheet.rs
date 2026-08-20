@@ -82,6 +82,7 @@ impl PlanetState {
     pub fn drill_output_rate(&self) -> f32 {
         self.stats
             .apply(StatId::DrillOutput, self.config.buildings.drill_output_rate)
+            * self.factory_focus_multiplier(crate::engine::BuildingType::Drill)
     }
 
     /// Every stat, resolved against this world. In `StatId::ALL` order, so the

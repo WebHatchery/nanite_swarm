@@ -11,7 +11,7 @@ use crate::{data, engine, state, Game, GamePhase};
 mod fixtures;
 
 #[allow(dead_code)]
-pub const REQUIRED_CAPTURE_SCENES: [&str; 7] = [
+pub const REQUIRED_CAPTURE_SCENES: [&str; 8] = [
     "mainmenu",
     "research",
     "logistics",
@@ -19,6 +19,7 @@ pub const REQUIRED_CAPTURE_SCENES: [&str; 7] = [
     "focus",
     "freight",
     "flow",
+    "factory_deck",
 ];
 
 impl Game {
@@ -375,7 +376,7 @@ impl Game {
                 }
                 planet.selected_tile = Some(smelter);
             }
-            "assembly" | "flow" => {
+            "assembly" | "flow" | "factory_deck" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();
                 for tech in [
@@ -481,6 +482,15 @@ impl Game {
                     planet.camera.zoom = 1.45;
                     planet.camera.pan_y = -72.0;
                     planet.selected_building = None;
+                    planet.notifications.clear();
+                } else if scene == "factory_deck" {
+                    planet.factory_deck_open = true;
+                    planet.factory_focus = state::FactoryFocus::Assembly;
+                    planet.core_stage = 2;
+                    planet.camera.zoom = 1.22;
+                    planet.camera.pan_y = -36.0;
+                    planet.selected_building = None;
+                    planet.selected_tile = None;
                     planet.notifications.clear();
                 }
             }

@@ -33,6 +33,10 @@ Factory controls:
 
 - Tap FLOW for live routes, recipe-buffer gauges, bottlenecks, installed
   capacity, utilization, priority badges, and traffic saturation.
+- Tap DECK for the Factory Control Room: see how far the base has reached from
+  Surface to Orbital, choose Balanced, Ore, Alloy, or Parts focus, and read the
+  live production/power trade in one compact overlay. The DECK control remains
+  visible in the compact command bar so the overlay is always touch-closable.
 - Research Adaptive Clocking, then tap BOOST for 1.5x work at 1.75x power
   and 1.8x dust, or tap AUTO CLOCK to manage healthy lines automatically.
 - Use BOX SELECT to boost, prioritize, pause, resume, or safely purge a
