@@ -98,7 +98,8 @@ fn the_core_can_run_through_several_stages_in_one_go() {
 
 #[test]
 fn every_declared_stage_asks_for_something_the_game_can_measure() {
-    for stage in core_stages() {
+    let state = state();
+    for stage in state.core_stages() {
         assert!(!stage.name.is_empty());
         for requirement in &stage.requires {
             assert!(
@@ -113,18 +114,18 @@ fn every_declared_stage_asks_for_something_the_game_can_measure() {
         }
     }
     // And the art has a frame for each of them.
-    assert_eq!(core_stages().len(), 5);
+    assert_eq!(state.core_stages().len(), 5);
 }
 
 #[test]
 fn the_last_stage_leaves_the_core_where_it_is() {
     let mut state = state();
-    state.core_stage = (core_stages().len() - 1) as u8;
+    state.core_stage = (state.core_stages().len() - 1) as u8;
     // The same rebuild a loaded save gets, since nothing advanced here.
     state.refresh_stats();
     state.update_core_stage();
 
-    assert_eq!(state.core_stage as usize, core_stages().len() - 1);
+    assert_eq!(state.core_stage as usize, state.core_stages().len() - 1);
     assert!(
         state.stats.multiplier(StatId::DrillOutput) > 1.0,
         "the last stage stopped working once it was the last one"

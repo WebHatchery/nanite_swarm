@@ -13,10 +13,10 @@ use crate::screens::{
     LaunchAction, MenuAction, PlanetaryAction, RecordsAction, ResearchAction, SeedShipAction,
     SettingsAction,
 };
-use crate::state::{self, load_from_file, save_exists, save_to_file, GAME_NAME};
+use crate::state::{self, GAME_NAME};
 use crate::{display, screens};
 
-use super::{save_path, slot_name, Game, GamePhase, SLOT_NAMES};
+use super::{save_path, slot_name, Game, GamePhase};
 
 impl Game {
     /// Check if mass driver technology is researched.
@@ -54,12 +54,13 @@ impl Game {
         ) {
             MenuAction::NewGame => {
                 self.menu_notice = None;
-                self.campaign =
-                    state::Campaign::new(self.config.clone(), macroquad_toolkit::rng::random_u64());
-                self.campaign.set_slot_name(slot_name(self.active_slot));
-                self.campaign
-                    .apply_preferred_speed(self.settings.default_speed);
-                self.research_state = crate::engine::ResearchState::default();
+                self.session
+                    .new_campaign(self.config.clone(), macroquad_toolkit::rng::random_u64());
+                let slot_name = slot_name(self.session.active_slot);
+                let preferred_speed = self.settings.default_speed;
+                self.session.campaign.set_slot_name(slot_name);
+                self.session.campaign.apply_preferred_speed(preferred_speed);
+                self.research_state = crate::engine::ResearchState::from_data(self.data.data());
                 self.sync_research_to_planet();
                 self.sync_building_unlocks();
                 self.phase = GamePhase::Playing;
@@ -67,8 +68,8 @@ impl Game {
             MenuAction::Continue | MenuAction::Load => self.load_campaign(),
             MenuAction::Save => self.save_campaign(),
             MenuAction::CycleSlot => {
-                self.active_slot = (self.active_slot + 1) % SLOT_NAMES.len();
-                self.has_save = save_exists(&save_path(self.active_slot));
+                self.active_slot = (self.active_slot + 1) % 3;
+                self.session.refresh_save_presence();
                 self.menu_notice = Some(format!("Selected {}", slot_name(self.active_slot)));
             }
             MenuAction::Delete => {
@@ -102,8 +103,9 @@ impl Game {
 
     fn update_playing(&mut self) {
         self.advance_simulation();
-        let (planet, directive) = self.campaign.current_and_directive();
-        let action = render_planetary_view(planet, &self.textures, directive, &self.ui_theme);
+        let (session, textures, ui_theme) = (&mut self.session, &self.textures, &self.ui_theme);
+        let (planet, directive) = session.campaign.current_and_directive();
+        let action = render_planetary_view(planet, textures, directive, ui_theme);
         self.remember_preferred_speed();
         match action {
             PlanetaryAction::OpenResearch => self.open_screen(GamePhase::Research),
@@ -130,8 +132,10 @@ impl Game {
 
     fn update_research_screen(&mut self) {
         self.advance_simulation();
+        let data_context = self.session.data.clone();
         let sheet = self.campaign.current().stat_sheet();
         match render_research_view(
+            data_context.data(),
             &self.research_state,
             &self.research_tree,
             self.campaign.current().resources.data,
@@ -222,6 +226,7 @@ impl Game {
         let overflow_pods: [usize; state::PLANET_COUNT] =
             std::array::from_fn(|index| self.campaign.overflow_pod_count(index));
         let view = screens::MapView {
+            data: self.data.data(),
             current_planet: self.campaign.current_index(),
             has_mass_driver: self.has_mass_driver(),
             seed_ship_ready: self.campaign.current().seed_ship.is_ready_to_launch(),
@@ -238,6 +243,8 @@ impl Game {
             overflow_pods: &overflow_pods,
             editing_world: self.shipping_edit_world,
         };
+        let editing_world = self.shipping_edit_world;
+        let current_world = self.campaign.current_index();
         match render_interplanetary_view(&view) {
             InterplanetaryAction::Close => self.phase = GamePhase::Playing,
             InterplanetaryAction::SelectPlanet(index) => {
@@ -255,63 +262,70 @@ impl Game {
                     self.sync_building_unlocks();
                     self.save_campaign();
                     self.campaign.current_mut().arrival_notice_timer = 0.0;
-                    self.launch = Some(state::LaunchSequence::new(origin, index));
+                    self.launch = Some(state::LaunchSequence::new_with_data(
+                        self.data.clone(),
+                        origin,
+                        index,
+                    ));
                     self.phase = GamePhase::Launch;
                 }
             }
             InterplanetaryAction::CycleExportCargo => self.campaign.cycle_export_cargo(),
             InterplanetaryAction::CycleExportTarget => self.campaign.cycle_export_target(),
             InterplanetaryAction::CycleExportPad => {
-                self.campaign.cycle_export_pad_for(self.shipping_edit_world)
+                self.campaign.cycle_export_pad_for(editing_world)
             }
-            InterplanetaryAction::CycleExportSchedule => self
-                .campaign
-                .cycle_export_schedule_for(self.campaign.current_index()),
-            InterplanetaryAction::CycleExportPriority => self
-                .campaign
-                .cycle_export_priority_for(self.campaign.current_index()),
-            InterplanetaryAction::ToggleExportSurplus => self
-                .campaign
-                .toggle_export_surplus_for(self.campaign.current_index()),
+            InterplanetaryAction::CycleExportSchedule => {
+                self.campaign.cycle_export_schedule_for(current_world)
+            }
+            InterplanetaryAction::CycleExportPriority => {
+                self.campaign.cycle_export_priority_for(current_world)
+            }
+            InterplanetaryAction::ToggleExportSurplus => {
+                self.campaign.toggle_export_surplus_for(current_world)
+            }
             InterplanetaryAction::SelectOrderWorld(index) => self.shipping_edit_world = index,
-            InterplanetaryAction::CycleRemoteExportCargo => self
-                .campaign
-                .cycle_export_cargo_for(self.shipping_edit_world),
-            InterplanetaryAction::CycleRemoteExportTarget => self
-                .campaign
-                .cycle_export_target_for(self.shipping_edit_world),
-            InterplanetaryAction::CycleRemoteExportSchedule => self
-                .campaign
-                .cycle_export_schedule_for(self.shipping_edit_world),
-            InterplanetaryAction::CycleRemoteExportPriority => self
-                .campaign
-                .cycle_export_priority_for(self.shipping_edit_world),
-            InterplanetaryAction::ToggleRemoteExportSurplus => self
-                .campaign
-                .toggle_export_surplus_for(self.shipping_edit_world),
+            InterplanetaryAction::CycleRemoteExportCargo => {
+                self.campaign.cycle_export_cargo_for(editing_world)
+            }
+            InterplanetaryAction::CycleRemoteExportTarget => {
+                self.campaign.cycle_export_target_for(editing_world)
+            }
+            InterplanetaryAction::CycleRemoteExportSchedule => {
+                self.campaign.cycle_export_schedule_for(editing_world)
+            }
+            InterplanetaryAction::CycleRemoteExportPriority => {
+                self.campaign.cycle_export_priority_for(editing_world)
+            }
+            InterplanetaryAction::ToggleRemoteExportSurplus => {
+                self.campaign.toggle_export_surplus_for(editing_world)
+            }
             InterplanetaryAction::None => {}
         }
     }
 
     fn update_launch(&mut self) {
-        let arrival_line = self.campaign.current().arrival_line();
+        let arrival_line = self.session.campaign.current().arrival_line().to_string();
         let origin_state = self
+            .session
             .launch
             .as_ref()
-            .and_then(|sequence| self.campaign.planet(sequence.origin()));
-        let Some(sequence) = self.launch.as_mut() else {
+            .and_then(|sequence| self.session.campaign.planet(sequence.origin()))
+            .cloned();
+        let capture_still = self.capture_still;
+        let Some(sequence) = self.session.launch.as_mut() else {
             self.phase = GamePhase::Playing;
             return;
         };
-        if !self.capture_still {
+        if !capture_still {
             sequence.advance(get_frame_time());
         }
-        let action = render_launch_view(sequence, arrival_line, origin_state);
+        let action = render_launch_view(sequence, &arrival_line, origin_state.as_ref());
         if action == LaunchAction::Skip {
             sequence.skip();
         }
         if sequence.is_finished() {
-            self.launch = None;
+            self.session.launch = None;
             self.phase = GamePhase::Playing;
         }
     }
@@ -382,11 +396,8 @@ impl Game {
     }
 
     fn save_campaign(&mut self) {
-        self.campaign.set_slot_name(slot_name(self.active_slot));
-        match save_to_file(&mut self.campaign, &save_path(self.active_slot)) {
+        match self.session.save_campaign() {
             Ok(()) => {
-                self.has_save = true;
-                self.campaign.mark_saved();
                 self.campaign.current_mut().save_failed = false;
             }
             Err(_) => self.campaign.current_mut().save_failed = true,
@@ -409,11 +420,10 @@ impl Game {
     }
 
     fn load_campaign(&mut self) {
-        match load_from_file(&save_path(self.active_slot)) {
-            Ok((campaign, source)) => {
-                self.campaign = campaign;
-                self.campaign
-                    .apply_preferred_speed(self.settings.default_speed);
+        match self.session.load_campaign() {
+            Ok(source) => {
+                let preferred_speed = self.settings.default_speed;
+                self.campaign.apply_preferred_speed(preferred_speed);
                 self.campaign.adopt_planet_research();
                 self.sync_research_from_planet();
                 self.sync_building_unlocks();
@@ -426,12 +436,11 @@ impl Game {
                         generation.max(1)
                     ));
                 }
-                self.has_save = true;
                 self.phase = GamePhase::Playing;
             }
             Err(error) => {
                 eprintln!("Could not load campaign: {error}");
-                self.has_save = save_exists(&save_path(self.active_slot));
+                self.session.refresh_save_presence();
                 self.menu_notice = Some("Load failed: save is missing or corrupt.".to_string());
             }
         }

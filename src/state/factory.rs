@@ -165,7 +165,7 @@ impl PlanetState {
                 building.powered && self.factory_focus.affects(building.building_type)
             })
             .map(|building| {
-                let def = crate::data::game_data().building(building.building_type.id());
+                let def = self.data().building(building.building_type.id());
                 def.power_consumption
                     * 0.15
                     * building.dust_power_consumption_multiplier()

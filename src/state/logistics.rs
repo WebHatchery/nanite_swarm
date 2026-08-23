@@ -218,10 +218,7 @@ impl PlanetState {
         let base_speed = self.drones.drone_speed;
         let grid = &self.grid;
         let traffic = &self.traffic;
-        let hazard_fields = crate::data::game_data()
-            .planet(self.planet_index)
-            .hazard_fields
-            .clone();
+        let hazard_fields = self.data().planet(self.planet_index).hazard_fields.clone();
         let grid_width = self.grid.width;
         let grid_height = self.grid.height;
 
@@ -385,7 +382,7 @@ impl PlanetState {
         else {
             return 1.0;
         };
-        crate::data::game_data()
+        self.data()
             .building(kind.id())
             .recipe
             .inputs
@@ -401,7 +398,8 @@ impl PlanetState {
     /// A drone looks for one of these before falling back to the Core, which
     /// is what makes a Smelter parked beside the drills get fed first.
     fn consumers_of(&self, resource: ResourceType) -> Vec<GridPos> {
-        let mut consumers: Vec<GridPos> = crate::data::game_data()
+        let mut consumers: Vec<GridPos> = self
+            .data()
             .buildings
             .iter()
             .filter(|def| {
@@ -581,7 +579,7 @@ impl PlanetState {
 
         // Anything whose recipe makes something a drone can carry is a
         // producer too, whatever that something turns out to be.
-        for def in &crate::data::game_data().buildings {
+        for def in &self.data().buildings {
             let Some(kind) = BuildingType::from_id(&def.id) else {
                 continue;
             };

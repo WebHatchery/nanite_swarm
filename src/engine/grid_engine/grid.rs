@@ -1,6 +1,6 @@
 //! The game grid: construction, placement, and spatial queries
 
-use crate::data::TerrainWeights;
+use crate::data::{GameData, GameDataContext, TerrainWeights};
 use macroquad_toolkit::grid::bfs_path as toolkit_bfs_path;
 use macroquad_toolkit::rng::SeededRng;
 use serde::{Deserialize, Serialize};
@@ -20,6 +20,10 @@ use macroquad_toolkit::math::lerp;
 /// The game grid containing all tiles
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Grid {
+    /// Immutable definitions for grid-level simulation. This is session state,
+    /// not save data, and is reattached when a campaign is loaded.
+    #[serde(skip, default)]
+    pub(super) data: GameDataContext,
     pub width: u32,
     pub height: u32,
     tiles: Vec<Tile>,
@@ -39,6 +43,7 @@ impl Grid {
     pub fn new(width: u32, height: u32) -> Self {
         let size = (width * height) as usize;
         Self {
+            data: GameDataContext::default(),
             width,
             height,
             tiles: vec![Tile::default(); size],
@@ -160,6 +165,7 @@ impl Grid {
         }
 
         let mut grid = Self {
+            data: GameDataContext::default(),
             width,
             height,
             tiles,
@@ -169,11 +175,25 @@ impl Grid {
         grid
     }
 
+    pub fn data(&self) -> &GameData {
+        self.data.data()
+    }
+
+    pub fn attach_data(&mut self, data: GameDataContext) {
+        self.data = data.clone();
+        for (_, tile) in self.iter_tiles_mut() {
+            if let Some(building) = tile.building.as_mut() {
+                building.attach_data(data.clone());
+            }
+        }
+    }
+
     /// Buildable ground reachable on foot from `from`, including it.
     ///
     /// Not the same question as whether a drone can get somewhere: this is
     /// about where the swarm can put anything at all.
     pub fn buildable_region(&self, from: GridPos) -> Vec<GridPos> {
+        let data = self.data();
         let mut seen = vec![false; self.tiles.len()];
         let mut region = Vec::new();
         let mut frontier = vec![from];
@@ -189,7 +209,7 @@ impl Grid {
                 if seen[index] {
                     continue;
                 }
-                if !self.tiles[index].terrain.is_buildable() {
+                if !self.tiles[index].terrain.is_buildable(data) {
                     continue;
                 }
                 seen[index] = true;
@@ -213,6 +233,8 @@ impl Grid {
     /// Only the least is cleared: the barrier tile nearest the Core, one at a
     /// time, so the rest of the world keeps its shape.
     fn open_a_landing_site(&mut self, center: GridPos, min_share: f32) {
+        let context = self.data.clone();
+        let data = context.data();
         let target = (self.tiles.len() as f32 * min_share.clamp(0.0, 1.0)).round() as usize;
         for _ in 0..self.tiles.len() {
             let region = self.buildable_region(center);
@@ -227,7 +249,7 @@ impl Grid {
                     let Some(index) = self.index_of(next) else {
                         continue;
                     };
-                    if !self.tiles[index].terrain.is_buildable() && !barriers.contains(&next) {
+                    if !self.tiles[index].terrain.is_buildable(data) && !barriers.contains(&next) {
                         barriers.push(next);
                     }
                 }
@@ -268,6 +290,7 @@ impl Grid {
 
     /// Check if a building can be placed at position
     pub fn can_place_building(&self, pos: GridPos, building_type: BuildingType) -> bool {
+        let data = self.data();
         if let Some(tile) = self.get(pos) {
             if !tile.revealed {
                 return false;
@@ -280,7 +303,7 @@ impl Grid {
             }
             // Conduits cannot overlap any existing building and must be on buildable terrain
             if building_type == BuildingType::Conduit {
-                return tile.terrain.is_buildable();
+                return tile.terrain.is_buildable(data);
             }
             // A Bridge is the network's answer to ground that will not hold
             // anything: it goes where nothing else can, and nowhere else.
@@ -294,7 +317,7 @@ impl Grid {
             if building_type == BuildingType::WindTurbine {
                 return matches!(tile.terrain, TerrainType::Empty | TerrainType::Mountain);
             }
-            tile.terrain.is_buildable()
+            tile.terrain.is_buildable(data)
         } else {
             false
         }
@@ -305,9 +328,10 @@ impl Grid {
         if !self.can_place_building(pos, building_type) {
             return false;
         }
+        let data = self.data.clone();
 
         if let Some(tile) = self.get_mut(pos) {
-            let mut building = Building::new(building_type, pos);
+            let mut building = Building::new_with_data(data, building_type, pos);
 
             // Wind turbines on mountains get efficiency bonus
             if building_type == BuildingType::WindTurbine && tile.terrain == TerrainType::Mountain {
@@ -416,7 +440,7 @@ impl Grid {
                     .building
                     .as_ref()
                     .is_some_and(|building| building.building_type == BuildingType::Bridge);
-                if !tile.terrain.is_buildable() && !bridged {
+                if !tile.terrain.is_buildable(grid.data()) && !bridged {
                     return false;
                 }
                 match tile.building.as_ref() {

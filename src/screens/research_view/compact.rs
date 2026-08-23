@@ -80,6 +80,7 @@ pub(super) fn clip_line(rect: Rect, from: Vec2, to: Vec2) -> Option<(Vec2, Vec2)
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn draw_compact_node_info(
+    data: &crate::data::GameData,
     research_state: &ResearchState,
     research_tree: &ResearchTree,
     node_id: &str,
@@ -105,7 +106,7 @@ pub(super) fn draw_compact_node_info(
         Colors::TEXT_DIM,
     );
     let mut detail_y = y;
-    for (text, color) in node_effects(node_id) {
+    for (text, color) in node_effects(data, node_id) {
         draw_ui_text(&text, split_x, detail_y, 11.0, color);
         detail_y += 16.0;
     }

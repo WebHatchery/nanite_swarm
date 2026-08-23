@@ -3,13 +3,12 @@ use crate::ui::Colors;
 use macroquad::prelude::Color;
 
 /// What a node does, as lines for the hover panel.
-pub(super) fn node_effects(node_id: &str) -> Vec<(String, Color)> {
-    let data = crate::data::game_data();
+pub(super) fn node_effects(data: &crate::data::GameData, node_id: &str) -> Vec<(String, Color)> {
     let mut lines = Vec::new();
 
     if let Some(def) = data.research.nodes.iter().find(|node| node.id == node_id) {
         for modifier in &def.modifiers {
-            let Some(summary) = describe_modifier(modifier) else {
+            let Some(summary) = describe_modifier(data, modifier) else {
                 continue;
             };
             let color = if summary.is_gain {

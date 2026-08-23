@@ -42,13 +42,10 @@ pub struct ResearchTree {
     pub nodes: Vec<ResearchNode>,
 }
 
-impl Default for ResearchTree {
-    fn default() -> Self {
-        crate::data::game_data().research_tree()
-    }
-}
-
 impl ResearchTree {
+    pub fn from_data(data: &crate::data::GameData) -> Self {
+        data.research_tree()
+    }
     pub fn from_nodes(nodes: Vec<ResearchNode>) -> Self {
         Self { nodes }
     }
@@ -158,17 +155,14 @@ pub struct ResearchState {
     pub research_progress: f32,
 }
 
-impl Default for ResearchState {
-    fn default() -> Self {
+impl ResearchState {
+    pub fn from_data(data: &crate::data::GameData) -> Self {
         Self {
-            unlocked: crate::data::game_data().research.starting_unlocked.clone(),
+            unlocked: data.research.starting_unlocked.clone(),
             current_research: None,
             research_progress: 0.0,
         }
     }
-}
-
-impl ResearchState {
     /// Start researching a tech
     pub fn start_research(
         &mut self,

@@ -24,9 +24,8 @@ pub enum TutorialGoal {
 impl TutorialGoal {
     /// Read a declared goal, or `None` if it names something unknown.
     ///
-    /// This runs while the data files are still being loaded, so it resolves
-    /// nothing against `game_data()`: asking for the game data from inside its
-    /// own initialiser deadlocks.
+    /// This runs while the data files are still being loaded, so it only
+    /// parses the declared goal and does not require a running session.
     pub fn parse(def: &TutorialGoalDef) -> Option<Self> {
         match def.kind.as_str() {
             "build" => BuildingType::from_id(&def.target).map(TutorialGoal::Build),
@@ -49,20 +48,20 @@ impl TutorialGoal {
 }
 
 impl PlanetState {
-    fn steps() -> &'static [TutorialStepDef] {
-        &crate::data::game_data().tutorial
+    fn steps(&self) -> &[TutorialStepDef] {
+        &self.data().tutorial
     }
 
     pub fn tutorial_step_count(&self) -> usize {
-        Self::steps().len()
+        self.steps().len()
     }
 
     /// The step the player is on, or `None` once they are through it.
-    pub fn tutorial_current(&self) -> Option<&'static TutorialStepDef> {
+    pub fn tutorial_current(&self) -> Option<&TutorialStepDef> {
         if self.tutorial_done {
             return None;
         }
-        Self::steps().get(self.tutorial_step as usize)
+        self.steps().get(self.tutorial_step as usize)
     }
 
     /// The building the current step wants placed, for the palette to point at.
@@ -104,7 +103,7 @@ impl PlanetState {
 
         let title = step.title.clone();
         self.tutorial_step = self.tutorial_step.saturating_add(1);
-        if self.tutorial_step as usize >= Self::steps().len() {
+        if self.tutorial_step as usize >= self.steps().len() {
             self.tutorial_done = true;
             self.notifications
                 .success("The swarm needs no more guidance.");

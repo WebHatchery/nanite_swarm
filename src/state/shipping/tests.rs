@@ -110,6 +110,11 @@ fn set_route(campaign: &mut Campaign, target: usize, cargo: ResourceType) {
     });
 }
 
+fn transit_seconds(from: usize, to: usize, config: &MassDriverConfig) -> f32 {
+    let data = crate::data::test_data();
+    super::transit_seconds(data.data(), from, to, config)
+}
+
 #[test]
 fn a_farther_world_is_a_longer_throw() {
     let config = MassDriverConfig::default();

@@ -191,7 +191,7 @@ pub(super) fn draw_uncovered_hazards(state: &PlanetState, metrics: HudMetrics) {
 
 /// Render authored spatial hazard regions and a compact legend.
 pub(super) fn draw_hazard_fields(state: &PlanetState, metrics: HudMetrics) {
-    let def = crate::data::game_data().planet(state.planet_index);
+    let def = state.data().planet(state.planet_index);
     let width = state.grid.width as f32;
     let height = state.grid.height as f32;
     for field in &def.hazard_fields {

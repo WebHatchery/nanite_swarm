@@ -4,7 +4,7 @@
 //! with the tier, and what it pays. Only the *kinds* are code, because a kind
 //! is something the simulation has to know how to measure.
 
-use crate::data::DirectiveDef;
+use crate::data::{DirectiveDef, GameData};
 use crate::engine::BuildingType;
 use crate::state::PlanetState;
 use serde::{Deserialize, Serialize};
@@ -193,21 +193,17 @@ impl Directive {
 }
 
 /// How long a directive stands before the next one takes its place.
-pub fn rotation_seconds() -> f32 {
-    crate::data::game_data()
-        .directives
-        .rotation_seconds
-        .max(1.0)
+pub fn rotation_seconds(data: &GameData) -> f32 {
+    data.directives.rotation_seconds.max(1.0)
 }
 
 /// The directive for this tier: the declared set, in order, cycling.
 ///
 /// The set is data, so a new standing order that reuses an existing kind is a
 /// line of JSON rather than another arm of a `match tier % 4`.
-pub fn pick_directive(tier: i32) -> Directive {
-    let data = crate::data::game_data();
+pub fn pick_directive(data: &GameData, tier: i32) -> Directive {
     let set = &data.directives.directives;
-    let duration = rotation_seconds();
+    let duration = rotation_seconds(data);
     if set.is_empty() {
         // Nothing declared: ask for a drill and say so plainly.
         return Directive {

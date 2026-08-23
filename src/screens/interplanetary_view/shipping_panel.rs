@@ -20,7 +20,7 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
     draw_panel(x, y, w, h);
     draw_ui_text("Shipping", x + 12.0, y + 26.0, 16.0, Colors::PRIMARY);
 
-    let home = crate::data::game_data().planet(view.editing_world);
+    let home = view.data.planet(view.editing_world);
     let edited_order = view.orders.get(view.editing_world).copied().flatten();
     if !view.has_mass_driver && edited_order.is_none() {
         draw_ui_text(
@@ -49,10 +49,7 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
         None => "Cargo: --".to_string(),
     };
     let target_label = match edited_order {
-        Some(order) => format!(
-            "Target: {}",
-            crate::data::game_data().planet(order.target).name
-        ),
+        Some(order) => format!("Target: {}", view.data.planet(order.target).name),
         None => "Target: hold".to_string(),
     };
 
@@ -157,10 +154,7 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
     if let Some(order) = edited_order {
         if view.pads.get(order.target).copied().unwrap_or(0) == 0 {
             draw_ui_text(
-                &format!(
-                    "{} has no Landing Pad",
-                    crate::data::game_data().planet(order.target).name
-                ),
+                &format!("{} has no Landing Pad", view.data.planet(order.target).name),
                 x + 12.0,
                 y + 264.0,
                 10.0,
@@ -205,7 +199,7 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
                 row_y - 12.0,
                 button_w,
                 22.0,
-                crate::data::game_data().planet(world).name.as_str(),
+                view.data.planet(world).name.as_str(),
             ) {
                 action = InterplanetaryAction::SelectOrderWorld(world);
             }
@@ -232,19 +226,24 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
     };
     draw_ui_text(&pod_text, x + 12.0, bar_y + 24.0, 10.0, Colors::TEXT_DIM);
 
-    draw_in_flight_list(view.shipments, x, bar_y + 46.0, w);
+    draw_in_flight_list(view.data, view.shipments, x, bar_y + 46.0, w);
 
     action
 }
 
-fn draw_in_flight_list(shipments: &[Shipment], x: f32, y: f32, w: f32) {
+fn draw_in_flight_list(
+    data: &crate::data::GameData,
+    shipments: &[Shipment],
+    x: f32,
+    y: f32,
+    w: f32,
+) {
     draw_ui_text("In flight", x + 12.0, y, 12.0, Colors::PRIMARY);
     if shipments.is_empty() {
         draw_ui_text("Nothing up", x + 12.0, y + 20.0, 10.0, Colors::TEXT_DIM);
         return;
     }
 
-    let data = crate::data::game_data();
     let mut row_y = y + 20.0;
     for shipment in shipments.iter().take(LISTED_SHIPMENTS) {
         draw_ui_text(

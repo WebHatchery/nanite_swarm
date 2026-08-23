@@ -3,7 +3,7 @@
 use super::camera::Camera;
 use super::factory::FactoryFocus;
 use super::seed_ship::SeedShip;
-use crate::data::{GameConfig, PlanetHazards};
+use crate::data::{GameConfig, GameData, GameDataContext, PlanetHazards};
 use crate::engine::{BuildingType, DroneManager, Grid, GridPos, ResourceType, Stats};
 use macroquad::miniquad;
 use macroquad_toolkit::achievements::{Achievement, Achievements};
@@ -162,9 +162,18 @@ pub struct ResearchProgress {
 impl Default for ResearchProgress {
     fn default() -> Self {
         Self {
-            unlocked_techs: crate::data::game_data().research.starting_unlocked.clone(),
+            unlocked_techs: Vec::new(),
             current_research: None,
             research_progress: 0.0,
+        }
+    }
+}
+
+impl ResearchProgress {
+    pub fn from_data(data: &GameData) -> Self {
+        Self {
+            unlocked_techs: data.research.starting_unlocked.clone(),
+            ..Self::default()
         }
     }
 }
@@ -172,6 +181,10 @@ impl Default for ResearchProgress {
 /// Current game state for a planet
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlanetState {
+    /// Immutable definitions injected by the campaign session. They are not
+    /// save data: loading reattaches the active session context.
+    #[serde(skip, default)]
+    pub(crate) data: GameDataContext,
     pub name: String,
     /// Which campaign slot this world is, so it can find its own definition.
     #[serde(default = "default_planet_index")]
@@ -411,7 +424,16 @@ impl PlanetState {
     /// Build the world at campaign slot `planet_index`, from its entry in
     /// `assets/planets.json`.
     pub fn new(planet_index: usize, seed: u64, config: GameConfig) -> Self {
-        let def = crate::data::game_data().planet(planet_index);
+        Self::new_with_data(planet_index, seed, config, GameDataContext::default())
+    }
+
+    pub fn new_with_data(
+        planet_index: usize,
+        seed: u64,
+        config: GameConfig,
+        data: GameDataContext,
+    ) -> Self {
+        let def = data.data().planet(planet_index);
         let (name, width, height) = (def.name.as_str(), def.width, def.height);
         let mut grid = Grid::generate(
             width,
@@ -421,6 +443,7 @@ impl PlanetState {
             &config.ore,
             config.grid.min_start_region,
         );
+        grid.attach_data(data.clone());
         grid.initialize_forest_biomass(config.resources.forest_biomass);
 
         // Place Core at center
@@ -429,7 +452,7 @@ impl PlanetState {
         grid.update_power_grid();
 
         let mut unlocked_buildings = Vec::new();
-        for def in &crate::data::game_data().buildings {
+        for def in &data.data().buildings {
             if def.start_unlocked {
                 if let Some(building_type) = BuildingType::from_id(&def.id) {
                     unlocked_buildings.push(building_type);
@@ -438,6 +461,7 @@ impl PlanetState {
         }
 
         let mut state = Self {
+            data: data.clone(),
             name: name.to_string(),
             planet_index,
             map_seed: seed,
@@ -454,7 +478,10 @@ impl PlanetState {
                 config.resources.drone_carry_capacity,
                 config.resources.drone_speed,
             ),
-            research: ResearchProgress::default(),
+            research: ResearchProgress {
+                unlocked_techs: data.data().research.starting_unlocked.clone(),
+                ..ResearchProgress::default()
+            },
             config,
             time_played: 0.0,
             selected_building: Some(BuildingType::Drill),
@@ -468,7 +495,7 @@ impl PlanetState {
             time_scale: default_time_scale(),
             battery_seconds: 4.0 * 60.0 * 60.0,
             last_saved_unix: unix_seconds_now(),
-            achievements: Achievements::from_definitions(achievement_definitions()),
+            achievements: Achievements::from_definitions(achievement_definitions(data.data())),
             stats: Stats::default(),
             throughput: default_throughput(),
             delivered_since_sample: 0.0,
@@ -497,7 +524,7 @@ impl PlanetState {
                 .collect(),
             hazards: def.hazards,
             features: generated_features(def, seed),
-            seed_ship: SeedShip::default(),
+            seed_ship: SeedShip::with_data(data.clone()),
             export: None,
             export_cooldown: 0.0,
             pod_loads: std::collections::HashMap::new(),
@@ -553,6 +580,16 @@ impl PlanetState {
         state.refresh_stats();
         state
     }
+
+    pub fn data(&self) -> &GameData {
+        self.data.data()
+    }
+
+    pub(crate) fn attach_data(&mut self, data: GameDataContext) {
+        self.grid.attach_data(data.clone());
+        self.seed_ship.attach_data(data.clone());
+        self.data = data;
+    }
 }
 
 fn generated_features(def: &crate::data::PlanetDef, seed: u64) -> Vec<PlanetFeature> {
@@ -594,13 +631,18 @@ impl PlanetState {
         // research unlock in a migrated/debug campaign must not leave a stale
         // building selectable on every world forever.
         self.unlocked_buildings.clear();
-        for def in &crate::data::game_data().buildings {
-            let Some(building_type) = BuildingType::from_id(&def.id) else {
+        let building_unlocks: Vec<_> = self
+            .data()
+            .buildings
+            .iter()
+            .map(|def| (def.id.clone(), def.start_unlocked, def.unlocked_by.clone()))
+            .collect();
+        for (id, start_unlocked, unlocked_by) in building_unlocks {
+            let Some(building_type) = BuildingType::from_id(&id) else {
                 continue;
             };
-            let unlocked = def.start_unlocked
-                || def
-                    .unlocked_by
+            let unlocked = start_unlocked
+                || unlocked_by
                     .as_deref()
                     .is_some_and(|tech| self.research.unlocked_techs.iter().any(|id| id == tech));
             if unlocked {
@@ -613,7 +655,7 @@ impl PlanetState {
     /// values that live outside it into place. Call this after anything that
     /// changes `research.unlocked_techs`.
     pub fn refresh_stats(&mut self) {
-        let mut stats = Stats::from_unlocked(&self.research.unlocked_techs);
+        let mut stats = Stats::from_unlocked(self.data(), &self.research.unlocked_techs);
         // A Seed Ship stage that is standing works for the world it stands on,
         // until the ship takes it away.
         for stage in self.seed_ship.standing_stages() {
@@ -663,9 +705,8 @@ impl Default for PlanetState {
 /// new [`PlanetState`] and to reconcile loaded saves via
 /// [`Achievements::sync_definitions`], so a save written before an achievement
 /// existed picks it up locked rather than losing the rest.
-pub(crate) fn achievement_definitions() -> Vec<Achievement> {
-    crate::data::game_data()
-        .achievements
+pub(crate) fn achievement_definitions(data: &GameData) -> Vec<Achievement> {
+    data.achievements
         .iter()
         .map(|def| Achievement::new(&def.id, &def.name, &def.description))
         .collect()

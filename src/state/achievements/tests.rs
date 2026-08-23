@@ -8,7 +8,7 @@ fn state() -> PlanetState {
 
 #[test]
 fn every_shipped_condition_is_one_the_game_can_measure() {
-    for def in &crate::data::game_data().achievements {
+    for def in &crate::data::test_data().data().achievements {
         assert!(
             Milestone::from_id(&def.condition.kind).is_some(),
             "{} asks for \"{}\"",
@@ -168,7 +168,8 @@ fn record(state: &PlanetState, name: &str) -> AchievementRecord {
 #[test]
 fn the_records_cover_the_declared_set_in_declaration_order() {
     let records = state().achievement_records();
-    let declared = &crate::data::game_data().achievements;
+    let state = state();
+    let declared = &state.data().achievements;
     assert_eq!(records.len(), declared.len());
     for (record, def) in records.iter().zip(declared) {
         assert_eq!(record.name, def.name);

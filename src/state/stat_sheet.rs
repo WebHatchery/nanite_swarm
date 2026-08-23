@@ -29,8 +29,8 @@ impl StatReading {
 
     /// Whether where it has moved to is good news, using the stat's own idea
     /// of which direction that is.
-    pub fn is_gain(&self) -> bool {
-        (self.value < self.base) == self.stat.lower_is_better()
+    pub fn is_gain(&self, data: &crate::data::GameData) -> bool {
+        (self.value < self.base) == self.stat.lower_is_better(data)
     }
 }
 
@@ -49,8 +49,8 @@ pub enum StatUnit {
 
 impl StatUnit {
     /// Declared alongside the stat's label in `research.json`.
-    pub fn of(stat: StatId) -> Self {
-        let declared = crate::data::game_data()
+    pub fn of(data: &crate::data::GameData, stat: StatId) -> Self {
+        let declared = data
             .research
             .stats
             .iter()
@@ -107,7 +107,7 @@ impl PlanetState {
     /// The inspector can show provenance without duplicating modifier folding.
     pub fn stat_sources(&self, stat: StatId) -> Vec<String> {
         let mut sources = Vec::new();
-        for node in &crate::data::game_data().research.nodes {
+        for node in &self.data().research.nodes {
             if self.research.unlocked_techs.iter().any(|id| id == &node.id)
                 && node
                     .modifiers

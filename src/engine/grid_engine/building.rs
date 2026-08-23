@@ -1,7 +1,6 @@
 //! A building instance placed on the grid
 
-use crate::data;
-use crate::data::DustResponseConfig;
+use crate::data::{DustResponseConfig, GameDataContext};
 
 use super::building_type::BuildingType;
 use super::grid_pos::GridPos;
@@ -10,6 +9,8 @@ use serde::{Deserialize, Serialize};
 /// A building placed on the grid
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Building {
+    #[serde(skip, default)]
+    data: GameDataContext,
     pub building_type: BuildingType,
     pub position: GridPos,
     pub powered: bool,
@@ -34,8 +35,17 @@ pub struct Building {
 
 impl Building {
     pub fn new(building_type: BuildingType, position: GridPos) -> Self {
+        Self::new_with_data(GameDataContext::default(), building_type, position)
+    }
+
+    pub fn new_with_data(
+        data: GameDataContext,
+        building_type: BuildingType,
+        position: GridPos,
+    ) -> Self {
         let is_core = building_type == BuildingType::Core;
         Self {
+            data,
             building_type,
             position,
             powered: is_core,
@@ -52,28 +62,32 @@ impl Building {
 
     /// Check if this building transmits power
     pub fn transmits_power(&self) -> bool {
-        data::game_data()
+        self.data
+            .data()
             .building(self.building_type.id())
             .transmits_power
     }
 
     /// Check if drones may route through this building's tile
     pub fn carries_traffic(&self) -> bool {
-        data::game_data()
+        self.data
+            .data()
             .building(self.building_type.id())
             .carries_traffic
     }
 
     /// Check if this building generates power
     pub fn generates_power(&self) -> bool {
-        data::game_data()
+        self.data
+            .data()
             .building(self.building_type.id())
             .generates_power
     }
 
     /// Check if this building consumes power
     pub fn consumes_power(&self) -> bool {
-        data::game_data()
+        self.data
+            .data()
             .building(self.building_type.id())
             .consumes_power
     }
@@ -163,7 +177,9 @@ impl Building {
     }
 
     pub fn supports_overclock(&self) -> bool {
-        !data::game_data()
+        !self
+            .data
+            .data()
             .building(self.building_type.id())
             .recipe
             .is_empty()
@@ -195,6 +211,10 @@ impl Building {
         } else {
             1.0
         }
+    }
+
+    pub(super) fn attach_data(&mut self, data: GameDataContext) {
+        self.data = data;
     }
 }
 

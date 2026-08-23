@@ -44,7 +44,7 @@ fn every_shipped_world_gives_the_swarm_somewhere_to_build() {
     // every world the game ships and a spread of seeds, the landing site
     // has to be worth landing on.
     let config = crate::data::GameConfig::default();
-    for def in &crate::data::game_data().planets {
+    for def in &crate::data::test_data().data().planets {
         for seed in 0..25u64 {
             let grid = Grid::generate(
                 def.width,

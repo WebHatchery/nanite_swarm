@@ -47,11 +47,17 @@ impl PlanetState {
             .iter_tiles()
             .filter_map(|(pos, tile)| (tile.terrain == TerrainType::Water).then_some(pos))
             .collect();
+        let water_cooled: Vec<_> = self
+            .data()
+            .buildings
+            .iter()
+            .filter(|def| def.water_cooling)
+            .filter_map(|def| BuildingType::from_id(&def.id))
+            .collect();
         for (pos, tile) in self.grid.iter_tiles_mut() {
             let Some(building) = tile.building.as_mut() else {
                 continue;
             };
-            let def = crate::data::game_data().building(building.building_type.id());
             let generated = if building.building_type == BuildingType::ServerBank
                 && building.powered
                 && !building.is_dust_stalled_with(&dust_response)
@@ -62,7 +68,7 @@ impl PlanetState {
             } else {
                 0.0
             };
-            let water_cooling = if def.water_cooling
+            let water_cooling = if water_cooled.contains(&building.building_type)
                 && water_tiles
                     .iter()
                     .any(|water| pos.distance(*water) as i32 <= 1)
@@ -137,10 +143,7 @@ impl PlanetState {
             .iter_tiles()
             .filter_map(|(pos, tile)| tile.forest_cleared.then_some(pos))
             .collect();
-        let acid_fields = crate::data::game_data()
-            .planet(self.planet_index)
-            .hazard_fields
-            .clone();
+        let acid_fields = self.data().planet(self.planet_index).hazard_fields.clone();
         let grid_width = self.grid.width;
         let grid_height = self.grid.height;
 

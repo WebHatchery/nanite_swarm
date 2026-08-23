@@ -1,6 +1,5 @@
 //! Keyboard and mouse input handling for the planetary view
 
-use crate::data;
 use crate::engine::{BuildingType, GridPos};
 use crate::state::PlanetState;
 use macroquad::prelude::*;
@@ -86,8 +85,14 @@ pub(super) fn handle_input(
         }
     }
     // Building hotkeys
-    for def in &data::game_data().buildings {
-        let Some(hotkey) = def.hotkey.as_ref().and_then(|key| key.chars().next()) else {
+    let hotkeys: Vec<_> = state
+        .data()
+        .buildings
+        .iter()
+        .map(|def| (def.id.clone(), def.hotkey.clone()))
+        .collect();
+    for (id, hotkey) in hotkeys {
+        let Some(hotkey) = hotkey.as_ref().and_then(|key| key.chars().next()) else {
             continue;
         };
         let Some(keycode) = keycode_from_hotkey(hotkey) else {
@@ -96,7 +101,7 @@ pub(super) fn handle_input(
         if !is_key_pressed(keycode) {
             continue;
         }
-        let Some(building_type) = BuildingType::from_id(&def.id) else {
+        let Some(building_type) = BuildingType::from_id(&id) else {
             continue;
         };
         if state.is_building_unlocked(building_type) {

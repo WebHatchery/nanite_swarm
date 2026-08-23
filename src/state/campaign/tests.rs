@@ -78,7 +78,7 @@ fn every_world_is_built_from_its_own_entry_in_the_data() {
     }
     for index in 0..PLANET_COUNT {
         campaign.travel_to(index);
-        let def = crate::data::game_data().planet(index);
+        let def = campaign.data().data().planet(index);
         let planet = campaign.current();
         assert_eq!(planet.name, def.name);
         assert_eq!(planet.grid.width, def.width);
@@ -412,7 +412,7 @@ fn arriving_somewhere_says_what_the_world_is() {
     assert!(planet.arrival_notice_timer > 0.0);
     assert_eq!(
         planet.arrival_line(),
-        crate::data::game_data().planet(0).arrival
+        crate::data::test_data().data().planet(0).arrival
     );
     assert!(!planet.arrival_line().is_empty());
 }
@@ -485,7 +485,7 @@ fn the_same_campaign_seed_lays_out_the_same_worlds() {
 /// The later stages are gated on research, so the fixture has to have done
 /// that research the same as a player would.
 fn build_seed_ship(campaign: &mut Campaign) {
-    for stage in &crate::data::game_data().seed_ship.stages {
+    for stage in &crate::data::test_data().data().seed_ship.stages {
         if let Some(tech) = stage.requires.as_deref() {
             if !campaign.research.unlocked_techs.iter().any(|id| id == tech) {
                 campaign.research.unlocked_techs.push(tech.to_string());

@@ -64,6 +64,8 @@ impl PlanetState {
     }
 
     fn record_collapse_source(&mut self) {
+        let data_context = self.data.clone();
+        let data = data_context.data();
         let local = self.grid.iter_tiles().find_map(|(pos, tile)| {
             let building = tile.building.as_ref()?;
             (building.powered && (building.is_dust_stalled() || building.acid_wear >= 100.0))
@@ -71,7 +73,7 @@ impl PlanetState {
         });
         let (source, building, position) = if let Some((position, building)) = local {
             (
-                format!("Local failure: {}", building.name()),
+                format!("Local failure: {}", building.name(data)),
                 Some(building),
                 Some(position),
             )

@@ -136,7 +136,8 @@ impl PlanetState {
                         .is_some_and(|building| building.supports_overclock() && building.standby)
                 })
                 .count() as f32,
-            Milestone::ProcessorOutputHeld => crate::data::game_data()
+            Milestone::ProcessorOutputHeld => self
+                .data()
                 .buildings
                 .iter()
                 .filter(|def| {

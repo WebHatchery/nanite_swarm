@@ -6,7 +6,7 @@
 //! plus the one place that reads it — not a `unlocked_techs.contains("...")`
 //! sprinkled wherever it happened to be needed.
 
-use crate::data::ModifierDef;
+use crate::data::{GameData, ModifierDef};
 
 /// A value the simulation reads and research can bend.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -102,9 +102,8 @@ impl StatId {
 
     /// What this stat is called where a player can see it. Falls back to the
     /// raw id, which is what an unlabelled stat deserves.
-    pub fn label(self) -> &'static str {
-        crate::data::game_data()
-            .research
+    pub fn label<'a>(self, data: &'a GameData) -> &'a str {
+        data.research
             .stats
             .iter()
             .find(|entry| entry.id == self.id())
@@ -113,9 +112,8 @@ impl StatId {
     }
 
     /// Whether a tech moving this stat down is doing the player a favour.
-    pub fn lower_is_better(self) -> bool {
-        crate::data::game_data()
-            .research
+    pub fn lower_is_better(self, data: &GameData) -> bool {
+        data.research
             .stats
             .iter()
             .find(|entry| entry.id == self.id())
@@ -127,7 +125,7 @@ impl StatId {
 /// whether that is good news.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ModifierSummary {
-    pub label: &'static str,
+    pub label: String,
     pub change: String,
     /// False when the tech is charging the player something for the rest.
     pub is_gain: bool,
@@ -135,16 +133,16 @@ pub struct ModifierSummary {
 
 /// Describe a declared modifier for display. `None` for a modifier that does
 /// not parse, which cannot happen in shipped data - it is rejected at load.
-pub fn describe_modifier(def: &ModifierDef) -> Option<ModifierSummary> {
+pub fn describe_modifier(data: &GameData, def: &ModifierDef) -> Option<ModifierSummary> {
     let (stat, op, value) = parse_modifier(def).ok()?;
     let change = match op {
         ModifierOp::Percent => format!("{}{:.0}%", sign(value), value * 100.0),
         ModifierOp::Add => format!("{}{}", sign(value), trim_number(value)),
     };
     Some(ModifierSummary {
-        label: stat.label(),
+        label: stat.label(data).to_string(),
         change,
-        is_gain: (value < 0.0) == stat.lower_is_better(),
+        is_gain: (value < 0.0) == stat.lower_is_better(data),
     })
 }
 
@@ -223,9 +221,9 @@ pub struct Stats {
 impl Stats {
     /// Fold every modifier declared by the unlocked research into one sheet.
     /// Unparseable modifiers are skipped here; they are rejected at data load.
-    pub fn from_unlocked(unlocked: &[String]) -> Self {
+    pub fn from_unlocked(data: &GameData, unlocked: &[String]) -> Self {
         let mut stats = Stats::default();
-        for node in &crate::data::game_data().research.nodes {
+        for node in &data.research.nodes {
             if !unlocked.iter().any(|id| id == &node.id) {
                 continue;
             }

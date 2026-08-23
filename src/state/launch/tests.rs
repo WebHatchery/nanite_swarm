@@ -41,7 +41,7 @@ fn each_beat_runs_from_nothing_to_all_of_it() {
     // The very first frame of the first beat.
     assert!(sequence.beat_fraction() < 0.05);
     // One frame short of the countdown ending is nearly all of that beat.
-    sequence.advance(LaunchSequence::beats()[0].1 - 0.01);
+    sequence.advance(sequence.beats()[0].1 - 0.01);
     assert_eq!(sequence.beat(), Some(LaunchBeat::Countdown));
     assert!(sequence.beat_fraction() > 0.95);
     // And the next beat starts over from the bottom.
@@ -53,7 +53,7 @@ fn each_beat_runs_from_nothing_to_all_of_it() {
 #[test]
 fn the_world_being_spent_is_named_in_the_line_that_spends_it() {
     let mut sequence = LaunchSequence::new(0, 1);
-    sequence.advance(LaunchSequence::beats()[0].1 + 0.1);
+    sequence.advance(sequence.beats()[0].1 + 0.1);
     let line = sequence.line("unused");
     assert_eq!(sequence.beat(), Some(LaunchBeat::Ascent));
     assert!(
@@ -67,7 +67,7 @@ fn the_world_being_spent_is_named_in_the_line_that_spends_it() {
 #[test]
 fn the_arriving_world_speaks_for_itself() {
     let mut sequence = LaunchSequence::new(0, 1);
-    sequence.advance(LaunchSequence::beats()[2].1 + 0.1);
+    sequence.advance(sequence.beats()[2].1 + 0.1);
     assert_eq!(sequence.beat(), Some(LaunchBeat::Arrival));
     assert_eq!(
         sequence.line("Venus does not want this."),

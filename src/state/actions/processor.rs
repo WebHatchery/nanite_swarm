@@ -138,6 +138,8 @@ impl PlanetState {
     }
 
     pub fn toggle_input_priority(&mut self, pos: GridPos) -> bool {
+        let data_context = self.data.clone();
+        let data = data_context.data();
         let Some(building) = self
             .grid
             .get_mut(pos)
@@ -150,7 +152,7 @@ impl PlanetState {
         }
         building.input_priority = !building.input_priority;
         let enabled = building.input_priority;
-        let name = building.building_type.name();
+        let name = building.building_type.name(data).to_string();
         self.notifications.info(if enabled {
             format!("{} input priority: first claim on routed cargo", name)
         } else {
@@ -160,6 +162,8 @@ impl PlanetState {
     }
 
     pub fn toggle_processor_standby(&mut self, pos: GridPos) -> bool {
+        let data_context = self.data.clone();
+        let data = data_context.data();
         let Some(building) = self
             .grid
             .get_mut(pos)
@@ -175,7 +179,7 @@ impl PlanetState {
             building.overclocked = false;
         }
         let standby = building.standby;
-        let name = building.building_type.name();
+        let name = building.building_type.name(data).to_string();
         self.grid.update_power_grid();
         self.power_balance = self.net_power();
         self.notifications.info(if standby {

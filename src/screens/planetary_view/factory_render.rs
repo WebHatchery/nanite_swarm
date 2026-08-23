@@ -189,7 +189,7 @@ fn draw_processor(visual: &ProcessorVisual, metrics: HudMetrics, theme: &UiTheme
 
 fn processor_visuals(state: &PlanetState) -> Vec<ProcessorVisual> {
     let mut visuals = Vec::new();
-    for def in &crate::data::game_data().buildings {
+    for def in &state.data().buildings {
         if def.recipe.is_empty() {
             continue;
         }

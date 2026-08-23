@@ -131,17 +131,17 @@ impl PlanetState {
     }
 
     /// Every placed building that has a recipe, with it.
-    fn recipe_buildings(&self) -> Vec<(crate::engine::GridPos, &'static crate::data::RecipeDef)> {
-        crate::data::game_data()
+    fn recipe_buildings(&self) -> Vec<(crate::engine::GridPos, crate::data::RecipeDef)> {
+        self.data()
             .buildings
             .iter()
             .filter(|def| !def.recipe.is_empty())
-            .filter_map(|def| BuildingType::from_id(&def.id).map(|kind| (kind, &def.recipe)))
+            .filter_map(|def| BuildingType::from_id(&def.id).map(|kind| (kind, def.recipe.clone())))
             .flat_map(|(kind, recipe)| {
                 self.grid
                     .find_buildings(kind)
                     .into_iter()
-                    .map(move |pos| (pos, recipe))
+                    .map(move |pos| (pos, recipe.clone()))
             })
             .collect()
     }

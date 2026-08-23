@@ -1,6 +1,6 @@
 //! Building catalog: identity, cost, and static definitions
 
-use crate::data;
+use crate::data::{BuildingDef, GameData};
 use serde::{Deserialize, Serialize};
 
 /// Building types that can be placed on the grid
@@ -68,37 +68,37 @@ impl BuildingType {
         }
     }
 
-    fn def(&self) -> &'static data::BuildingDef {
-        data::game_data().building(self.id())
+    fn def<'a>(&self, data: &'a GameData) -> &'a BuildingDef {
+        data.building(self.id())
     }
 
     /// Resource cost to build
-    pub fn cost(&self) -> (f32, f32) {
-        let def = self.def();
+    pub fn cost(&self, data: &GameData) -> (f32, f32) {
+        let def = self.def(data);
         (def.cost.minerals, def.cost.energy)
     }
 
     /// Display name for UI
-    pub fn name(&self) -> &'static str {
-        self.def().name.as_str()
+    pub fn name<'a>(&self, data: &'a GameData) -> &'a str {
+        self.def(data).name.as_str()
     }
 
     /// Keyboard shortcut for quick selection
-    pub fn hotkey(&self) -> Option<char> {
-        self.def()
+    pub fn hotkey(&self, data: &GameData) -> Option<char> {
+        self.def(data)
             .hotkey
             .as_ref()
             .and_then(|key| key.chars().next())
     }
 
     /// Short description for UI
-    pub fn description(&self) -> &'static str {
-        self.def().description.as_str()
+    pub fn description<'a>(&self, data: &'a GameData) -> &'a str {
+        self.def(data).description.as_str()
     }
 
     /// Net power per second (positive = generation, negative = consumption)
-    pub fn power_delta(&self) -> f32 {
-        let def = self.def();
+    pub fn power_delta(&self, data: &GameData) -> f32 {
+        let def = self.def(data);
         def.power_generation - def.power_consumption
     }
 }

@@ -110,7 +110,8 @@ impl PlanetState {
 
     pub fn active_planet_condition(&self) -> Option<&'static str> {
         if self.hazards.acid_rain > 0.0
-            || crate::data::game_data()
+            || self
+                .data()
                 .planet(self.planet_index)
                 .hazard_fields
                 .iter()
@@ -118,7 +119,8 @@ impl PlanetState {
         {
             Some("acid")
         } else if self.hazards.freeze > 0.0
-            || crate::data::game_data()
+            || self
+                .data()
                 .planet(self.planet_index)
                 .hazard_fields
                 .iter()
@@ -139,7 +141,7 @@ impl PlanetState {
             "cold" => self.freeze_strength(),
             _ => 0.0,
         };
-        let def = crate::data::game_data().planet(self.planet_index);
+        let def = self.data().planet(self.planet_index);
         hazard_field_strength(
             pos,
             hazard,
@@ -151,9 +153,7 @@ impl PlanetState {
     }
 
     pub fn planet_constraint_status(&self) -> (bool, String) {
-        let constraints = &crate::data::game_data()
-            .planet(self.planet_index)
-            .constraints;
+        let constraints = &self.data().planet(self.planet_index).constraints;
         let missing: Vec<_> = constraints
             .required_buildings
             .iter()
@@ -189,9 +189,7 @@ impl PlanetState {
     /// the player is satisfying that rule; only the gated Mass Driver checks
     /// the world's prerequisite buildings and power floor.
     pub fn constraints_allow_building(&self, building_type: BuildingType) -> bool {
-        let constraints = &crate::data::game_data()
-            .planet(self.planet_index)
-            .constraints;
+        let constraints = &self.data().planet(self.planet_index).constraints;
         if !constraints.required_research.iter().all(|required| {
             self.research
                 .unlocked_techs
@@ -307,7 +305,7 @@ impl PlanetState {
     /// Powered processors that cannot work because their dispatch pad is full.
     pub fn blocked_factories(&self) -> Vec<GridPos> {
         let capacity = self.processor_pad_capacity();
-        crate::data::game_data()
+        self.data()
             .buildings
             .iter()
             .filter(|def| {
@@ -337,7 +335,7 @@ impl PlanetState {
     /// Powered processors with at least one empty required input. Returning
     /// positions lets both the HUD count the bottleneck and the map mark it.
     pub fn starved_factories(&self) -> Vec<GridPos> {
-        crate::data::game_data()
+        self.data()
             .buildings
             .iter()
             .filter(|def| !def.recipe.is_empty())
@@ -390,7 +388,7 @@ impl PlanetState {
     }
 
     fn physical_output_rate(&self, resource_id: &str) -> f32 {
-        crate::data::game_data()
+        self.data()
             .buildings
             .iter()
             .filter_map(|def| {
@@ -472,11 +470,8 @@ impl PlanetState {
     }
 
     /// What this world has to say for itself, shown on arrival.
-    pub fn arrival_line(&self) -> &'static str {
-        crate::data::game_data()
-            .planet(self.planet_index)
-            .arrival
-            .as_str()
+    pub fn arrival_line(&self) -> &str {
+        self.data().planet(self.planet_index).arrival.as_str()
     }
 
     pub fn battery_time_left(&self) -> (i32, i32) {

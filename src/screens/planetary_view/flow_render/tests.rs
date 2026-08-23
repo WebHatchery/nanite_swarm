@@ -6,12 +6,14 @@ use crate::engine::TerrainType;
 fn assembler_readiness_uses_the_leanest_of_both_routed_inputs() {
     let mut state = PlanetState::new(2, 42, GameConfig::default());
     let pos = state.grid.find_core().unwrap();
-    let recipe = &crate::data::game_data()
+    let recipe = state
+        .data()
         .buildings
         .iter()
         .find(|def| def.id == "assembler")
         .unwrap()
-        .recipe;
+        .recipe
+        .clone();
     state.input_hoppers.insert(
         (pos.x, pos.y),
         [(ResourceType::Minerals, 10.0), (ResourceType::Alloy, 2.5)]
@@ -19,13 +21,13 @@ fn assembler_readiness_uses_the_leanest_of_both_routed_inputs() {
             .collect(),
     );
 
-    assert!((recipe_readiness(&state, pos, recipe) - 0.5).abs() < 0.001);
+    assert!((recipe_readiness(&state, pos, &recipe) - 0.5).abs() < 0.001);
     state
         .input_hoppers
         .get_mut(&(pos.x, pos.y))
         .unwrap()
         .insert(ResourceType::Minerals, 0.0);
-    assert_eq!(recipe_readiness(&state, pos, recipe), 0.0);
+    assert_eq!(recipe_readiness(&state, pos, &recipe), 0.0);
 }
 
 #[test]

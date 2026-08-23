@@ -88,8 +88,12 @@ impl Shipment {
 }
 
 /// How long a throw between two worlds takes, off their orbits.
-pub fn transit_seconds(from: usize, to: usize, config: &MassDriverConfig) -> f32 {
-    let data = crate::data::game_data();
+pub fn transit_seconds(
+    data: &crate::data::GameData,
+    from: usize,
+    to: usize,
+    config: &MassDriverConfig,
+) -> f32 {
     let gap = (data.planet(from).orbit_radius - data.planet(to).orbit_radius).abs();
     (gap * config.seconds_per_orbit_unit).max(config.min_transit_seconds)
 }
@@ -191,7 +195,7 @@ impl PlanetState {
         format!(
             "{} -> {} {:.0}/{:.0}",
             cargo_name(order.cargo),
-            crate::data::game_data().planet(order.target).name,
+            self.data().planet(order.target).name,
             loaded,
             self.config.mass_driver.pod_capacity
         )
@@ -212,7 +216,7 @@ impl PlanetState {
         }
         let config = self.config.mass_driver.clone();
         let capacity = config.pod_capacity.max(0.001);
-        let transit = transit_seconds(self.planet_index, order.target, &config);
+        let transit = transit_seconds(self.data(), self.planet_index, order.target, &config);
 
         for pos in self.powered_positions(BuildingType::MassDriver) {
             let key = (pos.x, pos.y);
@@ -266,10 +270,7 @@ impl Campaign {
     }
 
     pub fn pending_pod_cap(&self, index: usize) -> usize {
-        crate::data::game_data()
-            .planet(index)
-            .pending_pod_cap
-            .max(1)
+        self.data().data().planet(index).pending_pod_cap.max(1)
     }
 
     pub fn overflow_pod_count(&self, index: usize) -> usize {
@@ -487,7 +488,9 @@ impl Campaign {
                     *other_index != index && other.to == shipment.to && other.is_holding()
                 })
                 .count();
-            let cap = crate::data::game_data()
+            let cap = self
+                .data()
+                .data()
                 .planet(shipment.to)
                 .pending_pod_cap
                 .max(1);
@@ -497,6 +500,7 @@ impl Campaign {
                 }
                 continue;
             }
+            let origin_name = self.data().data().planet(shipment.from).name.clone();
             let Some(planet) = self.planet_mut(shipment.to) else {
                 continue;
             };
@@ -507,7 +511,7 @@ impl Campaign {
                 "{:.0} {} landed from {}",
                 shipment.amount,
                 cargo_name(shipment.cargo),
-                crate::data::game_data().planet(shipment.from).name
+                origin_name
             ));
             caught.push(index);
         }

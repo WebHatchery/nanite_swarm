@@ -1,6 +1,6 @@
 //! Texture loading and access helpers.
 
-use crate::data;
+use crate::data::GameData;
 use macroquad::prelude::*;
 use macroquad_toolkit::assets::{load_texture_from_pack_or_file, AssetPack};
 use std::collections::HashMap;
@@ -46,10 +46,10 @@ pub struct GameTextures {
 }
 
 impl GameTextures {
-    pub async fn load() -> Self {
+    pub async fn load(data: &GameData) -> Self {
         let asset_pack = AssetPack::load(ASSET_PACK_PATH).await.ok();
         let mut terrain_textures = HashMap::new();
-        for def in &data::game_data().terrain {
+        for def in &data.terrain {
             let texture =
                 load_required_texture(asset_pack.as_ref(), &def.texture, "terrain_texture").await;
             terrain_textures.insert(def.id.clone(), texture);
@@ -59,14 +59,14 @@ impl GameTextures {
         };
 
         let mut building_textures = HashMap::new();
-        for def in &data::game_data().buildings {
+        for def in &data.buildings {
             let texture =
                 load_required_texture(asset_pack.as_ref(), &def.texture, "building_texture").await;
             building_textures.insert(def.id.clone(), texture);
         }
 
         let mut building_icon_textures = HashMap::new();
-        for def in &data::game_data().buildings {
+        for def in &data.buildings {
             let icon_path = def.icon.as_deref().unwrap_or(&def.texture);
             let texture = match load_texture_from_pack_or_file(
                 asset_pack.as_ref(),

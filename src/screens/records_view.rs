@@ -197,7 +197,7 @@ fn draw_record(record: &AchievementRecord, x: f32, y: f32, w: f32) {
     } else {
         (Colors::TEXT, Colors::TEXT_DIM)
     };
-    draw_ui_text(record.name, x + 12.0, y + 24.0, 14.0, name_color);
+    draw_ui_text(&record.name, x + 12.0, y + 24.0, 14.0, name_color);
 
     let marker = if record.unlocked { "EARNED" } else { "LOCKED" };
     let marker_w = measure_ui_text(marker, None, 10, 1.0).width;
@@ -213,7 +213,7 @@ fn draw_record(record: &AchievementRecord, x: f32, y: f32, w: f32) {
         },
     );
 
-    draw_ui_text(record.description, x + 12.0, y + 43.0, 10.0, body_color);
+    draw_ui_text(&record.description, x + 12.0, y + 43.0, 10.0, body_color);
 
     let bar_y = y + CARD_H - 22.0;
     let bar_w = w - 24.0;

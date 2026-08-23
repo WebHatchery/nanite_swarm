@@ -1,7 +1,6 @@
 //! Background, terrain, conduit, and building rendering for the grid
 
 use crate::assets::GameTextures;
-use crate::data;
 use crate::engine::{BuildingType, GridPos, TerrainType};
 use crate::state::PlanetState;
 use crate::ui::Colors;
@@ -38,7 +37,7 @@ pub(super) fn draw_planetary_background(
     draw_circle(planet_x, planet_y, 220.0, Color::new(0.0, 0.2, 0.35, 0.12));
     draw_circle(planet_x, planet_y, 170.0, Color::new(0.0, 0.3, 0.45, glow));
     draw_circle(planet_x, planet_y, 120.0, Color::new(0.0, 0.25, 0.4, 0.25));
-    let planet = data::game_data().planet(state.planet_index);
+    let planet = state.data().planet(state.planet_index);
     let atmosphere = if state.acid_strength() > 0.0 {
         Color::new(0.8, 0.28, 0.14, 0.16)
     } else if state.freeze_strength() > 0.0 {
@@ -159,12 +158,17 @@ pub(super) fn draw_tutorial_route_hint(state: &PlanetState, metrics: HudMetrics,
 }
 
 /// Get color for terrain type with subtle variation
-fn terrain_color_at(pos: GridPos, terrain: TerrainType, revealed: bool) -> Color {
+fn terrain_color_at(
+    data: &crate::data::GameData,
+    pos: GridPos,
+    terrain: TerrainType,
+    revealed: bool,
+) -> Color {
     if !revealed {
         return Color::new(0.05, 0.05, 0.05, 1.0);
     }
 
-    let def = data::game_data().terrain(terrain.id());
+    let def = data.terrain(terrain.id());
     let mut color = Color::new(def.color[0], def.color[1], def.color[2], def.color[3]);
 
     if terrain == TerrainType::Empty {
@@ -334,7 +338,7 @@ pub(super) fn draw_grid_tiles(
                     },
                 );
             } else {
-                let color = terrain_color_at(pos, tile.terrain, tile.revealed);
+                let color = terrain_color_at(state.data(), pos, tile.terrain, tile.revealed);
                 draw_rectangle(
                     px,
                     py,
@@ -345,8 +349,9 @@ pub(super) fn draw_grid_tiles(
             }
 
             // Draw harvestable indicator
-            if tile.revealed && tile.terrain.is_harvestable() && tile.building.is_none() {
-                let terrain_def = data::game_data().terrain(tile.terrain.id());
+            if tile.revealed && tile.terrain.is_harvestable(state.data()) && tile.building.is_none()
+            {
+                let terrain_def = state.data().terrain(tile.terrain.id());
                 let indicator_color = Color::new(
                     terrain_def.color[0],
                     terrain_def.color[1],

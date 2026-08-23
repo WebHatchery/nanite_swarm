@@ -45,6 +45,7 @@ impl Default for ResearchViewport {
 
 /// Render the research neural network view
 pub fn render_research_view(
+    data: &crate::data::GameData,
     research_state: &ResearchState,
     research_tree: &ResearchTree,
     data_available: f32,
@@ -426,6 +427,7 @@ pub fn render_research_view(
             };
             if view.compact {
                 draw_compact_node_info(
+                    data,
                     research_state,
                     research_tree,
                     node_id,
@@ -461,7 +463,7 @@ pub fn render_research_view(
 
                 // What it actually does, under what it says it does.
                 let mut y = left_text_y + 58.0;
-                for (text, color) in node_effects(node_id) {
+                for (text, color) in node_effects(data, node_id) {
                     draw_ui_text(&text, left_panel_x + 12.0, y, 12.0, color);
                     y += 16.0;
                 }
@@ -592,7 +594,13 @@ pub fn render_research_view(
             Colors::SECONDARY,
         );
 
-        draw_swarm_sheet(sheet, right_panel_x, right_panel_y + 232.0, right_panel_w);
+        draw_swarm_sheet(
+            data,
+            sheet,
+            right_panel_x,
+            right_panel_y + 232.0,
+            right_panel_w,
+        );
     }
 
     // Instructions

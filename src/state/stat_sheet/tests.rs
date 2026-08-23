@@ -47,7 +47,7 @@ fn research_moves_the_number_the_simulation_is_actually_using() {
 
     let drills = reading(&state, StatId::DrillOutput);
     assert!(drills.is_changed());
-    assert!(drills.is_gain());
+    assert!(drills.is_gain(state.data()));
     assert!(
         drills.value > drills.base,
         "{} is not more than {}",
@@ -67,7 +67,7 @@ fn less_of_a_bad_thing_still_counts_as_a_gain() {
 
     let dust = reading(&state, StatId::DustAccumulation);
     assert!(dust.value < dust.base, "dust did not fall");
-    assert!(dust.is_gain(), "less dust read as a loss");
+    assert!(dust.is_gain(state.data()), "less dust read as a loss");
 }
 
 #[test]
@@ -136,15 +136,28 @@ fn harvest_yield_reads_as_a_share_of_ordinary_ground() {
 
     let charged = reading(&state, StatId::HarvestYield);
     assert!(charged.value > 1.0);
-    assert!(charged.is_gain());
-    assert_eq!(StatUnit::of(StatId::HarvestYield), StatUnit::Share);
+    assert!(charged.is_gain(state.data()));
+    assert_eq!(
+        StatUnit::of(state.data(), StatId::HarvestYield),
+        StatUnit::Share
+    );
 }
 
 #[test]
 fn a_stats_units_come_from_the_same_file_that_names_it() {
-    assert_eq!(StatUnit::of(StatId::DrillOutput), StatUnit::PerSecond);
-    assert_eq!(StatUnit::of(StatId::DronesPerDrill), StatUnit::Count);
-    assert_eq!(StatUnit::of(StatId::AcidResistance), StatUnit::Share);
+    let state = state();
+    assert_eq!(
+        StatUnit::of(state.data(), StatId::DrillOutput),
+        StatUnit::PerSecond
+    );
+    assert_eq!(
+        StatUnit::of(state.data(), StatId::DronesPerDrill),
+        StatUnit::Count
+    );
+    assert_eq!(
+        StatUnit::of(state.data(), StatId::AcidResistance),
+        StatUnit::Share
+    );
     assert_eq!(StatUnit::PerSecond.format(7.5), "7.50/s");
     assert_eq!(StatUnit::Count.format(2.0), "2");
     assert_eq!(StatUnit::Share.format(0.4), "40%");

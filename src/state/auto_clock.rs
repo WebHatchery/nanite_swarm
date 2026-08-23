@@ -47,6 +47,8 @@ impl PlanetState {
     }
 
     fn rebalance_auto_clocking(&mut self) -> (usize, usize) {
+        let data_context = self.data.clone();
+        let data = data_context.data();
         let starved: HashSet<GridPos> = self.starved_factories().into_iter().collect();
         let blocked: HashSet<GridPos> = self.blocked_factories().into_iter().collect();
         let mut processors: Vec<GridPos> = self
@@ -80,7 +82,7 @@ impl PlanetState {
                 || headroom < 0.0;
             if building.overclocked && unsafe_to_boost {
                 building.overclocked = false;
-                headroom += extra_power_draw(building);
+                headroom += extra_power_draw(data, building);
                 normalized += 1;
             }
         }
@@ -94,7 +96,7 @@ impl PlanetState {
             else {
                 continue;
             };
-            let extra = extra_power_draw(building);
+            let extra = extra_power_draw(data, building);
             if !building.overclocked
                 && building.powered
                 && !starved.contains(&pos)
@@ -115,8 +117,8 @@ impl PlanetState {
     }
 }
 
-fn extra_power_draw(building: &crate::engine::Building) -> f32 {
-    building.building_type.power_delta().abs() * 0.75
+fn extra_power_draw(data: &crate::data::GameData, building: &crate::engine::Building) -> f32 {
+    building.building_type.power_delta(data).abs() * 0.75
 }
 
 #[cfg(test)]

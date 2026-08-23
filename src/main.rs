@@ -19,16 +19,19 @@ mod game_data_validation;
 pub mod release;
 mod research_runtime;
 mod screens;
+mod session;
 mod state;
 mod ui;
 #[path = "main/update.rs"]
 mod update;
 
 use assets::GameTextures;
-use data::{load_game_config, load_game_data, load_ui_theme, set_game_data};
+use data::{load_game_config, load_game_data, load_ui_theme, GameDataContext};
 use engine::{ResearchState, ResearchTree};
 use game_data_validation::validate_game_data;
-use state::{Campaign, LaunchSequence, GAME_NAME};
+use session::GameSession;
+use state::GAME_NAME;
+use std::ops::{Deref, DerefMut};
 
 /// Game phases/screens.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -49,37 +52,40 @@ pub enum GamePhase {
 /// Application coordinator and durable session state.
 pub struct Game {
     phase: GamePhase,
-    campaign: Campaign,
+    session: GameSession,
     research_tree: ResearchTree,
     research_state: ResearchState,
     settings: GameSettings,
     audio_mix: state::AudioMix,
     debug_overlay: DebugOverlay,
-    has_save: bool,
-    menu_notice: Option<String>,
-    /// The ending has been shown once; seeing it again is the player's choice.
-    ending_seen: bool,
-    /// The launch being played out, if one is.
-    launch: Option<LaunchSequence>,
     /// Staging a still frame for the screenshot harness.
     capture_still: bool,
     textures: GameTextures,
     config: data::GameConfig,
     ui_theme: data::UiTheme,
     research_viewport: screens::ResearchViewport,
-    shipping_edit_world: usize,
-    active_slot: usize,
 }
 
-const SAVE_PATH: &str = "save.json";
-const SLOT_NAMES: [&str; 3] = ["slot_1", "slot_2", "slot_3"];
-
 fn slot_name(index: usize) -> &'static str {
-    SLOT_NAMES[index % SLOT_NAMES.len()]
+    GameSession::slot_name(index)
 }
 
 fn save_path(index: usize) -> String {
-    format!("{}_{}", SAVE_PATH, slot_name(index))
+    GameSession::save_path(index)
+}
+
+impl Deref for Game {
+    type Target = GameSession;
+
+    fn deref(&self) -> &Self::Target {
+        &self.session
+    }
+}
+
+impl DerefMut for Game {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.session
+    }
 }
 
 impl Game {
@@ -107,34 +113,32 @@ impl Game {
         validate_game_data(&game_data)
             .unwrap_or_else(|error| panic!("game data validation failed: {error}"));
 
-        set_game_data(game_data);
-
+        let data = GameDataContext::new(game_data);
         let mut settings = GameSettings::load(GAME_NAME);
         settings.sanitize();
         display::apply_display_settings(&settings, None);
 
+        let session = GameSession::new(config.clone(), data, 42);
+        let textures = GameTextures::load(session.data.data()).await;
+        let research_tree = ResearchTree::from_data(session.data.data());
+        let research_state = ResearchState::from_data(session.data.data());
+
         let mut game = Self {
             phase: GamePhase::MainMenu,
-            campaign: Campaign::new(config.clone(), 42),
-            research_tree: ResearchTree::default(),
-            research_state: ResearchState::default(),
+            session,
+            research_tree,
+            research_state,
             settings,
             audio_mix: state::AudioMix::default(),
             debug_overlay: DebugOverlay::new(),
-            has_save: state::save_exists(&save_path(0)),
-            menu_notice: None,
-            ending_seen: false,
-            launch: None,
             capture_still: false,
-            textures: GameTextures::load().await,
+            textures,
             config,
             ui_theme,
             research_viewport: screens::ResearchViewport::default(),
-            shipping_edit_world: state::STARTING_PLANET,
-            active_slot: 0,
         };
-        game.campaign
-            .apply_preferred_speed(game.settings.default_speed);
+        let preferred_speed = game.settings.default_speed;
+        game.session.campaign.apply_preferred_speed(preferred_speed);
         game
     }
 }

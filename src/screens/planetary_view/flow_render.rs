@@ -318,7 +318,8 @@ fn processor_output_capacity(state: &PlanetState, resource: ResourceType) -> f32
         .iter_tiles()
         .filter_map(|(_, tile)| tile.building.as_ref())
         .filter_map(|building| {
-            let rate = crate::data::game_data()
+            let rate = state
+                .data()
                 .building(building.building_type.id())
                 .recipe
                 .outputs
@@ -343,7 +344,7 @@ fn factory_bottleneck(
         else {
             continue;
         };
-        let recipe = &crate::data::game_data().building(kind.id()).recipe;
+        let recipe = &state.data().building(kind.id()).recipe;
         for resource in ordered_resources(recipe.inputs.keys().map(String::as_str)) {
             if input_available(state, *pos, recipe, resource) <= 0.001 {
                 if let Some((_, count)) = missing.iter_mut().find(|(item, _)| *item == resource) {
@@ -533,7 +534,7 @@ fn factory_flow_nodes(state: &PlanetState) -> Vec<FlowNode> {
     let mut nodes = Vec::new();
     let blocked: std::collections::HashSet<GridPos> =
         state.blocked_factories().into_iter().collect();
-    for def in &crate::data::game_data().buildings {
+    for def in &state.data().buildings {
         if def.recipe.is_empty() {
             continue;
         }
@@ -585,7 +586,7 @@ fn factory_flow_links(state: &PlanetState) -> Vec<FlowLink> {
         .filter(|pos| is_operational(state, *pos))
         .map(|pos| (pos, ResourceType::Minerals))
         .collect();
-    for def in &crate::data::game_data().buildings {
+    for def in &state.data().buildings {
         let Some(kind) = BuildingType::from_id(&def.id) else {
             continue;
         };

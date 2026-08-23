@@ -7,12 +7,6 @@ use crate::ui::{color_from_rgba, draw_button_sized, draw_panel, Colors, Dimensio
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::{draw_ui_text, Pointer};
 
-/// Planet identity comes from `assets/planets.json`, so the map and the world
-/// the swarm lands on can never drift apart.
-fn planets() -> &'static [crate::data::PlanetDef] {
-    &crate::data::game_data().planets
-}
-
 /// Actions from the interplanetary view
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum InterplanetaryAction {
@@ -38,6 +32,7 @@ pub enum InterplanetaryAction {
 /// growing row of positional booleans, which is how a caller ends up passing
 /// "ready" where "colonized" was wanted.
 pub struct MapView<'a> {
+    pub data: &'a crate::data::GameData,
     pub current_planet: usize,
     pub has_mass_driver: bool,
     pub seed_ship_ready: bool,
@@ -102,7 +97,7 @@ pub fn render_interplanetary_view(view: &MapView) -> InterplanetaryAction {
     draw_circle(center_x, center_y, 45.0, Color::new(1.0, 0.7, 0.1, 0.3));
     draw_circle(center_x, center_y, 40.0, Colors::WARNING);
 
-    let planets = planets();
+    let planets = &view.data.planets;
     let mut hovered_planet: Option<usize> = None;
     let mut action = InterplanetaryAction::None;
 
@@ -239,7 +234,7 @@ fn draw_planet_list(view: &MapView, x: f32, y: f32, w: f32, h: f32) {
     draw_ui_text("minerals", x + w - 58.0, y + 28.0, 10.0, Colors::TEXT_DIM);
 
     let mut row_y = y + 56.0;
-    for (index, planet) in planets().iter().enumerate() {
+    for (index, planet) in view.data.planets.iter().enumerate() {
         let is_current = index == view.current_planet;
         let is_colonized = view.colonized.get(index).copied().unwrap_or(false);
         let label_color = if is_current {
@@ -272,7 +267,7 @@ fn draw_planet_info(
     header_height: f32,
     activated: bool,
 ) -> Option<InterplanetaryAction> {
-    let planet = &planets()[index];
+    let planet = &view.data.planets[index];
     let is_colonized = view.colonized.get(index).copied().unwrap_or(false);
     let is_current = index == view.current_planet;
 

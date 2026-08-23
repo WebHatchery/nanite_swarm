@@ -1,7 +1,5 @@
 //! Power grid simulation: flood-fill connectivity and generation/consumption totals
 
-use crate::data;
-
 use super::building_type::BuildingType;
 use super::grid::Grid;
 use super::grid_pos::GridPos;
@@ -130,11 +128,12 @@ impl Grid {
 
     /// Get total power generation
     pub fn total_power_generation(&self) -> f32 {
+        let data = self.data();
         self.iter_tiles()
             .filter_map(|(_, tile)| tile.building.as_ref())
             .filter(|b| b.powered && b.generates_power())
             .map(|b| {
-                let def = data::game_data().building(b.building_type.id());
+                let def = data.building(b.building_type.id());
                 let mut generation = def.power_generation;
                 if def.uses_efficiency {
                     generation *= b.efficiency;
@@ -146,11 +145,12 @@ impl Grid {
 
     /// Get total power consumption
     pub fn total_power_consumption(&self) -> f32 {
+        let data = self.data();
         self.iter_tiles()
             .filter_map(|(_, tile)| tile.building.as_ref())
             .filter(|b| b.powered)
             .map(|b| {
-                let def = data::game_data().building(b.building_type.id());
+                let def = data.building(b.building_type.id());
                 let base = def.power_consumption;
                 let leak = b.dust_power_leak();
                 (base * b.dust_power_consumption_multiplier() * b.power_demand_multiplier()) + leak

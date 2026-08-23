@@ -1,6 +1,6 @@
 //! Terrain types affecting buildability and harvesting
 
-use crate::data;
+use crate::data::GameData;
 use serde::{Deserialize, Serialize};
 
 /// Terrain types that affect gameplay
@@ -40,38 +40,35 @@ impl TerrainType {
     }
 
     /// Whether buildings can be placed on this terrain
-    pub fn is_buildable(&self) -> bool {
-        data::game_data().terrain(self.id()).buildable
+    pub fn is_buildable(&self, data: &GameData) -> bool {
+        data.terrain(self.id()).buildable
     }
 
     /// Whether this terrain can be harvested
-    pub fn is_harvestable(&self) -> bool {
-        data::game_data().terrain(self.id()).harvestable
+    pub fn is_harvestable(&self, data: &GameData) -> bool {
+        data.terrain(self.id()).harvestable
     }
 
     /// Get harvest rewards (minerals, biomass)
-    pub fn harvest_rewards(&self) -> (f32, f32) {
-        let def = data::game_data().terrain(self.id());
+    pub fn harvest_rewards(&self, data: &GameData) -> (f32, f32) {
+        let def = data.terrain(self.id());
         (def.harvest_rewards.minerals, def.harvest_rewards.biomass)
     }
 
     /// Get terrain after harvesting
-    pub fn harvested(&self) -> TerrainType {
-        let def = data::game_data().terrain(self.id());
+    pub fn harvested(&self, data: &GameData) -> TerrainType {
+        let def = data.terrain(self.id());
         TerrainType::from_id(&def.harvested_to).unwrap_or(*self)
     }
 
     /// Get preservation bonus description
-    pub fn preservation_bonus(&self) -> Option<&'static str> {
-        data::game_data()
-            .terrain(self.id())
-            .preservation_bonus
-            .as_deref()
+    pub fn preservation_bonus<'a>(&self, data: &'a GameData) -> Option<&'a str> {
+        data.terrain(self.id()).preservation_bonus.as_deref()
     }
 
     /// Display name
-    pub fn name(&self) -> &'static str {
-        data::game_data().terrain(self.id()).name.as_str()
+    pub fn name<'a>(&self, data: &'a GameData) -> &'a str {
+        data.terrain(self.id()).name.as_str()
     }
 }
 

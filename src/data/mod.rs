@@ -13,9 +13,31 @@ pub use strings::*;
 pub use ui_theme::*;
 
 use std::path::PathBuf;
-use std::sync::OnceLock;
+use std::sync::Arc;
 
-static GAME_DATA: OnceLock<GameData> = OnceLock::new();
+/// Immutable game definitions shared by one running session.
+///
+/// The context is deliberately owned by the session and cloned into durable
+/// state as an `Arc`; it is never serialized. This lets tests and future
+/// simultaneous sessions supply different data without a process-wide cache.
+#[derive(Debug, Clone)]
+pub struct GameDataContext(Arc<GameData>);
+
+impl GameDataContext {
+    pub fn new(data: GameData) -> Self {
+        Self(Arc::new(data))
+    }
+
+    pub fn data(&self) -> &GameData {
+        &self.0
+    }
+}
+
+impl Default for GameDataContext {
+    fn default() -> Self {
+        Self::new(GameData::load())
+    }
+}
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn load_game_config() -> GameConfig {
@@ -65,16 +87,7 @@ pub async fn load_game_data() -> GameData {
     GameData::load()
 }
 
-pub fn set_game_data(data: GameData) {
-    let _ = GAME_DATA.set(data);
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-pub fn game_data() -> &'static GameData {
-    GAME_DATA.get_or_init(GameData::load)
-}
-
-#[cfg(target_arch = "wasm32")]
-pub fn game_data() -> &'static GameData {
-    GAME_DATA.get().expect("Game data not loaded yet")
+#[cfg(test)]
+pub(crate) fn test_data() -> GameDataContext {
+    GameDataContext::default()
 }

@@ -44,6 +44,7 @@ impl Game {
             .pod_loads
             .insert((driver.x, driver.y), capacity * 0.45);
         let transit = state::transit_seconds(
+            planet.data(),
             planet.planet_index,
             target,
             &planet.config.mass_driver.clone(),

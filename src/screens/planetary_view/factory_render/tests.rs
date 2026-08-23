@@ -25,7 +25,7 @@ fn assembler_art_tracks_each_hopper_and_its_waiting_components() {
             .collect(),
     );
     state.output_buffers.insert((pos.x, pos.y), 5.0);
-    let recipe = &crate::data::game_data().building("assembler").recipe;
+    let recipe = &state.data().building("assembler").recipe;
 
     let visual = processor_visual(&state, pos, recipe).unwrap();
     assert_eq!(visual.inputs[0], (ResourceType::Minerals, 0.5));
@@ -58,7 +58,7 @@ fn full_output_pad_closes_the_processor_art_shutters() {
     state
         .output_buffers
         .insert((pos.x, pos.y), state.processor_pad_capacity());
-    let recipe = &crate::data::game_data().building("smelter").recipe;
+    let recipe = &state.data().building("smelter").recipe;
 
     let visual = processor_visual(&state, pos, recipe).unwrap();
     assert!(visual.blocked);
@@ -78,7 +78,7 @@ fn empty_hopper_marks_processor_art_idle() {
         .as_mut()
         .unwrap()
         .powered = true;
-    let recipe = &crate::data::game_data().building("smelter").recipe;
+    let recipe = &state.data().building("smelter").recipe;
 
     assert!(!processor_visual(&state, pos, recipe).unwrap().active);
 }

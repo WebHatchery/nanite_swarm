@@ -8,7 +8,7 @@
 use macroquad_toolkit::notifications::LoggedNotification;
 use serde::{Deserialize, Serialize};
 
-use crate::data::GameConfig;
+use crate::data::{GameConfig, GameDataContext};
 use crate::directives::{pick_directive, Directive};
 
 use super::game_state::{PlanetState, ResearchProgress};
@@ -39,6 +39,10 @@ const SAVE_NOTICE_SECONDS: f32 = 3.0;
 /// Every planet the swarm holds, plus which one it is currently standing on.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Campaign {
+    /// Session-owned immutable data; omitted from player saves and reattached
+    /// by the persistence boundary after loading.
+    #[serde(skip, default)]
+    data: GameDataContext,
     /// Player-visible save slot. The campaign owns this label so a save can
     /// never silently change slots when loaded by another menu state.
     #[serde(default = "default_slot_name")]
@@ -80,14 +84,21 @@ fn default_slot_name() -> String {
 impl Campaign {
     /// Start a campaign: one colonized world, the rest untouched.
     pub fn new(config: GameConfig, seed: u64) -> Self {
+        Self::new_with_data(config, seed, GameDataContext::default())
+    }
+
+    pub fn new_with_data(config: GameConfig, seed: u64, data: GameDataContext) -> Self {
+        let directive = pick_directive(data.data(), 0);
+        let research = ResearchProgress::from_data(data.data());
         let mut campaign = Self {
+            data,
             slot_name: default_slot_name(),
             planets: std::array::from_fn(|_| None),
             current: STARTING_PLANET,
             seed,
-            directive: pick_directive(0),
+            directive,
             directive_history: Vec::new(),
-            research: ResearchProgress::default(),
+            research,
             directive_timer: 0.0,
             directive_tier: 0,
             since_save: 0.0,
@@ -103,16 +114,20 @@ impl Campaign {
     /// Wrap a single planet as a campaign, for a save written before the
     /// campaign existed.
     pub fn from_single_planet(planet: PlanetState, seed: u64) -> Self {
+        let data = GameDataContext::default();
+        let directive = pick_directive(data.data(), 0);
+        let research = ResearchProgress::from_data(data.data());
         let mut planets: [Option<PlanetState>; PLANET_COUNT] = std::array::from_fn(|_| None);
         planets[STARTING_PLANET] = Some(planet);
         Self {
+            data,
             slot_name: default_slot_name(),
             planets,
             current: STARTING_PLANET,
             seed,
-            directive: pick_directive(0),
+            directive,
             directive_history: Vec::new(),
-            research: ResearchProgress::default(),
+            research,
             directive_timer: 0.0,
             directive_tier: 0,
             since_save: 0.0,
@@ -232,7 +247,18 @@ impl Campaign {
     fn generate(&self, index: usize, config: &GameConfig) -> PlanetState {
         // Derived from the campaign seed so a campaign replays identically.
         let planet_seed = self.seed ^ (index as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
-        PlanetState::new(index, planet_seed, config.clone())
+        PlanetState::new_with_data(index, planet_seed, config.clone(), self.data.clone())
+    }
+
+    pub fn data(&self) -> &GameDataContext {
+        &self.data
+    }
+
+    pub fn attach_data(&mut self, data: GameDataContext) {
+        self.data = data.clone();
+        for planet in self.planets.iter_mut().flatten() {
+            planet.attach_data(data.clone());
+        }
     }
 
     pub fn current_index(&self) -> usize {
@@ -377,7 +403,7 @@ impl Campaign {
     pub fn update_directive(&mut self, delta_time: f32) {
         self.since_save += delta_time;
         self.directive_timer += delta_time;
-        let expired = self.directive_timer >= crate::directives::rotation_seconds()
+        let expired = self.directive_timer >= crate::directives::rotation_seconds(self.data.data())
             || self.directive.duration <= 0.0
             || self.directive.completed;
 
@@ -423,7 +449,7 @@ impl Campaign {
             }
             self.directive_timer = 0.0;
             self.directive_tier += 1;
-            self.directive = pick_directive(self.directive_tier);
+            self.directive = pick_directive(self.data.data(), self.directive_tier);
         }
 
         let Some(planet) = self.planets[self.current].as_ref() else {

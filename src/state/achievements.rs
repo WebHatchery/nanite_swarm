@@ -16,7 +16,8 @@ impl PlanetState {
     /// achievement earned on one planet is earned on that planet — which is
     /// also why the two campaign-wide ones are announced by code instead.
     pub(super) fn update_achievements(&mut self) {
-        let earned: Vec<String> = crate::data::game_data()
+        let earned: Vec<String> = self
+            .data()
             .achievements
             .iter()
             .filter(|def| self.achievement_met(def))
@@ -38,15 +39,15 @@ impl PlanetState {
     /// In declaration order, so the list does not reshuffle itself as things
     /// are earned.
     pub fn achievement_records(&self) -> Vec<AchievementRecord> {
-        crate::data::game_data()
+        self.data()
             .achievements
             .iter()
             .map(|def| {
                 let milestone = Milestone::from_id(&def.condition.kind);
                 let target = def.condition.target;
                 AchievementRecord {
-                    name: def.name.as_str(),
-                    description: def.description.as_str(),
+                    name: def.name.clone(),
+                    description: def.description.clone(),
                     unlocked: self.achievements.is_unlocked(&def.id),
                     // A manual achievement is announced by code at the moment
                     // it happens, so there is no running total to show.
@@ -61,10 +62,10 @@ impl PlanetState {
 }
 
 /// One achievement as the records screen reads it.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct AchievementRecord {
-    pub name: &'static str,
-    pub description: &'static str,
+    pub name: String,
+    pub description: String,
     pub unlocked: bool,
     /// Where the world stands, for the ones measured off state.
     pub progress: Option<f32>,

@@ -1,7 +1,7 @@
 //! Left sidebar: the build palette list and quick actions
 
 use crate::assets::GameTextures;
-use crate::data::{self, UiTheme};
+use crate::data::UiTheme;
 use crate::engine::BuildingType;
 use crate::state::PlanetState;
 use crate::ui::{color_from_rgba, draw_hud_button, draw_hud_panel};
@@ -25,11 +25,13 @@ fn draw_build_row(
     building_type: BuildingType,
     interactive: bool,
 ) -> f32 {
+    let data_context = state.data.clone();
+    let data = data_context.data();
     let rect = Rect::new(x, y, width, height);
     let pointer = Pointer::read(|position| position);
     let hovered = pointer.hovering_over(rect);
     let selected = state.selected_building == Some(building_type);
-    let (mineral_cost, energy_cost) = building_type.cost();
+    let (mineral_cost, energy_cost) = building_type.cost(data);
     let can_afford = state.resources.can_afford(mineral_cost, energy_cost);
     let unlocked = state.is_building_unlocked(building_type);
     let text = color_from_rgba(&theme.colors.text);
@@ -128,7 +130,11 @@ fn draw_build_row(
     }
 
     let name_x = icon_x + icon_size + 10.0;
-    let name_text = fit_text_to_width(building_type.name(), width - 138.0, theme.typography.body);
+    let name_text = fit_text_to_width(
+        building_type.name(data),
+        width - 138.0,
+        theme.typography.body,
+    );
     let name_color = if unlocked && can_afford { text } else { dim };
     draw_ui_text(
         &name_text,
@@ -139,7 +145,7 @@ fn draw_build_row(
     );
 
     let description = fit_text_to_width(
-        building_type.description(),
+        building_type.description(data),
         width - 92.0,
         theme.typography.small,
     );
@@ -177,7 +183,7 @@ fn draw_build_row(
             energy_value_color,
         );
 
-        let power_text = format!("P {}", format_power_delta(building_type.power_delta()));
+        let power_text = format!("P {}", format_power_delta(building_type.power_delta(data)));
         let power_width =
             measure_ui_text(&power_text, None, theme.typography.small as u16, 1.0).width;
         draw_ui_text(
@@ -218,6 +224,8 @@ pub(super) fn draw(
     colors: &PanelColors,
     screen_h: f32,
 ) {
+    let data_context = state.data.clone();
+    let data = data_context.data();
     let dim = colors.dim;
 
     let sidebar_x = 10.0;
@@ -247,7 +255,7 @@ pub(super) fn draw(
         );
     }
 
-    let mut building_defs: Vec<_> = data::game_data()
+    let mut building_defs: Vec<_> = data
         .buildings
         .iter()
         .filter(|def| def.show_in_build_menu)

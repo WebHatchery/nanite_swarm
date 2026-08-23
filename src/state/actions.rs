@@ -18,7 +18,7 @@ impl PlanetState {
                 self.notifications.warning("Planet constraint not met");
                 return false;
             }
-            let (mineral_cost, energy_cost) = building_type.cost();
+            let (mineral_cost, energy_cost) = building_type.cost(self.data());
 
             if !self.resources.can_afford(mineral_cost, energy_cost) {
                 return false;
@@ -94,7 +94,7 @@ impl PlanetState {
                 continue;
             }
 
-            let (mineral_cost, energy_cost) = BuildingType::Conduit.cost();
+            let (mineral_cost, energy_cost) = BuildingType::Conduit.cost(self.data());
             if !self.resources.can_afford(mineral_cost, energy_cost) {
                 break;
             }
@@ -129,7 +129,7 @@ impl PlanetState {
         }
 
         let building_type = building.building_type;
-        let (mineral_cost, energy_cost) = building_type.cost();
+        let (mineral_cost, energy_cost) = building_type.cost(self.data());
         let refund_ratio = 0.5;
 
         if let Some(removed) = self.grid.remove_building(pos) {
@@ -173,13 +173,15 @@ impl PlanetState {
 
     /// Try to harvest terrain at position
     pub fn try_harvest_terrain(&mut self, pos: GridPos) -> bool {
+        let data_context = self.data.clone();
+        let data = data_context.data();
         if let Some(tile) = self.grid.get(pos) {
-            if !tile.revealed || !tile.terrain.is_harvestable() || tile.building.is_some() {
+            if !tile.revealed || !tile.terrain.is_harvestable(data) || tile.building.is_some() {
                 return false;
             }
 
             let terrain = tile.terrain;
-            let (minerals, biomass) = terrain.harvest_rewards();
+            let (minerals, biomass) = terrain.harvest_rewards(data);
             // What the ground is worth is terrain data; what the swarm gets out
             // of it is a stat, so a tech can pay off on ground already surveyed.
             let yield_multiplier = self.stats.apply(crate::engine::StatId::HarvestYield, 1.0);
@@ -187,7 +189,7 @@ impl PlanetState {
 
             // Apply harvest
             if let Some(tile) = self.grid.get_mut(pos) {
-                tile.terrain = terrain.harvested();
+                tile.terrain = terrain.harvested(data);
                 match terrain {
                     TerrainType::Mountain => {
                         tile.mountain_harvested = true;
@@ -220,7 +222,7 @@ impl PlanetState {
     /// Check if terrain at position can be harvested
     pub fn can_harvest(&self, pos: GridPos) -> bool {
         if let Some(tile) = self.grid.get(pos) {
-            tile.revealed && tile.terrain.is_harvestable() && tile.building.is_none()
+            tile.revealed && tile.terrain.is_harvestable(self.data()) && tile.building.is_none()
         } else {
             false
         }
@@ -523,6 +525,8 @@ impl PlanetState {
     }
 
     pub fn toggle_building_overclock(&mut self, pos: GridPos) -> bool {
+        let data_context = self.data.clone();
+        let data = data_context.data();
         let supports_overclock = self
             .grid
             .get(pos)
@@ -551,7 +555,7 @@ impl PlanetState {
         let manual_override = std::mem::replace(&mut self.auto_clocking, false);
         building.overclocked = !building.overclocked;
         let enabled = building.overclocked;
-        let name = building.building_type.name();
+        let name = building.building_type.name(data).to_string();
         self.power_balance = self.net_power();
         self.notifications.info(if enabled {
             format!(

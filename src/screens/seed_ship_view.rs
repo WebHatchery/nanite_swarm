@@ -55,7 +55,7 @@ pub fn render_seed_ship_view(state: &PlanetState) -> SeedShipAction {
     let panel_x = (screen_w - panel_w) * 0.5;
     let mut y = HEADER_HEIGHT + 28.0;
 
-    for (index, stage) in crate::data::game_data().seed_ship.stages.iter().enumerate() {
+    for (index, stage) in state.data().seed_ship.stages.iter().enumerate() {
         let built = index < ship.stage_index();
         let active = index == ship.stage_index();
         draw_stage(
@@ -177,7 +177,8 @@ fn draw_stage(
         None
     };
     let sealed_requirement = stage.requires.as_deref().and_then(|id| {
-        crate::data::game_data()
+        state
+            .data()
             .research
             .nodes
             .iter()

@@ -1,6 +1,6 @@
 //! Runtime research progression and campaign synchronization.
 
-use crate::{data, engine, state, Game};
+use crate::{engine, state, Game};
 
 impl Game {
     pub(super) fn update_research(&mut self, delta_time: f32) {
@@ -12,7 +12,7 @@ impl Game {
         if self.campaign.current().research_lock_timer > 0.0 {
             return;
         }
-        let Some(node) = self.research_tree.get_node(&current_id) else {
+        let Some(node) = self.research_tree.get_node(&current_id).cloned() else {
             self.research_state.current_research = None;
             self.research_state.research_progress = 0.0;
             self.sync_research_to_planet();
@@ -72,7 +72,8 @@ impl Game {
 
     pub(super) fn sync_research_from_planet(&mut self) {
         self.research_state.unlocked = self.campaign.research.unlocked_techs.clone();
-        for tech in &data::game_data().research.starting_unlocked {
+        let starting_unlocked = self.data.data().research.starting_unlocked.clone();
+        for tech in &starting_unlocked {
             if !self.research_state.unlocked.contains(tech) {
                 self.research_state.unlocked.push(tech.clone());
             }
@@ -89,27 +90,30 @@ impl Game {
     }
 
     pub(super) fn sync_building_unlocks(&mut self) {
-        let before: Vec<engine::BuildingType> = data::game_data()
+        let before: Vec<engine::BuildingType> = self
+            .data
+            .data()
             .buildings
             .iter()
             .filter_map(|def| engine::BuildingType::from_id(&def.id))
             .filter(|kind| self.campaign.current().is_building_researched(*kind))
             .collect();
         self.campaign.sync_research();
-        for def in &data::game_data().buildings {
-            let Some(building_type) = engine::BuildingType::from_id(&def.id) else {
-                continue;
-            };
-            if def.start_unlocked || before.contains(&building_type) {
-                continue;
-            }
+        let available_buildings: Vec<_> = self
+            .data
+            .data()
+            .buildings
+            .iter()
+            .filter_map(|def| engine::BuildingType::from_id(&def.id).map(|kind| (def, kind)))
+            .filter(|(def, kind)| !def.start_unlocked && !before.contains(kind))
+            .map(|(def, kind)| (def.name.clone(), kind))
+            .collect();
+        for (name, building_type) in available_buildings {
             let planet = self.campaign.current_mut();
             if planet.is_building_researched(building_type)
                 && !planet.is_building_banned(building_type)
             {
-                planet
-                    .notifications
-                    .info(format!("Available: {}", def.name));
+                planet.notifications.info(format!("Available: {name}"));
             }
         }
     }

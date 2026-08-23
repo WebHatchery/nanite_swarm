@@ -11,26 +11,26 @@ use crate::data::CoreStageDef;
 use super::game_state::PlanetState;
 use super::milestone::Milestone;
 
-/// Every declared stage, starting with the one a world lands with.
-pub fn core_stages() -> &'static [CoreStageDef] {
-    &crate::data::game_data().core_stages
-}
-
 impl PlanetState {
-    /// The stage the Core has reached, clamped to what is declared.
-    pub fn core_stage_index(&self) -> usize {
-        (self.core_stage as usize).min(core_stages().len().saturating_sub(1))
+    /// Every declared stage, starting with the one a world lands with.
+    pub fn core_stages(&self) -> &[CoreStageDef] {
+        &self.data().core_stages
     }
 
-    pub fn core_stage_def(&self) -> Option<&'static CoreStageDef> {
-        core_stages().get(self.core_stage_index())
+    /// The stage the Core has reached, clamped to what is declared.
+    pub fn core_stage_index(&self) -> usize {
+        (self.core_stage as usize).min(self.core_stages().len().saturating_sub(1))
+    }
+
+    pub fn core_stage_def(&self) -> Option<&CoreStageDef> {
+        self.core_stages().get(self.core_stage_index())
     }
 
     /// The stages standing, which is every one reached so far. Their effects
     /// are cumulative: the Core does not trade one for the next.
-    pub fn core_stages_reached(&self) -> &'static [CoreStageDef] {
-        let reached = (self.core_stage as usize + 1).min(core_stages().len());
-        &core_stages()[..reached]
+    pub fn core_stages_reached(&self) -> &[CoreStageDef] {
+        let reached = (self.core_stage as usize + 1).min(self.core_stages().len());
+        &self.core_stages()[..reached]
     }
 
     /// Advance the Core through any stage whose milestones are all met.
@@ -39,7 +39,11 @@ impl PlanetState {
     /// reached — the Core grew, and growth is not something the swarm undoes.
     pub(super) fn update_core_stage(&mut self) {
         let mut advanced = None;
-        while let Some(next) = core_stages().get(self.core_stage as usize + 1) {
+        while let Some(next) = self
+            .core_stages()
+            .get(self.core_stage as usize + 1)
+            .cloned()
+        {
             let met = next.requires.iter().all(|requirement| {
                 Milestone::from_id(&requirement.kind)
                     .is_some_and(|milestone| self.meets(milestone, requirement.target))

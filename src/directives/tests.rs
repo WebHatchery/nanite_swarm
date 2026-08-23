@@ -3,9 +3,15 @@ use crate::data::GameConfig;
 use crate::engine::{BuildingType, GridPos};
 use crate::state::PlanetState;
 
+fn pick_directive(tier: i32) -> Directive {
+    let data = crate::data::test_data();
+    super::pick_directive(data.data(), tier)
+}
+
 #[test]
 fn the_tier_walks_the_declared_set_in_order_and_wraps() {
-    let set = &crate::data::game_data().directives.directives;
+    let data = crate::data::test_data();
+    let set = &data.data().directives.directives;
     assert!(
         set.len() > 4,
         "the shipped set is no bigger than the old one"
@@ -23,7 +29,8 @@ fn the_tier_walks_the_declared_set_in_order_and_wraps() {
 
 #[test]
 fn every_shipped_directive_says_what_it_wants_and_pays_for_it() {
-    for (tier, _) in crate::data::game_data()
+    for (tier, _) in crate::data::test_data()
+        .data()
         .directives
         .directives
         .iter()
@@ -43,7 +50,7 @@ fn every_shipped_directive_says_what_it_wants_and_pays_for_it() {
 
 #[test]
 fn a_later_lap_of_the_set_asks_for_more_and_pays_more() {
-    let set_len = crate::data::game_data().directives.directives.len() as i32;
+    let set_len = crate::data::test_data().data().directives.directives.len() as i32;
     let first = pick_directive(0);
     let second = pick_directive(set_len);
     assert_eq!(first.kind, second.kind);
@@ -60,7 +67,7 @@ fn holding_power_is_timed_by_its_own_number_not_by_the_threshold() {
     // also asked for it to be held longer.
     let directive = pick_directive(0);
     assert_eq!(directive.kind, DirectiveKind::PowerSurplus);
-    let harder = pick_directive(crate::data::game_data().directives.directives.len() as i32);
+    let harder = pick_directive(crate::data::test_data().data().directives.directives.len() as i32);
     assert!(harder.target > directive.target);
     assert_eq!(harder.hold_seconds, directive.hold_seconds);
 }

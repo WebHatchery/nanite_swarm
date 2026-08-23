@@ -343,7 +343,13 @@ pub(super) fn draw(
     };
     draw_ui_text(mode_label, controls_x + 12.0, mode_y, 9.0, mode_color);
     if let Some(selected) = state.selected_building {
-        draw_ui_text(selected.name(), controls_x + 86.0, mode_y, 9.0, text);
+        draw_ui_text(
+            selected.name(state.data()),
+            controls_x + 86.0,
+            mode_y,
+            9.0,
+            text,
+        );
     }
 
     // Help overlay

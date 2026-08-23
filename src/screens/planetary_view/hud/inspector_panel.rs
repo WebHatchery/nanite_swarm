@@ -22,6 +22,8 @@ pub(super) fn draw(
     colors: &PanelColors,
     right: &RightStackLayout,
 ) {
+    let data_context = state.data.clone();
+    let data = data_context.data();
     let text = colors.text;
     let dim = colors.dim;
     let warning = colors.warning;
@@ -56,8 +58,8 @@ pub(super) fn draw(
     if let Some(tile_pos) = display_pos {
         if let Some(tile) = state.grid.get(tile_pos) {
             tile_terrain = Some(tile.terrain);
-            tile_harvest = Some(tile.terrain.harvest_rewards());
-            tile_bonus = tile.terrain.preservation_bonus();
+            tile_harvest = Some(tile.terrain.harvest_rewards(data));
+            tile_bonus = tile.terrain.preservation_bonus(data);
             if let Some(building) = &tile.building {
                 tile_building = Some(building.building_type);
                 tile_pos_with_building = Some(tile_pos);
@@ -122,9 +124,15 @@ pub(super) fn draw(
         } else {
             right_x + 16.0
         };
-        draw_ui_text(building_type.name(), info_x, header_y + 16.0, 13.0, text);
+        draw_ui_text(
+            building_type.name(data),
+            info_x,
+            header_y + 16.0,
+            13.0,
+            text,
+        );
         let description = fit_text_to_width(
-            building_type.description(),
+            building_type.description(data),
             right_x + right_w - info_x - 14.0,
             if row_layout.show_icon { 10.0 } else { 9.0 },
         );
@@ -136,7 +144,7 @@ pub(super) fn draw(
             dim,
         );
         let power_multiplier = if tile_overclocked { 1.75 } else { 1.0 };
-        let output = format_power_delta(building_type.power_delta() * power_multiplier);
+        let output = format_power_delta(building_type.power_delta(data) * power_multiplier);
         let row_base = row_layout.row_base;
         let row_gap = row_layout.row_gap;
         draw_status_row(
@@ -161,10 +169,7 @@ pub(super) fn draw(
 
         // What the ground itself is worth. Without this a deposit is invisible
         // and drill placement is guesswork.
-        let has_recipe = !crate::data::game_data()
-            .building(building_type.id())
-            .recipe
-            .is_empty();
+        let has_recipe = !data.building(building_type.id()).recipe.is_empty();
         if !has_recipe {
             if let Some(tile) = display_pos.and_then(|pos| state.grid.get(pos)) {
                 let (ore_label, ore_color) = ore_status(tile.ore_richness, colors);
@@ -200,12 +205,7 @@ pub(super) fn draw(
             } else if waiting_in >= 1.0 {
                 status_text = format!("{} - {:.0} in", status_text, waiting_in);
             }
-            if waiting_out >= 1.0
-                && crate::data::game_data()
-                    .building(building_type.id())
-                    .recipe
-                    .is_empty()
-            {
+            if waiting_out >= 1.0 && data.building(building_type.id()).recipe.is_empty() {
                 status_text = format!("{} - {:.0} out", status_text, waiting_out);
             }
             let queued = state
@@ -325,13 +325,13 @@ pub(super) fn draw(
         );
         if let Some(terrain) = tile_terrain {
             draw_ui_text(
-                &format!("Terrain: {}", terrain.name()),
+                &format!("Terrain: {}", terrain.name(data)),
                 right_x + 16.0,
                 inspector_y + 82.0,
                 11.0,
                 dim,
             );
-            if terrain.is_harvestable() {
+            if terrain.is_harvestable(data) {
                 let (minerals, biomass) = tile_harvest.unwrap_or((0.0, 0.0));
                 let reward_text = if minerals > 0.0 {
                     format!("Harvest +{} minerals", minerals as i32)
@@ -407,7 +407,7 @@ fn recipe_flow_data(
     pos: GridPos,
     building_type: BuildingType,
 ) -> Option<RecipeFlowData> {
-    let recipe = &crate::data::game_data().building(building_type.id()).recipe;
+    let recipe = &state.data().building(building_type.id()).recipe;
     if recipe.is_empty() {
         return None;
     }

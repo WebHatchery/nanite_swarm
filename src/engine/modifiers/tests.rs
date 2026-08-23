@@ -1,5 +1,9 @@
 use super::*;
 
+fn data() -> crate::data::GameDataContext {
+    crate::data::test_data()
+}
+
 fn modifier(stat: &str, op: &str, value: f32) -> ModifierDef {
     ModifierDef {
         stat: stat.to_string(),
@@ -12,7 +16,7 @@ fn modifier(stat: &str, op: &str, value: f32) -> ModifierDef {
 fn every_stat_the_game_knows_has_something_to_call_itself() {
     for stat in StatId::ALL {
         assert_ne!(
-            stat.label(),
+            stat.label(data().data()),
             stat.id(),
             "{} is only ever shown as its raw id",
             stat.id()
@@ -22,31 +26,42 @@ fn every_stat_the_game_knows_has_something_to_call_itself() {
 
 #[test]
 fn a_percent_is_said_as_a_percent_and_a_count_as_a_count() {
-    let percent = describe_modifier(&modifier("drill_output", "percent", 0.25)).unwrap();
+    let percent =
+        describe_modifier(data().data(), &modifier("drill_output", "percent", 0.25)).unwrap();
     assert_eq!(percent.change, "+25%");
-    let count = describe_modifier(&modifier("drones_per_drill", "add", 1.0)).unwrap();
+    let count =
+        describe_modifier(data().data(), &modifier("drones_per_drill", "add", 1.0)).unwrap();
     assert_eq!(count.change, "+1");
-    assert_eq!(count.label, StatId::DronesPerDrill.label());
+    assert_eq!(count.label, StatId::DronesPerDrill.label(data().data()));
 }
 
 #[test]
 fn less_of_a_bad_thing_reads_as_a_gain_and_more_of_it_does_not() {
-    let quieter = describe_modifier(&modifier("dust_accumulation", "percent", -0.3)).unwrap();
+    let quieter = describe_modifier(
+        data().data(),
+        &modifier("dust_accumulation", "percent", -0.3),
+    )
+    .unwrap();
     assert_eq!(quieter.change, "-30%");
     assert!(quieter.is_gain, "less dust is good news");
 
-    let hungrier = describe_modifier(&modifier("power_consumption", "percent", 0.2)).unwrap();
+    let hungrier = describe_modifier(
+        data().data(),
+        &modifier("power_consumption", "percent", 0.2),
+    )
+    .unwrap();
     assert!(!hungrier.is_gain, "more power draw is a cost");
 
     // And the ordinary direction still holds for ordinary stats.
-    let weaker = describe_modifier(&modifier("drill_output", "percent", -0.1)).unwrap();
+    let weaker =
+        describe_modifier(data().data(), &modifier("drill_output", "percent", -0.1)).unwrap();
     assert!(!weaker.is_gain);
 }
 
 #[test]
 fn a_modifier_the_game_cannot_read_is_not_described() {
-    assert!(describe_modifier(&modifier("not_a_stat", "add", 1.0)).is_none());
-    assert!(describe_modifier(&modifier("drill_output", "multiply", 1.0)).is_none());
+    assert!(describe_modifier(data().data(), &modifier("not_a_stat", "add", 1.0)).is_none());
+    assert!(describe_modifier(data().data(), &modifier("drill_output", "multiply", 1.0)).is_none());
 }
 
 #[test]
@@ -111,16 +126,16 @@ fn a_negative_percent_reduces_the_stat() {
 
 #[test]
 fn modifiers_only_count_once_their_node_is_unlocked() {
-    let locked = Stats::from_unlocked(&[]);
+    let locked = Stats::from_unlocked(data().data(), &[]);
     assert_eq!(locked.multiplier(StatId::DrillOutput), 1.0);
 
-    let unlocked = Stats::from_unlocked(&["efficient_drills".to_string()]);
+    let unlocked = Stats::from_unlocked(data().data(), &["efficient_drills".to_string()]);
     assert!(unlocked.multiplier(StatId::DrillOutput) > 1.0);
 }
 
 #[test]
 fn the_shipped_research_tree_declares_only_valid_modifiers() {
-    for node in &crate::data::game_data().research.nodes {
+    for node in &crate::data::test_data().data().research.nodes {
         for modifier in &node.modifiers {
             assert!(
                 parse_modifier(modifier).is_ok(),

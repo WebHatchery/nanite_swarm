@@ -6,7 +6,7 @@
 //! in a state worth photographing; none of it runs in a real session.
 
 use crate::state::{Campaign, LaunchSequence};
-use crate::{data, engine, state, Game, GamePhase};
+use crate::{engine, state, Game, GamePhase};
 
 mod fixtures;
 
@@ -174,11 +174,15 @@ impl Game {
             "skyline" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();
-                for stage in &data::game_data().seed_ship.stages {
-                    if let Some(tech) = stage.requires.as_deref() {
-                        self.research_state.unlocked.push(tech.to_string());
-                    }
-                }
+                let required_techs: Vec<String> = self
+                    .data
+                    .data()
+                    .seed_ship
+                    .stages
+                    .iter()
+                    .filter_map(|stage| stage.requires.clone())
+                    .collect();
+                self.research_state.unlocked.extend(required_techs);
                 self.sync_research_to_planet();
                 let planet = self.campaign.current_mut();
                 planet.config.resources.base_mineral_cap = 100_000.0;
@@ -211,8 +215,11 @@ impl Game {
                 if let Some(core) = planet.grid.find_core() {
                     for step in 1..=3 {
                         let pos = engine::GridPos::new(core.x + step, core.y + 2);
-                        let mut building =
-                            engine::Building::new(engine::BuildingType::Smelter, pos);
+                        let mut building = engine::Building::new_with_data(
+                            planet.data.clone(),
+                            engine::BuildingType::Smelter,
+                            pos,
+                        );
                         building.input_priority = true;
                         building.standby = true;
                         if let Some(tile) = planet.grid.get_mut(pos) {
@@ -245,11 +252,11 @@ impl Game {
             "launch" | "arrival" => {
                 self.campaign.colonize(1);
                 self.campaign.travel_to(1);
-                let mut sequence = LaunchSequence::new(0, 1);
+                let mut sequence = LaunchSequence::new_with_data(self.data.clone(), 0, 1);
                 sequence.advance(if scene == "launch" {
-                    LaunchSequence::beat_start(state::LaunchBeat::Ascent) + 1.2
+                    sequence.beat_start(state::LaunchBeat::Ascent) + 1.2
                 } else {
-                    LaunchSequence::beat_start(state::LaunchBeat::Arrival) + 1.5
+                    sequence.beat_start(state::LaunchBeat::Arrival) + 1.5
                 });
                 self.launch = Some(sequence);
                 self.phase = GamePhase::Launch;
@@ -264,13 +271,18 @@ impl Game {
                 self.research_state
                     .unlocked
                     .push("heater_nodes".to_string());
+                let building_types: Vec<_> = self
+                    .data
+                    .data()
+                    .buildings
+                    .iter()
+                    .filter_map(|def| engine::BuildingType::from_id(&def.id))
+                    .collect();
                 let planet = self.campaign.current_mut();
                 // Everything researched, so the palette shows what this world
                 // refuses rather than what the swarm has not reached yet.
-                for def in &data::game_data().buildings {
-                    if let Some(building_type) = engine::BuildingType::from_id(&def.id) {
-                        planet.unlock_building(building_type);
-                    }
+                for building_type in building_types {
+                    planet.unlock_building(building_type);
                 }
                 if let Some(core) = planet.grid.find_core() {
                     planet.grid.reveal_around(core, 12);
@@ -299,14 +311,19 @@ impl Game {
                 self.research_state
                     .unlocked
                     .push("ceramic_plating".to_string());
+                let building_types: Vec<_> = self
+                    .data
+                    .data()
+                    .buildings
+                    .iter()
+                    .filter_map(|def| engine::BuildingType::from_id(&def.id))
+                    .collect();
                 let planet = self.campaign.current_mut();
                 planet.resources.minerals = 10_000.0;
                 planet.resources.energy = 10_000.0;
                 planet.config.resources.max_energy = 10_000.0;
-                for def in &data::game_data().buildings {
-                    if let Some(building_type) = engine::BuildingType::from_id(&def.id) {
-                        planet.unlock_building(building_type);
-                    }
+                for building_type in building_types {
+                    planet.unlock_building(building_type);
                 }
                 let Some(core) = planet.grid.find_core() else {
                     return;
@@ -541,11 +558,15 @@ impl Game {
                 // numbers on the ending screen are real.
                 // The later stages are gated on research, so the scene has to
                 // have done it, the same as a player would.
-                for stage in &data::game_data().seed_ship.stages {
-                    if let Some(tech) = stage.requires.as_deref() {
-                        self.research_state.unlocked.push(tech.to_string());
-                    }
-                }
+                let required_techs: Vec<String> = self
+                    .data
+                    .data()
+                    .seed_ship
+                    .stages
+                    .iter()
+                    .filter_map(|stage| stage.requires.clone())
+                    .collect();
+                self.research_state.unlocked.extend(required_techs);
                 self.sync_research_to_planet();
 
                 let build_ship = |campaign: &mut Campaign| {

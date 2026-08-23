@@ -45,7 +45,7 @@ pub fn load_from_json(json: &str) -> Result<Campaign, serde_json::Error> {
     for planet in campaign.planets.iter_mut().flatten() {
         planet
             .achievements
-            .sync_definitions(super::game_state::achievement_definitions());
+            .sync_definitions(super::game_state::achievement_definitions(planet.data()));
         // The stat sheet is derived, not saved: rebuild it before the
         // aggregated offline calculation runs.
         planet.refresh_stats();

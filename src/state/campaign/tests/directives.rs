@@ -37,7 +37,7 @@ fn a_directive_that_is_met_says_so_instead_of_rotating_in_silence() {
 fn a_directive_that_runs_out_of_time_is_reported_as_a_loss() {
     let mut campaign = campaign();
     let goal = campaign.directive.description.clone();
-    campaign.update_directive(crate::directives::rotation_seconds() + 1.0);
+    campaign.update_directive(crate::directives::rotation_seconds(campaign.data().data()) + 1.0);
 
     let announced = campaign.current().notifications.get_notifications();
     assert_eq!(announced.len(), 1);

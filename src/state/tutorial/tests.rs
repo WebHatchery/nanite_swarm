@@ -7,7 +7,7 @@ fn state() -> PlanetState {
 
 #[test]
 fn the_shipped_tutorial_declares_only_goals_the_game_can_check() {
-    let steps = crate::data::game_data().tutorial.clone();
+    let steps = crate::data::test_data().data().tutorial.clone();
     assert!(!steps.is_empty(), "no tutorial at all");
     for step in &steps {
         assert!(
@@ -25,7 +25,7 @@ fn the_shipped_tutorial_declares_only_goals_the_game_can_check() {
 
 #[test]
 fn every_tutorial_step_names_the_visible_touch_action() {
-    for step in &crate::data::game_data().tutorial {
+    for step in &crate::data::test_data().data().tutorial {
         assert!(
             step.instruction.contains("Tap ") || step.instruction.contains("Drag "),
             "step {} does not explain its touch action: {}",

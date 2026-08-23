@@ -9,7 +9,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::data::{SeedShipCost, SeedShipStageDef};
+use crate::data::{GameDataContext, SeedShipCost, SeedShipStageDef};
 
 use super::game_state::{PlanetState, Resources};
 
@@ -27,6 +27,8 @@ pub struct StageProgress {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SeedShip {
+    #[serde(skip, default)]
+    data: GameDataContext,
     /// Index of the stage being built; equal to the stage count once finished.
     stage: usize,
     progress: StageProgress,
@@ -39,8 +41,19 @@ pub struct SeedShip {
 }
 
 impl SeedShip {
-    fn stages() -> &'static [SeedShipStageDef] {
-        &crate::data::game_data().seed_ship.stages
+    pub(crate) fn with_data(data: GameDataContext) -> Self {
+        Self {
+            data,
+            ..Self::default()
+        }
+    }
+
+    pub(crate) fn attach_data(&mut self, data: GameDataContext) {
+        self.data = data;
+    }
+
+    fn stages(&self) -> &[SeedShipStageDef] {
+        &self.data.data().seed_ship.stages
     }
 
     pub fn stage_index(&self) -> usize {
@@ -48,12 +61,12 @@ impl SeedShip {
     }
 
     pub fn stage_count(&self) -> usize {
-        Self::stages().len()
+        self.stages().len()
     }
 
     /// The stage under construction, or `None` once the ship is finished.
-    pub fn stage(&self) -> Option<&'static SeedShipStageDef> {
-        Self::stages().get(self.stage)
+    pub fn stage(&self) -> Option<&SeedShipStageDef> {
+        self.stages().get(self.stage)
     }
 
     /// The stages already built and still on the pad.
@@ -61,9 +74,9 @@ impl SeedShip {
     /// They stop counting the moment the ship launches, which is the point:
     /// the yard's advantages leave with it, and the next ship has to earn them
     /// again.
-    pub fn standing_stages(&self) -> &'static [SeedShipStageDef] {
-        let built = self.stage.min(Self::stages().len());
-        &Self::stages()[..built]
+    pub fn standing_stages(&self) -> &[SeedShipStageDef] {
+        let built = self.stage.min(self.stages().len());
+        &self.stages()[..built]
     }
 
     /// Every stage is paid for and the ship is ready to leave.
@@ -134,7 +147,7 @@ impl SeedShip {
     }
 
     /// The research the current stage is waiting on, if it is waiting.
-    pub fn blocked_by(&self, unlocked: &[String]) -> Option<&'static str> {
+    pub fn blocked_by(&self, unlocked: &[String]) -> Option<&str> {
         let stage = self.stage()?;
         let required = stage.requires.as_deref()?;
         if unlocked.iter().any(|id| id == required) {
@@ -228,7 +241,7 @@ impl PlanetState {
             return;
         }
 
-        let intake = crate::data::game_data().seed_ship.intake_per_second;
+        let intake = self.data().seed_ship.intake_per_second;
         let finished_stage = self
             .seed_ship
             .absorb(&mut self.resources, intake, delta_time);
@@ -265,9 +278,9 @@ impl PlanetState {
 
     /// The research the yard is waiting on, and what it is called, for the
     /// ship screen to say so.
-    pub fn seed_ship_blocked_by(&self) -> Option<&'static str> {
+    pub fn seed_ship_blocked_by(&self) -> Option<&str> {
         let id = self.seed_ship.blocked_by(&self.research.unlocked_techs)?;
-        crate::data::game_data()
+        self.data()
             .research
             .nodes
             .iter()

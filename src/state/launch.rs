@@ -6,7 +6,7 @@
 //! already settled, so quitting mid-sequence cannot leave a half-launched
 //! campaign behind.
 
-use crate::data::LaunchSequenceDef;
+use crate::data::{GameDataContext, LaunchSequenceDef};
 
 /// Where the sequence has got to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -25,6 +25,7 @@ pub enum LaunchBeat {
 /// change any.
 #[derive(Debug, Clone)]
 pub struct LaunchSequence {
+    data: GameDataContext,
     /// Campaign slot of the world that was spent. Kept because the campaign
     /// is no longer pointing at it.
     origin: usize,
@@ -35,20 +36,25 @@ pub struct LaunchSequence {
 
 impl LaunchSequence {
     pub fn new(origin: usize, target: usize) -> Self {
+        Self::new_with_data(GameDataContext::default(), origin, target)
+    }
+
+    pub fn new_with_data(data: GameDataContext, origin: usize, target: usize) -> Self {
         Self {
+            data,
             origin,
             target,
             elapsed: 0.0,
         }
     }
 
-    fn def() -> &'static LaunchSequenceDef {
-        &crate::data::game_data().seed_ship.launch
+    fn def(&self) -> &LaunchSequenceDef {
+        &self.data.data().seed_ship.launch
     }
 
     /// Beat boundaries as running totals, in the order they play.
-    fn beats() -> [(LaunchBeat, f32); 4] {
-        let def = Self::def();
+    fn beats(&self) -> [(LaunchBeat, f32); 4] {
+        let def = self.def();
         let countdown = def.countdown_seconds.max(0.0);
         let ascent = countdown + def.ascent_seconds.max(0.0);
         let transit = ascent + def.transit_seconds.max(0.0);
@@ -62,14 +68,14 @@ impl LaunchSequence {
     }
 
     /// How long the whole sequence runs.
-    pub fn total_seconds() -> f32 {
-        Self::beats()[3].1
+    pub fn total_seconds(&self) -> f32 {
+        self.beats()[3].1
     }
 
     /// When a beat starts, measured from ignition being ordered. Lets a caller
     /// drop the sequence straight onto a beat without knowing the durations.
-    pub fn beat_start(beat: LaunchBeat) -> f32 {
-        Self::beats()
+    pub fn beat_start(&self, beat: LaunchBeat) -> f32 {
+        self.beats()
             .iter()
             .take_while(|(candidate, _)| *candidate != beat)
             .last()
@@ -82,8 +88,8 @@ impl LaunchSequence {
     }
 
     /// The name of the world being spent, for the lines that name it.
-    pub fn origin_name(&self) -> &'static str {
-        crate::data::game_data().planet(self.origin).name.as_str()
+    pub fn origin_name(&self) -> &str {
+        self.data.data().planet(self.origin).name.as_str()
     }
 
     pub fn target(&self) -> usize {
@@ -93,16 +99,16 @@ impl LaunchSequence {
     /// Run the sequence in real time. It is deliberately not on the world
     /// clock: the world is not being simulated while this plays.
     pub fn advance(&mut self, delta_time: f32) {
-        self.elapsed = (self.elapsed + delta_time.max(0.0)).min(Self::total_seconds());
+        self.elapsed = (self.elapsed + delta_time.max(0.0)).min(self.total_seconds());
     }
 
     /// Cut to the end. The player has seen it before.
     pub fn skip(&mut self) {
-        self.elapsed = Self::total_seconds();
+        self.elapsed = self.total_seconds();
     }
 
     pub fn is_finished(&self) -> bool {
-        self.elapsed >= Self::total_seconds()
+        self.elapsed >= self.total_seconds()
     }
 
     /// The beat playing now, or `None` once the sequence is over.
@@ -110,7 +116,7 @@ impl LaunchSequence {
         if self.is_finished() {
             return None;
         }
-        Self::beats()
+        self.beats()
             .iter()
             .find(|(_, end)| self.elapsed < *end)
             .map(|(beat, _)| *beat)
@@ -121,7 +127,7 @@ impl LaunchSequence {
         let Some(current) = self.beat() else {
             return 0.0;
         };
-        let beats = Self::beats();
+        let beats = self.beats();
         let end = beats
             .iter()
             .find(|(beat, _)| *beat == current)
@@ -142,13 +148,13 @@ impl LaunchSequence {
 
     /// Seconds left on the countdown, for the number on the pad.
     pub fn countdown_remaining(&self) -> f32 {
-        (Self::beats()[0].1 - self.elapsed).max(0.0)
+        (self.beats()[0].1 - self.elapsed).max(0.0)
     }
 
     /// What the swarm says over the current beat. The arrival beat speaks with
     /// the arriving world's own line, so it comes from the caller.
     pub fn line(&self, arrival_line: &str) -> String {
-        let def = Self::def();
+        let def = self.def();
         let raw = match self.beat() {
             Some(LaunchBeat::Countdown) => def.countdown_line.as_str(),
             Some(LaunchBeat::Ascent) => def.ascent_line.as_str(),
@@ -158,8 +164,12 @@ impl LaunchSequence {
         raw.replace("{origin}", self.origin_name())
     }
 
-    pub fn skip_hint() -> &'static str {
-        Self::def().skip_hint.as_str()
+    pub fn skip_hint(&self) -> &str {
+        self.def().skip_hint.as_str()
+    }
+
+    pub fn data(&self) -> &crate::data::GameData {
+        self.data.data()
     }
 }
 

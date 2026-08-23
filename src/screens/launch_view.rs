@@ -30,7 +30,7 @@ pub fn render_launch_view(
 
     draw_starfield(screen_w, screen_h);
 
-    let planets = &crate::data::game_data().planets;
+    let planets = &sequence.data().planets;
     let origin_color = color_from_rgba(&planets[sequence.origin()].color);
     let target_color = color_from_rgba(&planets[sequence.target()].color);
 
@@ -101,7 +101,7 @@ pub fn render_launch_view(
         draw_caption(sequence, beat, arrival_line, screen_w, screen_h);
     }
 
-    let hint = LaunchSequence::skip_hint();
+    let hint = sequence.skip_hint();
     if !hint.is_empty() {
         draw_ui_text(hint, 18.0, screen_h - 18.0, 12.0, Colors::TEXT_DIM);
     }
@@ -176,9 +176,7 @@ fn draw_caption(
     draw_panel(0.0, band_y - 34.0, screen_w, band_h);
 
     if beat == LaunchBeat::Arrival {
-        let name = crate::data::game_data().planets[sequence.target()]
-            .name
-            .as_str();
+        let name = sequence.data().planets[sequence.target()].name.as_str();
         draw_centered(
             name,
             screen_w,

@@ -16,7 +16,7 @@ fn state() -> PlanetState {
 /// The same world, with the research the later stages are gated on.
 fn researched_state() -> PlanetState {
     let mut state = state();
-    for stage in &crate::data::game_data().seed_ship.stages {
+    for stage in &crate::data::test_data().data().seed_ship.stages {
         if let Some(tech) = stage.requires.as_deref() {
             state.research.unlocked_techs.push(tech.to_string());
         }
@@ -26,7 +26,7 @@ fn researched_state() -> PlanetState {
 }
 
 fn intake() -> SeedShipCost {
-    crate::data::game_data().seed_ship.intake_per_second
+    crate::data::test_data().data().seed_ship.intake_per_second
 }
 
 /// A drill beside the Core and a Smelter on its other side, both powered.
@@ -179,7 +179,8 @@ fn a_smelter_with_no_minerals_left_simply_slows_down() {
 
 #[test]
 fn the_last_stages_of_the_ship_cannot_be_paid_without_alloy() {
-    let stages = &crate::data::game_data().seed_ship.stages;
+    let data = crate::data::test_data();
+    let stages = &data.data().seed_ship.stages;
     let alloy_stages = stages.iter().filter(|s| s.cost.alloy > 0.0).count();
     assert!(alloy_stages >= 2, "the chain has no sink");
 
@@ -208,7 +209,8 @@ fn the_last_stages_of_the_ship_cannot_be_paid_without_alloy() {
 
 #[test]
 fn flight_stages_cannot_be_paid_without_factory_components() {
-    let stages = &crate::data::game_data().seed_ship.stages;
+    let data = crate::data::test_data();
+    let stages = &data.data().seed_ship.stages;
     assert!(
         stages
             .iter()
@@ -351,7 +353,8 @@ fn the_research_that_unblocks_a_stage_gets_it_moving() {
 
 #[test]
 fn the_shipped_stages_declare_only_modifiers_the_game_can_read() {
-    let stages = &crate::data::game_data().seed_ship.stages;
+    let data = crate::data::test_data();
+    let stages = &data.data().seed_ship.stages;
     let with_boons = stages.iter().filter(|s| !s.modifiers.is_empty()).count();
     assert!(with_boons >= 3, "the ship is still all cost and no payoff");
     for stage in stages {
