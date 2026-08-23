@@ -7,12 +7,5 @@ are no known gameplay, save-system, UI, audio, release, or source-size gate
 blockers. The remaining work is architectural follow-up identified by the
 2026-08-20 architecture audit.
 
-## Architecture follow-up
-
-- [ ] Split the near-limit files before the next major feature adds to them:
-  `src/capture_scenes.rs` (691 lines),
-  `src/screens/planetary_view/flow_render.rs` (698 lines),
-  `src/screens/planetary_view/terrain_render.rs` (692 lines),
-  `src/data/defs.rs` (708 lines),
-  `src/state/logistics/tests.rs` (729 lines), and
-  `src/state/simulation/tests.rs` (682 lines).
+No outstanding implementation items are known. New work should be added here
+only when it is genuinely unaddressed.
