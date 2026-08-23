@@ -72,4 +72,4 @@ recovery, save slots, offline progress, and a campaign ending.
 ## Documentation
 
 - `gdd.md` — the design document: the logistics puzzle, the terrain dilemma, the solar campaign, and the evolving core.
-- `TODO.md` — the open work, from the 2026-07-14 code audit against the GDD.
+- `TODO.md` — the remaining architectural follow-up work.
