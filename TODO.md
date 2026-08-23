@@ -12,8 +12,6 @@ blockers. The remaining work is architectural follow-up identified by the
 - [ ] Extract a focused session/persistence service from `Game` if further
   features increase its ownership of campaign, research, settings, audio,
   capture, or persistence state.
-- [ ] Move `GameData` semantic validation into domain-owned validators so the
-  data layer no longer depends directly on engine, directive, and state enums.
 - [ ] Split the near-limit files before the next major feature adds to them:
   `src/capture_scenes.rs` (691 lines),
   `src/screens/planetary_view/flow_render.rs` (698 lines),

@@ -4,6 +4,7 @@
 
 #![allow(unused)]
 
+mod data_validation;
 mod drone_engine;
 mod grid_engine;
 mod modifiers;
@@ -11,6 +12,7 @@ mod research_engine;
 mod routing;
 mod terrain_gen;
 
+pub(crate) use data_validation::validate_game_data;
 pub use drone_engine::*;
 pub use grid_engine::*;
 pub use modifiers::*;

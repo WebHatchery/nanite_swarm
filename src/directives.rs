@@ -9,6 +9,24 @@ use crate::engine::BuildingType;
 use crate::state::PlanetState;
 use serde::{Deserialize, Serialize};
 
+pub(crate) fn validate_game_data(data: &crate::data::GameData) -> Result<(), String> {
+    for def in &data.directives.directives {
+        if DirectiveKind::from_id(&def.kind).is_none() {
+            return Err(format!(
+                "assets/directives.json directive \"{}\" has unknown kind \"{}\"",
+                def.id, def.kind
+            ));
+        }
+        if !def.base_target.is_finite() || !def.base_reward.is_finite() {
+            return Err(format!(
+                "assets/directives.json directive \"{}\" has invalid target or reward",
+                def.id
+            ));
+        }
+    }
+    Ok(())
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum DirectiveKind {
     PowerSurplus,

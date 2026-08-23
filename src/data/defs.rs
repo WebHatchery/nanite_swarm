@@ -530,32 +530,6 @@ impl GameData {
             stats: vec![],
         });
 
-        // Every stat needs a name a player can read, or the tree can only
-        // explain itself in the ids the JSON is written in. Checked against
-        // the file just parsed, never through game_data(): this runs while
-        // that is still being built.
-        if !research.stats.is_empty() {
-            for entry in &research.stats {
-                if crate::engine::StatId::from_id(&entry.id).is_none() {
-                    panic!("research stats: unknown stat \"{}\"", entry.id);
-                }
-            }
-            for stat in crate::engine::StatId::ALL {
-                if !research.stats.iter().any(|entry| entry.id == stat.id()) {
-                    panic!("research stats: no label for \"{}\"", stat.id());
-                }
-            }
-        }
-
-        // A typo in a modifier would otherwise be a tech that silently does
-        // nothing - the exact bug this system exists to stop.
-        for node in &research.nodes {
-            for modifier in &node.modifiers {
-                if let Err(problem) = crate::engine::parse_modifier(modifier) {
-                    panic!("research node \"{}\": {}", node.id, problem);
-                }
-            }
-        }
         let seed_ship: SeedShipData = macroquad_toolkit::data_loader::load_embedded_json(
             seed_ship_json,
         )
@@ -564,14 +538,6 @@ impl GameData {
             stages: vec![],
             launch: LaunchSequenceDef::default(),
         });
-        for stage in &seed_ship.stages {
-            for modifier in &stage.modifiers {
-                if let Err(problem) = crate::engine::parse_modifier(modifier) {
-                    panic!("seed ship stage \"{}\": {}", stage.id, problem);
-                }
-            }
-        }
-
         let planet_file: PlanetDataFile =
             macroquad_toolkit::data_loader::load_embedded_json(planets_json)
                 .unwrap_or_else(|_| PlanetDataFile { planets: vec![] });
@@ -579,17 +545,6 @@ impl GameData {
         let tutorial_file: TutorialDataFile =
             macroquad_toolkit::data_loader::load_embedded_json(tutorial_json)
                 .unwrap_or_else(|_| TutorialDataFile { steps: vec![] });
-        // A step whose goal cannot be read is a step nobody can finish, which
-        // would strand the player rather than merely doing nothing.
-        for step in &tutorial_file.steps {
-            if crate::state::TutorialGoal::parse(&step.goal).is_none() {
-                panic!(
-                    "tutorial step \"{}\": unknown goal kind \"{}\"",
-                    step.id, step.goal.kind
-                );
-            }
-        }
-
         let directives: DirectiveDataFile = macroquad_toolkit::data_loader::load_embedded_json(
             directives_json,
         )
@@ -597,50 +552,15 @@ impl GameData {
             rotation_seconds: 600.0,
             directives: vec![],
         });
-        // A directive nobody can evaluate would stand forever and never
-        // complete, which reads to a player as the game forgetting about them.
-        for def in &directives.directives {
-            if crate::directives::DirectiveKind::from_id(&def.kind).is_none() {
-                panic!("directive \"{}\": unknown kind \"{}\"", def.id, def.kind);
-            }
-        }
-
         let achievement_file: AchievementDataFile =
             macroquad_toolkit::data_loader::load_embedded_json(achievements_json).unwrap_or_else(
                 |_| AchievementDataFile {
                     achievements: vec![],
                 },
             );
-        // An achievement whose condition cannot be read would never fire, and
-        // would sit in the count forever making the set look unfinished.
-        for def in &achievement_file.achievements {
-            if crate::state::Milestone::from_id(&def.condition.kind).is_none() {
-                panic!(
-                    "achievement \"{}\": unknown condition \"{}\"",
-                    def.id, def.condition.kind
-                );
-            }
-        }
-
         let core_stage_file: CoreStageDataFile =
             macroquad_toolkit::data_loader::load_embedded_json(core_stages_json)
                 .unwrap_or_else(|_| CoreStageDataFile { stages: vec![] });
-        for stage in &core_stage_file.stages {
-            for requirement in &stage.requires {
-                if crate::state::Milestone::from_id(&requirement.kind).is_none() {
-                    panic!(
-                        "core stage \"{}\": unknown requirement \"{}\"",
-                        stage.id, requirement.kind
-                    );
-                }
-            }
-            for modifier in &stage.modifiers {
-                if let Err(problem) = crate::engine::parse_modifier(modifier) {
-                    panic!("core stage \"{}\": {}", stage.id, problem);
-                }
-            }
-        }
-
         let mut buildings_by_id = HashMap::new();
         for def in &building_file.buildings {
             buildings_by_id.insert(def.id.clone(), def.clone());
@@ -664,10 +584,6 @@ impl GameData {
             achievements: achievement_file.achievements,
             core_stages: core_stage_file.stages,
         };
-        if !data.buildings.is_empty() || !data.research.nodes.is_empty() {
-            data.validate()
-                .unwrap_or_else(|error| panic!("game data validation failed: {error}"));
-        }
         data
     }
 

@@ -6,7 +6,6 @@ mod defs;
 mod game_config;
 mod strings;
 mod ui_theme;
-mod validation;
 
 pub use defs::*;
 pub use game_config::*;

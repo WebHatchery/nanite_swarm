@@ -15,6 +15,7 @@ mod data;
 mod directives;
 mod display;
 mod engine;
+mod game_data_validation;
 pub mod release;
 mod research_runtime;
 mod screens;
@@ -26,6 +27,7 @@ mod update;
 use assets::GameTextures;
 use data::{load_game_config, load_game_data, load_ui_theme, set_game_data};
 use engine::{ResearchState, ResearchTree};
+use game_data_validation::validate_game_data;
 use state::{Campaign, LaunchSequence, GAME_NAME};
 
 /// Game phases/screens.
@@ -101,6 +103,9 @@ impl Game {
         let game_data = load_game_data();
         #[cfg(target_arch = "wasm32")]
         let game_data = load_game_data().await;
+
+        validate_game_data(&game_data)
+            .unwrap_or_else(|error| panic!("game data validation failed: {error}"));
 
         set_game_data(game_data);
 
