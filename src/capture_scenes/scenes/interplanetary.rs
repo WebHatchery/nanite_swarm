@@ -75,7 +75,12 @@ impl Game {
 
     pub(super) fn stage_interplanetary_remote_orders_scene(&mut self) {
         self.stage_interplanetary_scene();
-        self.shipping_edit_world = self.campaign.current_index();
+        // Open the route that lives on the remote world. The local Mars order
+        // is useful for the ordinary shipping capture, but this scene exists
+        // to prove that a player can inspect and edit a standing order after
+        // leaving its source world.
+        self.shipping_edit_world = 4;
+        self.shipping_scroll.set_offset(0.0);
         if let Some(planet) = self.campaign.planet_mut(4) {
             planet.export = Some(state::ExportOrder {
                 target: 2,

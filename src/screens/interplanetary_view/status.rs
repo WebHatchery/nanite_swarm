@@ -13,7 +13,7 @@ pub(super) fn driver_operation_status(built: usize, online: usize, world_name: &
     } else if built > 0 {
         format!("Mass Driver offline on {}", world_name)
     } else {
-        "No Mass Driver on this world".to_string()
+        format!("No Mass Driver on {world_name}")
     }
 }
 

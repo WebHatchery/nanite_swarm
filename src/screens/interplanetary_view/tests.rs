@@ -12,7 +12,7 @@ use super::world_dossier::{compact_shipping_status, shipping_status_line};
 fn shipping_status_distinguishes_absent_and_offline_drivers() {
     assert_eq!(
         driver_operation_status(0, 0, "Mars"),
-        "No Mass Driver on this world"
+        "No Mass Driver on Mars"
     );
     assert_eq!(
         driver_operation_status(1, 0, "Mars"),
