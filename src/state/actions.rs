@@ -292,6 +292,8 @@ impl PlanetState {
             })
             .collect();
         if entries.is_empty() {
+            self.notifications
+                .warning("Select at least one building before saving a blueprint");
             return false;
         }
         self.blueprint = entries;
@@ -442,6 +444,17 @@ impl PlanetState {
             .and_then(|tile| tile.building.as_ref())
             .is_none()
         {
+            self.notifications
+                .warning("Select a structure before relocating");
+            return false;
+        }
+        if self
+            .grid
+            .get(source)
+            .and_then(|tile| tile.building.as_ref())
+            .is_some_and(|building| building.building_type == BuildingType::Core)
+        {
+            self.notifications.warning("The Core cannot be relocated");
             return false;
         }
         self.selected_building = None;
@@ -574,6 +587,7 @@ impl PlanetState {
 
     pub fn undo_last_action(&mut self) -> bool {
         let Some(action) = self.undo_history.pop() else {
+            self.notifications.warning("No action to undo");
             return false;
         };
         let creates_inverse = !matches!(action, super::game_state::UndoEntry::Relocated(_, _));

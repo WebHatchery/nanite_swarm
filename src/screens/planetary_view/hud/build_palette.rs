@@ -410,7 +410,11 @@ pub(super) fn draw(
             half_w,
             action_layout.button_height,
         ),
-        "UNDO",
+        if state.undo_history.is_empty() {
+            "UNDO EMPTY"
+        } else {
+            "UNDO"
+        },
     ) {
         state.undo_last_action();
     }
@@ -426,6 +430,10 @@ pub(super) fn draw(
     ) {
         if let Some(tile) = state.selected_tile {
             state.begin_relocation(tile);
+        } else {
+            state
+                .notifications
+                .warning("Select a structure before relocating");
         }
     }
     let fourth_y = third_y + action_layout.button_height + action_layout.row_gap;
@@ -446,6 +454,10 @@ pub(super) fn draw(
                 state.box_selected.clone()
             };
             state.save_blueprint(tile, &positions);
+        } else {
+            state
+                .notifications
+                .warning("Select an anchor tile before saving a blueprint");
         }
     }
     if draw_hud_button(
