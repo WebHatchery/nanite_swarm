@@ -670,6 +670,11 @@ impl Game {
                 camera.pan_y = -180.0;
             }
             "interplanetary" => self.stage_interplanetary_scene(),
+            "interplanetary_rules" => {
+                self.stage_interplanetary_scene();
+                self.campaign.colonize(1);
+                self.campaign.travel_to(1);
+            }
             _ => {
                 // Default: jump straight into gameplay on the starting planet.
                 self.phase = GamePhase::Playing;

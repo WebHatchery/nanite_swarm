@@ -390,7 +390,7 @@ fn draw_planet_info(
         11.0,
         Colors::TEXT_DIM,
     );
-    let rules = world_rule_lines(view, index);
+    let rules = world_rule_lines(view.data, index);
     let rules_color = if rules.len() == 1 && rules[0] == "No special build rules" {
         Colors::SUCCESS
     } else {
@@ -519,23 +519,18 @@ fn hazard_color(planet: &crate::data::PlanetDef) -> Color {
     }
 }
 
-fn world_rule_lines(view: &MapView, index: usize) -> Vec<String> {
-    let planet = &view.data.planets[index];
+fn world_rule_lines(data: &crate::data::GameData, index: usize) -> Vec<String> {
+    let planet = &data.planets[index];
     let constraints = &planet.constraints;
     let mut lines = Vec::new();
+    for id in &planet.banned_buildings {
+        lines.push(format!("Unavailable: {}", building_name(data, id)));
+    }
     for id in &constraints.required_buildings {
-        let name = view
-            .data
-            .buildings
-            .iter()
-            .find(|building| building.id == *id)
-            .map(|building| building.name.as_str())
-            .unwrap_or(id.as_str());
-        lines.push(format!("Needs {}", name));
+        lines.push(format!("Needs {}", building_name(data, id)));
     }
     for id in &constraints.required_research {
-        let name = view
-            .data
+        let name = data
             .research
             .nodes
             .iter()
@@ -561,6 +556,14 @@ fn world_rule_lines(view: &MapView, index: usize) -> Vec<String> {
     }
     lines.truncate(3);
     lines
+}
+
+fn building_name<'a>(data: &'a crate::data::GameData, id: &'a str) -> &'a str {
+    data.buildings
+        .iter()
+        .find(|building| building.id == id)
+        .map(|building| building.name.as_str())
+        .unwrap_or(id)
 }
 
 fn draw_legend(screen_w: f32, screen_h: f32) {
@@ -590,3 +593,6 @@ fn draw_legend(screen_w: f32, screen_h: f32) {
         Colors::TEXT_DIM,
     );
 }
+
+#[cfg(test)]
+mod tests;
