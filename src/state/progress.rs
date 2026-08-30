@@ -13,6 +13,15 @@ pub struct OfflineReport {
     pub components_gained: f32,
     pub data_gained: f32,
     pub power_gained: f32,
+    /// Data spent by the active research job while the player was away.
+    #[serde(default)]
+    pub research_data_spent: f32,
+    /// Whether that offline research job crossed its completion line.
+    #[serde(default)]
+    pub research_completed: bool,
+    /// Seed Ship stages paid for while the player was away.
+    #[serde(default)]
+    pub seed_ship_stages_completed: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -600,6 +609,7 @@ impl PlanetState {
             components_gained: components,
             data_gained: data,
             power_gained: power,
+            ..OfflineReport::default()
         };
         self.last_offline_seconds = offline_seconds;
         self.last_offline_simulated = simulated;

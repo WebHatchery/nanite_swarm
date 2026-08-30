@@ -45,6 +45,7 @@ pub use launch::*;
 pub use milestone::*;
 pub use mobile::*;
 pub use persistence::*;
+pub use progress::*;
 pub use seed_ship::*;
 pub use shipping::*;
 pub use simulation::{TICK_SECONDS, TIME_SCALES};

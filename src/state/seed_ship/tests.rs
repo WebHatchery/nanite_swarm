@@ -281,6 +281,18 @@ fn a_stage_part_paid_counts_for_part_of_the_ship() {
 }
 
 #[test]
+fn offline_yard_uses_capped_intake_and_reports_finished_stages() {
+    let mut state = researched_state();
+    state.toggle_seed_ship_commitment();
+
+    let completed = state.apply_offline_seed_ship_progress(20.0);
+
+    assert_eq!(completed, 1);
+    assert_eq!(state.seed_ship.stage_index(), 1);
+    assert!(state.seed_ship.stage_fraction() > 0.0);
+}
+
+#[test]
 fn a_launched_yard_is_bare_ground_again() {
     let mut state = researched_state();
     state.toggle_seed_ship_commitment();

@@ -486,6 +486,30 @@ fn load_from_json_applies_offline_progress_for_past_save() {
 }
 
 #[test]
+fn load_from_json_advances_the_active_research_job() {
+    let mut campaign = campaign();
+    campaign.research.current_research = Some("power_grid".to_string());
+    campaign.current_mut().resources.data = 100.0;
+    campaign.current_mut().last_saved_unix = unix_seconds_now() - 120;
+    campaign.sync_research();
+    let save = SaveGame {
+        version: SAVE_VERSION,
+        campaign,
+    };
+    let json = serde_json::to_string(&save).unwrap();
+
+    let loaded = load_from_json(&json).unwrap();
+
+    assert!(loaded
+        .research
+        .unlocked_techs
+        .contains(&"power_grid".to_string()));
+    assert!(loaded.research.current_research.is_none());
+    assert!(loaded.current().last_offline_report.research_completed);
+    assert!(loaded.current().last_offline_report.research_data_spent >= 10.0);
+}
+
+#[test]
 fn loading_a_past_save_advances_shipments_already_in_flight() {
     let mut campaign = campaign();
     campaign.colonize(1);

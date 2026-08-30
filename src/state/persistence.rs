@@ -41,9 +41,17 @@ pub fn save_to_json(campaign: &mut Campaign) -> Result<String, serde_json::Error
 pub fn load_from_json(json: &str) -> Result<Campaign, serde_json::Error> {
     let mut campaign = crate::state::migrations::migrate(json)?.campaign;
 
+    // Older saves kept research only on each world. Restore that campaign
+    // mirror before offline work is assigned to the active job.
+    campaign.adopt_planet_research();
     let now = unix_seconds_now();
     let mut shipment_elapsed: f32 = 0.0;
-    for planet in campaign.planets.iter_mut().flatten() {
+    let current_index = campaign.current_index();
+    let mut foreground_simulated = 0.0;
+    for (index, slot) in campaign.planets.iter_mut().enumerate() {
+        let Some(planet) = slot.as_mut() else {
+            continue;
+        };
         planet
             .achievements
             .sync_definitions(super::game_state::achievement_definitions(planet.data()));
@@ -61,8 +69,23 @@ pub fn load_from_json(json: &str) -> Result<Campaign, serde_json::Error> {
                 .max(offline_seconds.min(planet.config.offline.max_elapsed_seconds.max(0.0)));
             planet.apply_offline_progress(offline_seconds);
             planet.last_offline_report.tamper_guarded = delta < 0;
+            if index == current_index {
+                foreground_simulated = planet.last_offline_simulated;
+            }
         }
         planet.last_saved_unix = now;
+    }
+
+    if foreground_simulated > 0.0 {
+        let (research_spent, research_completed) =
+            campaign.apply_offline_research(foreground_simulated);
+        let stages_completed = campaign
+            .current_mut()
+            .apply_offline_seed_ship_progress(foreground_simulated);
+        let report = &mut campaign.current_mut().last_offline_report;
+        report.research_data_spent = research_spent;
+        report.research_completed = research_completed;
+        report.seed_ship_stages_completed = stages_completed;
     }
 
     // A pod already in flight is campaign state, not a foreground-world

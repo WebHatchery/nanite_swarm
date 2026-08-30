@@ -20,6 +20,25 @@ fn a_new_campaign_starts_on_mars_with_nothing_else_colonized() {
 }
 
 #[test]
+fn offline_research_spends_foreground_data_and_keeps_campaign_state_synced() {
+    let mut campaign = campaign();
+    campaign.research.current_research = Some("power_grid".to_string());
+    campaign.current_mut().resources.data = 50.0;
+    campaign.sync_research();
+
+    let (spent, completed) = campaign.apply_offline_research(1.0);
+
+    assert_eq!(spent, 5.0);
+    assert!(!completed);
+    assert_eq!(campaign.research.research_progress, 5.0);
+    assert_eq!(campaign.current().resources.data, 45.0);
+    assert_eq!(
+        campaign.current().research.research_progress,
+        campaign.research.research_progress
+    );
+}
+
+#[test]
 fn travelling_is_refused_for_a_world_the_swarm_has_not_reached() {
     let mut campaign = campaign();
     assert!(!campaign.travel_to(0));

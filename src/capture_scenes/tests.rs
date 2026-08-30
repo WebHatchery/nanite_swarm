@@ -21,7 +21,9 @@ fn required_capture_scenes_are_registered() {
             "mobile_help",
             "mobile_launch",
             "mobile_arrival",
-            "hibernation"
+            "hibernation",
+            "offline",
+            "mobile_offline"
         ]
     );
 }

@@ -590,6 +590,28 @@ impl Game {
                 planet.battery_seconds = 0.0;
                 planet.notifications.clear();
             }
+            "offline" | "mobile_offline" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                let planet = self.campaign.current_mut();
+                planet.last_offline_seconds = 6.0 * 60.0 * 60.0;
+                planet.last_offline_simulated = 4.0 * 60.0 * 60.0;
+                planet.offline_notice_timer = 8.0;
+                planet.last_offline_report = state::OfflineReport {
+                    elapsed_seconds: planet.last_offline_seconds,
+                    capped_seconds: planet.last_offline_seconds,
+                    minerals_gained: 740.0,
+                    alloy_gained: 120.0,
+                    components_gained: 64.0,
+                    data_gained: 360.0,
+                    power_gained: 18.0,
+                    research_data_spent: 110.0,
+                    research_completed: true,
+                    seed_ship_stages_completed: 1,
+                    ..state::OfflineReport::default()
+                };
+                planet.notifications.clear();
+            }
             "demolish" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();

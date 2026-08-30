@@ -1,18 +1,38 @@
-use super::{mobile_status_text, top_bar_layout};
+use super::{mobile_offline_work_label, mobile_status_text, offline_work_label, top_bar_layout};
+use crate::state::OfflineReport;
 
 #[test]
 fn mobile_arrival_status_names_the_world_without_hiding_critical_failures() {
     assert_eq!(
-        mobile_status_text(false, false, false, true, "", "Venus"),
+        mobile_status_text(false, false, false, true, "", "", "Venus"),
         ("ARRIVED VENUS".to_string(), true)
     );
     assert_eq!(
-        mobile_status_text(true, false, false, true, "", "Venus"),
+        mobile_status_text(true, false, false, true, "", "", "Venus"),
         ("SAVE FAILED".to_string(), false)
     );
     assert_eq!(
-        mobile_status_text(false, false, false, false, "ACID RAIN", "Venus"),
+        mobile_status_text(false, false, false, false, "", "ACID RAIN", "Venus"),
         ("ACID RAIN".to_string(), false)
+    );
+}
+
+#[test]
+fn offline_work_status_is_short_enough_for_the_mobile_header() {
+    let report = OfflineReport {
+        research_completed: true,
+        seed_ship_stages_completed: 2,
+        ..OfflineReport::default()
+    };
+
+    assert_eq!(mobile_offline_work_label(report), "RESEARCH DONE");
+    assert_eq!(
+        offline_work_label(OfflineReport {
+            seed_ship_stages_completed: 2,
+            ..OfflineReport::default()
+        })
+        .as_deref(),
+        Some("Seed Ship +2 stages")
     );
 }
 

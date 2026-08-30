@@ -1,7 +1,7 @@
 //! Top bar: brand, resource metric cards, navigation buttons, and status banners
 
 use crate::data::UiTheme;
-use crate::state::PlanetState;
+use crate::state::{OfflineReport, PlanetState};
 use crate::ui::{color_from_rgba, draw_hud_button, draw_hud_panel, draw_metric_card};
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::draw_ui_text;
@@ -58,6 +58,7 @@ fn mobile_status_text(
     power_collapse: bool,
     hibernating: bool,
     arriving: bool,
+    offline_work: &str,
     hazard: &str,
     world_name: &str,
 ) -> (String, bool) {
@@ -69,8 +70,43 @@ fn mobile_status_text(
         ("HIBERNATION".to_string(), false)
     } else if arriving {
         (format!("ARRIVED {}", world_name.to_uppercase()), true)
+    } else if !offline_work.is_empty() {
+        (offline_work.to_string(), true)
     } else {
         (hazard.to_string(), false)
+    }
+}
+
+fn offline_work_label(report: OfflineReport) -> Option<String> {
+    let mut work = Vec::new();
+    if report.research_completed {
+        work.push("research complete".to_string());
+    } else if report.research_data_spent > 0.001 {
+        work.push(format!("research -{:.0} data", report.research_data_spent));
+    }
+    if report.seed_ship_stages_completed > 0 {
+        let suffix = if report.seed_ship_stages_completed == 1 {
+            "stage"
+        } else {
+            "stages"
+        };
+        work.push(format!(
+            "Seed Ship +{} {suffix}",
+            report.seed_ship_stages_completed
+        ));
+    }
+    (!work.is_empty()).then(|| work.join(" | "))
+}
+
+fn mobile_offline_work_label(report: OfflineReport) -> &'static str {
+    if report.research_completed {
+        "RESEARCH DONE"
+    } else if report.seed_ship_stages_completed > 0 {
+        "SHIP ADVANCED"
+    } else if report.research_data_spent > 0.001 {
+        "RESEARCHING"
+    } else {
+        ""
     }
 }
 
@@ -302,14 +338,17 @@ pub(super) fn draw(
         );
     }
 
+    let mut notice_y = metrics.top_bar_height + 6.0;
+
     // Offline progress banner
     if state.offline_notice_timer > 0.0 && state.last_offline_seconds > 0.0 {
         let (off_h, off_m) = format_hours_minutes(state.last_offline_seconds);
         let (sim_h, sim_m) = format_hours_minutes(state.last_offline_simulated);
         let banner_w = 520.0;
-        let banner_h = 48.0;
+        let work_note = offline_work_label(state.last_offline_report);
+        let banner_h = if work_note.is_some() { 64.0 } else { 48.0 };
         let banner_x = (screen_w - banner_w) * 0.5;
-        let banner_y = metrics.top_bar_height + 6.0;
+        let banner_y = notice_y;
         draw_hud_panel(
             theme,
             Rect::new(banner_x, banner_y, banner_w, banner_h),
@@ -352,13 +391,23 @@ pub(super) fn draw(
             11.0,
             success,
         );
+        if let Some(work_note) = work_note {
+            draw_ui_text(
+                &format!("Work: {work_note}"),
+                banner_x + 16.0,
+                banner_y + 54.0,
+                10.0,
+                primary_soft,
+            );
+        }
+        notice_y += banner_h + 4.0;
     }
 
     if state.arrival_notice_timer > 0.0 {
         let banner_w = 620.0;
         let banner_h = 36.0;
         let banner_x = (screen_w - banner_w) * 0.5;
-        let banner_y = metrics.top_bar_height + 6.0;
+        let banner_y = notice_y;
         draw_hud_panel(
             theme,
             Rect::new(banner_x, banner_y, banner_w, banner_h),
@@ -371,13 +420,14 @@ pub(super) fn draw(
             13.0,
             primary_soft,
         );
+        notice_y += banner_h + 4.0;
     }
 
     if state.collapse_notice_timer > 0.0 {
         let banner_w = 520.0;
         let banner_h = 36.0;
         let banner_x = (screen_w - banner_w) * 0.5;
-        let banner_y = metrics.top_bar_height + 46.0;
+        let banner_y = notice_y;
         draw_hud_panel(
             theme,
             Rect::new(banner_x, banner_y, banner_w, banner_h),
@@ -439,6 +489,11 @@ fn draw_mobile(
         state.power_collapse_shutdown > 0.0,
         state.battery_seconds <= 0.0,
         state.arrival_notice_timer > 0.0,
+        if state.offline_notice_timer > 0.0 && state.last_offline_seconds > 0.0 {
+            mobile_offline_work_label(state.last_offline_report)
+        } else {
+            ""
+        },
         &state.hazard_label(),
         &state.name,
     );
