@@ -117,6 +117,24 @@ impl PlanetState {
         placed_any
     }
 
+    /// Lay a conduit route that starts at an existing building.
+    ///
+    /// Smart Drag is deliberately stricter than ordinary conduit placement:
+    /// the gesture must begin on a building, so dragging across empty ground
+    /// cannot accidentally spend resources on a route.
+    pub fn try_place_smart_conduit_path(&mut self, from: GridPos, to: GridPos) -> bool {
+        if self
+            .grid
+            .get(from)
+            .and_then(|tile| tile.building.as_ref())
+            .is_none()
+        {
+            return false;
+        }
+
+        self.try_place_conduit_path(from, to)
+    }
+
     pub fn try_sell_building(&mut self, pos: GridPos) -> bool {
         let Some(tile) = self.grid.get(pos) else {
             return false;

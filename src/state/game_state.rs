@@ -306,6 +306,9 @@ pub struct PlanetState {
     pub offline_notice_timer: f32,
     #[serde(skip, default)]
     pub drag_last_pos: Option<GridPos>,
+    /// Existing building that began the current Smart Drag route.
+    #[serde(skip, default)]
+    pub smart_drag_source: Option<GridPos>,
     #[serde(skip, default)]
     pub selected_tile: Option<GridPos>,
     /// Clicking tears buildings down instead of putting them up.
@@ -539,6 +542,7 @@ impl PlanetState {
             last_offline_simulated: 0.0,
             offline_notice_timer: 0.0,
             drag_last_pos: None,
+            smart_drag_source: None,
             selected_tile: None,
             demolish_mode: false,
             camera: Camera::default(),

@@ -29,7 +29,9 @@ Grow the nanite core from a small foothold into a planetary-scale swarm without 
 
 Every required action has a visible tap/click control. Tap a building card and
 then the grid to build; with CONDUIT selected, drag across the grid to lay a
-route or tap individual tiles; drag elsewhere to pan, pinch or use the visible zoom
+route or tap individual tiles. Smart Drag also lets you drag from an existing
+building to a destination to extend its conduit route. Drag elsewhere to pan,
+pinch or use the visible zoom
 controls to zoom, and use the bottom command bar for selection, demolition,
 blueprints, relocation, undo, speed, and pause. Tap FOCUS to collapse both
 sidebars for route planning, then tap PANELS to restore them. When freight is

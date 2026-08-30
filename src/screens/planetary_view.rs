@@ -67,16 +67,24 @@ pub fn render_planetary_view(
         state.touch_gesture_routed = true;
         state.touch_camera_active =
             !is_cursor_over_ui(touch.center.x, touch.center.y, screen_w, screen_h, layout);
+        let starts_on_building = state.touch_camera_active
+            && touches().len() == 1
+            && screen_to_grid(touch.center.x, touch.center.y, layout)
+                .and_then(|pos| state.grid.get(pos))
+                .is_some_and(|tile| tile.building.is_some());
         state.touch_route_active = state.touch_camera_active
             && touches().len() == 1
-            && state.selected_building == Some(crate::engine::BuildingType::Conduit)
             && !state.demolish_mode
-            && !state.factory_deck_open;
+            && !state.factory_deck_open
+            && (state.selected_building == Some(crate::engine::BuildingType::Conduit)
+                || starts_on_building);
     }
     let touch_grid_active = state.touch_camera_active;
-    // A selected Conduit turns a one-finger map drag into the same route
-    // gesture the mouse path already supports. The player can still pan with
-    // the middle mouse button, or tap CANCEL before moving the map by touch.
+    // A selected Conduit, or a one-finger touch that starts on a building,
+    // turns a map drag into route planning. The latter is Smart Drag: the
+    // existing building is the source and the destination receives the path.
+    // The player can still pan from empty ground, or tap CANCEL before moving
+    // the map by touch.
     let touch_route_active = state.touch_route_active;
     let touch_camera_active = touch_grid_active && !touch_route_active;
     input::handle_camera(

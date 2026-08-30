@@ -171,27 +171,45 @@ pub(super) fn handle_input(
         return PlanetaryAction::None;
     }
 
-    // A one-finger touch drag is a route gesture while Conduit is selected.
-    // Seed the route from the first tile, then let the existing path planner
-    // lay down each newly crossed segment. A short touch that never becomes
-    // claimed falls through to the ordinary tap-to-place path below.
-    if state.selected_building == Some(BuildingType::Conduit) {
+    // A one-finger touch drag is a route gesture while Conduit is selected, or
+    // when it starts on an existing building. Seed the route from the first
+    // tile, then let the path planner lay down each newly crossed segment. A
+    // short touch that never becomes claimed falls through to tap-to-place.
+    if state.selected_building == Some(BuildingType::Conduit)
+        || state.smart_drag_source.is_some()
+        || touch_drag_pos.is_some()
+    {
         if let Some(pos) = touch_drag_pos {
             if state.drag_last_pos.is_none() {
                 state.drag_last_pos = Some(pos);
+                if state.selected_building != Some(BuildingType::Conduit)
+                    && state
+                        .grid
+                        .get(pos)
+                        .and_then(|tile| tile.building.as_ref())
+                        .is_some()
+                {
+                    state.smart_drag_source = Some(pos);
+                    state.selected_tile = Some(pos);
+                }
             }
             if touch.claimed {
                 if let Some(start_pos) = state.drag_last_pos {
-                    let _ = state.try_place_building(start_pos);
-                    if start_pos != pos && state.try_place_conduit_path(start_pos, pos) {
+                    let routed = if state.smart_drag_source.is_some() {
+                        state.try_place_smart_conduit_path(start_pos, pos)
+                    } else {
+                        let _ = state.try_place_building(start_pos);
+                        start_pos != pos && state.try_place_conduit_path(start_pos, pos)
+                    };
+                    if routed {
                         state.drag_last_pos = Some(pos);
                     }
                 }
             }
-        } else if !touch.active && touch.claimed {
-            // The release frame carries no active touch position, but its
-            // claimed bit tells us this was a route rather than a tap.
+        } else if !touch.active {
+            // The release frame carries no active touch position.
             state.drag_last_pos = None;
+            state.smart_drag_source = None;
         }
     }
 
@@ -209,7 +227,16 @@ pub(super) fn handle_input(
                 return PlanetaryAction::None;
             }
             let mut placed = false;
-            if let Some(building_type) = state.selected_building {
+            let starts_smart_drag = state
+                .grid
+                .get(pos)
+                .and_then(|tile| tile.building.as_ref())
+                .is_some();
+            if starts_smart_drag {
+                state.smart_drag_source = Some(pos);
+                state.drag_last_pos = Some(pos);
+                state.selected_tile = Some(pos);
+            } else if let Some(building_type) = state.selected_building {
                 if state.grid.can_place_building(pos, building_type) {
                     placed = state.try_place_building(pos);
                 }
@@ -233,6 +260,12 @@ pub(super) fn handle_input(
                             state.drag_last_pos = Some(pos);
                         }
                     }
+                } else if state.smart_drag_source.is_some() {
+                    if let Some(start_pos) = state.drag_last_pos {
+                        if state.try_place_smart_conduit_path(start_pos, pos) {
+                            state.drag_last_pos = Some(pos);
+                        }
+                    }
                 } else {
                     state.drag_last_pos = Some(pos);
                     state.try_place_building(pos);
@@ -243,6 +276,7 @@ pub(super) fn handle_input(
 
     if is_mouse_button_released(MouseButton::Left) {
         state.drag_last_pos = None;
+        state.smart_drag_source = None;
     }
 
     // Right click to cancel selection or harvest
@@ -255,11 +289,13 @@ pub(super) fn handle_input(
             state.clear_selection();
         }
         state.selected_tile = None;
+        state.smart_drag_source = None;
     }
 
     // Navigation keys
     if is_key_pressed(KeyCode::Escape) {
         state.selected_tile = None;
+        state.smart_drag_source = None;
         return PlanetaryAction::OpenMenu;
     }
     if is_key_pressed(KeyCode::R) {

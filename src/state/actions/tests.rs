@@ -60,6 +60,48 @@ fn a_conduit_route_lays_every_segment_between_two_tiles() {
 }
 
 #[test]
+fn smart_conduit_route_starts_at_an_existing_building() {
+    let mut state = state();
+    let core = state.grid.find_core().unwrap();
+    state.grid.reveal_around(core, 8);
+    state.unlock_building(BuildingType::Conduit);
+
+    let end = GridPos::new(core.x + 3, core.y);
+    for x in (core.x + 1)..=end.x {
+        state.grid.get_mut(GridPos::new(x, core.y)).unwrap().terrain = TerrainType::Empty;
+    }
+
+    assert!(state.try_place_smart_conduit_path(core, end));
+    for x in (core.x + 1)..=end.x {
+        assert_eq!(
+            state
+                .grid
+                .get(GridPos::new(x, core.y))
+                .and_then(|tile| tile.building.as_ref())
+                .map(|building| building.building_type),
+            Some(BuildingType::Conduit)
+        );
+    }
+}
+
+#[test]
+fn smart_conduit_route_rejects_an_empty_source_tile() {
+    let mut state = state();
+    let core = state.grid.find_core().unwrap();
+    state.grid.reveal_around(core, 8);
+    state.unlock_building(BuildingType::Conduit);
+    let source = GridPos::new(core.x + 1, core.y);
+    let end = GridPos::new(core.x + 3, core.y);
+    for x in (core.x + 1)..=end.x {
+        state.grid.get_mut(GridPos::new(x, core.y)).unwrap().terrain = TerrainType::Empty;
+    }
+
+    assert!(!state.try_place_smart_conduit_path(source, end));
+    assert!(state.grid.get(source).unwrap().building.is_none());
+    assert!(state.grid.get(end).unwrap().building.is_none());
+}
+
+#[test]
 fn demolish_mode_and_a_build_cursor_cannot_both_be_armed() {
     let mut state = state();
     state.select_building(BuildingType::Drill);
