@@ -192,6 +192,7 @@ fn the_last_stages_of_the_ship_cannot_be_paid_without_alloy() {
         energy: 0.0,
         alloy: 0.0,
         components: 100_000.0,
+        consumed: Default::default(),
     };
     for _ in 0..stages.len() {
         ship.absorb(&mut resources, intake(), 10_000.0);
@@ -227,6 +228,7 @@ fn flight_stages_cannot_be_paid_without_factory_components() {
         energy: 0.0,
         alloy: 100_000.0,
         components: 0.0,
+        consumed: Default::default(),
     };
     for _ in 0..stages.len() {
         ship.absorb(&mut resources, intake(), 10_000.0);
@@ -467,6 +469,7 @@ fn a_stage_completes_only_once_every_resource_is_paid() {
         energy: 0.0,
         alloy: 0.0,
         components: 0.0,
+        consumed: Default::default(),
     };
 
     // One very long step: intake is capped by what the stage still needs.

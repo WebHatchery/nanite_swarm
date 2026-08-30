@@ -89,8 +89,9 @@ impl PlanetState {
                     if let Some(buffer) = self.input_buffers.get_mut(&(pos.x, pos.y)) {
                         *buffer = (*buffer - taken).max(0.0);
                     }
+                    self.resources.consumed.record(resource, taken);
                 } else {
-                    self.resources.add(resource, -taken);
+                    self.resources.consume(resource, taken);
                 }
                 match resource {
                     ResourceType::Minerals => {

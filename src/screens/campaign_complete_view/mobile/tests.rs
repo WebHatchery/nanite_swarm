@@ -11,5 +11,5 @@ fn short_phone_completion_report_keeps_both_choices_inside_the_view() {
 
 #[test]
 fn regular_phone_completion_report_keeps_its_spacious_layout() {
-    assert_eq!(mobile_panel_geometry(640.0), (86.0, 432.0));
+    assert_eq!(mobile_panel_geometry(640.0), (86.0, 520.0));
 }

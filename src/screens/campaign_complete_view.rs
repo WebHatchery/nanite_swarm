@@ -8,8 +8,8 @@ use crate::state::Campaign;
 use crate::ui::{draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::math::pulse01;
-use macroquad_toolkit::ui::draw_ui_text;
-use report::completion_world_rows;
+use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text};
+use report::{completion_world_rows, consumption_entries, format_consumption};
 
 /// Actions from the ending screen.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -36,7 +36,7 @@ pub fn render_campaign_complete_view(campaign: &Campaign) -> CampaignCompleteAct
     }
 
     let panel_w = (screen_w * 0.55).clamp(460.0, 760.0);
-    let panel_h = 420.0;
+    let panel_h = 520.0;
     let panel_x = (screen_w - panel_w) * 0.5;
     let panel_y = (screen_h - panel_h) * 0.42;
     draw_panel(panel_x, panel_y, panel_w, panel_h);
@@ -91,16 +91,45 @@ pub fn render_campaign_complete_view(campaign: &Campaign) -> CampaignCompleteAct
         draw_ui_text(value, panel_x + panel_w - 120.0, y, 13.0, Colors::SUCCESS);
     }
 
-    let world_rows = completion_world_rows(campaign);
+    let entries = consumption_entries(campaign);
     draw_ui_text(
-        "WORLD CORE LEDGER",
+        "LIFETIME CONSUMPTION",
         panel_x + 28.0,
         panel_y + 245.0,
         11.0,
         Colors::TEXT_DIM,
     );
+    for column in 0..2 {
+        for row in 0..3 {
+            let (label, amount) = entries[column * 3 + row];
+            let y = panel_y + 270.0 + row as f32 * 18.0;
+            let x = if column == 0 {
+                panel_x + 28.0
+            } else {
+                panel_x + panel_w * 0.52
+            };
+            let value = format_consumption(amount);
+            let value_width = measure_ui_text(&value, None, 10, 1.0).width;
+            let value_x = if column == 0 {
+                panel_x + panel_w * 0.47 - value_width
+            } else {
+                panel_x + panel_w - 28.0 - value_width
+            };
+            draw_ui_text(label, x, y, 10.0, Colors::TEXT);
+            draw_ui_text(&value, value_x, y, 10.0, Colors::SUCCESS);
+        }
+    }
+
+    let world_rows = completion_world_rows(campaign);
+    draw_ui_text(
+        "WORLD CORE LEDGER",
+        panel_x + 28.0,
+        panel_y + 337.0,
+        11.0,
+        Colors::TEXT_DIM,
+    );
     for (index, row) in world_rows.iter().enumerate() {
-        let y = panel_y + 267.0 + index as f32 * 18.0;
+        let y = panel_y + 359.0 + index as f32 * 18.0;
         draw_ui_text(&row.name, panel_x + 28.0, y, 10.0, Colors::TEXT);
         draw_ui_text(
             &row.stage_label,

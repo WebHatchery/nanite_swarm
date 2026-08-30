@@ -1,6 +1,7 @@
 //! Current planetary state
 
 use super::camera::Camera;
+pub use super::consumption::{ConsumptionTotals, Resources};
 use super::factory::FactoryFocus;
 use super::seed_ship::SeedShip;
 use crate::data::{GameConfig, GameData, GameDataContext, PlanetHazards};
@@ -124,66 +125,6 @@ pub enum UndoEntry {
     Removed(BuildingType, GridPos, bool, bool, bool),
     Relocated(GridPos, GridPos),
 }
-/// Resources held by the player
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct Resources {
-    pub energy: f32,
-    pub minerals: f32,
-    pub data: f32,
-    pub biomass: f32,
-    /// Refined from minerals by processing buildings. The first product the
-    /// swarm cannot dig straight out of the ground.
-    #[serde(default)]
-    pub alloy: f32,
-    /// Precision assemblies produced from more than one routed factory input.
-    #[serde(default)]
-    pub components: f32,
-}
-
-impl Resources {
-    /// Read a pool by resource id, so a recipe declared in JSON can ask about
-    /// something without the engine having a branch per resource.
-    pub fn get(&self, resource: ResourceType) -> f32 {
-        match resource {
-            ResourceType::Energy => self.energy,
-            ResourceType::Minerals => self.minerals,
-            ResourceType::Data => self.data,
-            ResourceType::Biomass => self.biomass,
-            ResourceType::Alloy => self.alloy,
-            ResourceType::Components => self.components,
-        }
-    }
-
-    pub fn add(&mut self, resource: ResourceType, amount: f32) {
-        match resource {
-            ResourceType::Energy => self.energy += amount,
-            ResourceType::Minerals => self.minerals += amount,
-            ResourceType::Data => self.data += amount,
-            ResourceType::Biomass => self.biomass += amount,
-            ResourceType::Alloy => self.alloy += amount,
-            ResourceType::Components => self.components += amount,
-        }
-    }
-}
-
-impl Resources {
-    /// Check if player can afford a cost
-    pub fn can_afford(&self, minerals: f32, energy: f32) -> bool {
-        self.minerals >= minerals && self.energy >= energy
-    }
-
-    /// Deduct cost from resources
-    pub fn spend(&mut self, minerals: f32, energy: f32) -> bool {
-        if self.can_afford(minerals, energy) {
-            self.minerals -= minerals;
-            self.energy -= energy;
-            true
-        } else {
-            false
-        }
-    }
-}
-
 /// Research node status
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResearchProgress {
@@ -535,6 +476,7 @@ impl PlanetState {
                 biomass: 0.0,
                 alloy: 0.0,
                 components: 0.0,
+                consumed: ConsumptionTotals::default(),
             },
             grid,
             drones: DroneManager::new(

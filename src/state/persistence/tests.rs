@@ -418,7 +418,7 @@ fn an_unversioned_single_planet_save_still_loads() {
 fn every_supported_save_version_has_a_migration_path() {
     assert_eq!(
         super::super::migrations::SUPPORTED_SAVE_VERSIONS,
-        &[0, 1, 2, 3, 4]
+        &[0, 1, 2, 3, 4, 5]
     );
     let planet = PlanetState::new(2, 3, GameConfig::default());
     let legacy = serde_json::to_string(&planet).unwrap();

@@ -7,7 +7,7 @@ use super::campaign::Campaign;
 use super::game_state::PlanetState;
 use super::persistence::SaveGame;
 
-pub const SUPPORTED_SAVE_VERSIONS: &[u32] = &[0, 1, 2, 3, 4];
+pub const SUPPORTED_SAVE_VERSIONS: &[u32] = &[0, 1, 2, 3, 4, 5];
 
 pub fn migrate(json: &str) -> Result<SaveGame, serde_json::Error> {
     let value: Value = serde_json::from_str(json)?;
@@ -24,7 +24,8 @@ pub fn migrate(json: &str) -> Result<SaveGame, serde_json::Error> {
         1 => migrate_v1(value),
         2 => migrate_v2(value),
         3 => migrate_v3(value),
-        4 => Ok(value),
+        4 => migrate_v4(value),
+        5 => Ok(value),
         unsupported => Err(format!("unsupported save version {unsupported}")),
     }
     .map_err(|message| {
@@ -87,6 +88,19 @@ fn migrate_v3(mut value: Value) -> Result<Value, String> {
     // `parked_progress` is optional on the new research structs, so old
     // campaigns need no synthetic entries; bump the envelope so a later save
     // records the new schema explicitly.
+    object.insert(
+        "version".to_string(),
+        Value::from(super::persistence::SAVE_VERSION),
+    );
+    Ok(value)
+}
+
+fn migrate_v4(mut value: Value) -> Result<Value, String> {
+    let object = value
+        .as_object_mut()
+        .ok_or_else(|| "version 4 save root is not an object".to_string())?;
+    // Resources gained a durable lifetime-consumption ledger. Its serde
+    // default keeps the old live pools intact while recording future sinks.
     object.insert(
         "version".to_string(),
         Value::from(super::persistence::SAVE_VERSION),

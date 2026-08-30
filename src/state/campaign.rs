@@ -282,8 +282,11 @@ impl Campaign {
         if spend <= 0.0 || !spend.is_finite() {
             return (0.0, false);
         }
-        self.current_mut().resources.data -= spend;
-        self.research.research_progress += spend;
+        let spent = self
+            .current_mut()
+            .resources
+            .consume(ResourceType::Data, spend);
+        self.research.research_progress += spent;
 
         let completed = self.research.research_progress >= node.data_cost;
         if completed {
@@ -305,7 +308,7 @@ impl Campaign {
             planet.emit_audio(super::audio::AudioEvent::Research);
         }
         self.sync_research();
-        (spend, completed)
+        (spent, completed)
     }
 
     /// Merge each world's event stream into the campaign log. The cursors are

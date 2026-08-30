@@ -10,6 +10,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::data::{GameDataContext, SeedShipCost, SeedShipStageDef};
+use crate::engine::ResourceType;
 
 use super::game_state::{PlanetState, Resources};
 
@@ -170,42 +171,58 @@ impl SeedShip {
         };
         let cost = stage.cost;
 
-        let mut take = |pool: &mut f32, paid: &mut f32, needed: f32, rate: f32| {
+        let take = |resource: ResourceType,
+                    pool: &mut f32,
+                    paid: &mut f32,
+                    needed: f32,
+                    rate: f32,
+                    totals: &mut super::consumption::ConsumptionTotals| {
             let remaining = (needed - *paid).max(0.0);
             let moved = remaining.min(rate * delta_time).min(*pool).max(0.0);
             *pool -= moved;
             *paid += moved;
+            totals.record(resource, moved);
         };
 
         take(
+            ResourceType::Minerals,
             &mut resources.minerals,
             &mut self.progress.minerals,
             cost.minerals,
             intake.minerals,
+            &mut resources.consumed,
         );
         take(
+            ResourceType::Data,
             &mut resources.data,
             &mut self.progress.data,
             cost.data,
             intake.data,
+            &mut resources.consumed,
         );
         take(
+            ResourceType::Biomass,
             &mut resources.biomass,
             &mut self.progress.biomass,
             cost.biomass,
             intake.biomass,
+            &mut resources.consumed,
         );
         take(
+            ResourceType::Alloy,
             &mut resources.alloy,
             &mut self.progress.alloy,
             cost.alloy,
             intake.alloy,
+            &mut resources.consumed,
         );
         take(
+            ResourceType::Components,
             &mut resources.components,
             &mut self.progress.components,
             cost.components,
             intake.components,
+            &mut resources.consumed,
         );
 
         let paid = self.progress.minerals >= cost.minerals

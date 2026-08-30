@@ -64,8 +64,12 @@ impl Game {
             planet.config.resources.research_rate,
         );
         let spend = (rate * delta_time).min(available).min(remaining);
-        self.campaign.current_mut().resources.data -= spend;
-        self.research_state.research_progress += spend;
+        let spent = self
+            .campaign
+            .current_mut()
+            .resources
+            .consume(crate::engine::ResourceType::Data, spend);
+        self.research_state.research_progress += spent;
         if self.research_state.research_progress >= node.data_cost {
             let name = node.name.clone();
             self.research_state.complete_research();

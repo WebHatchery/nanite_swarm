@@ -1,12 +1,15 @@
 //! Compact completion report for portrait screens.
 
-use super::report::{compact_core_stage_line, completion_world_rows};
+use super::report::{
+    compact_consumption_line, compact_core_stage_line, completion_world_rows, consumption_entries,
+    format_consumption,
+};
 use super::*;
 use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text, truncate_text_to_width};
 
 const PANEL_X: f32 = 12.0;
 const PANEL_Y: f32 = 86.0;
-const PANEL_H: f32 = 432.0;
+const PANEL_H: f32 = 520.0;
 
 pub(super) fn draw(campaign: &Campaign, pulse: f32) -> CampaignCompleteAction {
     let screen_w = screen_width();
@@ -75,18 +78,66 @@ pub(super) fn draw(campaign: &Campaign, pulse: f32) -> CampaignCompleteAction {
         );
     }
 
+    let compact = panel_h < 500.0;
     let world_rows = completion_world_rows(campaign);
+    let world_header_y = if compact {
+        draw_ui_text(
+            "LIFETIME CONSUMPTION",
+            PANEL_X + 16.0,
+            panel_y + 258.0,
+            10.0,
+            Colors::TEXT_DIM,
+        );
+        draw_ui_text(
+            &truncate_text_to_width(&compact_consumption_line(campaign), panel_w - 32.0, 8.0),
+            PANEL_X + 16.0,
+            panel_y + 276.0,
+            8.0,
+            Colors::SUCCESS,
+        );
+        panel_y + 302.0
+    } else {
+        draw_ui_text(
+            "LIFETIME CONSUMPTION",
+            PANEL_X + 16.0,
+            panel_y + 260.0,
+            10.0,
+            Colors::TEXT_DIM,
+        );
+        let entries = consumption_entries(campaign);
+        for column in 0..2 {
+            for row in 0..3 {
+                let (label, amount) = entries[column * 3 + row];
+                let y = panel_y + 280.0 + row as f32 * 16.0;
+                let x = if column == 0 {
+                    PANEL_X + 16.0
+                } else {
+                    PANEL_X + panel_w * 0.52
+                };
+                let value = format_consumption(amount);
+                let value_width = measure_ui_text(&value, None, 9, 1.0).width;
+                let value_x = if column == 0 {
+                    PANEL_X + panel_w * 0.47 - value_width
+                } else {
+                    PANEL_X + panel_w - 16.0 - value_width
+                };
+                draw_ui_text(label, x, y, 9.0, Colors::TEXT);
+                draw_ui_text(&value, value_x, y, 9.0, Colors::SUCCESS);
+            }
+        }
+        panel_y + 342.0
+    };
     draw_ui_text(
         "WORLD CORE LEDGER",
         PANEL_X + 16.0,
-        panel_y + 260.0,
+        world_header_y,
         10.0,
         Colors::TEXT_DIM,
     );
     draw_ui_text(
         &truncate_text_to_width(&compact_core_stage_line(&world_rows), panel_w - 32.0, 9.0),
         PANEL_X + 16.0,
-        panel_y + 280.0,
+        world_header_y + 20.0,
         9.0,
         Colors::PRIMARY,
     );

@@ -634,6 +634,10 @@ impl PlanetState {
         let components = (components_rate * simulated).clamp(0.0, cap);
         let data = (data_rate * simulated).clamp(0.0, cap);
         let power = (power_rate * simulated).clamp(-cap, cap);
+        self.resources.consumed.record(
+            ResourceType::Energy,
+            self.power_consumption().max(0.0) * simulated,
+        );
         self.resources.minerals = (self.resources.minerals + minerals)
             .min(self.resource_capacity(ResourceType::Minerals));
         self.resources.alloy =

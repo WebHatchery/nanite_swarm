@@ -168,6 +168,10 @@ impl PlanetState {
         self.refresh_power_grid();
         let net_power = self.net_power();
         self.power_balance = net_power;
+        self.resources.consumed.record(
+            crate::engine::ResourceType::Energy,
+            self.power_consumption().max(0.0) * sim_delta,
+        );
         self.resources.energy += self.power_balance * sim_delta;
 
         // Passive data trickle from Core to avoid research deadlock
