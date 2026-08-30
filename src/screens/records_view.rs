@@ -20,6 +20,8 @@ const CARD_MIN_W: f32 = 260.0;
 const LOG_ROW_H: f32 = 18.0;
 /// The log gets whatever the grid leaves, down to this much.
 const LOG_MIN_H: f32 = 120.0;
+const GRID_TO_LOG_GAP: f32 = 22.0;
+const FOOTER_RESERVE: f32 = 36.0;
 
 /// Actions from the records view
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -75,7 +77,7 @@ pub fn render_records_view(
         area_x,
         area_y,
         area_w,
-        (screen_h - area_y - LOG_MIN_H - 24.0).max(CARD_H),
+        records_grid_height(screen_h, area_y),
     );
     records_scroll.update(grid_view, grid_h);
     let grid_offset = records_scroll.offset();
@@ -86,7 +88,7 @@ pub fn render_records_view(
         let y = area_y + (CARD_H + CARD_GAP) * row as f32 - grid_offset;
         // A set that outgrows the screen is a scrolling problem, not a reason
         // to draw over the footer.
-        if y + CARD_H < area_y || y > grid_view.bottom() {
+        if !record_card_fits_view(y, CARD_H, grid_view) {
             continue;
         }
         draw_record(record, x, y, card_w);
@@ -108,7 +110,7 @@ pub fn render_records_view(
 
     // The log takes the room the grid does not want. Two halves of the same
     // question: what the swarm has done, and what it has been told.
-    let log_y = area_y + grid_h + 28.0;
+    let log_y = grid_view.bottom() + GRID_TO_LOG_GAP;
     let log_h = screen_h - log_y - 36.0;
     if log_h >= LOG_MIN_H {
         draw_log(log, scroll, Rect::new(area_x, log_y, area_w, log_h));
@@ -127,6 +129,14 @@ pub fn render_records_view(
     }
 
     action
+}
+
+fn records_grid_height(screen_h: f32, area_y: f32) -> f32 {
+    (screen_h - area_y - LOG_MIN_H - GRID_TO_LOG_GAP - FOOTER_RESERVE).max(CARD_H)
+}
+
+fn record_card_fits_view(y: f32, height: f32, view: Rect) -> bool {
+    y >= view.y && y + height <= view.bottom()
 }
 
 /// Everything this world has been told, newest first.
@@ -249,3 +259,6 @@ fn draw_record(record: &AchievementRecord, x: f32, y: f32, w: f32) {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;
