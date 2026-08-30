@@ -24,6 +24,7 @@ impl Campaign {
                 ));
             }
             self.validate_grid_shape(planet, source)?;
+            self.validate_drones(planet, source)?;
             for (index, shipment) in planet.launched_pods.iter().enumerate() {
                 self.validate_shipment(
                     shipment,
@@ -66,6 +67,56 @@ impl Campaign {
             self.validate_shipment(shipment, &format!("shipment {index}"), None)?;
         }
 
+        Ok(())
+    }
+
+    fn validate_drones(
+        &self,
+        planet: &super::super::PlanetState,
+        source: usize,
+    ) -> Result<(), String> {
+        let width = planet.grid.width;
+        let height = planet.grid.height;
+        for (index, drone) in planet.drones.drones().iter().enumerate() {
+            for (label, position) in [
+                ("position", drone.position),
+                ("target", drone.target),
+                ("home", drone.home),
+            ] {
+                if !position.in_bounds(width, height) {
+                    return Err(format!(
+                        "save world slot {source} drone {index} has an out-of-bounds {label}"
+                    ));
+                }
+            }
+            if drone.path_index > drone.path.len() {
+                return Err(format!(
+                    "save world slot {source} drone {index} points past its route"
+                ));
+            }
+            if drone
+                .path
+                .iter()
+                .any(|position| !position.in_bounds(width, height))
+            {
+                return Err(format!(
+                    "save world slot {source} drone {index} has an out-of-bounds route"
+                ));
+            }
+            if !drone.carrying.is_finite()
+                || drone.carrying < 0.0
+                || !drone.capacity.is_finite()
+                || drone.capacity < 0.0
+                || !drone.speed.is_finite()
+                || drone.speed < 0.0
+                || !drone.progress.is_finite()
+                || !(0.0..1.0).contains(&drone.progress)
+            {
+                return Err(format!(
+                    "save world slot {source} drone {index} has invalid flight data"
+                ));
+            }
+        }
         Ok(())
     }
 

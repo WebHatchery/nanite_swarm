@@ -128,6 +128,8 @@ Impossible world or freight references in a save are rejected before
 simulation, so the rotated backup can be used instead of crashing on load.
 Malformed world grids are rejected the same way when their dimensions no
 longer match their stored tiles.
+Persisted drones with broken routes or invalid flight values are rejected
+before their first movement update as well.
 When it reports LOW BATTERY, tap FLOW to inspect the power network before the
 swarm continues in hibernation.
 While away, the foreground world continues its selected research job and a

@@ -153,6 +153,32 @@ fn a_save_with_a_truncated_grid_is_recovered_from_the_backup() {
 }
 
 #[test]
+fn a_save_with_a_drone_past_its_route_is_recovered_from_the_backup() {
+    let mut store = MapStore::default();
+    let mut good = campaign();
+    good.current_mut().resources.biomass = 33.0;
+    save_campaign(&mut store, "save", &mut good).unwrap();
+
+    let mut newer = campaign();
+    let core = newer.current().grid.find_core().unwrap();
+    newer.current_mut().drones.spawn_drone(core);
+    newer.current_mut().resources.biomass = 44.0;
+    save_campaign(&mut store, "save", &mut newer).unwrap();
+
+    let mut malformed: serde_json::Value =
+        serde_json::from_str(&store.read("save").unwrap()).unwrap();
+    malformed["campaign"]["planets"][2]["drones"]["drones"][0]["path_index"] =
+        serde_json::Value::from(1);
+    store
+        .write("save", &serde_json::to_string(&malformed).unwrap())
+        .unwrap();
+
+    let (recovered, source) = load_campaign(&store, "save").unwrap();
+    assert_eq!(source, LoadSource::Backup);
+    assert_eq!(recovered.current().resources.biomass, 33.0);
+}
+
+#[test]
 fn a_save_with_a_freight_order_to_an_untouched_world_is_rejected() {
     let mut campaign = campaign();
     campaign.current_mut().export = Some(crate::state::ExportOrder {
