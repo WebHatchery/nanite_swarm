@@ -21,6 +21,9 @@ Audit date: 2026-08-20
   placement rule.
 - Removed an unused recipe helper, fixed the redundant planetary hover branch,
   made `GridPos::to_index` value-based, and made strict Clippy clean.
+- Moved duplicate-ID, cross-file reference, and definition-shape checks into
+  `src/data/validation.rs`; the application layer now only sequences the data,
+  engine, directive, and state validators.
 
 ## Remaining debt
 
@@ -28,11 +31,9 @@ Audit date: 2026-08-20
   research, settings, audio, capture, and persistence state. It is now isolated
   from the binary entrypoint, but a future feature pass could extract a small
   session/persistence service if those responsibilities grow again.
-- `data/defs.rs` still performs semantic validation against engine, directive,
-  and state vocabularies. This is safe and well-covered today, but it keeps the
-  data layer coupled to gameplay enums. Splitting validation into domain-owned
-  validators would be the next architectural step; it is intentionally not
-  part of this behavior-preserving pass.
+- The domain validators still depend on their gameplay vocabularies, by design:
+  engine, directive, and state rules are checked by the modules that execute
+  them. Cross-file definition integrity now stays in the data domain.
 - Several rendering and fixture files remain near the 600-line restructure
   signal (`capture_scenes.rs`, `flow_render.rs`, `terrain_render.rs`, and the
   larger test suites), but all remain below the 800-line hard limit. They should

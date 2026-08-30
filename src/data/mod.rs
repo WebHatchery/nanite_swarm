@@ -6,11 +6,14 @@ mod defs;
 mod game_config;
 mod strings;
 mod ui_theme;
+mod validation;
 
 pub use defs::*;
 pub use game_config::*;
 pub use strings::*;
 pub use ui_theme::*;
+
+pub(crate) use validation::validate_game_data;
 
 use std::path::PathBuf;
 use std::sync::Arc;
