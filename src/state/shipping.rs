@@ -598,12 +598,15 @@ impl Campaign {
             .map(|order| order.map(|order| (order.target, order.target_pad)))
             .collect();
         for shipment in &mut self.shipments {
-            let Some(Some((target, target_pad))) = route_pads.get(shipment.from) else {
-                continue;
-            };
-            if *target == shipment.to {
-                shipment.target_pad = *target_pad;
-            }
+            // A pod already in flight keeps its destination, but a pad choice
+            // belongs to the standing order that launched it. If that order
+            // is retargeted or stopped, release the stale coordinate so an
+            // available pad at the original destination can catch the pod.
+            shipment.target_pad = route_pads
+                .get(shipment.from)
+                .and_then(|order| order.as_ref())
+                .and_then(|(target, target_pad)| (*target == shipment.to).then_some(*target_pad))
+                .flatten();
         }
     }
 

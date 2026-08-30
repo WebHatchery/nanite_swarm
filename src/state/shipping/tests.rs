@@ -468,6 +468,51 @@ fn cycling_a_recovered_pad_releases_an_in_flight_pod_from_the_old_coordinate() {
 }
 
 #[test]
+fn retargeting_a_route_releases_an_in_flight_pod_from_its_old_pad() {
+    let mut campaign = two_world_campaign();
+    campaign.colonize(SATURN);
+    let old_pad = pad_on(&mut campaign, VENUS);
+    let new_pad = second_pad_on(&mut campaign, VENUS);
+    let driver = driver_on_current(&mut campaign);
+    campaign.current_mut().export = Some(ExportOrder {
+        target: VENUS,
+        target_pad: Some(old_pad),
+        ..ExportOrder::default()
+    });
+    campaign
+        .current_mut()
+        .input_buffers
+        .insert((driver.x, driver.y), 100.0);
+
+    let flight = transit_seconds(MARS, VENUS, &campaign.current().config.mass_driver);
+    run(&mut campaign, 25.0);
+    assert_eq!(campaign.shipments().len(), 1);
+
+    // The pod still belongs to Venus, but the standing order now points at
+    // Saturn. The old pad is taken offline before the pod arrives.
+    campaign.current_mut().export = Some(ExportOrder {
+        target: SATURN,
+        ..campaign.current().export.unwrap()
+    });
+    campaign
+        .planet_mut(VENUS)
+        .unwrap()
+        .grid
+        .get_mut(old_pad)
+        .unwrap()
+        .building
+        .as_mut()
+        .unwrap()
+        .standby = true;
+    campaign.planet_mut(VENUS).unwrap().grid.update_power_grid();
+
+    run(&mut campaign, flight);
+
+    assert_eq!(campaign.holding_shipments(), 0);
+    assert!(held_on(&campaign, VENUS, new_pad) > 0.0);
+}
+
+#[test]
 fn what_lands_on_a_pad_is_carried_off_it_like_anything_else() {
     let mut campaign = two_world_campaign();
     let pad = pad_on(&mut campaign, MARS);
