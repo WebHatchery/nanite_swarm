@@ -126,6 +126,8 @@ When it reports BACKUP RECOVERED, tap SAVE NOW to establish a fresh primary
 save after recovery.
 Impossible world or freight references in a save are rejected before
 simulation, so the rotated backup can be used instead of crashing on load.
+Malformed world grids are rejected the same way when their dimensions no
+longer match their stored tiles.
 When it reports LOW BATTERY, tap FLOW to inspect the power network before the
 swarm continues in hibernation.
 While away, the foreground world continues its selected research job and a

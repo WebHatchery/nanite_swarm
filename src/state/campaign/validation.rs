@@ -23,6 +23,7 @@ impl Campaign {
                     planet.planet_index
                 ));
             }
+            self.validate_grid_shape(planet, source)?;
             for (index, shipment) in planet.launched_pods.iter().enumerate() {
                 self.validate_shipment(
                     shipment,
@@ -65,6 +66,31 @@ impl Campaign {
             self.validate_shipment(shipment, &format!("shipment {index}"), None)?;
         }
 
+        Ok(())
+    }
+
+    fn validate_grid_shape(
+        &self,
+        planet: &super::super::PlanetState,
+        source: usize,
+    ) -> Result<(), String> {
+        let width = planet.grid.width;
+        let height = planet.grid.height;
+        if width == 0 || height == 0 {
+            return Err(format!("save world slot {source} has an empty grid"));
+        }
+        if width > i32::MAX as u32 || height > i32::MAX as u32 {
+            return Err(format!(
+                "save world slot {source} has grid dimensions too large"
+            ));
+        }
+        let expected_tiles = width as u64 * height as u64;
+        let actual_tiles = planet.grid.iter_tiles().count() as u64;
+        if expected_tiles != actual_tiles {
+            return Err(format!(
+                "save world slot {source} has {actual_tiles} tiles for a {width}x{height} grid"
+            ));
+        }
         Ok(())
     }
 
