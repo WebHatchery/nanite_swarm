@@ -1,6 +1,23 @@
 use super::status::{
-    launch_action, launch_prompt, mass_driver_status_label, seed_ship_status_label,
+    driver_operation_status, launch_action, launch_prompt, mass_driver_status_label,
+    seed_ship_status_label,
 };
+
+#[test]
+fn shipping_status_distinguishes_absent_and_offline_drivers() {
+    assert_eq!(
+        driver_operation_status(0, 0, "Mars"),
+        "No Mass Driver on this world"
+    );
+    assert_eq!(
+        driver_operation_status(1, 0, "Mars"),
+        "Mass Driver offline on Mars"
+    );
+    assert_eq!(
+        driver_operation_status(2, 2, "Mars"),
+        "2 drivers online on Mars"
+    );
+}
 use super::{
     solar_map_layout, world_alert_code, world_rule_lines, world_telemetry_height,
     world_telemetry_row_y, MIN_SOLAR_MAP_SCALE,

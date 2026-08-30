@@ -2,6 +2,21 @@
 
 use super::InterplanetaryAction;
 
+pub(super) fn driver_operation_status(built: usize, online: usize, world_name: &str) -> String {
+    if online > 0 {
+        format!(
+            "{} driver{} online on {}",
+            online,
+            if online == 1 { "" } else { "s" },
+            world_name
+        )
+    } else if built > 0 {
+        format!("Mass Driver offline on {}", world_name)
+    } else {
+        "No Mass Driver on this world".to_string()
+    }
+}
+
 pub(super) fn launch_action(index: usize, confirming: bool) -> InterplanetaryAction {
     if confirming {
         InterplanetaryAction::LaunchSeedShip(index)

@@ -97,6 +97,8 @@ pub struct MapView<'a> {
     pub launch_confirmation_target: Option<usize>,
     /// Powered Mass Drivers on every colonized world, for remote order edits.
     pub drivers_online: &'a [usize],
+    /// Mass Drivers standing on every colonized world, including offline ones.
+    pub drivers_built: &'a [usize],
     /// Powered Landing Pads on each world, so the panel can say when the
     /// target has nothing to catch a pod with.
     pub pads: &'a [usize],

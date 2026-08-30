@@ -264,6 +264,12 @@ impl Game {
                 .map(|planet| planet.mass_drivers_online())
                 .unwrap_or(0)
         });
+        let drivers_built: [usize; state::PLANET_COUNT] = std::array::from_fn(|index| {
+            self.campaign
+                .planet(index)
+                .map(|planet| planet.mass_drivers_built())
+                .unwrap_or(0)
+        });
         let pod_fractions: [f32; state::PLANET_COUNT] = std::array::from_fn(|index| {
             self.campaign
                 .planet(index)
@@ -295,6 +301,7 @@ impl Game {
             current_drivers_online: drivers_online[current_world],
             current_drivers_built,
             drivers_online: &drivers_online,
+            drivers_built: &drivers_built,
             pads: &pads,
             pod_fractions: &pod_fractions,
             shipments: campaign.shipments(),

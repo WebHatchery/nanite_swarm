@@ -5,6 +5,7 @@ use crate::ui::{draw_button_sized, draw_panel, Colors};
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::{draw_ui_text, is_fully_visible, ScrollArea};
 
+use super::status::driver_operation_status;
 use super::{InterplanetaryAction, MapView};
 
 /// How many in-flight pods the panel lists before it starts counting them.
@@ -72,13 +73,18 @@ pub(super) fn draw(
         .get(view.editing_world)
         .copied()
         .unwrap_or(0);
-    let (status, status_color) = match drivers_online {
-        0 => ("No driver on this world".to_string(), Colors::TEXT_DIM),
-        1 => (format!("1 driver on {}", home.name), Colors::SUCCESS),
-        count => (
-            format!("{} drivers on {}", count, home.name),
-            Colors::SUCCESS,
-        ),
+    let drivers_built = view
+        .drivers_built
+        .get(view.editing_world)
+        .copied()
+        .unwrap_or(0);
+    let status = driver_operation_status(drivers_built, drivers_online, home.name.as_str());
+    let status_color = if drivers_online > 0 {
+        Colors::SUCCESS
+    } else if drivers_built > 0 {
+        Colors::WARNING
+    } else {
+        Colors::TEXT_DIM
     };
     draw_scrolled_text(
         &status,

@@ -750,7 +750,7 @@ impl Game {
                 self.stage_interplanetary_scene();
                 self.launch_confirmation_target = Some(0);
             }
-            "interplanetary_driver_offline" => {
+            "interplanetary_driver_offline" | "mobile_driver_offline" => {
                 self.stage_interplanetary_scene();
                 let driver = self
                     .campaign
@@ -769,6 +769,9 @@ impl Game {
                     {
                         building.standby = true;
                     }
+                }
+                if scene == "mobile_driver_offline" {
+                    self.interplanetary_mobile_panel = state::InterplanetaryMobilePanel::Shipping;
                 }
             }
             "mobile_shipping" => {
