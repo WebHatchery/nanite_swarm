@@ -10,6 +10,7 @@ use macroquad_toolkit::debug::DebugOverlay;
 use macroquad_toolkit::settings::GameSettings;
 
 mod assets;
+mod audio;
 mod capture_scenes;
 mod data;
 mod directives;
@@ -57,6 +58,7 @@ pub struct Game {
     research_state: ResearchState,
     settings: GameSettings,
     audio_mix: state::AudioMix,
+    audio: audio::GameAudio,
     debug_overlay: DebugOverlay,
     /// Staging a still frame for the screenshot harness.
     capture_still: bool,
@@ -122,6 +124,7 @@ impl Game {
         let textures = GameTextures::load(session.data.data()).await;
         let research_tree = ResearchTree::from_data(session.data.data());
         let research_state = ResearchState::from_data(session.data.data());
+        let audio = audio::GameAudio::load().await;
 
         let mut game = Self {
             phase: GamePhase::MainMenu,
@@ -130,6 +133,7 @@ impl Game {
             research_state,
             settings,
             audio_mix: state::AudioMix::default(),
+            audio,
             debug_overlay: DebugOverlay::new(),
             capture_still: false,
             textures,

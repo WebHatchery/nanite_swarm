@@ -425,7 +425,18 @@ impl Game {
                 self.settings.effective_music_volume(),
             )
         };
-        self.campaign.current_mut().take_audio_events();
+        let events = self.campaign.current_mut().take_audio_events();
+        self.audio.update(
+            self.audio_mix,
+            events,
+            is_mouse_button_pressed(MouseButton::Left)
+                || is_mouse_button_pressed(MouseButton::Right)
+                || touches()
+                    .iter()
+                    .any(|touch| matches!(touch.phase, TouchPhase::Started))
+                || get_last_key_pressed().is_some(),
+            get_frame_time(),
+        );
     }
 
     /// Advance the world and all campaign-level timers by the same simulated time.
