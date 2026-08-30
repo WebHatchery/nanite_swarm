@@ -221,7 +221,6 @@ pub(super) fn handle_input(
                     let routed = if state.smart_drag_source.is_some() {
                         state.try_place_smart_conduit_path(start_pos, pos)
                     } else {
-                        let _ = state.try_place_building(start_pos);
                         start_pos != pos && state.try_place_conduit_path(start_pos, pos)
                     };
                     if routed {

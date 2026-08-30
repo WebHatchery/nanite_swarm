@@ -11,89 +11,69 @@ mod processor;
 pub use placement::*;
 
 impl PlanetState {
-    /// Try to place a building at position
+    /// Try to place a building at position.
+    ///
+    /// Placement is also reached by drag, blueprint, and undo paths, so this
+    /// method owns the same first-actionable failure explanation as the map
+    /// preview. Keeping the guard here prevents one input path from silently
+    /// failing while another reports the same invalid tile.
     pub fn try_place_building(&mut self, pos: GridPos) -> bool {
-        if let Some(building_type) = self.selected_building {
-            if !self.is_building_researched(building_type) || self.is_building_banned(building_type)
+        let Some(building_type) = self.selected_building else {
+            return false;
+        };
+        if let Some(reason) = self.placement_block_reason(pos, building_type) {
+            self.notifications
+                .warning(reason.message(self, building_type));
+            return false;
+        }
+        let (mineral_cost, energy_cost) = building_type.cost(self.data());
+
+        if self.grid.place_building(pos, building_type) {
+            self.resources.spend(mineral_cost, energy_cost);
+
+            // Spawn initial drone for drills
+            if building_type == BuildingType::Drill {
+                self.drones.spawn_drone(pos);
+                self.output_buffers.insert((pos.x, pos.y), 0.0);
+            }
+
+            // Reveal area around new building
+            self.grid.reveal_around(pos, 3);
+
+            // Update power grid
+            self.refresh_power_grid();
+            self.network_revision = self.network_revision.wrapping_add(1);
+            self.power_balance = self.net_power();
+            self.update_achievements();
+            if matches!(
+                building_type,
+                BuildingType::Drill
+                    | BuildingType::Smelter
+                    | BuildingType::Assembler
+                    | BuildingType::MassDriver
+            ) && self
+                .grid
+                .find_core()
+                .and_then(|core| {
+                    let dust_response = self.resolved_dust_response();
+                    crate::engine::route_over_network_with(&self.grid, pos, core, &dust_response)
+                })
+                .is_none()
             {
-                return false;
-            }
-            if !self.building_condition_met(building_type) {
-                if let Some(condition) = self.building_planet_condition(building_type) {
-                    let article =
-                        if matches!(condition.chars().next(), Some('a' | 'e' | 'i' | 'o' | 'u')) {
-                            "an"
-                        } else {
-                            "a"
-                        };
-                    self.notifications.warning(format!(
-                        "This building requires {article} {condition} world"
-                    ));
-                }
-                return false;
-            }
-            if !self.constraints_allow_building(building_type) {
-                self.notifications.warning("Planet constraint not met");
-                return false;
-            }
-            let (mineral_cost, energy_cost) = building_type.cost(self.data());
-
-            if !self.resources.can_afford(mineral_cost, energy_cost) {
-                return false;
+                self.notifications
+                    .warning("Producer placed on open ground - connect a conduit route");
             }
 
-            if self.grid.place_building(pos, building_type) {
-                self.resources.spend(mineral_cost, energy_cost);
+            self.placement_anims.push(PlacementAnim {
+                position: pos,
+                timer: 0.3,
+            });
+            self.spawn_place_burst(pos);
+            self.emit_audio(super::audio::AudioEvent::Placement);
+            self.undo_history
+                .push(super::game_state::UndoEntry::Placed(pos));
 
-                // Spawn initial drone for drills
-                if building_type == BuildingType::Drill {
-                    self.drones.spawn_drone(pos);
-                    self.output_buffers.insert((pos.x, pos.y), 0.0);
-                }
-
-                // Reveal area around new building
-                self.grid.reveal_around(pos, 3);
-
-                // Update power grid
-                self.refresh_power_grid();
-                self.network_revision = self.network_revision.wrapping_add(1);
-                self.power_balance = self.net_power();
-                self.update_achievements();
-                if matches!(
-                    building_type,
-                    BuildingType::Drill
-                        | BuildingType::Smelter
-                        | BuildingType::Assembler
-                        | BuildingType::MassDriver
-                ) && self
-                    .grid
-                    .find_core()
-                    .and_then(|core| {
-                        let dust_response = self.resolved_dust_response();
-                        crate::engine::route_over_network_with(
-                            &self.grid,
-                            pos,
-                            core,
-                            &dust_response,
-                        )
-                    })
-                    .is_none()
-                {
-                    self.notifications
-                        .warning("Producer placed on open ground - connect a conduit route");
-                }
-
-                self.placement_anims.push(PlacementAnim {
-                    position: pos,
-                    timer: 0.3,
-                });
-                self.spawn_place_burst(pos);
-                self.emit_audio(super::audio::AudioEvent::Placement);
-                self.undo_history
-                    .push(super::game_state::UndoEntry::Placed(pos));
-
-                return true;
-            }
+            return true;
         }
         false
     }
@@ -102,9 +82,20 @@ impl PlanetState {
         if !self.is_building_unlocked(BuildingType::Conduit) {
             return false;
         }
-        let Some(path) = self.grid.find_conduit_path(from, to) else {
+        let Some(mut path) = self.grid.find_conduit_path(from, to) else {
             return false;
         };
+
+        // Touch route gestures can begin on empty ground. Include that first
+        // tile here so the route action has one owner and cannot warn once for
+        // a failed first placement and again for the next segment.
+        if self
+            .grid
+            .get(from)
+            .is_some_and(|tile| tile.building.is_none())
+        {
+            path.insert(0, from);
+        }
 
         let mut placed_any = false;
         let mut resource_blocked_at = None;

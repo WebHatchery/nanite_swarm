@@ -41,6 +41,40 @@ fn placement_reason_catches_resources_after_terrain_and_research() {
 }
 
 #[test]
+fn direct_build_action_reports_the_same_terrain_reason_as_the_preview() {
+    let mut state = state();
+    let core = state.grid.find_core().unwrap();
+    let water = GridPos::new(core.x + 1, core.y);
+    state.grid.get_mut(water).unwrap().terrain = TerrainType::Water;
+    state.select_building(BuildingType::Drill);
+
+    assert!(!state.try_place_building(water));
+    assert!(state
+        .notifications
+        .get_notifications()
+        .iter()
+        .any(|notification| notification.message == "That terrain cannot hold this building"));
+}
+
+#[test]
+fn direct_build_action_reports_a_cost_shortfall() {
+    let mut state = state();
+    let core = state.grid.find_core().unwrap();
+    let pos = GridPos::new(core.x + 1, core.y);
+    state.grid.reveal_around(pos, 1);
+    state.select_building(BuildingType::Drill);
+    state.resources.minerals = 0.0;
+    state.resources.energy = 0.0;
+
+    assert!(!state.try_place_building(pos));
+    assert!(state
+        .notifications
+        .get_notifications()
+        .iter()
+        .any(|notification| notification.message == "Need M 20 and E 10 to build"));
+}
+
+#[test]
 fn a_conduit_drag_reports_the_next_segment_cost_when_resources_run_out() {
     let mut state = state();
     let core = state.grid.find_core().unwrap();
@@ -90,6 +124,27 @@ fn a_blocked_conduit_segment_warns_once_until_the_gesture_ends() {
     state.cancel_interaction_modes();
     assert!(!state.try_place_conduit_path(core, second));
     assert_eq!(state.notifications.count(), 2);
+}
+
+#[test]
+fn a_conduit_route_started_on_empty_ground_owns_its_first_tile() {
+    let mut state = state();
+    let core = state.grid.find_core().unwrap();
+    let first = GridPos::new(core.x + 1, core.y);
+    let second = GridPos::new(core.x + 2, core.y);
+    for pos in [first, second] {
+        let tile = state.grid.get_mut(pos).unwrap();
+        tile.terrain = TerrainType::Empty;
+    }
+    state.grid.reveal_around(second, 1);
+    state.unlock_building(BuildingType::Conduit);
+    state.resources.minerals = 10.0;
+    state.resources.energy = 4.0;
+
+    assert!(state.try_place_conduit_path(first, second));
+    assert!(state.grid.get(first).unwrap().building.is_some());
+    assert!(state.grid.get(second).unwrap().building.is_some());
+    assert!(state.notifications.get_notifications().is_empty());
 }
 
 #[test]
