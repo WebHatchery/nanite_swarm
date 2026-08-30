@@ -222,6 +222,7 @@ impl Game {
         self.campaign.sync_notification_history();
         let log = self.campaign.toast_history.clone();
         let directive_history = self.campaign.directive_history.clone();
+        let consumption = self.campaign.total_consumption();
         let planet = self.campaign.current_mut();
         let records = planet.achievement_records();
         let name = planet.name.clone();
@@ -230,6 +231,7 @@ impl Game {
             &records,
             &log,
             &directive_history,
+            consumption,
             &mut planet.log_scroll,
             &mut planet.records_scroll,
         );

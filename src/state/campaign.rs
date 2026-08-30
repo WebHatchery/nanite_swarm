@@ -12,6 +12,7 @@ use crate::data::{GameConfig, GameDataContext};
 use crate::directives::{pick_directive, Directive};
 use crate::engine::{ResearchTree, ResourceType, StatId};
 
+use super::consumption::ConsumptionTotals;
 use super::core_stage::CoreRequirementProgress;
 use super::game_state::{PlanetState, ResearchProgress};
 use super::UpkeepAlertCause;
@@ -643,6 +644,18 @@ impl Campaign {
             .filter_map(Option::as_ref)
             .map(|planet| planet.grid.total_buildings())
             .sum()
+    }
+
+    /// Lifetime resource sinks across every world the swarm has reached.
+    pub fn total_consumption(&self) -> ConsumptionTotals {
+        self.planets
+            .iter()
+            .filter_map(Option::as_ref)
+            .map(|planet| planet.resources.consumed)
+            .fold(ConsumptionTotals::default(), |mut total, consumed| {
+                total.add(consumed);
+                total
+            })
     }
 
     /// Move the swarm's attention to another colonized world. The world it

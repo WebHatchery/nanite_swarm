@@ -5,13 +5,13 @@
 //! toast that faded. This is the list: what has been earned, what has not, and
 //! how close the ones that are counted actually are.
 
-use crate::state::{AchievementRecord, DirectiveRecord};
+use crate::state::{AchievementRecord, ConsumptionTotals, DirectiveRecord};
 use crate::ui::{draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::notifications::{LoggedNotification, NotificationType};
 use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text, truncate_text_to_width, ScrollArea};
 
-const HEADER_HEIGHT: f32 = 72.0;
+const HEADER_HEIGHT: f32 = 96.0;
 const CARD_H: f32 = 76.0;
 const CARD_GAP: f32 = 10.0;
 /// Never fewer than this many across, and never so many that a card is a strip.
@@ -39,6 +39,7 @@ pub fn render_records_view(
     records: &[AchievementRecord],
     log: &[LoggedNotification],
     directives: &[DirectiveRecord],
+    consumption: ConsumptionTotals,
     scroll: &mut ScrollArea,
     records_scroll: &mut ScrollArea,
 ) -> RecordsAction {
@@ -57,6 +58,7 @@ pub fn render_records_view(
         12.0,
         Colors::TEXT_DIM,
     );
+    draw_consumption_summary(consumption, screen_w);
 
     let mut action = RecordsAction::None;
     if draw_button_sized(screen_w - 110.0, 18.0, 80.0, 34.0, "Back") {
@@ -123,6 +125,63 @@ pub fn render_records_view(
     }
 
     action
+}
+
+fn draw_consumption_summary(consumption: ConsumptionTotals, screen_w: f32) {
+    if screen_w < 600.0 {
+        draw_ui_text(
+            &format!(
+                "SYSTEM SINKS  M {} | P {} | D {}",
+                format_consumption(consumption.minerals),
+                format_consumption(consumption.energy),
+                format_consumption(consumption.data),
+            ),
+            18.0,
+            70.0,
+            8.0,
+            Colors::SUCCESS,
+        );
+        draw_ui_text(
+            &format!(
+                "B {} | A {} | C {}",
+                format_consumption(consumption.biomass),
+                format_consumption(consumption.alloy),
+                format_consumption(consumption.components),
+            ),
+            18.0,
+            84.0,
+            8.0,
+            Colors::SUCCESS,
+        );
+    } else {
+        draw_ui_text(
+            &format!(
+                "SYSTEM SINKS  MIN {} | PWR {} | DATA {} | BIO {} | ALLOY {} | PARTS {}",
+                format_consumption(consumption.minerals),
+                format_consumption(consumption.energy),
+                format_consumption(consumption.data),
+                format_consumption(consumption.biomass),
+                format_consumption(consumption.alloy),
+                format_consumption(consumption.components),
+            ),
+            18.0,
+            74.0,
+            9.0,
+            Colors::SUCCESS,
+        );
+    }
+}
+
+fn format_consumption(amount: f32) -> String {
+    if amount >= 1_000.0 {
+        format!("{:.1}k", amount / 1_000.0)
+    } else if amount >= 100.0 {
+        format!("{amount:.0}")
+    } else if amount >= 10.0 {
+        format!("{amount:.1}")
+    } else {
+        format!("{amount:.2}")
+    }
 }
 
 fn draw_records_footer(screen_w: f32, screen_h: f32) {

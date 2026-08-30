@@ -35,13 +35,7 @@ pub(super) fn compact_core_stage_line(rows: &[CompletionWorldRow]) -> String {
 }
 
 pub(super) fn completion_consumption(campaign: &Campaign) -> ConsumptionTotals {
-    (0..PLANET_COUNT)
-        .filter_map(|index| campaign.planet(index))
-        .map(|planet| planet.resources.consumed)
-        .fold(ConsumptionTotals::default(), |mut total, consumed| {
-            total.add(consumed);
-            total
-        })
+    campaign.total_consumption()
 }
 
 pub(super) fn consumption_entries(campaign: &Campaign) -> [(&'static str, f32); 6] {

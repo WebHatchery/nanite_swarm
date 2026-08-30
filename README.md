@@ -43,6 +43,8 @@ The swarm is powerful, but every expansion changes the terrain, stresses the gri
   into the planetary backdrop so late evolution is visible beyond its tile.
 - The completion report adds a world-by-world Core ledger, keeping each final
   stage and standing structure count visible after the last launch.
+- Records also shows the campaign-wide lifetime resource sinks while the run
+  is still in progress, including power draw, research Data, and factory input.
 
 ## Goal
 
