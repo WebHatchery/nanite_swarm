@@ -24,6 +24,9 @@ Audit date: 2026-08-20
 - Moved duplicate-ID, cross-file reference, and definition-shape checks into
   `src/data/validation.rs`; the application layer now only sequences the data,
   engine, directive, and state validators.
+- Split the factory and campaign-ending screenshot fixtures into child modules;
+  the scene dispatcher fell from 792 to 620 lines before the next capture
+  family can make the source-size limit a problem.
 
 ## Remaining debt
 
@@ -34,11 +37,7 @@ Audit date: 2026-08-20
 - The domain validators still depend on their gameplay vocabularies, by design:
   engine, directive, and state rules are checked by the modules that execute
   them. Cross-file definition integrity now stays in the data domain.
-- Several rendering and fixture files remain near the 600-line restructure
-  signal (`capture_scenes.rs`, `flow_render.rs`, `terrain_render.rs`, and the
-  larger test suites), but all remain below the 800-line hard limit. They should
-  be split by scene family or rendering model before the next major feature.
-- `GameData` is initialized through a process-global `OnceLock`, which matches
-  the current Macroquad startup model but makes isolated multi-game instances
-  difficult to test. A dependency-injected data context would be cleaner if
-  the project ever needs multiple simultaneous sessions.
+- Several rendering and test files remain near the 600-line restructure signal
+  (`flow_render.rs`, `terrain_render.rs`, and the larger test suites), but all
+  remain below the 800-line hard limit. They should be split by rendering model
+  or responsibility before the next major feature.
