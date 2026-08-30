@@ -71,7 +71,14 @@ impl Game {
             "mobile_info" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();
+                self.research_state.current_research = Some("power_grid".to_string());
+                self.research_state.research_progress = 4.0;
+                self.sync_research_to_planet();
                 let planet = self.campaign.current_mut();
+                // Keep a live research job in this otherwise quiet gameplay
+                // frame so the mobile header's progress readout is verifiable
+                // without covering the selected-structure information.
+                planet.resources.data = 1.0;
                 planet.mobile_panel = state::MobilePanel::Info;
                 planet.selected_building = None;
                 planet.selected_tile = planet

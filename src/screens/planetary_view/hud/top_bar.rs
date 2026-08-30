@@ -77,6 +77,20 @@ fn mobile_status_text(
     }
 }
 
+fn mobile_research_status(
+    current_research: Option<&str>,
+    progress: f32,
+    data: &crate::data::GameData,
+) -> Option<String> {
+    let id = current_research?;
+    let node = data.research.nodes.iter().find(|node| node.id == id)?;
+    Some(format!(
+        "R {:.0}/{:.0} DATA",
+        progress.clamp(0.0, node.data_cost),
+        node.data_cost
+    ))
+}
+
 fn offline_work_label(report: OfflineReport) -> Option<String> {
     let mut work = Vec::new();
     if report.research_completed {
@@ -585,6 +599,23 @@ fn draw_mobile(
                 colors.primary_soft
             } else {
                 colors.warning
+            },
+        );
+    }
+    if let Some(research_status) = mobile_research_status(
+        state.research.current_research.as_deref(),
+        state.research.research_progress,
+        state.data(),
+    ) {
+        draw_ui_text(
+            &truncate_text_to_width(&research_status, 108.0, 8.0),
+            screen_w - 108.0,
+            31.0,
+            8.0,
+            if state.research_lock_timer > 0.0 {
+                colors.warning
+            } else {
+                colors.primary_soft
             },
         );
     }

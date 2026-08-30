@@ -100,6 +100,9 @@ After a world change, the mobile header briefly names the arrival as
 `ARRIVED <WORLD>` while the desktop banner keeps the full arrival line.
 On portrait screens, BUILD and INFO open one full-width drawer at a time;
 MAP returns to the live grid between actions.
+The mobile gameplay header also keeps the active research job's DATA progress
+visible beneath the status line, including a warning colour while collapse
+recovery has research locked.
 Research uses a separate control row and full-width detail drawer on phones;
 drag the neural tree with a mouse or touch to pan it, then tap `-` / `+` to
 zoom;

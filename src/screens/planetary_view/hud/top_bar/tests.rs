@@ -1,6 +1,6 @@
 use super::{
-    mobile_offline_report_lines, mobile_offline_work_label, mobile_status_text, offline_work_label,
-    top_bar_layout,
+    mobile_offline_report_lines, mobile_offline_work_label, mobile_research_status,
+    mobile_status_text, offline_work_label, top_bar_layout,
 };
 use crate::state::OfflineReport;
 
@@ -37,6 +37,18 @@ fn offline_work_status_is_short_enough_for_the_mobile_header() {
         .as_deref(),
         Some("Seed Ship +2 stages")
     );
+}
+
+#[test]
+fn mobile_header_can_report_active_research_progress() {
+    let data = crate::data::test_data();
+
+    assert_eq!(
+        mobile_research_status(Some("adaptive_clocking"), 42.0, data.data()).as_deref(),
+        Some("R 42/110 DATA")
+    );
+    assert!(mobile_research_status(Some("missing"), 42.0, data.data()).is_none());
+    assert!(mobile_research_status(None, 42.0, data.data()).is_none());
 }
 
 #[test]
