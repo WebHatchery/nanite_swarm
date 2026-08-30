@@ -29,6 +29,11 @@ pub(super) fn draw(
     let ops_y = right.ops.y;
     let ops_h = right.ops.h;
 
+    if right.compact {
+        draw_compact_power(state, theme, colors, right);
+        return draw_compact_operations(state, theme, colors, right);
+    }
+
     draw_hud_panel(theme, right.power, Some("POWER GRID"));
     let generation = state.power_generation();
     let consumption = state.power_consumption();
@@ -156,4 +161,72 @@ pub(super) fn draw(
         return PlanetaryAction::OpenRecords;
     }
     PlanetaryAction::None
+}
+
+fn draw_compact_power(
+    state: &PlanetState,
+    theme: &UiTheme,
+    colors: &PanelColors,
+    right: &RightStackLayout,
+) {
+    draw_hud_panel(theme, right.power, None);
+    draw_ui_text(
+        "POWER GRID",
+        right.right_x + 12.0,
+        right.power.y + 18.0,
+        theme.typography.section,
+        colors.primary,
+    );
+    let battery_ratio = (state.battery_seconds / (4.0 * 60.0 * 60.0)).clamp(0.0, 1.0);
+    let summary = format!(
+        "NET {:+.1}/s   BAT {:.0}%",
+        state.power_balance,
+        battery_ratio * 100.0
+    );
+    draw_ui_text(
+        &summary,
+        right.right_x + 12.0,
+        right.power.y + right.power.h - 9.0,
+        10.0,
+        colors.power,
+    );
+}
+
+fn draw_compact_operations(
+    state: &PlanetState,
+    theme: &UiTheme,
+    colors: &PanelColors,
+    right: &RightStackLayout,
+) -> PlanetaryAction {
+    draw_hud_panel(theme, right.ops, None);
+    draw_ui_text(
+        "OPERATIONS",
+        right.right_x + 12.0,
+        right.ops.y + 18.0,
+        theme.typography.section,
+        colors.primary,
+    );
+    let (achieved, total) = state.achievements_progress();
+    let label = format!(
+        "D {}   S {}   RECORDS {}/{}",
+        state.drones.total_count(),
+        state.grid.total_buildings(),
+        achieved,
+        total
+    );
+    let button_h = (right.ops.h - 27.0).max(14.0);
+    if crate::ui::draw_hud_button(
+        theme,
+        Rect::new(
+            right.right_x + 8.0,
+            right.ops.y + 21.0,
+            right.right_w - 16.0,
+            button_h,
+        ),
+        &label,
+    ) {
+        PlanetaryAction::OpenRecords
+    } else {
+        PlanetaryAction::None
+    }
 }

@@ -13,6 +13,33 @@ use super::super::format::{fit_text_to_width, format_power_delta};
 use super::super::metrics::HudMetrics;
 use super::PanelColors;
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct QuickActionLayout {
+    compact: bool,
+    button_height: f32,
+    row_gap: f32,
+    policy_gap: f32,
+    policy_height: f32,
+    total_height: f32,
+}
+
+fn quick_action_layout(sidebar_height: f32) -> QuickActionLayout {
+    let compact = sidebar_height < 360.0;
+    let button_height = if compact { 22.0 } else { 30.0 };
+    let row_gap = if compact { 4.0 } else { 8.0 };
+    let policy_gap = if compact { 4.0 } else { 6.0 };
+    let policy_height = if compact { 20.0 } else { 24.0 };
+    let total_height = button_height * 5.0 + row_gap * 4.0 + policy_gap + policy_height + 4.0;
+    QuickActionLayout {
+        compact,
+        button_height,
+        row_gap,
+        policy_gap,
+        policy_height,
+        total_height,
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn draw_build_row(
     state: &mut PlanetState,
@@ -263,7 +290,8 @@ pub(super) fn draw(
     building_defs.sort_by_key(|def| def.build_menu_order);
 
     let list_top = sidebar_y + 78.0;
-    let quick_actions_h = 216.0;
+    let action_layout = quick_action_layout(sidebar_h);
+    let quick_actions_h = action_layout.total_height;
     let list_bottom = sidebar_y + sidebar_h - quick_actions_h - metrics.panel_gap;
     let list_height = (list_bottom - list_top).max(0.0);
     let content_x = sidebar_x + metrics.panel_padding;
@@ -326,7 +354,7 @@ pub(super) fn draw(
             sidebar_x + metrics.panel_padding,
             quick_actions_y,
             sidebar_w - metrics.panel_padding * 2.0,
-            30.0,
+            action_layout.button_height,
         ),
         if state.demolish_mode {
             "DEMOLISH MODE  [ON]"
@@ -337,10 +365,15 @@ pub(super) fn draw(
         state.toggle_demolish_mode();
     }
     let half_w = (sidebar_w - metrics.panel_padding * 2.0 - 8.0) * 0.5;
-    let second_y = quick_actions_y + 38.0;
+    let second_y = quick_actions_y + action_layout.button_height + action_layout.row_gap;
     if draw_hud_button(
         theme,
-        Rect::new(sidebar_x + metrics.panel_padding, second_y, half_w, 30.0),
+        Rect::new(
+            sidebar_x + metrics.panel_padding,
+            second_y,
+            half_w,
+            action_layout.button_height,
+        ),
         "CANCEL",
     ) {
         state.clear_selection();
@@ -353,16 +386,21 @@ pub(super) fn draw(
             sidebar_x + metrics.panel_padding + half_w + 8.0,
             second_y,
             half_w,
-            30.0,
+            action_layout.button_height,
         ),
         "HELP",
     ) {
         state.show_help = !state.show_help;
     }
-    let third_y = second_y + 38.0;
+    let third_y = second_y + action_layout.button_height + action_layout.row_gap;
     if draw_hud_button(
         theme,
-        Rect::new(sidebar_x + metrics.panel_padding, third_y, half_w, 30.0),
+        Rect::new(
+            sidebar_x + metrics.panel_padding,
+            third_y,
+            half_w,
+            action_layout.button_height,
+        ),
         "UNDO",
     ) {
         state.undo_last_action();
@@ -373,7 +411,7 @@ pub(super) fn draw(
             sidebar_x + metrics.panel_padding + half_w + 8.0,
             third_y,
             half_w,
-            30.0,
+            action_layout.button_height,
         ),
         "RELOCATE",
     ) {
@@ -381,10 +419,15 @@ pub(super) fn draw(
             state.begin_relocation(tile);
         }
     }
-    let fourth_y = third_y + 38.0;
+    let fourth_y = third_y + action_layout.button_height + action_layout.row_gap;
     if draw_hud_button(
         theme,
-        Rect::new(sidebar_x + metrics.panel_padding, fourth_y, half_w, 30.0),
+        Rect::new(
+            sidebar_x + metrics.panel_padding,
+            fourth_y,
+            half_w,
+            action_layout.button_height,
+        ),
         "SAVE BP",
     ) {
         if let Some(tile) = state.selected_tile {
@@ -402,7 +445,7 @@ pub(super) fn draw(
             sidebar_x + metrics.panel_padding + half_w + 8.0,
             fourth_y,
             half_w,
-            30.0,
+            action_layout.button_height,
         ),
         "STAMP",
     ) {
@@ -410,7 +453,7 @@ pub(super) fn draw(
             state.place_blueprint(tile);
         }
     }
-    let fifth_y = fourth_y + 38.0;
+    let fifth_y = fourth_y + action_layout.button_height + action_layout.row_gap;
     let blocked: std::collections::HashSet<_> = state.blocked_factories().into_iter().collect();
     let selected_blocked = state
         .box_selected
@@ -430,7 +473,12 @@ pub(super) fn draw(
     };
     if draw_hud_button(
         theme,
-        Rect::new(sidebar_x + metrics.panel_padding, fifth_y, half_w, 30.0),
+        Rect::new(
+            sidebar_x + metrics.panel_padding,
+            fifth_y,
+            half_w,
+            action_layout.button_height,
+        ),
         &selection_action,
     ) {
         if selected_blocked > 0 {
@@ -477,7 +525,7 @@ pub(super) fn draw(
                 sidebar_x + metrics.panel_padding + half_w + 8.0,
                 fifth_y,
                 half_w,
-                30.0,
+                action_layout.button_height,
             ),
             &label,
         ) {
@@ -512,9 +560,9 @@ pub(super) fn draw(
             theme,
             Rect::new(
                 sidebar_x + metrics.panel_padding,
-                fifth_y + 36.0,
+                fifth_y + action_layout.button_height + action_layout.policy_gap,
                 half_w,
-                24.0,
+                action_layout.policy_height,
             ),
             &label,
         ) {
@@ -545,9 +593,9 @@ pub(super) fn draw(
             theme,
             Rect::new(
                 sidebar_x + metrics.panel_padding + half_w + 8.0,
-                fifth_y + 36.0,
+                fifth_y + action_layout.button_height + action_layout.policy_gap,
                 half_w,
-                24.0,
+                action_layout.policy_height,
             ),
             &label,
         ) {
@@ -572,7 +620,7 @@ pub(super) fn draw(
                 sidebar_x + metrics.panel_padding + half_w + 8.0,
                 fifth_y,
                 half_w,
-                30.0,
+                action_layout.button_height,
             ),
             label,
         ) {
@@ -580,3 +628,6 @@ pub(super) fn draw(
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

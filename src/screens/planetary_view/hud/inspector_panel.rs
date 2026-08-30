@@ -34,6 +34,7 @@ pub(super) fn draw(
     let right_w = right.right_w;
     let inspector_y = right.inspector.y;
     let inspector_h = right.inspector.h;
+    let tight = right.compact && inspector_h < 140.0;
 
     draw_hud_panel(theme, right.inspector, Some("SELECTED STRUCTURE"));
 
@@ -81,7 +82,7 @@ pub(super) fn draw(
 
     let inspected_building = tile_building.or(state.selected_building);
     if let Some(building_type) = inspected_building {
-        let header_y = inspector_y + 44.0;
+        let header_y = inspector_y + if tight { 36.0 } else { 44.0 };
         let row_layout = inspector_row_layout(inspector_y, inspector_h);
         let icon_size = if inspector_h < 204.0 { 54.0 } else { 72.0 };
         let icon_rect = Rect::new(right_x + 16.0, header_y, icon_size, icon_size);
@@ -139,7 +140,14 @@ pub(super) fn draw(
         draw_ui_text(
             &description,
             info_x,
-            header_y + if row_layout.show_icon { 40.0 } else { 32.0 },
+            header_y
+                + if row_layout.show_icon {
+                    40.0
+                } else if tight {
+                    27.0
+                } else {
+                    32.0
+                },
             if row_layout.show_icon { 10.0 } else { 9.0 },
             dim,
         );
@@ -175,7 +183,7 @@ pub(super) fn draw(
         // What the ground itself is worth. Without this a deposit is invisible
         // and drill placement is guesswork.
         let has_recipe = !data.building(building_type.id()).recipe.is_empty();
-        if !has_recipe {
+        if row_layout.show_detail_rows && !has_recipe {
             if let Some(tile) = display_pos.and_then(|pos| state.grid.get(pos)) {
                 let (ore_label, ore_color) = ore_status(tile.ore_richness, colors);
                 draw_status_row(
@@ -267,22 +275,24 @@ pub(super) fn draw(
             &status_text,
             status_color,
         );
-        if let Some(pos) = tile_pos_with_building {
-            if let Some(flow) = recipe_flow_data(state, pos, building_type) {
-                let (priority_toggled, standby_toggled) = draw_recipe_flow_row(
-                    &flow,
-                    theme,
-                    right_x + 16.0,
-                    row_base + row_gap * 3.0,
-                    right_w - 32.0,
-                    dim,
-                    warning,
-                );
-                if priority_toggled {
-                    state.toggle_input_priority(pos);
-                }
-                if standby_toggled {
-                    state.toggle_processor_standby(pos);
+        if row_layout.show_detail_rows {
+            if let Some(pos) = tile_pos_with_building {
+                if let Some(flow) = recipe_flow_data(state, pos, building_type) {
+                    let (priority_toggled, standby_toggled) = draw_recipe_flow_row(
+                        &flow,
+                        theme,
+                        right_x + 16.0,
+                        row_base + row_gap * 3.0,
+                        right_w - 32.0,
+                        dim,
+                        warning,
+                    );
+                    if priority_toggled {
+                        state.toggle_input_priority(pos);
+                    }
+                    if standby_toggled {
+                        state.toggle_processor_standby(pos);
+                    }
                 }
             }
         }
@@ -325,7 +335,7 @@ pub(super) fn draw(
         draw_ui_text(
             "NO STRUCTURE",
             right_x + 16.0,
-            inspector_y + 56.0,
+            inspector_y + if tight { 44.0 } else { 56.0 },
             13.0,
             text,
         );
@@ -351,17 +361,19 @@ pub(super) fn draw(
                     11.0,
                     warning,
                 );
-                if let Some(bonus) = tile_bonus {
-                    let bonus_text = fit_text_to_width(bonus, right_w - 32.0, 10.0);
-                    draw_ui_text(
-                        &bonus_text,
-                        right_x + 16.0,
-                        inspector_y + bonus_y,
-                        10.0,
-                        success,
-                    );
+                if !tight {
+                    if let Some(bonus) = tile_bonus {
+                        let bonus_text = fit_text_to_width(bonus, right_w - 32.0, 10.0);
+                        draw_ui_text(
+                            &bonus_text,
+                            right_x + 16.0,
+                            inspector_y + bonus_y,
+                            10.0,
+                            success,
+                        );
+                    }
                 }
-                let button_y = inspector_y + inspector_h - 38.0;
+                let button_y = inspector_y + inspector_h - if tight { 36.0 } else { 38.0 };
                 let filter_available = terrain == TerrainType::Forest;
                 let button_w = if filter_available {
                     (right_w - 40.0) * 0.5
@@ -400,7 +412,9 @@ pub(super) fn draw(
 }
 
 fn terrain_detail_offsets(inspector_h: f32) -> (f32, f32, f32) {
-    if inspector_h < 180.0 {
+    if inspector_h < 130.0 {
+        (60.0, 76.0, 0.0)
+    } else if inspector_h < 180.0 {
         // Forests have two buttons, so their preservation line must clear the
         // compact action row rather than hiding behind it.
         (70.0, 86.0, 100.0)
@@ -598,20 +612,30 @@ fn flow_resource_name(resource: crate::engine::ResourceType) -> &'static str {
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct InspectorRowLayout {
     show_icon: bool,
+    show_detail_rows: bool,
     row_base: f32,
     row_gap: f32,
 }
 
 fn inspector_row_layout(inspector_y: f32, inspector_h: f32) -> InspectorRowLayout {
-    if inspector_h < 175.0 {
+    if inspector_h < 140.0 {
         InspectorRowLayout {
             show_icon: false,
+            show_detail_rows: false,
+            row_base: inspector_y + 74.0,
+            row_gap: 16.0,
+        }
+    } else if inspector_h < 175.0 {
+        InspectorRowLayout {
+            show_icon: false,
+            show_detail_rows: true,
             row_base: inspector_y + 88.0,
             row_gap: 18.0,
         }
     } else {
         InspectorRowLayout {
             show_icon: true,
+            show_detail_rows: true,
             row_base: inspector_y + inspector_h - 72.0,
             row_gap: 20.0,
         }

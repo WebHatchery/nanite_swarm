@@ -61,6 +61,8 @@ Tap the event-coded NEXT button to jump to the next recovery, research-unlock,
 or mass-driver timer while keeping the whole campaign clock in sync.
 The Solar System map recentres and scales its orbit rings on narrow windows;
 the planet list remains a touch-sized travel and launch control.
+At compact browser sizes, the resource cards abbreviate and the build/right
+panels use short summaries so touch controls remain separated and visible.
 
 Factory controls:
 

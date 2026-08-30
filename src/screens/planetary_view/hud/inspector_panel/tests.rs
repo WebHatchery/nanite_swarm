@@ -11,6 +11,17 @@ fn compact_inspector_rows_end_inside_the_panel_without_needing_the_icon_column()
 }
 
 #[test]
+fn tight_inspector_keeps_its_three_core_rows_inside_the_panel() {
+    let top = 86.0;
+    let height = 116.0;
+    let layout = inspector_row_layout(top, height);
+
+    assert!(!layout.show_icon);
+    assert!(!layout.show_detail_rows);
+    assert!(layout.row_base + layout.row_gap * 2.0 <= top + height);
+}
+
+#[test]
 fn regular_inspector_keeps_the_building_art_and_four_rows() {
     let top = 96.0;
     let height = 192.0;

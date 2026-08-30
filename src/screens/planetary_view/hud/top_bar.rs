@@ -11,6 +11,48 @@ use super::super::metrics::HudMetrics;
 use super::super::PlanetaryAction;
 use super::PanelColors;
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct TopBarLayout {
+    compact: bool,
+    abbreviated_labels: bool,
+    brand_width: f32,
+    actions_width: f32,
+    card_gap: f32,
+    card_width: f32,
+    card_count: usize,
+}
+
+fn top_bar_layout(screen_width: f32, top_bar_height: f32, panel_gap: f32) -> TopBarLayout {
+    let compact = screen_width < 1180.0 || top_bar_height < 80.0;
+    let narrow = screen_width < 720.0;
+    let brand_width = if narrow {
+        150.0
+    } else {
+        (screen_width * 0.18).clamp(188.0, 318.0)
+    };
+    let actions_width = if narrow {
+        236.0
+    } else {
+        (screen_width * 0.25).clamp(304.0, 448.0)
+    };
+    let card_gap = if compact { 6.0 } else { 10.0 };
+    let card_count = if compact { 4 } else { 6 };
+    let cards_x = brand_width + panel_gap;
+    let action_x = screen_width - actions_width - 8.0;
+    let card_area_width = (action_x - cards_x - panel_gap).max(0.0);
+    let card_width = ((card_area_width - card_gap * (card_count - 1) as f32) / card_count as f32)
+        .max(if narrow { 42.0 } else { 52.0 });
+    TopBarLayout {
+        compact,
+        abbreviated_labels: narrow,
+        brand_width,
+        actions_width,
+        card_gap,
+        card_width,
+        card_count,
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(super) fn draw(
     state: &PlanetState,
@@ -33,13 +75,12 @@ pub(super) fn draw(
         Rect::new(0.0, 0.0, screen_w, metrics.top_bar_height),
         None,
     );
-    let compact_top = screen_w < 1180.0 || metrics.top_bar_height < 80.0;
-    let title_size = if compact_top {
+    let layout = top_bar_layout(screen_w, metrics.top_bar_height, metrics.panel_gap);
+    let title_size = if layout.compact {
         theme.typography.title - 3.0
     } else {
         theme.typography.title
     };
-    let brand_w = (screen_w * 0.18).clamp(188.0, 318.0);
     draw_ui_text("NANITE SWARM", 66.0, 31.0, title_size, primary);
     let hazard = state.hazard_label();
     let subtitle = if hazard.is_empty() {
@@ -51,7 +92,7 @@ pub(super) fn draw(
         &subtitle,
         66.0,
         55.0,
-        if compact_top {
+        if layout.compact {
             theme.typography.small
         } else {
             theme.typography.body
@@ -64,16 +105,18 @@ pub(super) fn draw(
     draw_line(48.0, 24.0, 36.0, 34.0, 1.5, primary_soft);
     draw_circle(36.0, 24.0, 4.0, primary);
 
-    let cards_x = brand_w + metrics.panel_gap;
+    let cards_x = layout.brand_width + metrics.panel_gap;
     let cards_y = 9.0;
-    let card_gap = if compact_top { 6.0 } else { 10.0 };
-    let actions_w = (screen_w * 0.25).clamp(304.0, 448.0);
+    let card_gap = layout.card_gap;
+    let actions_w = layout.actions_width;
     let action_x = screen_w - actions_w - 8.0;
-    let card_area_w = (action_x - cards_x - metrics.panel_gap).max(0.0);
-    let visible_card_count = if compact_top { 4.0 } else { 6.0 };
-    let card_w =
-        ((card_area_w - card_gap * (visible_card_count - 1.0)) / visible_card_count).max(52.0);
-    let card_h = if compact_top { 62.0 } else { 68.0 };
+    let card_w = layout.card_width;
+    let card_h = if layout.compact { 62.0 } else { 68.0 };
+    let (energy_label, minerals_label, data_label, parts_label) = if layout.abbreviated_labels {
+        ("ENG", "MIN", "DATA", "PARTS")
+    } else {
+        ("ENERGY", "MINERALS", "DATA", "COMPONENTS")
+    };
     let energy_value = format!("{:.0}", state.resources.energy);
     let energy_rate = format_power_delta(state.power_balance);
     let minerals_value = format!("{:.0}", state.resources.minerals);
@@ -92,7 +135,7 @@ pub(super) fn draw(
         theme,
         Rect::new(cards_x, cards_y, card_w, card_h),
         "energy",
-        "ENERGY",
+        energy_label,
         &energy_value,
         &energy_rate,
         None,
@@ -102,7 +145,7 @@ pub(super) fn draw(
         theme,
         Rect::new(cards_x + (card_w + card_gap), cards_y, card_w, card_h),
         "minerals",
-        "MINERALS",
+        minerals_label,
         &minerals_value,
         &minerals_rate,
         Some(&minerals_cap),
@@ -112,18 +155,18 @@ pub(super) fn draw(
         theme,
         Rect::new(cards_x + 2.0 * (card_w + card_gap), cards_y, card_w, card_h),
         "data",
-        "DATA",
+        data_label,
         &data_value,
         &data_rate,
         None,
         color_from_rgba(&theme.colors.data),
     );
-    if compact_top {
+    if layout.compact {
         draw_metric_card(
             theme,
             Rect::new(cards_x + 3.0 * (card_w + card_gap), cards_y, card_w, card_h),
             "components",
-            "PARTS",
+            parts_label,
             &components_value,
             &components_rate,
             Some("/ 1000"),
@@ -335,3 +378,6 @@ pub(super) fn draw(
 
     ui_action
 }
+
+#[cfg(test)]
+mod tests;

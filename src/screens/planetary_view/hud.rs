@@ -51,6 +51,7 @@ impl PanelColors {
 pub(super) struct RightStackLayout {
     pub(super) right_x: f32,
     pub(super) right_w: f32,
+    pub(super) compact: bool,
     pub(super) inspector: Rect,
     pub(super) power: Rect,
     pub(super) ops: Rect,
@@ -69,9 +70,19 @@ impl RightStackLayout {
         // Allocate the stack from the actual viewport first. Fixed minimums
         // made the directive panel run underneath the bottom bar on short
         // browser windows, exactly where touch users need the compact layout.
-        let inspector_h = available_stack * 0.36;
-        let power_h = available_stack * 0.24;
-        let ops_h = available_stack * 0.18;
+        // Compact utility panels use a summary renderer, so the inspector and
+        // tutorial can keep enough vertical room for their actual content.
+        let compact = available_stack < 460.0;
+        let (inspector_h, power_h, ops_h) = if compact {
+            let utility_h = (available_stack * 0.145).min(58.0);
+            (available_stack * 0.40, utility_h, utility_h)
+        } else {
+            (
+                available_stack * 0.36,
+                available_stack * 0.24,
+                available_stack * 0.18,
+            )
+        };
         let directive_h = available_stack - inspector_h - power_h - ops_h;
         let inspector_y = right_y;
         let power_y = inspector_y + inspector_h + stack_gap;
@@ -81,6 +92,7 @@ impl RightStackLayout {
         Self {
             right_x,
             right_w,
+            compact,
             inspector: Rect::new(right_x, inspector_y, right_w, inspector_h),
             power: Rect::new(right_x, power_y, right_w, power_h),
             ops: Rect::new(right_x, ops_y, right_w, ops_h),
@@ -183,3 +195,6 @@ fn change_map_zoom(
         ),
     );
 }
+
+#[cfg(test)]
+mod tests;
