@@ -56,7 +56,9 @@ The bottom graph records observed ore, alloy, and parts flow; tap its visible
 FLOW button to cycle through live power and Data production/consumption. Warning
 triangles and the Operations count identify powered processors that are missing a feed.
 The top resource cards show live rates from active drills, the Core and Server
-Banks, and biomass harvesters.
+Banks, and biomass harvesters. Every stored resource also shows its live cap;
+when production has nowhere to go, the rate changes to FULL so the swarm can
+expand storage or redirect the line.
 The desktop Operations panel's Achievements row is touch-sized as well as
 mouse-clickable, so Records remains reachable without a physical keyboard.
 Records keeps achievements, directive progress, and the durable event log in

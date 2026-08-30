@@ -2,7 +2,7 @@
 
 #[cfg(test)]
 use crate::engine::{BuildingType, TerrainType};
-use crate::engine::{DroneState, StatId};
+use crate::engine::{DroneState, ResourceType, StatId};
 
 use super::game_state::PlanetState;
 
@@ -204,12 +204,27 @@ impl PlanetState {
         self.resources.energy = self
             .resources
             .energy
-            .clamp(0.0, self.config.resources.max_energy);
-        self.resources.minerals = self.resources.minerals.min(self.mineral_capacity());
-        self.resources.data = self.resources.data.min(1000.0);
-        self.resources.biomass = self.resources.biomass.min(1000.0);
-        self.resources.alloy = self.resources.alloy.min(1000.0);
-        self.resources.components = self.resources.components.min(1000.0);
+            .clamp(0.0, self.resource_capacity(ResourceType::Energy));
+        self.resources.minerals = self
+            .resources
+            .minerals
+            .min(self.resource_capacity(ResourceType::Minerals));
+        self.resources.data = self
+            .resources
+            .data
+            .min(self.resource_capacity(ResourceType::Data));
+        self.resources.biomass = self
+            .resources
+            .biomass
+            .min(self.resource_capacity(ResourceType::Biomass));
+        self.resources.alloy = self
+            .resources
+            .alloy
+            .min(self.resource_capacity(ResourceType::Alloy));
+        self.resources.components = self
+            .resources
+            .components
+            .min(self.resource_capacity(ResourceType::Components));
 
         self.update_achievements();
         self.update_core_stage();

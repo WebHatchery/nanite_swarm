@@ -1,6 +1,7 @@
 //! Top bar: brand, resource metric cards, navigation buttons, and status banners
 
 use crate::data::UiTheme;
+use crate::engine::ResourceType;
 use crate::state::{OfflineReport, PlanetState};
 use crate::ui::{color_from_rgba, draw_hud_button, draw_hud_panel, draw_metric_card};
 use macroquad::prelude::*;
@@ -89,6 +90,46 @@ fn mobile_research_status(
         progress.clamp(0.0, node.data_cost),
         node.data_cost
     ))
+}
+
+fn resource_rate_label(state: &PlanetState, resource: ResourceType, rate: &str) -> String {
+    if state.resource_is_full(resource) && rate.starts_with('+') {
+        "FULL".to_string()
+    } else {
+        rate.to_string()
+    }
+}
+
+fn resource_card_color(
+    state: &PlanetState,
+    resource: ResourceType,
+    normal: Color,
+    warning: Color,
+) -> Color {
+    if state.resource_is_full(resource) {
+        warning
+    } else {
+        normal
+    }
+}
+
+fn compact_resource_readout(state: &PlanetState) -> String {
+    let compact = |resource: ResourceType| {
+        let value = state.resources.get(resource);
+        let capacity = state.resource_capacity(resource);
+        if capacity >= 1_000.0 {
+            format!("{:.0}k/{:.0}k", value / 1_000.0, capacity / 1_000.0)
+        } else {
+            format!("{:.0}/{:.0}", value, capacity)
+        }
+    };
+    format!(
+        "E{} M{} D{} C{}",
+        compact(ResourceType::Energy),
+        compact(ResourceType::Minerals),
+        compact(ResourceType::Data),
+        compact(ResourceType::Components)
+    )
 }
 
 fn offline_work_label(report: OfflineReport) -> Option<String> {
@@ -270,18 +311,47 @@ pub(super) fn draw(
         ("ENERGY", "MINERALS", "DATA", "COMPONENTS")
     };
     let energy_value = format!("{:.0}", state.resources.energy);
-    let energy_rate = format_power_delta(state.power_balance);
+    let energy_rate = resource_rate_label(
+        state,
+        ResourceType::Energy,
+        &format_power_delta(state.power_balance),
+    );
     let minerals_value = format!("{:.0}", state.resources.minerals);
-    let minerals_rate = format!("+{:.1}/s", state.mineral_output_rate());
-    let minerals_cap = format!("/ {:.0}", state.mineral_capacity());
+    let minerals_rate = resource_rate_label(
+        state,
+        ResourceType::Minerals,
+        &format!("+{:.1}/s", state.mineral_output_rate()),
+    );
+    let minerals_cap = format!("/ {:.0}", state.resource_capacity(ResourceType::Minerals));
     let data_value = format!("{:.0}", state.resources.data);
-    let data_rate = format!("+{:.2}/s", state.data_generation_rate());
+    let data_rate = resource_rate_label(
+        state,
+        ResourceType::Data,
+        &format!("+{:.2}/s", state.data_generation_rate()),
+    );
     let biomass_value = format!("{:.0}", state.resources.biomass);
-    let biomass_rate = format!("+{:.1}/s", state.biomass_harvest_rate());
+    let biomass_rate = resource_rate_label(
+        state,
+        ResourceType::Biomass,
+        &format!("+{:.1}/s", state.biomass_harvest_rate()),
+    );
     let alloy_value = format!("{:.0}", state.resources.alloy);
-    let alloy_rate = format!("+{:.1}/s", state.observed_alloy_rate());
+    let alloy_rate = resource_rate_label(
+        state,
+        ResourceType::Alloy,
+        &format!("+{:.1}/s", state.observed_alloy_rate()),
+    );
     let components_value = format!("{:.0}", state.resources.components);
-    let components_rate = format!("+{:.1}/s", state.observed_components_rate());
+    let components_rate = resource_rate_label(
+        state,
+        ResourceType::Components,
+        &format!("+{:.1}/s", state.observed_components_rate()),
+    );
+    let energy_cap = format!("/ {:.0}", state.resource_capacity(ResourceType::Energy));
+    let data_cap = format!("/ {:.0}", state.resource_capacity(ResourceType::Data));
+    let biomass_cap = format!("/ {:.0}", state.resource_capacity(ResourceType::Biomass));
+    let alloy_cap = format!("/ {:.0}", state.resource_capacity(ResourceType::Alloy));
+    let components_cap = format!("/ {:.0}", state.resource_capacity(ResourceType::Components));
 
     draw_metric_card(
         theme,
@@ -290,8 +360,13 @@ pub(super) fn draw(
         energy_label,
         &energy_value,
         &energy_rate,
-        None,
-        color_from_rgba(&theme.colors.energy),
+        Some(&energy_cap),
+        resource_card_color(
+            state,
+            ResourceType::Energy,
+            color_from_rgba(&theme.colors.energy),
+            warning,
+        ),
     );
     draw_metric_card(
         theme,
@@ -301,7 +376,12 @@ pub(super) fn draw(
         &minerals_value,
         &minerals_rate,
         Some(&minerals_cap),
-        color_from_rgba(&theme.colors.minerals),
+        resource_card_color(
+            state,
+            ResourceType::Minerals,
+            color_from_rgba(&theme.colors.minerals),
+            warning,
+        ),
     );
     draw_metric_card(
         theme,
@@ -310,8 +390,13 @@ pub(super) fn draw(
         data_label,
         &data_value,
         &data_rate,
-        None,
-        color_from_rgba(&theme.colors.data),
+        Some(&data_cap),
+        resource_card_color(
+            state,
+            ResourceType::Data,
+            color_from_rgba(&theme.colors.data),
+            warning,
+        ),
     );
     if layout.compact {
         draw_metric_card(
@@ -321,8 +406,13 @@ pub(super) fn draw(
             parts_label,
             &components_value,
             &components_rate,
-            Some("/ 1000"),
-            color_from_rgba(&theme.colors.components),
+            Some(&components_cap),
+            resource_card_color(
+                state,
+                ResourceType::Components,
+                color_from_rgba(&theme.colors.components),
+                warning,
+            ),
         );
     } else {
         draw_metric_card(
@@ -332,8 +422,13 @@ pub(super) fn draw(
             "BIOMASS",
             &biomass_value,
             &biomass_rate,
-            Some("/ 1000"),
-            color_from_rgba(&theme.colors.biomass),
+            Some(&biomass_cap),
+            resource_card_color(
+                state,
+                ResourceType::Biomass,
+                color_from_rgba(&theme.colors.biomass),
+                warning,
+            ),
         );
         draw_metric_card(
             theme,
@@ -342,8 +437,13 @@ pub(super) fn draw(
             "ALLOY",
             &alloy_value,
             &alloy_rate,
-            Some("/ 1000"),
-            color_from_rgba(&theme.colors.alloy),
+            Some(&alloy_cap),
+            resource_card_color(
+                state,
+                ResourceType::Alloy,
+                color_from_rgba(&theme.colors.alloy),
+                warning,
+            ),
         );
         draw_metric_card(
             theme,
@@ -352,8 +452,13 @@ pub(super) fn draw(
             "COMPONENTS",
             &components_value,
             &components_rate,
-            Some("/ 1000"),
-            color_from_rgba(&theme.colors.components),
+            Some(&components_cap),
+            resource_card_color(
+                state,
+                ResourceType::Components,
+                color_from_rgba(&theme.colors.components),
+                warning,
+            ),
         );
     }
 
@@ -564,13 +669,7 @@ fn draw_mobile(
     draw_circle(36.0, 24.0, 4.0, colors.primary);
     draw_ui_text("NANITE SWARM", 58.0, 18.0, 11.0, colors.primary);
     draw_ui_text(
-        &format!(
-            "E{:.0}  M{:.0}  D{:.0}  C{:.0}",
-            state.resources.energy,
-            state.resources.minerals,
-            state.resources.data,
-            state.resources.components
-        ),
+        &compact_resource_readout(state),
         58.0,
         31.0,
         8.0,

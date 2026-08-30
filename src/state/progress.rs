@@ -325,6 +325,24 @@ impl PlanetState {
             .apply(StatId::MineralCapacity, self.built_mineral_capacity())
     }
 
+    /// The live storage ceiling for a resource. Keeping this in one place is
+    /// important because foreground ticks, offline progress, and the HUD all
+    /// need to agree about what a full stockpile means.
+    pub fn resource_capacity(&self, resource: ResourceType) -> f32 {
+        match resource {
+            ResourceType::Energy => self.config.resources.max_energy,
+            ResourceType::Minerals => self.mineral_capacity(),
+            ResourceType::Data
+            | ResourceType::Biomass
+            | ResourceType::Alloy
+            | ResourceType::Components => 1_000.0,
+        }
+    }
+
+    pub fn resource_is_full(&self, resource: ResourceType) -> bool {
+        self.resources.get(resource) >= self.resource_capacity(resource) - 0.001
+    }
+
     /// Storage before research touches it: the base plus whatever has been
     /// built for it. The stat sheet needs the two halves separately.
     pub fn built_mineral_capacity(&self) -> f32 {
@@ -616,12 +634,16 @@ impl PlanetState {
         let components = (components_rate * simulated).clamp(0.0, cap);
         let data = (data_rate * simulated).clamp(0.0, cap);
         let power = (power_rate * simulated).clamp(-cap, cap);
-        self.resources.minerals = (self.resources.minerals + minerals).min(self.mineral_capacity());
-        self.resources.alloy = (self.resources.alloy + alloy).min(cap.max(1000.0));
-        self.resources.components = (self.resources.components + components).min(cap.max(1000.0));
-        self.resources.data = (self.resources.data + data).min(1000.0);
-        self.resources.energy =
-            (self.resources.energy + power).clamp(0.0, self.config.resources.max_energy);
+        self.resources.minerals = (self.resources.minerals + minerals)
+            .min(self.resource_capacity(ResourceType::Minerals));
+        self.resources.alloy =
+            (self.resources.alloy + alloy).min(self.resource_capacity(ResourceType::Alloy));
+        self.resources.components = (self.resources.components + components)
+            .min(self.resource_capacity(ResourceType::Components));
+        self.resources.data =
+            (self.resources.data + data).min(self.resource_capacity(ResourceType::Data));
+        self.resources.energy = (self.resources.energy + power)
+            .clamp(0.0, self.resource_capacity(ResourceType::Energy));
         self.time_played += simulated as f64;
         self.battery_seconds = (self.battery_seconds - capped).max(0.0);
         self.last_offline_report = OfflineReport {

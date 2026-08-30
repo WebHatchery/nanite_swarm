@@ -418,6 +418,70 @@ fn mineral_capacity_grows_with_storage_buildings() {
 }
 
 #[test]
+fn every_resource_reports_the_same_cap_used_by_simulation() {
+    let state = state();
+    assert_eq!(
+        state.resource_capacity(crate::engine::ResourceType::Energy),
+        50.0
+    );
+    assert_eq!(
+        state.resource_capacity(crate::engine::ResourceType::Minerals),
+        state.mineral_capacity()
+    );
+    for resource in [
+        crate::engine::ResourceType::Data,
+        crate::engine::ResourceType::Biomass,
+        crate::engine::ResourceType::Alloy,
+        crate::engine::ResourceType::Components,
+    ] {
+        assert_eq!(state.resource_capacity(resource), 1_000.0);
+    }
+}
+
+#[test]
+fn offline_progress_respects_live_storage_caps() {
+    let mut state = state();
+    state.config.offline.max_resource_gain = 10_000.0;
+    state.config.resources.max_energy = 10_000.0;
+    state.config.resources.base_mineral_cap = 100_000.0;
+    state.resources.minerals = 10_000.0;
+    state.resources.energy = 10_000.0;
+    let core = state.grid.find_core().unwrap();
+    for (building, pos) in [
+        (BuildingType::Smelter, GridPos::new(core.x + 1, core.y)),
+        (BuildingType::Assembler, GridPos::new(core.x, core.y + 1)),
+    ] {
+        state.grid.get_mut(pos).unwrap().terrain = crate::engine::TerrainType::Empty;
+        state.grid.reveal_around(pos, 1);
+        state.unlock_building(building);
+        state.select_building(building);
+        assert!(state.try_place_building(pos));
+    }
+    state.grid.update_power_grid();
+    state.resources.data = 999.0;
+    state.resources.biomass = 999.0;
+    state.resources.alloy = 999.0;
+    state.resources.components = 999.0;
+    state.apply_offline_progress(10_000.0);
+
+    for resource in [
+        crate::engine::ResourceType::Data,
+        crate::engine::ResourceType::Biomass,
+        crate::engine::ResourceType::Alloy,
+        crate::engine::ResourceType::Components,
+    ] {
+        assert!(
+            state.resources.get(resource) <= state.resource_capacity(resource),
+            "offline progress exceeded the {:?} cap",
+            resource
+        );
+    }
+    assert_eq!(state.resources.data, 1_000.0);
+    assert_eq!(state.resources.alloy, 1_000.0);
+    assert_eq!(state.resources.components, 1_000.0);
+}
+
+#[test]
 fn battery_time_left_converts_seconds_to_hours_and_minutes() {
     let state = PlanetState {
         battery_seconds: 3661.0, // 1h 1m 1s

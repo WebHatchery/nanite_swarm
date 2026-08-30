@@ -1,8 +1,11 @@
 use super::{
-    mobile_offline_report_lines, mobile_offline_work_label, mobile_research_status,
-    mobile_status_text, offline_work_label, top_bar_layout,
+    compact_resource_readout, mobile_offline_report_lines, mobile_offline_work_label,
+    mobile_research_status, mobile_status_text, offline_work_label, resource_rate_label,
+    top_bar_layout,
 };
+use crate::engine::ResourceType;
 use crate::state::OfflineReport;
+use crate::state::PlanetState;
 
 #[test]
 fn mobile_arrival_status_names_the_world_without_hiding_critical_failures() {
@@ -90,4 +93,32 @@ fn narrow_top_bar_keeps_resource_cards_before_navigation_buttons() {
     assert!(layout.abbreviated_labels);
     assert!(cards_right <= action_x - 10.0);
     assert!(button_width >= 50.0);
+}
+
+#[test]
+fn capped_resource_rate_becomes_explicitly_full() {
+    let mut state = PlanetState::default();
+    state.resources.data = state.resource_capacity(ResourceType::Data);
+    assert_eq!(
+        resource_rate_label(&state, ResourceType::Data, "+1.00/s"),
+        "FULL"
+    );
+    assert_eq!(
+        resource_rate_label(&state, ResourceType::Data, "-5.00/s"),
+        "-5.00/s"
+    );
+}
+
+#[test]
+fn mobile_resource_readout_includes_storage_caps() {
+    let mut state = PlanetState::default();
+    state.resources.energy = 50.0;
+    state.resources.minerals = 25.0;
+    state.resources.data = 1000.0;
+    state.resources.components = 40.0;
+
+    assert_eq!(
+        compact_resource_readout(&state),
+        "E50/50 M25/100 D1k/1k C0k/1k"
+    );
 }
