@@ -69,6 +69,7 @@ those remote worlds MAINT.
 When it reports SAVE FAILED, tap RETRY to attempt the campaign save again.
 On the title screen, SAVE appears only after New Game or Continue/Load, so an
 existing slot cannot be overwritten before a campaign is selected.
+The slot selector marks the chosen slot as SAVED or EMPTY before you switch it.
 When it reports BACKUP RECOVERED, tap SAVE NOW to establish a fresh primary
 save after recovery.
 When it reports LOW BATTERY, tap FLOW to inspect the power network before the

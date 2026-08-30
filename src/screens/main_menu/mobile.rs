@@ -110,7 +110,7 @@ fn buttons(
 ) -> Vec<(String, MenuAction)> {
     let mut buttons = vec![
         (
-            format!("Slot: {}  (tap to switch)", slot),
+            super::slot_button_label(slot, has_save),
             MenuAction::CycleSlot,
         ),
         (strings.new_game.clone(), MenuAction::NewGame),

@@ -136,10 +136,7 @@ pub fn render_main_menu(
 
     // Menu panel
     let mut buttons = vec![
-        (
-            format!("Slot: {}  (tap to switch)", slot),
-            MenuAction::CycleSlot,
-        ),
+        (slot_button_label(slot, has_save), MenuAction::CycleSlot),
         (strings.new_game.clone(), MenuAction::NewGame),
     ];
     if has_save {
@@ -203,6 +200,11 @@ fn delete_slot_label(strings: &crate::data::PlayerStrings, armed: bool) -> Strin
 
 fn show_save_button(has_active_campaign: bool) -> bool {
     has_active_campaign
+}
+
+fn slot_button_label(slot: &str, has_save: bool) -> String {
+    let state = if has_save { "SAVED" } else { "EMPTY" };
+    format!("Slot: {slot} [{state}] (tap to switch)")
 }
 
 #[cfg(test)]
