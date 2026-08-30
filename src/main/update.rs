@@ -50,6 +50,7 @@ impl Game {
     fn update_main_menu(&mut self) {
         let action = render_main_menu(
             self.has_save,
+            self.has_active_campaign,
             self.menu_notice.as_deref(),
             slot_name(self.active_slot),
             self.delete_confirmation_slot == Some(self.active_slot),

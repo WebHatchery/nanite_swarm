@@ -21,6 +21,7 @@ impl Game {
         self.campaign.current_mut().show_help = false;
         self.campaign.current_mut().auto_clocking = false;
         self.campaign.current_mut().save_failed = false;
+        self.has_active_campaign = false;
         self.campaign.current_mut().restored_from_backup = false;
         self.campaign.current_mut().restored_from_backup_generation = 0;
         self.research_state.current_research = None;
@@ -36,6 +37,7 @@ impl Game {
             "save_failed_menu" | "mobile_save_failed_menu" => {
                 self.phase = GamePhase::MainMenu;
                 self.has_save = true;
+                self.has_active_campaign = true;
                 self.menu_notice =
                     Some("Save failed: progress is in memory. Tap SAVE to retry.".to_string());
                 self.campaign.current_mut().save_failed = true;

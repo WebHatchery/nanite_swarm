@@ -19,6 +19,9 @@ pub struct GameSession {
     pub campaign: Campaign,
     pub data: GameDataContext,
     pub has_save: bool,
+    /// Whether the in-memory campaign is a player-selected session that may
+    /// safely be written to the active slot.
+    pub has_active_campaign: bool,
     pub menu_notice: Option<String>,
     /// The launch being played out, if one is.
     pub launch: Option<LaunchSequence>,
@@ -38,6 +41,7 @@ impl GameSession {
             campaign: Campaign::new_with_data(config, seed, data.clone()),
             data,
             has_save: state::save_exists(&Self::save_path(0)),
+            has_active_campaign: false,
             menu_notice: None,
             launch: None,
             shipping_edit_world: state::STARTING_PLANET,
@@ -62,6 +66,7 @@ impl GameSession {
 
     pub fn new_campaign(&mut self, config: GameConfig, seed: u64) {
         self.campaign = Campaign::new_with_data(config, seed, self.data.clone());
+        self.has_active_campaign = true;
         self.shipping_edit_world = state::STARTING_PLANET;
         self.shipping_scroll.set_offset(0.0);
         self.interplanetary_mobile_panel = InterplanetaryMobilePanel::Worlds;
@@ -69,6 +74,9 @@ impl GameSession {
     }
 
     pub fn save_campaign(&mut self) -> Result<(), io::Error> {
+        if !self.has_active_campaign {
+            return Ok(());
+        }
         self.campaign
             .set_slot_name(Self::slot_name(self.active_slot));
         let path = self.active_save_path();
@@ -87,6 +95,7 @@ impl GameSession {
         self.delete_confirmation_slot = None;
         self.campaign = campaign;
         self.has_save = true;
+        self.has_active_campaign = true;
         Ok(source)
     }
 

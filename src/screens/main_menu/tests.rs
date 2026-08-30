@@ -13,3 +13,9 @@ fn delete_label_makes_the_second_tap_explicit() {
         "Delete Slot (tap again)"
     );
 }
+
+#[test]
+fn save_is_only_available_for_an_active_campaign() {
+    assert!(!show_save_button(false));
+    assert!(show_save_button(true));
+}

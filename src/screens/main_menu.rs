@@ -26,6 +26,7 @@ pub enum MenuAction {
 /// Render the main menu and return any action taken
 pub fn render_main_menu(
     has_save: bool,
+    has_active_campaign: bool,
     notice: Option<&str>,
     slot: &str,
     delete_armed: bool,
@@ -67,10 +68,13 @@ pub fn render_main_menu(
     if screen_w < 600.0 {
         return mobile::draw(
             strings,
-            has_save,
-            notice,
-            slot,
-            delete_armed,
+            mobile::MobileMenuState {
+                has_save,
+                has_active_campaign,
+                notice,
+                slot,
+                delete_armed,
+            },
             screen_w,
             screen_h,
         );
@@ -142,7 +146,7 @@ pub fn render_main_menu(
         buttons.push((strings.r#continue.clone(), MenuAction::Continue));
     }
     buttons.push((strings.load.clone(), MenuAction::Load));
-    if has_save {
+    if show_save_button(has_active_campaign) {
         buttons.push((strings.save.clone(), MenuAction::Save));
     }
     buttons.push((strings.settings.clone(), MenuAction::Settings));
@@ -195,6 +199,10 @@ fn delete_slot_label(strings: &crate::data::PlayerStrings, armed: bool) -> Strin
     } else {
         strings.delete_slot.clone()
     }
+}
+
+fn show_save_button(has_active_campaign: bool) -> bool {
+    has_active_campaign
 }
 
 #[cfg(test)]

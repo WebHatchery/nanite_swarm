@@ -67,6 +67,8 @@ The same JUMP path points to buildings where dust has started reducing output
 or corrosion is nearing a network failure, and the Solar System dossier marks
 those remote worlds MAINT.
 When it reports SAVE FAILED, tap RETRY to attempt the campaign save again.
+On the title screen, SAVE appears only after New Game or Continue/Load, so an
+existing slot cannot be overwritten before a campaign is selected.
 When it reports BACKUP RECOVERED, tap SAVE NOW to establish a fresh primary
 save after recovery.
 When it reports LOW BATTERY, tap FLOW to inspect the power network before the

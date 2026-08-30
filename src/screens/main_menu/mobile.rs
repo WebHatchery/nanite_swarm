@@ -3,12 +3,17 @@
 use super::*;
 use macroquad_toolkit::ui::truncate_text_to_width;
 
+pub(super) struct MobileMenuState<'a> {
+    pub(super) has_save: bool,
+    pub(super) has_active_campaign: bool,
+    pub(super) notice: Option<&'a str>,
+    pub(super) slot: &'a str,
+    pub(super) delete_armed: bool,
+}
+
 pub(super) fn draw(
     strings: &crate::data::PlayerStrings,
-    has_save: bool,
-    notice: Option<&str>,
-    slot: &str,
-    delete_armed: bool,
+    state: MobileMenuState<'_>,
     screen_w: f32,
     screen_h: f32,
 ) -> MenuAction {
@@ -41,7 +46,13 @@ pub(super) fn draw(
         Colors::TEXT_DIM,
     );
 
-    let buttons = buttons(strings, has_save, slot, delete_armed);
+    let buttons = buttons(
+        strings,
+        state.has_save,
+        state.has_active_campaign,
+        state.slot,
+        state.delete_armed,
+    );
     let panel_y = briefing_y + briefing_h + if compact { 12.0 } else { 10.0 };
     let button_h = if compact { 24.0 } else { 28.0 };
     let button_spacing = if compact { 27.0 } else { 34.0 };
@@ -73,7 +84,7 @@ pub(super) fn draw(
             return *action;
         }
     }
-    if let Some(notice) = notice {
+    if let Some(notice) = state.notice {
         let notice_y = if compact {
             panel_y - 6.0
         } else {
@@ -93,6 +104,7 @@ pub(super) fn draw(
 fn buttons(
     strings: &crate::data::PlayerStrings,
     has_save: bool,
+    has_active_campaign: bool,
     slot: &str,
     delete_armed: bool,
 ) -> Vec<(String, MenuAction)> {
@@ -107,7 +119,7 @@ fn buttons(
         buttons.push((strings.r#continue.clone(), MenuAction::Continue));
     }
     buttons.push((strings.load.clone(), MenuAction::Load));
-    if has_save {
+    if super::show_save_button(has_active_campaign) {
         buttons.push((strings.save.clone(), MenuAction::Save));
     }
     buttons.push((strings.settings.clone(), MenuAction::Settings));
