@@ -404,6 +404,17 @@ fn enough_world_time_makes_a_save_due() {
 }
 
 #[test]
+fn a_successful_save_clears_the_backup_recovery_warning() {
+    let mut campaign = campaign();
+    campaign.current_mut().restored_from_backup = true;
+
+    campaign.mark_saved();
+
+    assert!(!campaign.current().restored_from_backup);
+    assert!(campaign.current().save_notice_timer > 0.0);
+}
+
+#[test]
 fn a_shorter_interval_from_settings_saves_sooner() {
     let mut campaign = campaign();
     for _ in 0..11 {

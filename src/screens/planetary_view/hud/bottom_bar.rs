@@ -108,7 +108,7 @@ pub(super) fn draw(
     let alert_text = if state.save_failed {
         "SAVE FAILED"
     } else if state.restored_from_backup {
-        "RESTORED FROM BACKUP"
+        "BACKUP RECOVERED"
     } else if state.power_collapse_shutdown > 0.0 {
         "POWER COLLAPSE"
     } else if state.battery_seconds <= 0.0 {
@@ -134,12 +134,15 @@ pub(super) fn draw(
         11.0,
         if alert_count > 0 { error } else { success },
     );
-    if let Some((alert_label, alert_action)) =
-        alert_button(state.save_failed, flow_alert, state.flow_overlay)
-    {
+    if let Some((alert_label, alert_action)) = alert_button(
+        state.save_failed,
+        state.restored_from_backup,
+        flow_alert,
+        state.flow_overlay,
+    ) {
         if draw_hud_button(
             theme,
-            Rect::new(10.0 + alert_w - 62.0, bottom_y + 10.0, 54.0, 22.0),
+            Rect::new(10.0 + alert_w - 74.0, bottom_y + 10.0, 66.0, 22.0),
             alert_label,
         ) {
             clock = alert_action;
@@ -448,11 +451,14 @@ pub(super) fn draw(
 
 fn alert_button(
     save_failed: bool,
+    restored_from_backup: bool,
     flow_alert: bool,
     flow_overlay: bool,
 ) -> Option<(&'static str, ClockAction)> {
     if save_failed {
         Some(("RETRY", ClockAction::RetrySave))
+    } else if restored_from_backup {
+        Some(("SAVE NOW", ClockAction::RetrySave))
     } else if flow_alert {
         Some((
             if flow_overlay { "FLOW ON" } else { "FLOW" },

@@ -335,7 +335,12 @@ impl Campaign {
     /// Called after a successful write, whatever prompted it.
     pub fn mark_saved(&mut self) {
         self.since_save = 0.0;
-        self.current_mut().save_notice_timer = SAVE_NOTICE_SECONDS;
+        let planet = self.current_mut();
+        planet.save_notice_timer = SAVE_NOTICE_SECONDS;
+        // A successful write promotes a backup recovery into a healthy
+        // primary save. Keep the warning visible until that point, then let
+        // the normal saved marker replace it.
+        planet.restored_from_backup = false;
     }
 
     fn generate(&self, index: usize, config: &GameConfig) -> PlanetState {

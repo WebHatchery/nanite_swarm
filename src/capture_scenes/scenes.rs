@@ -15,6 +15,9 @@ impl Game {
         self.campaign.current_mut().focus_mode = false;
         self.campaign.current_mut().flow_overlay = false;
         self.campaign.current_mut().auto_clocking = false;
+        self.campaign.current_mut().save_failed = false;
+        self.campaign.current_mut().restored_from_backup = false;
+        self.campaign.current_mut().restored_from_backup_generation = 0;
         self.research_state.current_research = None;
         self.research_state.research_progress = 0.0;
         match scene {
@@ -541,6 +544,14 @@ impl Game {
                 self.seed_logistics_scene();
                 let planet = self.campaign.current_mut();
                 planet.save_failed = true;
+                planet.notifications.clear();
+            }
+            "backup_recovery" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                let planet = self.campaign.current_mut();
+                planet.restored_from_backup = true;
+                planet.restored_from_backup_generation = 1;
                 planet.notifications.clear();
             }
             "demolish" => {

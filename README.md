@@ -39,6 +39,8 @@ and the Operations count identify powered processors that are missing a feed.
 When the bottom alert card reports a network or power problem, tap its FLOW
 button to open the network diagnosis overlay.
 When it reports SAVE FAILED, tap RETRY to attempt the campaign save again.
+When it reports BACKUP RECOVERED, tap SAVE NOW to establish a fresh primary
+save after recovery.
 Tap the event-coded NEXT button to jump to the next recovery, research-unlock,
 or mass-driver timer while keeping the whole campaign clock in sync.
 
