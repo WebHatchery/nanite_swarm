@@ -55,6 +55,7 @@ pub(super) fn draw_severed_network(state: &PlanetState, metrics: HudMetrics, tim
 /// when acid is eating a run twenty tiles long: the player needs to see *which*
 /// part of the network is going.
 pub(super) fn draw_wear(state: &PlanetState, metrics: HudMetrics, time: f32) {
+    let dust_response = state.resolved_dust_response();
     for (pos, tile) in state.grid.iter_tiles() {
         if !tile.revealed {
             continue;
@@ -73,7 +74,7 @@ pub(super) fn draw_wear(state: &PlanetState, metrics: HudMetrics, time: f32) {
         let (screen_x, screen_y) = grid_to_screen(pos, metrics);
         let color = if building.acid_wear >= 100.0 {
             with_alpha(Color::new(0.75, 0.2, 0.9, 1.0), 0.35 + acid_severity * 0.3)
-        } else if building.is_dust_stalled() {
+        } else if building.is_dust_stalled_with(&dust_response) {
             // Stalled is a different state, not just more wear: this building
             // has stopped, and if it carried the network the run is cut.
             with_alpha(Colors::ERROR, 0.30 + (time * 3.0).sin().abs() * 0.25)

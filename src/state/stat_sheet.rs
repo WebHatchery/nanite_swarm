@@ -156,7 +156,9 @@ impl PlanetState {
                 .logistics
                 .pad_depth
                 .max(self.drones.drone_capacity * 3.0),
-            StatId::PowerConsumption => self.grid.total_power_consumption(),
+            StatId::PowerConsumption => self
+                .grid
+                .total_power_consumption_with(&self.resolved_dust_response()),
             StatId::ResearchRate => resources.research_rate,
             StatId::AcidResistance => self.hazards.acid_rain,
             StatId::FreezeResistance => self.hazards.freeze,

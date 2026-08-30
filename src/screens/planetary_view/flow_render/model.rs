@@ -46,6 +46,7 @@ pub(super) fn factory_ledger(state: &PlanetState) -> FactoryLedger {
 }
 
 pub(super) fn processor_output_capacity(state: &PlanetState, resource: ResourceType) -> f32 {
+    let dust_response = state.resolved_dust_response();
     state
         .grid
         .iter_tiles()
@@ -58,7 +59,7 @@ pub(super) fn processor_output_capacity(state: &PlanetState, resource: ResourceT
                 .outputs
                 .get(resource.id())
                 .copied()?;
-            Some(rate * building.work_multiplier() * building.dust_efficiency())
+            Some(rate * building.work_multiplier() * building.dust_efficiency_with(&dust_response))
         })
         .sum()
 }
@@ -414,12 +415,13 @@ pub(super) fn ordered_resources<'a>(ids: impl Iterator<Item = &'a str>) -> Vec<R
 }
 
 pub(super) fn is_operational(state: &PlanetState, pos: GridPos) -> bool {
+    let dust_response = state.resolved_dust_response();
     state
         .grid
         .get(pos)
         .and_then(|tile| tile.building.as_ref())
         .is_some_and(|building| {
-            building.powered && !building.standby && !building.is_dust_stalled()
+            building.powered && !building.standby && !building.is_dust_stalled_with(&dust_response)
         })
 }
 

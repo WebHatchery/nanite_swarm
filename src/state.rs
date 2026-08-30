@@ -24,6 +24,7 @@ mod particles;
 #[cfg(test)]
 mod performance;
 mod persistence;
+mod power;
 mod progress;
 mod seed_ship;
 mod shipping;

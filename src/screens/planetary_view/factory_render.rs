@@ -240,9 +240,10 @@ fn processor_visual(
         .copied()
         .unwrap_or(0.0);
     let output_fill = (waiting / state.processor_pad_capacity()).clamp(0.0, 1.0);
+    let dust_response = state.resolved_dust_response();
     let active = building.powered
         && !building.standby
-        && !building.is_dust_stalled()
+        && !building.is_dust_stalled_with(&dust_response)
         && inputs.iter().all(|(_, fill)| *fill > 0.001)
         && output_fill < 0.999;
     Some(ProcessorVisual {

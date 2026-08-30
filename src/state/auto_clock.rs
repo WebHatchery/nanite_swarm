@@ -110,7 +110,7 @@ impl PlanetState {
             }
         }
         if boosted > 0 || normalized > 0 {
-            self.grid.update_power_grid();
+            self.refresh_power_grid();
             self.power_balance = self.net_power();
         }
         (boosted, normalized)

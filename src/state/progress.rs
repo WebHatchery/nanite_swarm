@@ -240,14 +240,16 @@ impl PlanetState {
     /// burned. Generation and consumption are asked for separately because the
     /// HUD shows both halves.
     pub fn power_generation(&self) -> f32 {
-        self.grid.total_power_generation() + self.biomass_power_bonus
+        let dust_response = self.resolved_dust_response();
+        self.grid.total_power_generation_with(&dust_response) + self.biomass_power_bonus
     }
 
     /// Power drawn this tick, after research efficiencies.
     pub fn power_consumption(&self) -> f32 {
+        let dust_response = self.resolved_dust_response();
         self.stats.apply(
             StatId::PowerConsumption,
-            self.grid.total_power_consumption(),
+            self.grid.total_power_consumption_with(&dust_response),
         ) + self.factory_focus_power_tax()
     }
 
@@ -305,6 +307,7 @@ impl PlanetState {
     /// Powered processors that cannot work because their dispatch pad is full.
     pub fn blocked_factories(&self) -> Vec<GridPos> {
         let capacity = self.processor_pad_capacity();
+        let dust_response = self.resolved_dust_response();
         self.data()
             .buildings
             .iter()
@@ -320,7 +323,9 @@ impl PlanetState {
                     .get(*pos)
                     .and_then(|tile| tile.building.as_ref())
                     .is_some_and(|building| {
-                        building.powered && !building.standby && !building.is_dust_stalled()
+                        building.powered
+                            && !building.standby
+                            && !building.is_dust_stalled_with(&dust_response)
                     })
                     && self
                         .output_buffers
@@ -335,6 +340,7 @@ impl PlanetState {
     /// Powered processors with at least one empty required input. Returning
     /// positions lets both the HUD count the bottleneck and the map mark it.
     pub fn starved_factories(&self) -> Vec<GridPos> {
+        let dust_response = self.resolved_dust_response();
         self.data()
             .buildings
             .iter()
@@ -351,7 +357,10 @@ impl PlanetState {
                 else {
                     return false;
                 };
-                if !building.powered || building.standby || building.is_dust_stalled() {
+                if !building.powered
+                    || building.standby
+                    || building.is_dust_stalled_with(&dust_response)
+                {
                     return false;
                 }
                 let carried = recipe.carried_ids();
@@ -388,6 +397,7 @@ impl PlanetState {
     }
 
     fn physical_output_rate(&self, resource_id: &str) -> f32 {
+        let dust_response = self.resolved_dust_response();
         self.data()
             .buildings
             .iter()
@@ -401,9 +411,11 @@ impl PlanetState {
                     .find_buildings(kind)
                     .into_iter()
                     .filter_map(|pos| self.grid.get(pos).and_then(|tile| tile.building.as_ref()))
-                    .filter(|building| building.powered && !building.is_dust_stalled())
+                    .filter(|building| {
+                        building.powered && !building.is_dust_stalled_with(&dust_response)
+                    })
                     .map(|building| {
-                        out * building.dust_efficiency()
+                        out * building.dust_efficiency_with(&dust_response)
                             * building.work_multiplier()
                             * self.factory_focus_multiplier(building.building_type)
                     })

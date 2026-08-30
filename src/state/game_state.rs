@@ -702,7 +702,7 @@ impl PlanetState {
             )
             .max(1.0)
             .round() as u32;
-        self.grid.update_power_grid();
+        self.refresh_power_grid();
     }
 }
 

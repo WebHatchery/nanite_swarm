@@ -118,6 +118,7 @@ impl PlanetState {
 
     pub(super) fn update_dust(&mut self, delta_time: f32) {
         let upkeep = self.config.upkeep.clone();
+        let dust_response = self.resolved_dust_response();
         let dust_rate = self.stats.apply(StatId::DustAccumulation, upkeep.dust_rate);
         let acid_rate = upkeep.dust_rate * upkeep.acid_multiplier;
         let acid_strength = self.acid_strength();
@@ -130,7 +131,9 @@ impl PlanetState {
                 self.grid
                     .get(*pos)
                     .and_then(|t| t.building.as_ref())
-                    .is_some_and(|building| building.powered && !building.is_dust_stalled())
+                    .is_some_and(|building| {
+                        building.powered && !building.is_dust_stalled_with(&dust_response)
+                    })
             })
             .collect();
         let preserved_forest_positions: Vec<_> = self
@@ -216,6 +219,7 @@ impl PlanetState {
     pub(super) fn update_biomass_harvesters(&mut self, delta_time: f32) {
         let output = self.config.resources.biomass_power_output;
         let rate = self.config.resources.biomass_consumption_rate;
+        let dust_response = self.resolved_dust_response();
         let mut power_bonus = 0.0;
 
         for (_, tile) in self.grid.iter_tiles_mut() {
@@ -226,7 +230,7 @@ impl PlanetState {
                 || tile.terrain != TerrainType::Forest
                 || tile.biomass_amount <= 0.0
                 || !building.powered
-                || building.is_dust_stalled()
+                || building.is_dust_stalled_with(&dust_response)
             {
                 continue;
             }
@@ -243,7 +247,8 @@ impl PlanetState {
             } else {
                 0.0
             };
-            power_bonus += output * fraction * building.dust_power_generation_multiplier();
+            power_bonus +=
+                output * fraction * building.dust_power_generation_multiplier_with(&dust_response);
 
             if tile.biomass_amount <= 0.0 {
                 tile.terrain = TerrainType::Empty;

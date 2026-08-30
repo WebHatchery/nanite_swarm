@@ -4,9 +4,10 @@
 //! whose route is cut stops where it stands and waves an error flag; it goes
 //! back to work by itself once the network is whole again.
 
+use crate::data::DustResponseConfig;
 use crate::engine::{
-    route_over_network, route_over_network_weighted, tile_carries_traffic, traffic_cost,
-    BuildingType, Drone, DroneEvent, DroneState, Grid, GridPos, ResourceType, StatId,
+    route_over_network_weighted_with, tile_carries_traffic_with, traffic_cost, BuildingType, Drone,
+    DroneEvent, DroneState, Grid, GridPos, ResourceType, StatId,
 };
 
 use std::collections::HashMap;
@@ -98,6 +99,7 @@ impl PlanetState {
         let Some(core) = self.grid.find_core() else {
             return Vec::new();
         };
+        let dust_response = self.resolved_dust_response();
 
         // A piece of network regardless of whether it is working right now,
         // because a piece that has stopped working is exactly the answer.
@@ -115,7 +117,7 @@ impl PlanetState {
             for next in pos.neighbors() {
                 if !next.in_bounds(self.grid.width, self.grid.height)
                     || reached.contains(&(next.x, next.y))
-                    || !tile_carries_traffic(&self.grid, next)
+                    || !tile_carries_traffic_with(&self.grid, next, &dust_response)
                 {
                     continue;
                 }
@@ -145,6 +147,7 @@ impl PlanetState {
         // Borrowed field by field: the router reads the traffic map while the
         // drones are being handed new routes.
         let grid = &self.grid;
+        let dust_response = self.resolved_dust_response();
         let cost = network_cost(
             &self.traffic,
             self.config.buildings.conduit_capacity,
@@ -160,11 +163,13 @@ impl PlanetState {
             match drone.state {
                 DroneState::Error => {
                     if network_changed {
-                        repath(grid, drone, core, &cost);
+                        repath(grid, drone, core, &cost, &dust_response);
                     }
                 }
                 DroneState::MovingToCore | DroneState::MovingToDrill => {
-                    if !route_is_intact(grid, drone) && !repath(grid, drone, core, &cost) {
+                    if !route_is_intact(grid, drone, &dust_response)
+                        && !repath(grid, drone, core, &cost, &dust_response)
+                    {
                         events.push(drone.block());
                     }
                 }
@@ -173,7 +178,13 @@ impl PlanetState {
                     // drop it before heading home: a drone that walks the route
                     // back is what makes a long run cost throughput.
                     drone.carrying = 0.0;
-                    match route_over_network_weighted(grid, drone.position, drone.home, &cost) {
+                    match route_over_network_weighted_with(
+                        grid,
+                        drone.position,
+                        drone.home,
+                        &cost,
+                        &dust_response,
+                    ) {
                         Some(route) => drone.return_to_drill(route),
                         None => events.push(drone.block()),
                     }
@@ -216,6 +227,7 @@ impl PlanetState {
             Vec::new()
         };
         let base_speed = self.drones.drone_speed;
+        let dust_response = self.resolved_dust_response();
         let grid = &self.grid;
         let traffic = &self.traffic;
         let hazard_fields = self.data().planet(self.planet_index).hazard_fields.clone();
@@ -225,7 +237,7 @@ impl PlanetState {
         for drone in self.drones.drones_mut() {
             let mut speed = base_speed;
             if let Some(building) = grid.get(drone.home).and_then(|t| t.building.as_ref()) {
-                speed *= building.dust_drone_speed_multiplier();
+                speed *= building.dust_drone_speed_multiplier_with(&dust_response);
             }
             if let Some(tile) = drone.path.get(drone.path_index) {
                 // The cold bites where the network is not heated, so a long run
@@ -323,6 +335,7 @@ impl PlanetState {
         resource: ResourceType,
     ) -> Option<(GridPos, Vec<GridPos>)> {
         let hopper_ceiling = self.processor_pad_capacity();
+        let dust_response = self.resolved_dust_response();
         let mut best: Option<DeliveryChoice> = None;
 
         for pos in self.consumers_of(resource) {
@@ -348,8 +361,13 @@ impl PlanetState {
             if committed + self.drones.drone_capacity > hopper_ceiling {
                 continue;
             }
-            let Some(route) = route_over_network_weighted(&self.grid, from, pos, self.route_cost())
-            else {
+            let Some(route) = route_over_network_weighted_with(
+                &self.grid,
+                from,
+                pos,
+                self.route_cost(),
+                &dust_response,
+            ) else {
                 continue;
             };
             let consumption = self.consumer_rate(pos, resource).max(0.001);
@@ -368,8 +386,14 @@ impl PlanetState {
         }
 
         best.map(|(_, pos, route)| (pos, route)).or_else(|| {
-            route_over_network_weighted(&self.grid, from, core, self.route_cost())
-                .map(|route| (core, route))
+            route_over_network_weighted_with(
+                &self.grid,
+                from,
+                core,
+                self.route_cost(),
+                &dust_response,
+            )
+            .map(|route| (core, route))
         })
     }
 
@@ -430,6 +454,7 @@ impl PlanetState {
     /// [`Self::dispatch_producers`]'s problem, the same as for a Smelter.
     fn update_drills(&mut self, delta_time: f32) {
         let rate = self.drill_output_rate();
+        let dust_response = self.resolved_dust_response();
         let crew = self.drone_crew_size();
         let ceiling = self
             .config
@@ -445,13 +470,13 @@ impl PlanetState {
             let Some(building) = tile.building.as_ref() else {
                 continue;
             };
-            if !building.powered || building.is_dust_stalled() {
+            if !building.powered || building.is_dust_stalled_with(&dust_response) {
                 continue;
             }
             // What the ground under this particular drill is worth. Placement
             // is a spatial decision, not only a question of run length.
             let richness = tile.ore_richness;
-            let efficiency = building.dust_efficiency();
+            let efficiency = building.dust_efficiency_with(&dust_response);
             let cut = rate * richness * efficiency * delta_time;
 
             let buffer = self
@@ -619,7 +644,13 @@ impl PlanetState {
 /// carrying, otherwise home to its drill. This is both how a re-route around a
 /// cut happens and how a stalled drone goes back to work once the network is
 /// whole. Returns `false` when the network cannot carry it there at all.
-fn repath(grid: &Grid, drone: &mut Drone, core: GridPos, cost: impl Fn(GridPos) -> f32) -> bool {
+fn repath(
+    grid: &Grid,
+    drone: &mut Drone,
+    core: GridPos,
+    cost: impl Fn(GridPos) -> f32,
+    dust_response: &DustResponseConfig,
+) -> bool {
     let carrying = drone.carrying;
     let destination = match drone.state {
         // Whatever it was sent to, which may be a processing building.
@@ -634,7 +665,9 @@ fn repath(grid: &Grid, drone: &mut Drone, core: GridPos, cost: impl Fn(GridPos) 
         return true;
     }
 
-    let Some(route) = route_over_network_weighted(grid, drone.position, destination, cost) else {
+    let Some(route) =
+        route_over_network_weighted_with(grid, drone.position, destination, cost, dust_response)
+    else {
         return false;
     };
 
@@ -650,12 +683,14 @@ fn repath(grid: &Grid, drone: &mut Drone, core: GridPos, cost: impl Fn(GridPos) 
 
 /// Is the rest of this drone's path still on the network? The final tile is the
 /// destination (a drill does not itself carry traffic), so it is exempt.
-fn route_is_intact(grid: &Grid, drone: &Drone) -> bool {
+fn route_is_intact(grid: &Grid, drone: &Drone, dust_response: &DustResponseConfig) -> bool {
     let remaining = drone.path.get(drone.path_index..).unwrap_or(&[]);
     let Some((_destination, corridor)) = remaining.split_last() else {
         return true;
     };
-    corridor.iter().all(|pos| tile_carries_traffic(grid, *pos))
+    corridor
+        .iter()
+        .all(|pos| tile_carries_traffic_with(grid, *pos, dust_response))
 }
 
 /// The routing cost of every network tile, given who is already on it.

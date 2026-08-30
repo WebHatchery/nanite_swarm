@@ -1,4 +1,5 @@
 use super::*;
+use crate::data::DustResponseConfig;
 
 fn drill_at_origin() -> Building {
     Building::new(BuildingType::Drill, GridPos::new(0, 0))
@@ -55,6 +56,51 @@ fn dust_power_leak_only_for_transmitters_over_75() {
     drill.dust = 80.0;
     assert!(!drill.transmits_power());
     assert_eq!(drill.dust_power_leak(), 0.0);
+}
+
+#[test]
+fn dust_response_thresholds_are_applied_by_runtime_helpers() {
+    let response = DustResponseConfig {
+        efficiency_threshold: 40.0,
+        speed_threshold: 60.0,
+        leak_threshold: 80.0,
+        stall_threshold: 90.0,
+        ..DustResponseConfig::default()
+    };
+    let mut conduit = Building::new(BuildingType::Conduit, GridPos::new(0, 0));
+
+    conduit.dust = 39.9;
+    assert_eq!(conduit.dust_efficiency_with(&response), 1.0);
+    assert_eq!(conduit.dust_drone_speed_multiplier_with(&response), 1.0);
+    assert_eq!(conduit.dust_power_leak_with(&response), 0.0);
+    assert_eq!(
+        conduit.dust_power_generation_multiplier_with(&response),
+        1.0
+    );
+
+    conduit.dust = 80.0;
+    assert_eq!(conduit.dust_efficiency_with(&response), response.efficiency);
+    assert_eq!(
+        conduit.dust_drone_speed_multiplier_with(&response),
+        response.speed_multiplier
+    );
+    assert_eq!(conduit.dust_power_leak_with(&response), response.leak);
+    assert_eq!(
+        conduit.dust_power_generation_multiplier_with(&response),
+        0.7
+    );
+
+    conduit.dust = 90.0;
+    assert!(conduit.is_dust_stalled_with(&response));
+    assert_eq!(conduit.dust_efficiency_with(&response), 0.0);
+    assert_eq!(
+        conduit.dust_power_generation_multiplier_with(&response),
+        0.0
+    );
+    assert_eq!(
+        conduit.dust_power_consumption_multiplier_with(&response),
+        0.0
+    );
 }
 
 #[test]

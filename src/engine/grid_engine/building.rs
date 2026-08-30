@@ -93,13 +93,7 @@ impl Building {
     }
 
     pub fn dust_efficiency(&self) -> f32 {
-        if self.dust >= 100.0 {
-            0.0
-        } else if self.dust >= 25.0 {
-            0.9
-        } else {
-            1.0
-        }
+        self.dust_efficiency_with(&DustResponseConfig::default())
     }
 
     pub fn dust_efficiency_with(&self, response: &DustResponseConfig) -> f32 {
@@ -113,11 +107,7 @@ impl Building {
     }
 
     pub fn dust_drone_speed_multiplier(&self) -> f32 {
-        if self.dust >= 50.0 {
-            0.7
-        } else {
-            1.0
-        }
+        self.dust_drone_speed_multiplier_with(&DustResponseConfig::default())
     }
 
     pub fn dust_drone_speed_multiplier_with(&self, response: &DustResponseConfig) -> f32 {
@@ -129,9 +119,13 @@ impl Building {
     }
 
     pub fn dust_power_generation_multiplier(&self) -> f32 {
-        if self.dust >= 100.0 {
+        self.dust_power_generation_multiplier_with(&DustResponseConfig::default())
+    }
+
+    pub fn dust_power_generation_multiplier_with(&self, response: &DustResponseConfig) -> f32 {
+        if self.dust >= response.stall_threshold {
             0.0
-        } else if self.dust >= 75.0 {
+        } else if self.dust >= response.leak_threshold {
             0.7
         } else {
             1.0
@@ -139,9 +133,13 @@ impl Building {
     }
 
     pub fn dust_power_consumption_multiplier(&self) -> f32 {
-        if self.dust >= 100.0 {
+        self.dust_power_consumption_multiplier_with(&DustResponseConfig::default())
+    }
+
+    pub fn dust_power_consumption_multiplier_with(&self, response: &DustResponseConfig) -> f32 {
+        if self.dust >= response.stall_threshold {
             0.0
-        } else if self.dust >= 75.0 {
+        } else if self.dust >= response.leak_threshold {
             1.2
         } else {
             1.0
@@ -149,11 +147,7 @@ impl Building {
     }
 
     pub fn dust_power_leak(&self) -> f32 {
-        if self.dust >= 75.0 && self.transmits_power() {
-            0.5
-        } else {
-            0.0
-        }
+        self.dust_power_leak_with(&DustResponseConfig::default())
     }
 
     pub fn dust_power_leak_with(&self, response: &DustResponseConfig) -> f32 {
@@ -165,7 +159,7 @@ impl Building {
     }
 
     pub fn is_dust_stalled(&self) -> bool {
-        self.dust >= 100.0
+        self.is_dust_stalled_with(&DustResponseConfig::default())
     }
 
     pub fn is_dust_stalled_with(&self, response: &DustResponseConfig) -> bool {

@@ -54,7 +54,7 @@ impl PlanetState {
             }
         }
         if changed > 0 {
-            self.grid.update_power_grid();
+            self.refresh_power_grid();
             self.power_balance = self.net_power();
             self.notifications.info(format!(
                 "{} processor{} {}",
@@ -180,7 +180,7 @@ impl PlanetState {
         }
         let standby = building.standby;
         let name = building.building_type.name(data).to_string();
-        self.grid.update_power_grid();
+        self.refresh_power_grid();
         self.power_balance = self.net_power();
         self.notifications.info(if standby {
             format!("{} on standby; freight buffers preserved", name)

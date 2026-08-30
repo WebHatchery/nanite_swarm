@@ -165,20 +165,22 @@ impl PlanetState {
         }
 
         // Power-based energy generation
-        self.grid.update_power_grid();
+        self.refresh_power_grid();
         let net_power = self.net_power();
         self.power_balance = net_power;
         self.resources.energy += self.power_balance * sim_delta;
 
         // Passive data trickle from Core to avoid research deadlock
+        let dust_response = self.resolved_dust_response();
         if let Some(core_pos) = self.grid.find_core() {
             if let Some(core_tile) = self.grid.get(core_pos) {
                 if let Some(core) = core_tile.building.as_ref() {
-                    if core.powered && !core.is_dust_stalled() {
+                    if core.powered && !core.is_dust_stalled_with(&dust_response) {
                         let rate = self
                             .stats
                             .apply(StatId::DataGeneration, self.config.resources.core_data_rate);
-                        self.resources.data += rate * sim_delta * core.dust_efficiency();
+                        self.resources.data +=
+                            rate * sim_delta * core.dust_efficiency_with(&dust_response);
                     }
                 }
             }

@@ -6,6 +6,8 @@
 //! which is what makes conduit layout — not straight-line distance — the thing
 //! the player is actually optimising.
 
+use crate::data::DustResponseConfig;
+
 use super::{Grid, GridPos};
 use macroquad_toolkit::pathfinding::{find_path_with, Heuristic, Pos};
 
@@ -14,10 +16,21 @@ use macroquad_toolkit::pathfinding::{find_path_with, Heuristic, Pos};
 /// Endpoints (a drill, a Core) are handled by the caller; this is about the
 /// tiles in between. A fully dust-stalled conduit is treated as broken pipe.
 pub fn tile_carries_traffic(grid: &Grid, pos: GridPos) -> bool {
+    tile_carries_traffic_with(grid, pos, &DustResponseConfig::default())
+}
+
+/// Whether a tile carries traffic under the planet's active dust thresholds.
+pub fn tile_carries_traffic_with(
+    grid: &Grid,
+    pos: GridPos,
+    dust_response: &DustResponseConfig,
+) -> bool {
     grid.get(pos)
         .and_then(|tile| tile.building.as_ref())
         .map(|building| {
-            building.carries_traffic() && !building.is_dust_stalled() && building.acid_wear < 100.0
+            building.carries_traffic()
+                && !building.is_dust_stalled_with(dust_response)
+                && building.acid_wear < 100.0
         })
         .unwrap_or(false)
 }
@@ -29,7 +42,17 @@ pub fn tile_carries_traffic(grid: &Grid, pos: GridPos) -> bool {
 /// when the network is broken between them. An empty route means the drone is
 /// already there.
 pub fn route_over_network(grid: &Grid, from: GridPos, to: GridPos) -> Option<Vec<GridPos>> {
-    route_over_network_weighted(grid, from, to, |_| 1.0)
+    route_over_network_with(grid, from, to, &DustResponseConfig::default())
+}
+
+/// Shortest route using the planet's active dust thresholds.
+pub fn route_over_network_with(
+    grid: &Grid,
+    from: GridPos,
+    to: GridPos,
+    dust_response: &DustResponseConfig,
+) -> Option<Vec<GridPos>> {
+    route_over_network_weighted_with(grid, from, to, |_| 1.0, dust_response)
 }
 
 /// The same route, with each tile costing whatever `tile_cost` says it does.
@@ -45,6 +68,17 @@ pub fn route_over_network_weighted(
     to: GridPos,
     tile_cost: impl Fn(GridPos) -> f32,
 ) -> Option<Vec<GridPos>> {
+    route_over_network_weighted_with(grid, from, to, tile_cost, &DustResponseConfig::default())
+}
+
+/// Weighted route using the planet's active dust thresholds.
+pub fn route_over_network_weighted_with(
+    grid: &Grid,
+    from: GridPos,
+    to: GridPos,
+    tile_cost: impl Fn(GridPos) -> f32,
+    dust_response: &DustResponseConfig,
+) -> Option<Vec<GridPos>> {
     if from == to {
         return Some(Vec::new());
     }
@@ -56,7 +90,7 @@ pub fn route_over_network_weighted(
         grid.height as usize,
         |pos| {
             let pos = GridPos::new(pos.x, pos.y);
-            pos == from || pos == to || tile_carries_traffic(grid, pos)
+            pos == from || pos == to || tile_carries_traffic_with(grid, pos, dust_response)
         },
         |pos| tile_cost(GridPos::new(pos.x, pos.y)).max(1.0),
         Heuristic::Manhattan,

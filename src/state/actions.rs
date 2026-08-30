@@ -37,7 +37,7 @@ impl PlanetState {
                 self.grid.reveal_around(pos, 3);
 
                 // Update power grid
-                self.grid.update_power_grid();
+                self.refresh_power_grid();
                 self.network_revision = self.network_revision.wrapping_add(1);
                 self.power_balance = self.net_power();
                 self.update_achievements();
@@ -50,7 +50,15 @@ impl PlanetState {
                 ) && self
                     .grid
                     .find_core()
-                    .and_then(|core| crate::engine::route_over_network(&self.grid, pos, core))
+                    .and_then(|core| {
+                        let dust_response = self.resolved_dust_response();
+                        crate::engine::route_over_network_with(
+                            &self.grid,
+                            pos,
+                            core,
+                            &dust_response,
+                        )
+                    })
                     .is_none()
                 {
                     self.notifications
@@ -109,7 +117,7 @@ impl PlanetState {
         }
 
         if placed_any {
-            self.grid.update_power_grid();
+            self.refresh_power_grid();
             self.power_balance = self.net_power();
             self.network_revision = self.network_revision.wrapping_add(1);
         }
@@ -171,7 +179,7 @@ impl PlanetState {
             self.resources.minerals += mineral_cost * refund_ratio;
             self.resources.energy += energy_cost * refund_ratio;
 
-            self.grid.update_power_grid();
+            self.refresh_power_grid();
             self.power_balance = self.net_power();
             self.network_revision = self.network_revision.wrapping_add(1);
             self.emit_audio(super::audio::AudioEvent::Demolition);
@@ -533,7 +541,7 @@ impl PlanetState {
         self.route_reservations.clear();
         self.select_building(building_type);
         self.grid.reveal_around(destination, 3);
-        self.grid.update_power_grid();
+        self.refresh_power_grid();
         self.network_revision = self.network_revision.wrapping_add(1);
         self.power_balance = self.net_power();
         self.placement_anims.push(PlacementAnim {

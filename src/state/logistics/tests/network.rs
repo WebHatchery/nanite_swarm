@@ -129,6 +129,105 @@ fn a_drill_works_alone_until_research_says_otherwise() {
     assert_eq!(state.drones.drones_at(drill).len(), 1);
 }
 
+fn drill_output_after_research(researched: bool) -> f32 {
+    let (mut state, _, drill) = state_with_run(0);
+    if researched {
+        state
+            .research
+            .unlocked_techs
+            .push("self_cleaning_servos".to_string());
+        state.refresh_stats();
+    }
+    state
+        .grid
+        .get_mut(drill)
+        .unwrap()
+        .building
+        .as_mut()
+        .unwrap()
+        .dust = 26.0;
+    state.update_drills(1.0);
+    state
+        .output_buffers
+        .get(&(drill.x, drill.y))
+        .copied()
+        .unwrap_or(0.0)
+}
+
+#[test]
+fn self_cleaning_servos_moves_the_live_drill_efficiency_threshold() {
+    let plain = drill_output_after_research(false);
+    let researched = drill_output_after_research(true);
+
+    assert_eq!(plain, 4.5, "the default threshold should reduce the drill");
+    assert_eq!(
+        researched, 5.0,
+        "the researched threshold should keep this drill at full output"
+    );
+}
+
+#[test]
+fn self_cleaning_servos_moves_the_live_drone_speed_threshold() {
+    let (mut plain, _, drill) = state_with_run(2);
+    let (mut researched, _, researched_drill) = state_with_run(2);
+    researched
+        .research
+        .unlocked_techs
+        .push("self_cleaning_servos".to_string());
+    researched.refresh_stats();
+
+    for (state, drill_pos) in [(&mut plain, drill), (&mut researched, researched_drill)] {
+        state
+            .grid
+            .get_mut(drill_pos)
+            .unwrap()
+            .building
+            .as_mut()
+            .unwrap()
+            .dust = 51.0;
+        state.update_logistics(FILL_SECONDS, false);
+    }
+
+    assert_eq!(plain.drones.drones()[0].speed, 5.6);
+    assert_eq!(researched.drones.drones()[0].speed, 8.0);
+}
+
+#[test]
+fn acid_neutralizers_keep_a_high_dust_run_connected() {
+    let (mut state, core, drill) = state_with_run(4);
+    state
+        .research
+        .unlocked_techs
+        .push("acid_neutralizers".to_string());
+    state.refresh_stats();
+
+    let choked = GridPos::new(core.x + 2, core.y);
+    state
+        .grid
+        .get_mut(choked)
+        .unwrap()
+        .building
+        .as_mut()
+        .unwrap()
+        .dust = 105.0;
+    state.refresh_power_grid();
+
+    assert!(state.resolved_dust_response().stall_threshold > 105.0);
+    assert!(
+        state
+            .grid
+            .get(choked)
+            .unwrap()
+            .building
+            .as_ref()
+            .unwrap()
+            .powered
+    );
+    assert!(state
+        .delivery_for(drill, core, ResourceType::Minerals)
+        .is_some());
+}
+
 #[test]
 fn swarm_dispatch_puts_a_second_drone_on_every_drill() {
     let (mut state, _core, drill) = state_with_run(2);

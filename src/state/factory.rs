@@ -158,6 +158,7 @@ impl PlanetState {
         if self.factory_focus == FactoryFocus::Balanced {
             return 0.0;
         }
+        let dust_response = self.resolved_dust_response();
         self.grid
             .iter_tiles()
             .filter_map(|(_, tile)| tile.building.as_ref())
@@ -168,7 +169,7 @@ impl PlanetState {
                 let def = self.data().building(building.building_type.id());
                 def.power_consumption
                     * 0.15
-                    * building.dust_power_consumption_multiplier()
+                    * building.dust_power_consumption_multiplier_with(&dust_response)
                     * building.power_demand_multiplier()
             })
             .sum()
@@ -179,7 +180,7 @@ impl PlanetState {
             return;
         }
         self.factory_focus = focus;
-        self.grid.update_power_grid();
+        self.refresh_power_grid();
         self.power_balance = self.net_power();
         self.notifications
             .info(format!("Factory focus: {}", focus.label()));

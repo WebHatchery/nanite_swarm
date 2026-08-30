@@ -66,9 +66,11 @@ impl PlanetState {
     fn record_collapse_source(&mut self) {
         let data_context = self.data.clone();
         let data = data_context.data();
+        let dust_response = self.resolved_dust_response();
         let local = self.grid.iter_tiles().find_map(|(pos, tile)| {
             let building = tile.building.as_ref()?;
-            (building.powered && (building.is_dust_stalled() || building.acid_wear >= 100.0))
+            (building.powered
+                && (building.is_dust_stalled_with(&dust_response) || building.acid_wear >= 100.0))
                 .then_some((pos, building.building_type))
         });
         let (source, building, position) = if let Some((position, building)) = local {
