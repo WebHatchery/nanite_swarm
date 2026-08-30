@@ -295,7 +295,8 @@ pub(super) fn draw_notifications(state: &PlanetState, metrics: HudMetrics, scree
     // Clear of the right-hand panel stack, which the full-screen menus do not
     // have and so anchor differently.
     let anchor = crate::screens::ToastAnchor {
-        x: (screen_w - metrics.right_panel_width - 260.0 - 24.0).max(metrics.base_offset_x() + 8.0),
+        x: (screen_w - metrics.right_panel_width - crate::screens::toast_width() - 24.0)
+            .max(metrics.base_offset_x() + 8.0),
         y: metrics.top_bar_height + 96.0,
     };
     crate::screens::draw_toasts(state, anchor);
