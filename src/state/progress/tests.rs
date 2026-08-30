@@ -69,6 +69,50 @@ fn hostile_arrival_guidance_walks_the_power_route_prerequisites() {
 }
 
 #[test]
+fn acid_arrival_guidance_continues_to_the_corrosion_countermeasure() {
+    let mut state = PlanetState::new(1, 7, GameConfig::default());
+    for tech in ["power_grid", "geothermal_tapping"] {
+        state.research.unlocked_techs.push(tech.to_string());
+    }
+    let core = state.grid.find_core().unwrap();
+    let source = GridPos::new(core.x + 1, core.y);
+    let tile = state.grid.get_mut(source).unwrap();
+    tile.terrain = crate::engine::TerrainType::Empty;
+    tile.revealed = true;
+    assert!(state
+        .grid
+        .place_building(source, BuildingType::GeothermalTap));
+
+    assert_eq!(
+        state.arrival_guidance().as_deref(),
+        Some("Next: tap RESEARCH for Ceramic Plating.")
+    );
+}
+
+#[test]
+fn a_cold_world_keeps_heater_placement_visible_after_fusion_is_ready() {
+    let mut state = PlanetState::new(3, 7, GameConfig::default());
+    for tech in ["power_grid", "heater_nodes", "fusion_reactors"] {
+        state.research.unlocked_techs.push(tech.to_string());
+    }
+    state.unlock_building(BuildingType::HeaterNode);
+    state.unlock_building(BuildingType::FusionReactor);
+    let core = state.grid.find_core().unwrap();
+    let source = GridPos::new(core.x + 1, core.y);
+    let tile = state.grid.get_mut(source).unwrap();
+    tile.terrain = crate::engine::TerrainType::Empty;
+    tile.revealed = true;
+    assert!(state
+        .grid
+        .place_building(source, BuildingType::FusionReactor));
+
+    assert_eq!(
+        state.arrival_guidance().as_deref(),
+        Some("Next: tap BUILD, then place Heater Node.")
+    );
+}
+
+#[test]
 fn cold_arrival_guidance_starts_with_the_first_fusion_prerequisite() {
     let state = PlanetState::new(4, 7, GameConfig::default());
     assert_eq!(

@@ -41,6 +41,12 @@ impl PlanetState {
             }
         }
 
+        if let Some(condition) = condition {
+            if let Some(guidance) = self.hazard_countermeasure_guidance(condition) {
+                return Some(guidance);
+            }
+        }
+
         let constraints = &data.planet(self.planet_index).constraints;
         if let Some(id) = constraints
             .required_research
@@ -82,6 +88,44 @@ impl PlanetState {
             ));
         }
         None
+    }
+
+    fn hazard_countermeasure_guidance(&self, condition: &str) -> Option<String> {
+        match condition {
+            "acid" => {
+                let next_id = self.first_missing_research("ceramic_plating")?;
+                let name = self
+                    .data()
+                    .research
+                    .nodes
+                    .iter()
+                    .find(|node| node.id == next_id)
+                    .map(|node| node.name.as_str())
+                    .unwrap_or(next_id.as_str());
+                Some(format!("Next: tap RESEARCH for {name}."))
+            }
+            "cold" => {
+                let heater = BuildingType::HeaterNode;
+                if !self.is_building_researched(heater) {
+                    let research_id = self.data().building(heater.id()).unlocked_by.as_deref()?;
+                    let next_id = self.first_missing_research(research_id)?;
+                    let name = self
+                        .data()
+                        .research
+                        .nodes
+                        .iter()
+                        .find(|node| node.id == next_id)
+                        .map(|node| node.name.as_str())
+                        .unwrap_or(next_id.as_str());
+                    return Some(format!("Next: tap RESEARCH for {name}."));
+                }
+                self.grid
+                    .find_buildings(heater)
+                    .is_empty()
+                    .then(|| "Next: tap BUILD, then place Heater Node.".to_string())
+            }
+            _ => None,
+        }
     }
 
     fn first_missing_research(&self, id: &str) -> Option<String> {

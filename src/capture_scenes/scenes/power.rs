@@ -60,11 +60,15 @@ impl Game {
         self.campaign.travel_to(planet_index);
 
         let research = match source {
-            engine::BuildingType::GeothermalTap => "geothermal_tapping",
-            engine::BuildingType::FusionReactor => "fusion_reactors",
+            engine::BuildingType::GeothermalTap => ["power_grid", "geothermal_tapping"].as_slice(),
+            engine::BuildingType::FusionReactor => {
+                ["power_grid", "heater_nodes", "fusion_reactors"].as_slice()
+            }
             _ => return,
         };
-        self.research_state.unlocked.push(research.to_string());
+        self.research_state
+            .unlocked
+            .extend(research.iter().map(|id| (*id).to_string()));
         self.sync_research_to_planet();
 
         let planet = self.campaign.current_mut();

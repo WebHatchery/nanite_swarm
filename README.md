@@ -17,6 +17,9 @@ The swarm is powerful, but every expansion changes the terrain, stresses the gri
 - Hostile arrivals name the next visible RESEARCH or BUILD control for their
   authored power route in the landing banner and build palette, following any
   research prerequisites instead of leaving the dossier's warning behind.
+- After the power route is standing, the same handoff continues to the
+  world's hazard response: Ceramic Plating on acid worlds and Heater Nodes on
+  cold worlds.
 - Completing the opening lesson points to the visible SHIP control for the
   Seed Ship yard, then MAP for choosing the next world.
 - Connect structures through conduits and power networks.
