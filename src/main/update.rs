@@ -5,6 +5,7 @@
 //! screen actions into state changes.
 
 use macroquad::prelude::*;
+use macroquad_toolkit::ui::ScrollArea;
 
 use crate::screens::{
     render_campaign_complete_view, render_interplanetary_view, render_launch_view,
@@ -238,30 +239,38 @@ impl Game {
         let overflow_pods: [usize; state::PLANET_COUNT] =
             std::array::from_fn(|index| self.campaign.overflow_pod_count(index));
         let current_world = self.campaign.current_index();
+        let mass_driver_researched = self.has_mass_driver();
+        let seed_ship_ready = self.campaign.current().seed_ship.is_ready_to_launch();
+        let editing_world = self.shipping_edit_world;
+        let mut shipping_scroll = std::mem::replace(&mut self.shipping_scroll, ScrollArea::new());
+        let campaign = &self.campaign;
+        let data = &self.data;
         let view = screens::MapView {
-            data: self.data.data(),
-            current_planet: self.campaign.current_index(),
-            mass_driver_researched: self.has_mass_driver(),
-            seed_ship_ready: self.campaign.current().seed_ship.is_ready_to_launch(),
+            data: data.data(),
+            current_planet: current_world,
+            mass_driver_researched,
+            seed_ship_ready,
             colonized: &colonized,
             stockpiles: &stockpiles,
             current_drivers_online: drivers_online[current_world],
             drivers_online: &drivers_online,
             pads: &pads,
             pod_fractions: &pod_fractions,
-            shipments: self.campaign.shipments(),
+            shipments: campaign.shipments(),
             orders: &orders,
             pending_pods: &pending_pods,
             pod_caps: &pod_caps,
             overflow_pods: &overflow_pods,
-            editing_world: self.shipping_edit_world,
+            editing_world,
         };
-        let editing_world = self.shipping_edit_world;
-        match render_interplanetary_view(&view) {
+        let action = render_interplanetary_view(&view, &mut shipping_scroll);
+        self.shipping_scroll = shipping_scroll;
+        match action {
             InterplanetaryAction::Close => self.phase = GamePhase::Playing,
             InterplanetaryAction::SelectPlanet(index) => {
                 if self.campaign.travel_to(index) {
                     self.shipping_edit_world = index;
+                    self.shipping_scroll.set_offset(0.0);
                     self.sync_research_to_planet();
                     self.sync_building_unlocks();
                     self.save_campaign();
@@ -272,6 +281,7 @@ impl Game {
                 let origin = self.campaign.current_index();
                 if self.has_mass_driver() && self.campaign.launch_seed_ship(index) {
                     self.shipping_edit_world = index;
+                    self.shipping_scroll.set_offset(0.0);
                     self.sync_research_to_planet();
                     self.sync_building_unlocks();
                     self.save_campaign();
@@ -298,7 +308,10 @@ impl Game {
             InterplanetaryAction::ToggleExportSurplus => {
                 self.campaign.toggle_export_surplus_for(current_world)
             }
-            InterplanetaryAction::SelectOrderWorld(index) => self.shipping_edit_world = index,
+            InterplanetaryAction::SelectOrderWorld(index) => {
+                self.shipping_edit_world = index;
+                self.shipping_scroll.set_offset(0.0);
+            }
             InterplanetaryAction::CycleRemoteExportCargo => {
                 self.campaign.cycle_export_cargo_for(editing_world)
             }

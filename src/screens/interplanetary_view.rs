@@ -5,7 +5,7 @@ mod shipping_panel;
 use crate::state::{ExportOrder, Shipment};
 use crate::ui::{color_from_rgba, draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
-use macroquad_toolkit::ui::{draw_ui_text, note_neighbour, touch_area, Pointer};
+use macroquad_toolkit::ui::{draw_ui_text, note_neighbour, touch_area, Pointer, ScrollArea};
 
 /// Actions from the interplanetary view
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -57,7 +57,10 @@ pub struct MapView<'a> {
 }
 
 /// Render the interplanetary solar system view
-pub fn render_interplanetary_view(view: &MapView) -> InterplanetaryAction {
+pub fn render_interplanetary_view(
+    view: &MapView,
+    shipping_scroll: &mut ScrollArea,
+) -> InterplanetaryAction {
     // A new world costs a whole Seed Ship, thrown by a Mass Driver.
     let can_launch = view.current_drivers_online > 0 && view.seed_ship_ready;
     let current_planet = view.current_planet;
@@ -126,7 +129,14 @@ pub fn render_interplanetary_view(view: &MapView) -> InterplanetaryAction {
     // list does not need.
     let shipping_y = list_y + list_h + 12.0;
     let shipping_h = (screen_h - shipping_y - 80.0).max(120.0);
-    let shipping_action = shipping_panel::draw(view, list_x, shipping_y, list_w, shipping_h);
+    let shipping_action = shipping_panel::draw(
+        view,
+        list_x,
+        shipping_y,
+        list_w,
+        shipping_h,
+        shipping_scroll,
+    );
     if shipping_action != InterplanetaryAction::None {
         action = shipping_action;
     }

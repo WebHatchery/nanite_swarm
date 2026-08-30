@@ -3,7 +3,7 @@
 use crate::state::{cargo_name, Shipment};
 use crate::ui::{draw_button_sized, draw_panel, Colors};
 use macroquad::prelude::*;
-use macroquad_toolkit::ui::draw_ui_text;
+use macroquad_toolkit::ui::{draw_ui_text, is_fully_visible, ScrollArea};
 
 use super::{InterplanetaryAction, MapView};
 
@@ -16,7 +16,14 @@ const LISTED_SHIPMENTS: usize = 4;
 /// Only the current world: a driver is set up where it was built. What a world
 /// keeps doing after the swarm leaves is the whole point, so the order stays
 /// behind with it.
-pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> InterplanetaryAction {
+pub(super) fn draw(
+    view: &MapView,
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+    scroll: &mut ScrollArea,
+) -> InterplanetaryAction {
     draw_panel(x, y, w, h);
     draw_ui_text("Shipping", x + 12.0, y + 26.0, 16.0, Colors::PRIMARY);
 
@@ -32,6 +39,28 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
         );
         return InterplanetaryAction::None;
     }
+
+    let remote_worlds: Vec<usize> = view
+        .orders
+        .iter()
+        .enumerate()
+        .filter_map(|(world, order)| {
+            (world != view.editing_world && order.is_some()).then_some(world)
+        })
+        .collect();
+    let bar_y = 340.0f32.max(318.0 + remote_worlds.len() as f32 * 26.0 + 8.0);
+    let listed_flights = view.shipments.len().min(LISTED_SHIPMENTS);
+    let extra_flight_line = if view.shipments.len() > LISTED_SHIPMENTS {
+        16.0
+    } else {
+        0.0
+    };
+    let content_height =
+        (bar_y + 46.0 + 20.0 + listed_flights as f32 * 16.0 + extra_flight_line + 12.0).max(420.0);
+    let content_view = Rect::new(x + 8.0, y + 40.0, (w - 16.0).max(0.0), (h - 48.0).max(0.0));
+    scroll.update(content_view, content_height);
+    let offset_y = y - scroll.offset();
+    let interactive = !scroll.absorbs_press();
 
     let pod_fraction = view
         .pod_fractions
@@ -51,7 +80,14 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
             Colors::SUCCESS,
         ),
     };
-    draw_ui_text(&status, x + 12.0, y + 48.0, 11.0, status_color);
+    draw_scrolled_text(
+        &status,
+        x + 12.0,
+        offset_y + 48.0,
+        11.0,
+        status_color,
+        content_view,
+    );
 
     let button_w = w - 24.0;
     let cargo_label = match edited_order {
@@ -64,25 +100,32 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
     };
 
     let mut action = InterplanetaryAction::None;
-    if draw_button_sized(x + 12.0, y + 60.0, button_w, 28.0, &cargo_label) {
+    if draw_scrolled_button(
+        Rect::new(x + 12.0, offset_y + 60.0, button_w, 28.0),
+        &cargo_label,
+        content_view,
+        interactive,
+    ) {
         action = if view.editing_world == view.current_planet {
             InterplanetaryAction::CycleExportCargo
         } else {
             InterplanetaryAction::CycleRemoteExportCargo
         };
     }
-    if draw_button_sized(x + 12.0, y + 94.0, button_w, 28.0, &target_label) {
+    if draw_scrolled_button(
+        Rect::new(x + 12.0, offset_y + 94.0, button_w, 28.0),
+        &target_label,
+        content_view,
+        interactive,
+    ) {
         action = if view.editing_world == view.current_planet {
             InterplanetaryAction::CycleExportTarget
         } else {
             InterplanetaryAction::CycleRemoteExportTarget
         };
     }
-    if draw_button_sized(
-        x + 12.0,
-        y + 128.0,
-        button_w,
-        28.0,
+    if draw_scrolled_button(
+        Rect::new(x + 12.0, offset_y + 128.0, button_w, 28.0),
         &format!(
             "Landing pad: {}",
             edited_order
@@ -90,21 +133,22 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
                 .map(|_| "specific")
                 .unwrap_or("any")
         ),
+        content_view,
+        interactive,
     ) {
         action = InterplanetaryAction::CycleExportPad;
     }
 
-    if draw_button_sized(
-        x + 12.0,
-        y + 162.0,
-        button_w,
-        28.0,
+    if draw_scrolled_button(
+        Rect::new(x + 12.0, offset_y + 162.0, button_w, 28.0),
         &format!(
             "Cooldown: {:.0}s",
             edited_order
                 .map(|order| order.schedule_seconds)
                 .unwrap_or(0.0)
         ),
+        content_view,
+        interactive,
     ) {
         action = if view.editing_world == view.current_planet {
             InterplanetaryAction::CycleExportSchedule
@@ -112,11 +156,8 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
             InterplanetaryAction::CycleRemoteExportSchedule
         };
     }
-    if draw_button_sized(
-        x + 12.0,
-        y + 196.0,
-        button_w,
-        28.0,
+    if draw_scrolled_button(
+        Rect::new(x + 12.0, offset_y + 196.0, button_w, 28.0),
         &format!(
             "Priority: {}   {}",
             edited_order.map(|order| order.priority + 1).unwrap_or(1),
@@ -126,6 +167,8 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
                 "ALL STOCK"
             }
         ),
+        content_view,
+        interactive,
     ) {
         action = if view.editing_world == view.current_planet {
             InterplanetaryAction::CycleExportPriority
@@ -133,11 +176,8 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
             InterplanetaryAction::CycleRemoteExportPriority
         };
     }
-    if draw_button_sized(
-        x + 12.0,
-        y + 230.0,
-        button_w,
-        28.0,
+    if draw_scrolled_button(
+        Rect::new(x + 12.0, offset_y + 230.0, button_w, 28.0),
         &format!(
             "Shipping reserve: {}",
             if edited_order.is_some_and(|order| order.surplus_only) {
@@ -151,6 +191,8 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
                 "off".to_string()
             }
         ),
+        content_view,
+        interactive,
     ) {
         action = if view.editing_world == view.current_planet {
             InterplanetaryAction::ToggleExportSurplus
@@ -163,53 +205,53 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
     // pods will circle it until one gets built, so say so where it is set.
     if let Some(order) = edited_order {
         if view.pads.get(order.target).copied().unwrap_or(0) == 0 {
-            draw_ui_text(
+            draw_scrolled_text(
                 &format!("{} has no Landing Pad", view.data.planet(order.target).name),
                 x + 12.0,
-                y + 264.0,
+                offset_y + 264.0,
                 10.0,
                 Colors::ERROR,
+                content_view,
             );
         } else if view.pending_pods.get(order.target).copied().unwrap_or(0)
             >= view.pod_caps.get(order.target).copied().unwrap_or(1)
         {
-            draw_ui_text(
+            draw_scrolled_text(
                 "Destination queue full - pods hold in orbit",
                 x + 12.0,
-                y + 264.0,
+                offset_y + 264.0,
                 10.0,
                 Colors::WARNING,
+                content_view,
             );
         }
         if view.overflow_pods.get(order.target).copied().unwrap_or(0) > 0 {
-            draw_ui_text(
+            draw_scrolled_text(
                 "OVERFLOW: landing capacity is exhausted",
                 x + 12.0,
-                y + 276.0,
+                offset_y + 276.0,
                 10.0,
                 Colors::ERROR,
+                content_view,
             );
         }
     }
-    if view.orders.iter().any(Option::is_some) {
-        draw_ui_text(
+    if !remote_worlds.is_empty() {
+        draw_scrolled_text(
             "Remote standing orders",
             x + 12.0,
-            y + 300.0,
+            offset_y + 300.0,
             10.0,
             Colors::PRIMARY,
+            content_view,
         );
-        let mut row_y = y + 318.0;
-        for (world, order) in view.orders.iter().enumerate() {
-            if world == view.editing_world || order.is_none() {
-                continue;
-            }
-            if draw_button_sized(
-                x + 12.0,
-                row_y - 12.0,
-                button_w,
-                22.0,
+        let mut row_y = 318.0;
+        for world in remote_worlds {
+            if draw_scrolled_button(
+                Rect::new(x + 12.0, offset_y + row_y - 12.0, button_w, 22.0),
                 view.data.planet(world).name.as_str(),
+                content_view,
+                interactive,
             ) {
                 action = InterplanetaryAction::SelectOrderWorld(world);
             }
@@ -218,15 +260,23 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
     }
     // The pod being loaded, so a route that is set but starved reads as
     // starved rather than as broken.
-    let bar_y = y + 340.0;
-    draw_rectangle(x + 12.0, bar_y, button_w, 8.0, Colors::SURFACE_DARK);
-    draw_rectangle(
-        x + 12.0,
-        bar_y,
-        button_w * pod_fraction.clamp(0.0, 1.0),
-        8.0,
-        Colors::ACCENT,
-    );
+    let bar_rect = Rect::new(x + 12.0, offset_y + bar_y, button_w, 8.0);
+    if is_fully_visible(bar_rect, content_view) {
+        draw_rectangle(
+            bar_rect.x,
+            bar_rect.y,
+            bar_rect.w,
+            bar_rect.h,
+            Colors::SURFACE_DARK,
+        );
+        draw_rectangle(
+            bar_rect.x,
+            bar_rect.y,
+            button_w * pod_fraction.clamp(0.0, 1.0),
+            bar_rect.h,
+            Colors::ACCENT,
+        );
+    }
     let pod_text = if edited_order.is_none() {
         "No route set".to_string()
     } else if pod_fraction <= 0.0 {
@@ -234,11 +284,39 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
     } else {
         format!("Pod {:.0}% loaded", pod_fraction * 100.0)
     };
-    draw_ui_text(&pod_text, x + 12.0, bar_y + 24.0, 10.0, Colors::TEXT_DIM);
+    draw_scrolled_text(
+        &pod_text,
+        x + 12.0,
+        offset_y + bar_y + 24.0,
+        10.0,
+        Colors::TEXT_DIM,
+        content_view,
+    );
 
-    draw_in_flight_list(view.data, view.shipments, x, bar_y + 46.0, w);
+    draw_in_flight_list(
+        view.data,
+        view.shipments,
+        x,
+        offset_y + bar_y + 46.0,
+        w,
+        content_view,
+    );
+    scroll.draw_scrollbar(content_view, content_height);
 
     action
+}
+
+fn draw_scrolled_button(rect: Rect, text: &str, content_view: Rect, interactive: bool) -> bool {
+    if !is_fully_visible(rect, content_view) {
+        return false;
+    }
+    draw_button_sized(rect.x, rect.y, rect.w, rect.h, text) && interactive
+}
+
+fn draw_scrolled_text(text: &str, x: f32, y: f32, size: f32, color: Color, content_view: Rect) {
+    if y >= content_view.y && y <= content_view.bottom() {
+        draw_ui_text(text, x, y, size, color);
+    }
 }
 
 fn draw_in_flight_list(
@@ -247,16 +325,31 @@ fn draw_in_flight_list(
     x: f32,
     y: f32,
     w: f32,
+    content_view: Rect,
 ) {
-    draw_ui_text("In flight", x + 12.0, y, 12.0, Colors::PRIMARY);
+    draw_scrolled_text(
+        "In flight",
+        x + 12.0,
+        y,
+        12.0,
+        Colors::PRIMARY,
+        content_view,
+    );
     if shipments.is_empty() {
-        draw_ui_text("Nothing up", x + 12.0, y + 20.0, 10.0, Colors::TEXT_DIM);
+        draw_scrolled_text(
+            "Nothing up",
+            x + 12.0,
+            y + 20.0,
+            10.0,
+            Colors::TEXT_DIM,
+            content_view,
+        );
         return;
     }
 
     let mut row_y = y + 20.0;
     for shipment in shipments.iter().take(LISTED_SHIPMENTS) {
-        draw_ui_text(
+        draw_scrolled_text(
             &format!(
                 "{:.0} {} -> {}",
                 shipment.amount,
@@ -267,6 +360,7 @@ fn draw_in_flight_list(
             row_y,
             10.0,
             Colors::TEXT,
+            content_view,
         );
         // A pod that has arrived and found nowhere to land says so rather than
         // sitting on "0s" forever.
@@ -275,16 +369,17 @@ fn draw_in_flight_list(
         } else {
             (format!("{:.0}s", shipment.remaining), Colors::TEXT_DIM)
         };
-        draw_ui_text(&eta, x + w - 46.0, row_y, 10.0, eta_color);
+        draw_scrolled_text(&eta, x + w - 46.0, row_y, 10.0, eta_color, content_view);
         row_y += 16.0;
     }
     if shipments.len() > LISTED_SHIPMENTS {
-        draw_ui_text(
+        draw_scrolled_text(
             &format!("+{} more", shipments.len() - LISTED_SHIPMENTS),
             x + 12.0,
             row_y,
             10.0,
             Colors::TEXT_DIM,
+            content_view,
         );
     }
 }
