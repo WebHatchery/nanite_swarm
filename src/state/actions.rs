@@ -107,6 +107,7 @@ impl PlanetState {
         };
 
         let mut placed_any = false;
+        let mut resource_blocked = false;
         for pos in path {
             let Some(tile) = self.grid.get(pos) else {
                 continue;
@@ -122,6 +123,7 @@ impl PlanetState {
 
             let (mineral_cost, energy_cost) = BuildingType::Conduit.cost(self.data());
             if !self.resources.can_afford(mineral_cost, energy_cost) {
+                resource_blocked = true;
                 break;
             }
 
@@ -138,6 +140,14 @@ impl PlanetState {
             self.refresh_power_grid();
             self.power_balance = self.net_power();
             self.network_revision = self.network_revision.wrapping_add(1);
+        }
+
+        if resource_blocked {
+            let (mineral_cost, energy_cost) = BuildingType::Conduit.cost(self.data());
+            self.notifications.warning(format!(
+                "Route paused: need M {:.0} and E {:.0} per conduit",
+                mineral_cost, energy_cost
+            ));
         }
 
         placed_any

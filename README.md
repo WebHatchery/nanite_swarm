@@ -50,6 +50,8 @@ each pod under a `full route` heading, so simultaneous routes remain
 distinguishable.
 Tap CANCEL to abandon a build, relocation, box-selection, or pending purge
 confirmation before the next map tap.
+If a dragged conduit route spends its last resources, the route pauses and
+reports the exact mineral and energy cost of the next segment.
 The bottom graph records observed ore, alloy, and parts flow; tap its visible
 FLOW button to cycle through live power and Data production/consumption. Warning
 triangles and the Operations count identify powered processors that are missing a feed.

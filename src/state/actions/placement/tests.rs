@@ -41,6 +41,33 @@ fn placement_reason_catches_resources_after_terrain_and_research() {
 }
 
 #[test]
+fn a_conduit_drag_reports_the_next_segment_cost_when_resources_run_out() {
+    let mut state = state();
+    let core = state.grid.find_core().unwrap();
+    let first = GridPos::new(core.x + 1, core.y);
+    let second = GridPos::new(core.x + 2, core.y);
+    for pos in [first, second] {
+        let tile = state.grid.get_mut(pos).unwrap();
+        tile.terrain = TerrainType::Empty;
+    }
+    state.grid.reveal_around(second, 1);
+    state.unlock_building(BuildingType::Conduit);
+    state.resources.minerals = 5.0;
+    state.resources.energy = 2.0;
+
+    assert!(state.try_place_conduit_path(core, second));
+    assert!(state.grid.get(first).unwrap().building.is_some());
+    assert!(state.grid.get(second).unwrap().building.is_none());
+    assert!(state
+        .notifications
+        .get_notifications()
+        .iter()
+        .any(|notification| notification
+            .message
+            .contains("Route paused: need M 5 and E 2 per conduit")));
+}
+
+#[test]
 fn placement_reason_treats_world_requirements_as_a_separate_block() {
     let mut state = PlanetState::new(0, 42, GameConfig::default());
     let core = state.grid.find_core().unwrap();
