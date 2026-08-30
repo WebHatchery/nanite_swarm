@@ -34,7 +34,8 @@ pub enum InterplanetaryAction {
 pub struct MapView<'a> {
     pub data: &'a crate::data::GameData,
     pub current_planet: usize,
-    pub has_mass_driver: bool,
+    /// Whether the swarm has researched Mass Drivers, for remote order setup.
+    pub mass_driver_researched: bool,
     pub seed_ship_ready: bool,
     pub colonized: &'a [bool],
     pub stockpiles: &'a [Option<f32>],
@@ -56,7 +57,7 @@ pub struct MapView<'a> {
 /// Render the interplanetary solar system view
 pub fn render_interplanetary_view(view: &MapView) -> InterplanetaryAction {
     // A new world costs a whole Seed Ship, thrown by a Mass Driver.
-    let can_launch = view.has_mass_driver && view.seed_ship_ready;
+    let can_launch = view.drivers_online > 0 && view.seed_ship_ready;
     let current_planet = view.current_planet;
     clear_background(Colors::BACKGROUND);
 
@@ -74,10 +75,12 @@ pub fn render_interplanetary_view(view: &MapView) -> InterplanetaryAction {
         return InterplanetaryAction::Close;
     }
 
-    let (driver_label, driver_color) = if view.has_mass_driver {
+    let (driver_label, driver_color) = if view.drivers_online > 0 {
         ("Mass Driver: ONLINE", Colors::SUCCESS)
+    } else if view.mass_driver_researched {
+        ("Mass Driver: NOT BUILT", Colors::WARNING)
     } else {
-        ("Mass Driver: OFFLINE", Colors::TEXT_DIM)
+        ("Mass Driver: LOCKED", Colors::TEXT_DIM)
     };
     draw_ui_text(driver_label, screen_w - 320.0, 34.0, 12.0, driver_color);
 
@@ -407,8 +410,10 @@ fn draw_planet_info(
             Colors::SUCCESS,
         );
     } else {
-        let blocker = if !view.has_mass_driver {
-            "Requires: Mass Driver"
+        let blocker = if !view.mass_driver_researched {
+            "Requires: Mass Driver research"
+        } else if view.drivers_online == 0 {
+            "Requires: a powered Mass Driver"
         } else {
             "Requires: a finished Seed Ship"
         };

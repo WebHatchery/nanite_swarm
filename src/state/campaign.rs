@@ -338,7 +338,13 @@ impl Campaign {
     /// travel works between worlds it already holds, but a new one costs a
     /// whole ship.
     pub fn launch_seed_ship(&mut self, target: usize) -> bool {
-        if !self.current().seed_ship.is_ready_to_launch() {
+        // Research names the technology, but the launch still needs a live
+        // piece of infrastructure on the world being left. Without this
+        // guard a finished ship could silently bypass the Mass Driver puzzle
+        // and carry the campaign away from an unconnected Core.
+        if !self.current().seed_ship.is_ready_to_launch()
+            || self.current().mass_drivers_online() == 0
+        {
             return false;
         }
         if !self.colonize(target) {

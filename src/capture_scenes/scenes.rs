@@ -1,5 +1,6 @@
 //! Screenshot scene staging implementation.
 
+use super::fixtures::seed_capture_launch_rail;
 use crate::state::{Campaign, LaunchSequence};
 use crate::{engine, state, Game, GamePhase};
 
@@ -560,6 +561,17 @@ impl Game {
                     planet.resources.biomass = 100_000.0;
                     planet.resources.alloy = 100_000.0;
                     planet.resources.components = 100_000.0;
+                    // The fixture runs enough world time to make the ending
+                    // statistics legible. Keep its launch rail powered and
+                    // clean while that presentation time passes.
+                    planet.config.resources.max_energy = 100_000.0;
+                    planet.resources.energy = 100_000.0;
+                    planet.config.upkeep.dust_rate = 0.0;
+                    planet.config.collapse.negative_power_seconds = f32::MAX;
+                    // A Seed Ship still needs a live launch rail on every
+                    // world. The ending scene walks the same infrastructure
+                    // path as a real campaign instead of skipping that rule.
+                    seed_capture_launch_rail(planet);
                     if !planet.seed_ship.committed {
                         planet.toggle_seed_ship_commitment();
                     }

@@ -2,6 +2,112 @@
 
 use crate::{engine, state, Game};
 
+/// Put the infrastructure needed to leave a captured world through its real
+/// launch rules. Some worlds ask for a power floor or a heater before they
+/// accept a Mass Driver, so the ending scene cannot just edit the building
+/// count and call the ship finished.
+pub(super) fn seed_capture_launch_rail(planet: &mut state::PlanetState) {
+    use engine::{BuildingType, GridPos, TerrainType};
+
+    let Some(core) = planet.grid.find_core() else {
+        return;
+    };
+    let constraints = planet
+        .data()
+        .planet(planet.planet_index)
+        .constraints
+        .clone();
+    let required_offsets = [(0, 1), (0, -1), (-1, 0), (1, 0)];
+
+    for (required_index, id) in constraints.required_buildings.iter().enumerate() {
+        let Some(building_type) = BuildingType::from_id(id) else {
+            continue;
+        };
+        if building_type == BuildingType::MassDriver {
+            continue;
+        }
+        let (x, y) = required_offsets
+            .get(required_index)
+            .copied()
+            .unwrap_or((0, 1));
+        let pos = GridPos::new(core.x + x, core.y + y);
+        prepare_capture_tile(planet, pos, TerrainType::Empty);
+        planet.unlock_building(building_type);
+        planet.select_building(building_type);
+        assert!(
+            planet.try_place_building(pos),
+            "capture fixture could not place required {:?}",
+            building_type
+        );
+    }
+
+    if planet.power_generation() < constraints.minimum_power_generation {
+        if !planet.is_building_banned(BuildingType::WindTurbine) {
+            let required = ((constraints.minimum_power_generation - planet.power_generation())
+                / 5.0)
+                .ceil()
+                .max(1.0) as usize;
+            for pos in [
+                GridPos::new(core.x - 1, core.y),
+                GridPos::new(core.x, core.y - 1),
+                GridPos::new(core.x, core.y + 2),
+            ]
+            .into_iter()
+            .take(required)
+            {
+                prepare_capture_tile(planet, pos, TerrainType::Empty);
+                planet.unlock_building(BuildingType::WindTurbine);
+                planet.select_building(BuildingType::WindTurbine);
+                assert!(
+                    planet.try_place_building(pos),
+                    "capture fixture could not place a power source"
+                );
+            }
+        } else {
+            let biomass_tile = GridPos::new(core.x - 1, core.y);
+            prepare_capture_tile(planet, biomass_tile, TerrainType::Forest);
+            if let Some(tile) = planet.grid.get_mut(biomass_tile) {
+                tile.biomass_amount = planet.config.resources.forest_biomass;
+            }
+            planet.unlock_building(BuildingType::BiomassHarvester);
+            planet.select_building(BuildingType::BiomassHarvester);
+            assert!(
+                planet.try_place_building(biomass_tile),
+                "capture fixture could not place biomass power"
+            );
+            // Biomass power is calculated during upkeep, so give the harvester
+            // one real tick before the Mass Driver checks the power floor.
+            planet.grid.update_power_grid();
+            planet.step(state::TICK_SECONDS, false);
+        }
+    }
+
+    let driver = GridPos::new(core.x + 1, core.y);
+    prepare_capture_tile(planet, driver, TerrainType::Empty);
+    planet.unlock_building(BuildingType::MassDriver);
+    planet.select_building(BuildingType::MassDriver);
+    assert!(
+        planet.try_place_building(driver),
+        "capture fixture could not place its Mass Driver"
+    );
+    planet.grid.update_power_grid();
+}
+
+fn prepare_capture_tile(
+    planet: &mut state::PlanetState,
+    pos: engine::GridPos,
+    terrain: engine::TerrainType,
+) {
+    if let Some(tile) = planet.grid.get_mut(pos) {
+        tile.terrain = terrain;
+        tile.building = None;
+        tile.revealed = true;
+        tile.biomass_amount = 0.0;
+        tile.forest_cleared = false;
+    }
+    planet.grid.reveal_around(pos, 1);
+}
+
 impl Game {
     /// A Mass Driver under a standing order, with cargo on both ends.
     pub(super) fn seed_shipping_scene(&mut self, target: usize) {

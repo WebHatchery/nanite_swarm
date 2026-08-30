@@ -228,7 +228,7 @@ impl Game {
         let view = screens::MapView {
             data: self.data.data(),
             current_planet: self.campaign.current_index(),
-            has_mass_driver: self.has_mass_driver(),
+            mass_driver_researched: self.has_mass_driver(),
             seed_ship_ready: self.campaign.current().seed_ship.is_ready_to_launch(),
             colonized: &colonized,
             stockpiles: &stockpiles,

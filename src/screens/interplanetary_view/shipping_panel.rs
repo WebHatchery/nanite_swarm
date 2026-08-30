@@ -22,7 +22,7 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
 
     let home = view.data.planet(view.editing_world);
     let edited_order = view.orders.get(view.editing_world).copied().flatten();
-    if !view.has_mass_driver && edited_order.is_none() {
+    if !view.mass_driver_researched && edited_order.is_none() {
         draw_ui_text(
             "Requires: Mass Driver",
             x + 12.0,

@@ -50,6 +50,8 @@ Factory controls:
 - Processor floor art shows intake fill, product stacks, active packets,
   priority beacons, boost cadence, and red backpressure shutters.
 - Research Buffer Lattices to expand every processor dispatch pad by 50%.
+- A Seed Ship needs a powered Mass Driver on the world it leaves; research
+  unlocks the rail, but the infrastructure still has to stand.
 - Records reward boosted clusters, staged freight, priority lattices, and
   districts held in standby.
 
