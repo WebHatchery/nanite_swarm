@@ -24,7 +24,8 @@ The swarm is powerful, but every expansion changes the terrain, stresses the gri
   plus their live generation/harvest rates, so a world can be managed without
   first travelling.
 - The Solar System dossier also previews each world's construction bans and
-  infrastructure requirements before the Seed Ship leaves.
+  infrastructure requirements before the Seed Ship leaves, including the
+  authored Geothermal and Fusion power routes for hostile worlds.
 
 ## Goal
 

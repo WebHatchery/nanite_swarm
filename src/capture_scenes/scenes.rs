@@ -750,6 +750,12 @@ impl Game {
                 self.campaign.travel_to(1);
                 self.campaign.current_mut().power_balance = -1.0;
             }
+            "mobile_interplanetary_rules" => {
+                self.stage_interplanetary_scene();
+                self.campaign.colonize(1);
+                self.campaign.travel_to(1);
+                self.interplanetary_mobile_panel = state::InterplanetaryMobilePanel::Worlds;
+            }
             _ => {
                 // Default: jump straight into gameplay on the starting planet.
                 self.phase = GamePhase::Playing;

@@ -138,6 +138,7 @@ pub(super) fn hazard_color(planet: &crate::data::PlanetDef) -> Color {
 pub(super) fn world_rule_lines(data: &crate::data::GameData, index: usize) -> Vec<String> {
     let planet = &data.planets[index];
     let constraints = &planet.constraints;
+    let power_source = world_power_source(data, planet);
     let mut lines = Vec::new();
     let rule_count_without_bans = constraints.required_buildings.len()
         + constraints.required_research.len()
@@ -172,8 +173,11 @@ pub(super) fn world_rule_lines(data: &crate::data::GameData, index: usize) -> Ve
         lines.push(format!("Needs research: {}", name));
     }
     if constraints.minimum_power_generation > 0.0 {
+        let source_suffix = power_source
+            .map(|name| format!(" via {name}"))
+            .unwrap_or_default();
         lines.push(format!(
-            "Needs {:.0} power generation",
+            "Needs {:.0} power generation{source_suffix}",
             constraints.minimum_power_generation
         ));
     }
@@ -184,10 +188,48 @@ pub(super) fn world_rule_lines(data: &crate::data::GameData, index: usize) -> Ve
         ));
     }
     if lines.is_empty() {
-        lines.push("No special build rules".to_string());
+        if let Some(source) = power_source {
+            lines.push(format!("Power source: {source}"));
+        } else {
+            lines.push("No special build rules".to_string());
+        }
+    } else if constraints.minimum_power_generation <= 0.0 {
+        if let Some(source) = power_source {
+            lines.push(format!("Power source: {source}"));
+        }
     }
     lines.truncate(3);
     lines
+}
+
+fn world_power_source<'a>(
+    data: &'a crate::data::GameData,
+    planet: &crate::data::PlanetDef,
+) -> Option<&'a str> {
+    let condition = if planet.hazards.acid_rain > 0.0
+        || planet
+            .hazard_fields
+            .iter()
+            .any(|field| field.hazard == "acid")
+    {
+        Some("acid")
+    } else if planet.hazards.freeze > 0.0
+        || planet
+            .hazard_fields
+            .iter()
+            .any(|field| field.hazard == "cold")
+    {
+        Some("cold")
+    } else {
+        None
+    };
+    let condition = condition?;
+    data.buildings
+        .iter()
+        .find(|building| {
+            building.generates_power && building.planet_condition.as_deref() == Some(condition)
+        })
+        .map(|building| building.name.as_str())
 }
 
 fn building_name<'a>(data: &'a crate::data::GameData, id: &'a str) -> &'a str {

@@ -12,5 +12,5 @@ fn short_phone_dossier_stays_above_the_footer() {
 
 #[test]
 fn regular_phone_dossier_keeps_the_full_world_summary() {
-    assert_eq!(mobile_info_height(640.0, true), 228.0);
+    assert_eq!(mobile_info_height(640.0, true), 250.0);
 }

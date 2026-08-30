@@ -344,7 +344,7 @@ fn draw_mobile_planet_info(
     }
     draw_ui_text("World rules:", x + 15.0, next_y, 10.0, Colors::TEXT_DIM);
     let rules = world_rule_lines(view.data, index);
-    for (rule_index, rule) in rules.iter().take(2).enumerate() {
+    for (rule_index, rule) in rules.iter().take(3).enumerate() {
         draw_ui_text(
             &truncate_text_to_width(rule, text_w, 9.0),
             x + 15.0,
@@ -394,7 +394,7 @@ fn mobile_info_height(screen_h: f32, has_telemetry: bool) -> f32 {
             96.0
         }
     } else {
-        228.0
+        250.0
     }
 }
 

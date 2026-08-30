@@ -173,5 +173,19 @@ fn dossier_rules_keep_infrastructure_requirements_with_world_bans() {
         .iter()
         .any(|line| line == "Unavailable: Wind Turbine + Biomass Harvester"));
     assert!(rules.iter().any(|line| line == "Needs Heater Node"));
-    assert!(rules.iter().any(|line| line == "Needs 10 power generation"));
+    assert!(rules
+        .iter()
+        .any(|line| line == "Needs 10 power generation via Fusion Reactor"));
+}
+
+#[test]
+fn dossier_rules_name_the_power_route_for_hostile_worlds() {
+    let data = crate::data::test_data();
+
+    assert!(world_rule_lines(data.data(), 1)
+        .iter()
+        .any(|line| line == "Power source: Geothermal Tap"));
+    assert!(world_rule_lines(data.data(), 3)
+        .iter()
+        .any(|line| line == "Power source: Fusion Reactor"));
 }
