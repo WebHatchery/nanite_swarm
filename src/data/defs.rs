@@ -324,6 +324,9 @@ pub struct TutorialStepDef {
     pub title: String,
     pub instruction: String,
     pub goal: TutorialGoalDef,
+    /// Optional next-action copy shown when this step completes the lesson.
+    #[serde(default)]
+    pub completion_message: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

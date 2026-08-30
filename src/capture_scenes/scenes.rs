@@ -576,6 +576,7 @@ impl Game {
                 planet
                     .notifications
                     .warning("Seed Ship: Ion Spine under way");
+                planet.notifications.success("Next: tap SHIP, then MAP.");
             }
             "ending" => self.stage_ending_scene(),
             "desktop_ending" => self.stage_ending_scene(),

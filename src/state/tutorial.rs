@@ -1,9 +1,9 @@
 //! The opening lesson, driven from `assets/tutorial.json`.
 //!
-//! It was five hardcoded match arms and a "Tutorial step 4 / 5" counter, which
-//! told the player how far through they were but never what to do. The steps
-//! are data now, each with a goal the simulation can check, and the panel says
-//! the next thing rather than the current number.
+//! It began as five hardcoded match arms and a step counter, which told the
+//! player how far through they were but never what to do. The steps are data
+//! now, each with a goal the simulation can check, and the panel says the next
+//! thing rather than the current number.
 
 use crate::data::{TutorialGoalDef, TutorialStepDef};
 use crate::engine::BuildingType;
@@ -110,11 +110,14 @@ impl PlanetState {
         }
 
         let title = step.title.clone();
+        let completion_message = step.completion_message.clone();
         self.tutorial_step = self.tutorial_step.saturating_add(1);
         if self.tutorial_step as usize >= self.steps().len() {
             self.tutorial_done = true;
-            self.notifications
-                .success("The swarm needs no more guidance.");
+            self.notifications.success(
+                completion_message
+                    .unwrap_or_else(|| "The swarm needs no more guidance.".to_string()),
+            );
         } else {
             self.notifications.success(format!("Done: {}", title));
         }

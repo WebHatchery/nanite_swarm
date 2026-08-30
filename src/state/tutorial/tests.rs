@@ -162,4 +162,18 @@ fn finishing_the_last_step_ends_the_tutorial() {
     assert!(state.tutorial_done);
     assert!(state.tutorial_current().is_none());
     assert_eq!(state.tutorial_highlight(), None);
+    assert_eq!(
+        state.tutorial_research_target(),
+        None,
+        "a completed lesson has no research target"
+    );
+    assert_eq!(
+        state
+            .notifications
+            .get_notifications()
+            .last()
+            .unwrap()
+            .message,
+        "Next: tap SHIP, then MAP."
+    );
 }

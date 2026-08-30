@@ -52,6 +52,7 @@
       "id": "mass_driver",
       "title": "Build the launch rail",
       "instruction": "Tap MASS DRIVER, then tap revealed ground beside the Core.",
+      "completion_message": "Next: tap SHIP, then MAP.",
       "goal": { "kind": "build", "target": "mass_driver" }
     }
   ]

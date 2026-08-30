@@ -11,6 +11,8 @@ The swarm is powerful, but every expansion changes the terrain, stresses the gri
   Efficient Drills and Power Efficiency prerequisites to the researched and
   built Mass Driver that opens the campaign's next world; research lessons
   pulse and center the next neural node on touch-sized views.
+- Completing the opening lesson points to the visible SHIP control for the
+  Seed Ship yard, then MAP for choosing the next world.
 - Connect structures through conduits and power networks.
 - Use drones to move minerals and keep production flowing.
 - Route ore and alloy through multi-input precision assemblers to make flight-grade components.
