@@ -35,7 +35,8 @@ The swarm is powerful, but every expansion changes the terrain, stresses the gri
   its first remaining Core milestone, so strategic growth remains actionable
   even when the swarm is managing another world.
 - At Space Elevator and Planetary Ring stages, the map grows a live tether and
-  orbital ring around the Core so late evolution is visible beyond its tile.
+  orbital ring around the Core; the final stage also projects a quieter ring
+  into the planetary backdrop so late evolution is visible beyond its tile.
 
 ## Goal
 

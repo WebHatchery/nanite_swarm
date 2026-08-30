@@ -137,6 +137,7 @@ pub fn render_planetary_view(
     terrain_render::draw_planetary_background(screen_w, screen_h, time, state);
     terrain_render::draw_collapse_shake(state, screen_w, screen_h, time);
     terrain_render::draw_grid_tiles(state, textures, metrics, hovered_pos, pulse, global_pulse);
+    terrain_render::draw_core_stage_planetary_backdrop(state, screen_w, screen_h, time);
     terrain_render::draw_core_stage_ambient_for_map(state, metrics, time);
     selection_render::draw_box_selection(state, metrics, hovered_pos);
     terrain_render::draw_planet_features(state, metrics);

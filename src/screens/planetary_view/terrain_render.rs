@@ -19,6 +19,73 @@ pub(super) fn draw_core_stage_ambient_for_map(state: &PlanetState, metrics: HudM
     draw_core_stage_ambient(state, metrics, time);
 }
 
+/// Project the final Core stage into the planetary backdrop. The map ring is
+/// the local interaction anchor; this quieter ring belongs to the planet that
+/// the Core has begun to encircle.
+pub(super) fn draw_core_stage_planetary_backdrop(
+    state: &PlanetState,
+    screen_w: f32,
+    screen_h: f32,
+    time: f32,
+) {
+    if state.core_stage_index() < 4 {
+        return;
+    }
+
+    let center = vec2(screen_w * 0.82, screen_h * 0.85);
+    let diameter = (screen_w.min(screen_h) * 0.72).clamp(300.0, 760.0);
+    let height = (diameter * 0.30).clamp(96.0, 180.0);
+    let pulse = if macroquad_toolkit::settings::reduced_motion_enabled() {
+        0.0
+    } else {
+        pulse01_at(time as f64, 2.4)
+    };
+    let rotation = -12.0 + (time * 0.04).sin() * pulse * 1.5;
+
+    draw_ellipse_lines(
+        center.x,
+        center.y,
+        diameter,
+        height,
+        rotation,
+        2.0,
+        with_alpha(Colors::PRIMARY_SOFT, 0.28 + pulse * 0.08),
+    );
+    draw_ellipse_lines(
+        center.x,
+        center.y,
+        diameter * 0.92,
+        height * 0.60,
+        rotation + 3.0,
+        1.0,
+        with_alpha(Colors::ACCENT, 0.18 + pulse * 0.06),
+    );
+
+    for (index, angle) in [0.35, 1.95, 3.55, 5.15].into_iter().enumerate() {
+        let position = ellipse_point(center, diameter * 0.5, height * 0.5, angle, rotation);
+        let color = if index % 2 == 0 {
+            Colors::PRIMARY
+        } else {
+            Colors::ACCENT
+        };
+        draw_circle(
+            position.x,
+            position.y,
+            3.0,
+            with_alpha(Colors::BACKGROUND, 0.82),
+        );
+        draw_circle(position.x, position.y, 1.8 + pulse * 0.7, color);
+    }
+}
+
+fn ellipse_point(center: Vec2, radius_x: f32, radius_y: f32, angle: f32, rotation: f32) -> Vec2 {
+    let angle = angle + rotation.to_radians();
+    vec2(
+        center.x + angle.cos() * radius_x,
+        center.y + angle.sin() * radius_y,
+    )
+}
+
 pub(super) fn draw_planetary_background(
     screen_w: f32,
     screen_h: f32,

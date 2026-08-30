@@ -241,7 +241,7 @@ impl Game {
             }
             // The final Core stage makes its planetary-scale silhouette
             // visible in the ordinary map, not only in the inspector text.
-            "core_ring" => {
+            "core_ring" | "core_ring_focus" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();
                 let planet = self.campaign.current_mut();
@@ -255,6 +255,13 @@ impl Game {
                 planet.notifications.clear();
                 planet.selected_building = None;
                 planet.selected_tile = planet.grid.find_core();
+                if scene == "core_ring_focus" {
+                    // Center the final-stage silhouette in the unobstructed
+                    // map for a stable visual regression frame.
+                    planet.focus_mode = true;
+                    planet.camera.pan_x = 240.0;
+                    planet.camera.pan_y = -100.0;
+                }
             }
             // A run cut in the middle, with drones stalled beyond the break.
             "severed" => {
