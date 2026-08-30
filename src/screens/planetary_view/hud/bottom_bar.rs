@@ -22,7 +22,7 @@ pub(super) enum ClockAction {
     ToggleFocus,
     ToggleFlow,
     ToggleDeck,
-    OpenMenu,
+    RetrySave,
 }
 
 fn next_event_code(label: &str) -> &'static str {
@@ -452,7 +452,7 @@ fn alert_button(
     flow_overlay: bool,
 ) -> Option<(&'static str, ClockAction)> {
     if save_failed {
-        Some(("MENU", ClockAction::OpenMenu))
+        Some(("RETRY", ClockAction::RetrySave))
     } else if flow_alert {
         Some((
             if flow_overlay { "FLOW ON" } else { "FLOW" },

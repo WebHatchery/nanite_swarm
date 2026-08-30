@@ -34,6 +34,7 @@ pub enum PlanetaryAction {
     OpenInterplanetary,
     OpenRecords,
     OpenMenu,
+    RetrySave,
 }
 
 /// Render the planetary grid view

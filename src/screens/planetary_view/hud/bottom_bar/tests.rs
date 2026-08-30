@@ -13,6 +13,6 @@ fn alert_button_points_at_the_relevant_recovery_surface() {
     );
     assert_eq!(
         alert_button(true, true, false),
-        Some(("MENU", ClockAction::OpenMenu))
+        Some(("RETRY", ClockAction::RetrySave))
     );
 }

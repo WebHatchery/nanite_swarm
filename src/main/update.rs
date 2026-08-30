@@ -114,6 +114,7 @@ impl Game {
             PlanetaryAction::OpenSeedShip => self.open_screen(GamePhase::SeedShip),
             PlanetaryAction::OpenInterplanetary => self.open_screen(GamePhase::Interplanetary),
             PlanetaryAction::OpenRecords => self.open_screen(GamePhase::Records),
+            PlanetaryAction::RetrySave => self.save_campaign(),
             PlanetaryAction::OpenMenu => {
                 self.campaign
                     .current_mut()

@@ -536,6 +536,13 @@ impl Game {
                 }
                 self.campaign.mark_saved();
             }
+            "save_failed" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                let planet = self.campaign.current_mut();
+                planet.save_failed = true;
+                planet.notifications.clear();
+            }
             "demolish" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();
