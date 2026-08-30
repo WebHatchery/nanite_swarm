@@ -471,7 +471,13 @@ impl PlanetState {
         let blueprint = self.blueprint.clone();
         let mut placed = 0;
         for entry in blueprint {
-            let pos = GridPos::new(anchor.x + entry.offset.0, anchor.y + entry.offset.1);
+            let Some(x) = anchor.x.checked_add(entry.offset.0) else {
+                continue;
+            };
+            let Some(y) = anchor.y.checked_add(entry.offset.1) else {
+                continue;
+            };
+            let pos = GridPos::new(x, y);
             self.selected_building = Some(entry.building_type);
             if self.try_place_building(pos) {
                 if let Some(building) = self

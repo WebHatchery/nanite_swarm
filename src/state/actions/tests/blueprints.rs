@@ -91,3 +91,17 @@ fn stamping_clears_build_selection_before_the_next_map_tap() {
     assert_eq!(state.drag_last_pos, None);
     assert_eq!(state.smart_drag_source, None);
 }
+
+#[test]
+fn stamping_skips_an_offset_that_would_overflow_the_anchor() {
+    let mut state = state();
+    state.blueprint.push(crate::state::BlueprintEntry {
+        offset: (i32::MAX, 0),
+        building_type: BuildingType::Drill,
+        overclocked: false,
+        input_priority: false,
+        standby: false,
+    });
+
+    assert_eq!(state.place_blueprint(GridPos::new(1, 1)), 0);
+}
