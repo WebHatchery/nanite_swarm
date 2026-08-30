@@ -1,5 +1,6 @@
 //! Solar system overview screen
 
+mod core_marker;
 mod mobile;
 mod shipping_panel;
 mod status;
@@ -7,6 +8,7 @@ mod world_dossier;
 
 use crate::state::{ExportOrder, InterplanetaryMobilePanel, Shipment, WorldTelemetry};
 use crate::ui::{color_from_rgba, draw_button_sized, draw_panel, Colors, Dimensions};
+use core_marker::draw_core_stage_marker;
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::{draw_ui_text, note_neighbour, touch_area, Pointer, ScrollArea};
 use shipping_panel::{route_status_color, route_status_for};
@@ -198,6 +200,7 @@ pub fn render_interplanetary_view(
     let (center_x, center_y, orbit_scale) =
         solar_map_layout(screen_w, screen_h, header_height, list_x, list_w, max_orbit);
     let map_compressed = orbit_scale < MIN_SOLAR_MAP_SCALE;
+    let animation_time = get_time();
 
     if map_compressed {
         draw_ui_text(
@@ -274,7 +277,7 @@ pub fn render_interplanetary_view(
             );
 
             // Calculate planet position
-            let angle = (i as f32) * 1.2 + get_time() as f32 * 0.02 * (1.0 / (i as f32 + 1.0));
+            let angle = (i as f32) * 1.2 + animation_time as f32 * 0.02 * (1.0 / (i as f32 + 1.0));
             let px = center_x + planet.orbit_radius * orbit_scale * angle.cos();
             let py = center_y + planet.orbit_radius * orbit_scale * angle.sin();
             positions.push((px, py));
@@ -312,6 +315,13 @@ pub fn render_interplanetary_view(
 
             // Draw planet
             draw_circle(px, py, planet_size, color_from_rgba(&planet.color));
+            draw_core_stage_marker(
+                view.telemetry.get(i).copied().flatten(),
+                vec2(px, py),
+                planet_size,
+                orbit_scale,
+                animation_time,
+            );
 
             // Hover highlight
             if is_hovered {
@@ -690,6 +700,20 @@ fn draw_planet_info(
 
 fn draw_legend(screen_w: f32, screen_h: f32) {
     draw_panel(screen_w - 190.0, screen_h - 130.0, 180.0, 120.0);
+    draw_circle_lines(
+        screen_w - 175.0,
+        screen_h - 110.0,
+        6.0,
+        1.0,
+        Colors::PRIMARY,
+    );
+    draw_ui_text(
+        "Core C1-C5",
+        screen_w - 160.0,
+        screen_h - 105.0,
+        12.0,
+        Colors::TEXT_DIM,
+    );
     draw_circle(screen_w - 175.0, screen_h - 85.0, 6.0, Colors::SUCCESS);
     draw_ui_text(
         "Colonized",

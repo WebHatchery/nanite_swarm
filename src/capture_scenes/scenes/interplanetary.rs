@@ -90,6 +90,37 @@ impl Game {
         }
     }
 
+    pub(super) fn stage_interplanetary_core_stages_scene(&mut self) {
+        self.stage_interplanetary_scene();
+        for index in [1, 3] {
+            self.campaign.colonize(index);
+        }
+
+        // A map should show progression as a system-wide story, not only for
+        // the world currently underfoot. These snapshots deliberately span
+        // the named Core silhouettes from Crash-Lander through Ring.
+        for (index, stage) in [(1, 1_u8), (2, 5), (3, 4), (4, 3)] {
+            if let Some(planet) = self.campaign.planet_mut(index) {
+                planet.core_stage = stage.saturating_sub(1);
+                planet.refresh_stats();
+                planet.notifications.clear();
+            }
+        }
+        let achievement_ids = self
+            .campaign
+            .current()
+            .achievements
+            .iter()
+            .map(|achievement| achievement.id.clone())
+            .collect::<Vec<_>>();
+        let current = self.campaign.current_mut();
+        for id in achievement_ids {
+            current.achievements.unlock(&id);
+        }
+        current.notifications.clear();
+        self.campaign.travel_to(2);
+    }
+
     pub(super) fn stage_mobile_interplanetary_alert_scene(&mut self) {
         self.stage_interplanetary_scene();
         self.campaign.travel_to(4);
