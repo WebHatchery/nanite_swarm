@@ -17,6 +17,12 @@ impl Campaign {
             let Some(planet) = planet else {
                 continue;
             };
+            if planet.planet_index != source {
+                return Err(format!(
+                    "save world slot {source} contains world {}",
+                    planet.planet_index
+                ));
+            }
             for (index, shipment) in planet.launched_pods.iter().enumerate() {
                 self.validate_shipment(
                     shipment,
