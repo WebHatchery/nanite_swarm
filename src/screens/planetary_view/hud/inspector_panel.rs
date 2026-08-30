@@ -208,7 +208,17 @@ pub(super) fn draw(
         // and drill placement is guesswork.
         let has_recipe = !data.building(building_type.id()).recipe.is_empty();
         if row_layout.show_detail_rows && !has_recipe {
-            if let Some(tile) = display_pos.and_then(|pos| state.grid.get(pos)) {
+            if building_type == BuildingType::Core {
+                draw_status_row(
+                    theme,
+                    right_x + 16.0,
+                    row_base + row_gap * 3.0,
+                    right_w - 32.0,
+                    "Next",
+                    &core_next_stage_label(state),
+                    colors.primary,
+                );
+            } else if let Some(tile) = display_pos.and_then(|pos| state.grid.get(pos)) {
                 let (ore_label, ore_color) = ore_status(tile.ore_richness, colors);
                 draw_status_row(
                     theme,
@@ -270,6 +280,7 @@ pub(super) fn draw(
             match building_type {
                 BuildingType::MassDriver => status_text = state.export_summary(tile_pos),
                 BuildingType::LandingPad => status_text = state.pad_summary(tile_pos),
+                BuildingType::Core => status_text = core_stage_status_text(state),
                 _ => {}
             }
         }
@@ -627,6 +638,22 @@ fn flow_resource_name(resource: crate::engine::ResourceType) -> &'static str {
         crate::engine::ResourceType::Components => "Parts",
         _ => crate::state::cargo_name(resource),
     }
+}
+
+fn core_stage_status_text(state: &PlanetState) -> String {
+    format!(
+        "CORE {}/{}",
+        state.core_stage_index() + 1,
+        state.core_stages().len()
+    )
+}
+
+fn core_next_stage_label(state: &PlanetState) -> String {
+    state
+        .core_stages()
+        .get(state.core_stage_index() + 1)
+        .map(|stage| stage.name.clone())
+        .unwrap_or_else(|| "FULLY EVOLVED".to_string())
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

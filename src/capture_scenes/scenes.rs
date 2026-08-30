@@ -233,6 +233,11 @@ impl Game {
                 }
                 planet.grid.update_power_grid();
                 planet.step(state::TICK_SECONDS, false);
+                // The Core progression scene should also prove that selecting
+                // the evolving structure exposes its stage in the ordinary
+                // inspector, not only in the Factory Deck.
+                planet.selected_building = None;
+                planet.selected_tile = planet.grid.find_core();
             }
             // A run cut in the middle, with drones stalled beyond the break.
             "severed" => {

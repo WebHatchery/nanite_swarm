@@ -90,3 +90,15 @@ fn a_full_dispatch_pad_is_named_before_it_can_hide_as_idle() {
     let flow = recipe_flow_data(&state, pos, BuildingType::Smelter).unwrap();
     assert_eq!(recipe_status(&flow, true), "Output pad full");
 }
+
+#[test]
+fn core_inspector_names_its_current_and_next_evolution() {
+    let mut state = PlanetState::new(2, 42, GameConfig::default());
+
+    assert_eq!(core_stage_status_text(&state), "CORE 1/5");
+    assert_eq!(core_next_stage_label(&state), "Foundry");
+
+    state.core_stage = (state.core_stages().len() - 1) as u8;
+    assert_eq!(core_stage_status_text(&state), "CORE 5/5");
+    assert_eq!(core_next_stage_label(&state), "FULLY EVOLVED");
+}
