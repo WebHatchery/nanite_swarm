@@ -45,6 +45,45 @@ fn core_is_always_unlocked_others_require_explicit_unlock() {
 }
 
 #[test]
+fn hostile_arrival_guidance_walks_the_power_route_prerequisites() {
+    let mut state = PlanetState::new(1, 7, GameConfig::default());
+    assert_eq!(
+        state.arrival_guidance().as_deref(),
+        Some("Next: tap RESEARCH for Power Grid.")
+    );
+
+    state.research.unlocked_techs.push("power_grid".to_string());
+    assert_eq!(
+        state.arrival_guidance().as_deref(),
+        Some("Next: tap RESEARCH for Geothermal Tapping.")
+    );
+
+    state
+        .research
+        .unlocked_techs
+        .push("geothermal_tapping".to_string());
+    assert_eq!(
+        state.arrival_guidance().as_deref(),
+        Some("Next: tap BUILD, then place Geothermal Tap.")
+    );
+}
+
+#[test]
+fn cold_arrival_guidance_starts_with_the_first_fusion_prerequisite() {
+    let state = PlanetState::new(4, 7, GameConfig::default());
+    assert_eq!(
+        state.arrival_guidance().as_deref(),
+        Some("Next: tap RESEARCH for Power Grid.")
+    );
+}
+
+#[test]
+fn calm_worlds_without_a_construction_rule_need_no_arrival_guidance() {
+    let state = PlanetState::new(2, 7, GameConfig::default());
+    assert_eq!(state.arrival_guidance(), None);
+}
+
+#[test]
 fn unlock_building_does_not_duplicate_entries() {
     let mut state = PlanetState::default();
     state.unlock_building(BuildingType::Storage);

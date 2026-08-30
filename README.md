@@ -14,6 +14,9 @@ The swarm is powerful, but every expansion changes the terrain, stresses the gri
 - The opening lesson belongs to the starting world; newly colonized worlds
   keep the arrival notice and visible controls without replaying steps that
   may be forbidden by their own terrain and power rules.
+- Hostile arrivals name the next visible RESEARCH or BUILD control for their
+  authored power route in the landing banner and build palette, following any
+  research prerequisites instead of leaving the dossier's warning behind.
 - Completing the opening lesson points to the visible SHIP control for the
   Seed Ship yard, then MAP for choosing the next world.
 - Connect structures through conduits and power networks.

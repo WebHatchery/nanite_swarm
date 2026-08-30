@@ -3,6 +3,8 @@ use crate::engine::{BuildingType, GridPos, ResourceType, StatId};
 
 use super::game_state::PlanetState;
 
+mod arrival;
+
 #[derive(Debug, Clone, Copy, Default, serde::Serialize, serde::Deserialize)]
 pub struct OfflineReport {
     pub elapsed_seconds: f32,

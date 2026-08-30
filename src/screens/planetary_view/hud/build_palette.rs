@@ -291,7 +291,15 @@ pub(super) fn draw(
         dim,
     );
     let (constraints_met, constraint_text) = state.planet_constraint_status();
-    if !constraints_met && !constraint_text.is_empty() {
+    if let Some(guidance) = state.arrival_guidance() {
+        draw_ui_text(
+            &fit_text_to_width(&guidance, sidebar_w - metrics.panel_padding * 2.0, 9.0),
+            sidebar_x + metrics.panel_padding,
+            sidebar_y + 66.0,
+            9.0,
+            colors.primary_soft,
+        );
+    } else if !constraints_met && !constraint_text.is_empty() {
         draw_ui_text(
             &format!("WORLD RULE: {}", constraint_text),
             sidebar_x + metrics.panel_padding,

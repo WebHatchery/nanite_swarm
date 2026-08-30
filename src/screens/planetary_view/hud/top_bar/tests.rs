@@ -24,6 +24,18 @@ fn mobile_arrival_status_names_the_world_without_hiding_critical_failures() {
 }
 
 #[test]
+fn mobile_arrival_guidance_names_the_visible_recovery_control() {
+    assert_eq!(
+        super::mobile_arrival_guidance_label("Next: tap RESEARCH for Power Grid."),
+        "TAP RESEARCH"
+    );
+    assert_eq!(
+        super::mobile_arrival_guidance_label("Next: tap BUILD, then place Geothermal Tap."),
+        "TAP BUILD"
+    );
+}
+
+#[test]
 fn offline_work_status_is_short_enough_for_the_mobile_header() {
     let report = OfflineReport {
         research_completed: true,

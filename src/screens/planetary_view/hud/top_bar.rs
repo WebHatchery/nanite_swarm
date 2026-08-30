@@ -92,6 +92,16 @@ fn mobile_research_status(
     ))
 }
 
+fn mobile_arrival_guidance_label(guidance: &str) -> &'static str {
+    if guidance.contains("tap RESEARCH") {
+        "TAP RESEARCH"
+    } else if guidance.contains("tap BUILD") {
+        "TAP BUILD"
+    } else {
+        "FOLLOW ARRIVAL GUIDE"
+    }
+}
+
 fn compact_resource_amount(amount: f32) -> String {
     let amount = amount.max(0.0);
     if amount >= 1_000.0 {
@@ -611,7 +621,12 @@ pub(super) fn draw(
 
     if state.arrival_notice_timer > 0.0 {
         let banner_w = 620.0;
-        let banner_h = 36.0;
+        let arrival_guidance = state.arrival_guidance();
+        let banner_h = if arrival_guidance.is_some() {
+            52.0
+        } else {
+            36.0
+        };
         let banner_x = (screen_w - banner_w) * 0.5;
         let banner_y = notice_y;
         draw_hud_panel(
@@ -622,10 +637,19 @@ pub(super) fn draw(
         draw_ui_text(
             state.arrival_line(),
             banner_x + 16.0,
-            banner_y + 24.0,
+            banner_y + 21.0,
             13.0,
             primary_soft,
         );
+        if let Some(guidance) = arrival_guidance {
+            draw_ui_text(
+                &truncate_text_to_width(&guidance, banner_w - 32.0, 10.0),
+                banner_x + 16.0,
+                banner_y + 41.0,
+                10.0,
+                colors.warning,
+            );
+        }
         notice_y += banner_h + 4.0;
     }
 
@@ -710,11 +734,12 @@ fn draw_mobile(
             },
         );
     }
-    if let Some(research_status) = mobile_research_status(
+    let research_status = mobile_research_status(
         state.research.current_research.as_deref(),
         state.research.research_progress,
         state.data(),
-    ) {
+    );
+    if let Some(research_status) = research_status {
         draw_ui_text(
             &truncate_text_to_width(&research_status, 108.0, 8.0),
             screen_w - 108.0,
@@ -726,6 +751,16 @@ fn draw_mobile(
                 colors.primary_soft
             },
         );
+    } else if state.arrival_notice_timer > 0.0 {
+        if let Some(guidance) = state.arrival_guidance() {
+            draw_ui_text(
+                mobile_arrival_guidance_label(&guidance),
+                screen_w - 108.0,
+                31.0,
+                8.0,
+                colors.warning,
+            );
+        }
     }
 
     let gap = 6.0;
