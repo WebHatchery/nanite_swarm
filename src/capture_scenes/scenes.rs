@@ -35,6 +35,13 @@ impl Game {
                 self.menu_notice = None;
                 self.delete_confirmation_slot = None;
             }
+            "desktop_mainmenu_short" => {
+                self.phase = GamePhase::MainMenu;
+                self.has_save = true;
+                self.has_active_campaign = true;
+                self.menu_notice = None;
+                self.delete_confirmation_slot = None;
+            }
             "mobile_mainmenu_narrow" => {
                 self.phase = GamePhase::MainMenu;
                 self.has_save = true;

@@ -6,6 +6,7 @@ fn required_capture_scenes_are_registered() {
         REQUIRED_CAPTURE_SCENES,
         [
             "mainmenu",
+            "desktop_mainmenu_short",
             "mobile_mainmenu_narrow",
             "mobile_settings_narrow",
             "mobile_settings_audio_narrow",

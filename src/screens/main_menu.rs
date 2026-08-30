@@ -23,6 +23,15 @@ pub enum MenuAction {
     Quit,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct DesktopMenuLayout {
+    panel_h: f32,
+    panel_y: f32,
+    button_h: f32,
+    button_spacing: f32,
+    button_top: f32,
+}
+
 /// Render the main menu and return any action taken
 pub fn render_main_menu(
     has_save: bool,
@@ -167,14 +176,13 @@ pub fn render_main_menu(
     buttons.push((strings.quit.clone(), MenuAction::Quit));
 
     let panel_w = 320.0;
-    let panel_h = 78.0 + buttons.len() as f32 * 38.0;
+    let layout = desktop_menu_layout(screen_h, float_y, buttons.len());
     let panel_x = screen_w - panel_w - 40.0;
-    let panel_y = ((screen_h - panel_h) * 0.5 + float_y * 0.2).max(88.0);
-    draw_panel(panel_x, panel_y, panel_w, panel_h);
+    draw_panel(panel_x, layout.panel_y, panel_w, layout.panel_h);
     draw_ui_text(
         &strings.command_menu,
         panel_x + 18.0,
-        panel_y + 30.0,
+        layout.panel_y + 30.0,
         18.0,
         Colors::PRIMARY,
     );
@@ -182,7 +190,7 @@ pub fn render_main_menu(
         draw_ui_text(
             notice,
             panel_x + 20.0,
-            panel_y + panel_h + 20.0,
+            layout.panel_y + layout.panel_h + 20.0,
             11.0,
             Colors::WARNING,
         );
@@ -192,15 +200,35 @@ pub fn render_main_menu(
     // dead gaps that make the command panel look unfinished.
     let btn_w = panel_w - 40.0;
     let btn_x = panel_x + 20.0;
-    let btn_spacing = 38.0;
     for (index, (label, action)) in buttons.iter().enumerate() {
-        let y = panel_y + 60.0 + index as f32 * btn_spacing;
-        if draw_button_sized(btn_x, y, btn_w, 30.0, label) {
+        let y = layout.panel_y + layout.button_top + index as f32 * layout.button_spacing;
+        if draw_button_sized(btn_x, y, btn_w, layout.button_h, label) {
             return *action;
         }
     }
 
     MenuAction::None
+}
+
+fn desktop_menu_layout(screen_h: f32, float_y: f32, button_count: usize) -> DesktopMenuLayout {
+    let compact = screen_h < 520.0;
+    let panel_h = if compact {
+        54.0 + button_count as f32 * 29.0
+    } else {
+        78.0 + button_count as f32 * 38.0
+    };
+    let panel_y = if compact {
+        ((screen_h - panel_h) * 0.5 + float_y * 0.2).max(76.0)
+    } else {
+        ((screen_h - panel_h) * 0.5 + float_y * 0.2).max(88.0)
+    };
+    DesktopMenuLayout {
+        panel_h,
+        panel_y,
+        button_h: if compact { 24.0 } else { 30.0 },
+        button_spacing: if compact { 29.0 } else { 38.0 },
+        button_top: if compact { 46.0 } else { 60.0 },
+    }
 }
 
 fn delete_slot_label(strings: &crate::data::PlayerStrings, armed: bool) -> String {
