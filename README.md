@@ -42,6 +42,9 @@ The bottom graph records observed ore, alloy, and parts flow; warning triangles
 and the Operations count identify powered processors that are missing a feed.
 The top resource cards show live rates from active drills, the Core and Server
 Banks, and biomass harvesters.
+The selected-structure Power row follows the standing building's live draw or
+generation, including dust, overclock, standby, focus, and research effects;
+build previews continue to show nominal power.
 When the bottom alert card reports a logistics problem, tap its JUMP button to
 cycle through the affected structures or network tiles; power-only problems
 keep the FLOW button for the network diagnosis overlay.

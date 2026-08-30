@@ -143,8 +143,13 @@ pub(super) fn draw(
             if row_layout.show_icon { 10.0 } else { 9.0 },
             dim,
         );
-        let power_multiplier = if tile_overclocked { 1.75 } else { 1.0 };
-        let output = format_power_delta(building_type.power_delta(data) * power_multiplier);
+        let output = tile_pos_with_building
+            .and_then(|pos| state.building_power_delta(pos))
+            .map(format_power_delta)
+            .unwrap_or_else(|| {
+                let power_multiplier = if tile_overclocked { 1.75 } else { 1.0 };
+                format_power_delta(building_type.power_delta(data) * power_multiplier)
+            });
         let row_base = row_layout.row_base;
         let row_gap = row_layout.row_gap;
         draw_status_row(
