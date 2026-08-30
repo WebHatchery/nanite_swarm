@@ -6,6 +6,7 @@ use super::status::{
     driver_operation_status, landing_pad_operation_status, launch_action, launch_prompt,
     mass_driver_status_label, seed_ship_status_label,
 };
+use super::world_dossier::{compact_shipping_status, shipping_status_line};
 
 #[test]
 fn shipping_status_distinguishes_absent_and_offline_drivers() {
@@ -208,6 +209,18 @@ fn dossier_can_name_a_worlds_standing_shipping_route() {
         Some("Shipping: Minerals -> Saturn @ 180/min".to_string())
     );
     assert!(shipping_summary(data.data(), None, 0.0).is_none());
+}
+
+#[test]
+fn dossier_shipping_copy_keeps_route_health_visible() {
+    assert_eq!(
+        shipping_status_line("PAD OFFLINE"),
+        "Route status: PAD OFFLINE".to_string()
+    );
+    assert_eq!(
+        compact_shipping_status("Saturn", "RESERVE HELD"),
+        "Route: Saturn RESERVE HELD".to_string()
+    );
 }
 
 #[test]

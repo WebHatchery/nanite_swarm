@@ -32,6 +32,14 @@ pub(super) fn shipping_summary(
     ))
 }
 
+pub(super) fn shipping_status_line(status: &str) -> String {
+    format!("Route status: {status}")
+}
+
+pub(super) fn compact_shipping_status(target: &str, status: &str) -> String {
+    format!("Route: {target} {status}")
+}
+
 pub(super) fn draw_world_telemetry(telemetry: &WorldTelemetry, x: f32, y: f32) {
     draw_ui_text(
         &format!(

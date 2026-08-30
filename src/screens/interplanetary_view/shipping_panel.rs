@@ -319,22 +319,7 @@ pub(super) fn draw(
                 action = InterplanetaryAction::SelectOrderWorld(world);
             }
             let rate = view.export_rates.get(world).copied().unwrap_or(0.0);
-            let status = route_status_label(
-                view.drivers_built.get(world).copied().unwrap_or(0),
-                view.drivers_online.get(world).copied().unwrap_or(0),
-                view.pads_built.get(order.target).copied().unwrap_or(0),
-                view.pads.get(order.target).copied().unwrap_or(0),
-                view.pending_pods.get(order.target).copied().unwrap_or(0),
-                view.pod_caps.get(order.target).copied().unwrap_or(1),
-                view.overflow_pods.get(order.target).copied().unwrap_or(0),
-            );
-            let status = if status == "NOMINAL"
-                && source_reserve_text(view, world, order).is_some_and(|(_, held)| held)
-            {
-                "RESERVE HELD"
-            } else {
-                status
-            };
+            let status = route_status_for(view, world, order);
             draw_scrolled_text(
                 &format!(
                     "{} {:.0}/min | {status}",
@@ -427,11 +412,29 @@ pub(super) fn route_status_label(
     }
 }
 
-fn route_status_color(status: &str) -> Color {
+pub(super) fn route_status_color(status: &str) -> Color {
     match status {
         "NOMINAL" => Colors::SUCCESS,
         "DRIVER OFFLINE" | "PAD OFFLINE" | "HOLDING" | "RESERVE HELD" => Colors::WARNING,
         _ => Colors::ERROR,
+    }
+}
+
+pub(super) fn route_status_for(view: &MapView, world: usize, order: ExportOrder) -> &'static str {
+    let status = route_status_label(
+        view.drivers_built.get(world).copied().unwrap_or(0),
+        view.drivers_online.get(world).copied().unwrap_or(0),
+        view.pads_built.get(order.target).copied().unwrap_or(0),
+        view.pads.get(order.target).copied().unwrap_or(0),
+        view.pending_pods.get(order.target).copied().unwrap_or(0),
+        view.pod_caps.get(order.target).copied().unwrap_or(1),
+        view.overflow_pods.get(order.target).copied().unwrap_or(0),
+    );
+    if status == "NOMINAL" && source_reserve_text(view, world, order).is_some_and(|(_, held)| held)
+    {
+        "RESERVE HELD"
+    } else {
+        status
     }
 }
 

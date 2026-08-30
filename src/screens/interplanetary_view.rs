@@ -9,10 +9,11 @@ use crate::state::{ExportOrder, InterplanetaryMobilePanel, Shipment, WorldTeleme
 use crate::ui::{color_from_rgba, draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::{draw_ui_text, note_neighbour, touch_area, Pointer, ScrollArea};
+use shipping_panel::{route_status_color, route_status_for};
 use status::{launch_action, launch_prompt, mass_driver_status_label, seed_ship_status_label};
 use world_dossier::{
-    draw_world_telemetry, hazard_color, hazard_summary, shipping_summary, world_alert_code,
-    world_alert_color, world_rule_lines, world_telemetry_height,
+    draw_world_telemetry, hazard_color, hazard_summary, shipping_status_line, shipping_summary,
+    world_alert_code, world_alert_color, world_rule_lines, world_telemetry_height,
 };
 
 /// Actions from the interplanetary view
@@ -507,9 +508,15 @@ fn draw_planet_info(
         view.orders.get(index).copied().flatten(),
         view.export_rates.get(index).copied().unwrap_or(0.0),
     );
+    let route_status = view
+        .orders
+        .get(index)
+        .copied()
+        .flatten()
+        .map(|order| route_status_for(view, index, order));
 
     let panel_w = PLANET_INFO_WIDTH;
-    let shipping_offset = if shipping.is_some() { 20.0 } else { 0.0 };
+    let shipping_offset = if shipping.is_some() { 36.0 } else { 0.0 };
     let panel_h = 300.0 + shipping_offset;
     let panel_x = screen_w - panel_w - PLANET_INFO_MARGIN;
     let panel_y = header_height + 12.0;
@@ -570,6 +577,15 @@ fn draw_planet_info(
             10.0,
             Colors::PRIMARY,
         );
+        if let Some(status) = route_status {
+            draw_ui_text(
+                &shipping_status_line(status),
+                panel_x + 15.0,
+                panel_y + info_end + 16.0,
+                10.0,
+                route_status_color(status),
+            );
+        }
     }
     let rules_y = panel_y + info_end + shipping_offset;
     draw_ui_text(

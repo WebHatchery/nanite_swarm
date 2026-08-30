@@ -1,5 +1,7 @@
 //! Touch-first solar-system sections for portrait screens.
 
+use super::shipping_panel::{route_status_color, route_status_for};
+use super::world_dossier::{compact_shipping_status, shipping_status_line};
 use super::*;
 use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text, truncate_text_to_width, Pointer};
 
@@ -143,11 +145,13 @@ fn draw_mobile_planet_info(
     let is_colonized = view.colonized.get(index).copied().unwrap_or(false);
     let is_current = index == view.current_planet;
     let telemetry = view.telemetry.get(index).copied().flatten();
+    let order = view.orders.get(index).copied().flatten();
     let shipping = super::shipping_summary(
         view.data,
-        view.orders.get(index).copied().flatten(),
+        order,
         view.export_rates.get(index).copied().unwrap_or(0.0),
     );
+    let route_status = order.map(|order| route_status_for(view, index, order));
     let panel_h = mobile_info_height(screen_h, telemetry.is_some(), shipping.is_some());
     let text_w = (width - 30.0).max(40.0);
     draw_panel(x, y, width, panel_h);
@@ -211,23 +215,35 @@ fn draw_mobile_planet_info(
                 Colors::TEXT,
             );
         }
-        let rules = world_rule_lines(view.data, index);
-        let rule = rules
-            .first()
-            .map(|rule| format!("Rule: {}", rule))
-            .unwrap_or_else(|| "Rule: no special build rules".to_string());
-        let rule_color = if rules.len() == 1 && rules[0] == "No special build rules" {
-            Colors::SUCCESS
+        let compact_line_y = y + if telemetry.is_some() { 99.0 } else { 73.0 };
+        if let (Some(order), Some(status)) = (order, route_status) {
+            let route_line = compact_shipping_status(&view.data.planet(order.target).name, status);
+            draw_ui_text(
+                &truncate_text_to_width(&route_line, text_w, 8.0),
+                x + 15.0,
+                compact_line_y,
+                8.0,
+                route_status_color(status),
+            );
         } else {
-            Colors::WARNING
-        };
-        draw_ui_text(
-            &truncate_text_to_width(&rule, text_w, 8.0),
-            x + 15.0,
-            y + if telemetry.is_some() { 99.0 } else { 73.0 },
-            8.0,
-            rule_color,
-        );
+            let rules = world_rule_lines(view.data, index);
+            let rule = rules
+                .first()
+                .map(|rule| format!("Rule: {}", rule))
+                .unwrap_or_else(|| "Rule: no special build rules".to_string());
+            let rule_color = if rules.len() == 1 && rules[0] == "No special build rules" {
+                Colors::SUCCESS
+            } else {
+                Colors::WARNING
+            };
+            draw_ui_text(
+                &truncate_text_to_width(&rule, text_w, 8.0),
+                x + 15.0,
+                compact_line_y,
+                8.0,
+                rule_color,
+            );
+        }
         let action = if is_current {
             "Current location"
         } else if is_colonized {
@@ -355,7 +371,16 @@ fn draw_mobile_planet_info(
             9.0,
             Colors::PRIMARY,
         );
-        next_y += 18.0;
+        if let Some(status) = route_status {
+            draw_ui_text(
+                &truncate_text_to_width(&shipping_status_line(status), text_w, 9.0),
+                x + 15.0,
+                next_y + 14.0,
+                9.0,
+                route_status_color(status),
+            );
+        }
+        next_y += 32.0;
     }
     draw_ui_text("World rules:", x + 15.0, next_y, 10.0, Colors::TEXT_DIM);
     let rules = world_rule_lines(view.data, index);
@@ -409,7 +434,7 @@ fn mobile_info_height(screen_h: f32, has_telemetry: bool, has_shipping: bool) ->
             96.0
         }
     } else {
-        250.0 + if has_shipping { 18.0 } else { 0.0 }
+        250.0 + if has_shipping { 32.0 } else { 0.0 }
     }
 }
 
