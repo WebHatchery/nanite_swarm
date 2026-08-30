@@ -4,7 +4,17 @@ use crate::data::GameData;
 
 use super::{Milestone, TutorialGoal};
 
+#[cfg(test)]
+mod tests;
+
 pub(crate) fn validate_game_data(data: &GameData) -> Result<(), String> {
+    if data.planets.len() != super::campaign::PLANET_COUNT {
+        return Err(format!(
+            "assets/planets.json has {} planets; expected {}",
+            data.planets.len(),
+            super::campaign::PLANET_COUNT
+        ));
+    }
     for def in &data.achievements {
         if Milestone::from_id(&def.condition.kind).is_none() {
             return Err(format!(
