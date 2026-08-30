@@ -39,6 +39,9 @@ Audit date: 2026-08-20
 - Split the touch-sized top-bar renderer from `top_bar.rs` into
   `top_bar/mobile.rs`, leaving desktop metrics and notice layout independent
   from future mobile navigation changes.
+- Split Solar System planet rows, dossiers, and the legend from
+  `interplanetary_view.rs` into `interplanetary_view/planet_panel.rs`, leaving
+  the map coordinator focused on orbit layout, routes, and transitions.
 
 ## Remaining debt
 

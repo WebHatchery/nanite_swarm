@@ -1,8 +1,12 @@
 //! Touch-first solar-system sections for portrait screens.
 
+use super::planet_panel::draw_planet_list;
 use super::shipping_panel::{route_status_color, route_status_for};
+use super::status::launch_prompt;
 use super::world_dossier::{
-    compact_shipping_status, core_stage_summary, shipping_status_line, storage_resource_label,
+    compact_shipping_status, core_stage_summary, hazard_color, hazard_summary,
+    shipping_status_line, shipping_summary, storage_resource_label, world_alert_code,
+    world_rule_lines,
 };
 use super::*;
 use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text, truncate_text_to_width, Pointer};
@@ -231,7 +235,7 @@ fn draw_mobile_planet_info(
     let telemetry = view.telemetry.get(index).copied().flatten();
     let alert_code = telemetry
         .filter(|telemetry| telemetry.alerts > 0)
-        .map(|telemetry| super::world_alert_code(Some(telemetry)));
+        .map(|telemetry| world_alert_code(Some(telemetry)));
     let status_line = mobile_status_text(is_colonized, alert_code.as_deref());
     let status_color = if alert_code.is_some() {
         Colors::ERROR
@@ -241,7 +245,7 @@ fn draw_mobile_planet_info(
         Colors::WARNING
     };
     let order = view.orders.get(index).copied().flatten();
-    let shipping = super::shipping_summary(
+    let shipping = shipping_summary(
         view.data,
         order,
         view.export_rates.get(index).copied().unwrap_or(0.0),
@@ -305,7 +309,7 @@ fn draw_mobile_planet_info(
         ) {
             action
         } else if can_launch {
-            super::launch_prompt(view.launch_confirmation_target == Some(index)).to_string()
+            launch_prompt(view.launch_confirmation_target == Some(index)).to_string()
         } else {
             "World not ready to launch".to_string()
         };
@@ -422,7 +426,7 @@ fn draw_mobile_planet_info(
         ) {
             action
         } else if can_launch {
-            super::launch_prompt(view.launch_confirmation_target == Some(index)).to_string()
+            launch_prompt(view.launch_confirmation_target == Some(index)).to_string()
         } else {
             "World not ready to launch".to_string()
         };
@@ -582,7 +586,7 @@ fn draw_mobile_planet_info(
     ) {
         action
     } else if can_launch {
-        super::launch_prompt(view.launch_confirmation_target == Some(index)).to_string()
+        launch_prompt(view.launch_confirmation_target == Some(index)).to_string()
     } else if !view.mass_driver_researched {
         "Requires Mass Driver research".to_string()
     } else if view.current_drivers_online == 0 {

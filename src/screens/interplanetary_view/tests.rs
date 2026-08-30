@@ -7,7 +7,10 @@ use super::status::{
     driver_operation_status, landing_pad_operation_status, launch_action, launch_prompt,
     mass_driver_status_label, seed_ship_status_label,
 };
-use super::world_dossier::{compact_shipping_status, shipping_status_line};
+use super::world_dossier::{
+    compact_shipping_status, shipping_status_line, shipping_summary, world_alert_code,
+    world_rule_lines, world_telemetry_height,
+};
 
 #[test]
 fn shipping_status_distinguishes_absent_and_offline_drivers() {
@@ -43,10 +46,7 @@ fn shipping_status_distinguishes_absent_and_offline_landing_pads() {
 use super::world_dossier::{
     core_stage_summary, maintenance_cause_label, storage_resource_label, world_telemetry_row_y,
 };
-use super::{
-    shipping_summary, solar_map_layout, world_alert_code, world_rule_lines, world_telemetry_height,
-    MIN_SOLAR_MAP_SCALE,
-};
+use super::{solar_map_layout, MIN_SOLAR_MAP_SCALE};
 
 #[test]
 fn launch_header_distinguishes_a_built_driver_that_is_offline() {
