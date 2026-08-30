@@ -2,7 +2,7 @@
 
 mod shipping_panel;
 
-use crate::state::{ExportOrder, Shipment, WorldTelemetry};
+use crate::state::{ExportOrder, Shipment, WorldAlert, WorldTelemetry};
 use crate::ui::{color_from_rgba, draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::{draw_ui_text, note_neighbour, touch_area, Pointer, ScrollArea};
@@ -466,9 +466,12 @@ fn draw_world_telemetry(telemetry: &WorldTelemetry, x: f32, y: f32) {
         Colors::TEXT,
     );
     let health = if telemetry.alerts == 0 {
-        ("NOMINAL", Colors::SUCCESS)
+        (WorldAlert::Nominal.label().to_string(), Colors::SUCCESS)
     } else {
-        ("ALERT", Colors::ERROR)
+        (
+            format!("{} x{}", telemetry.alert_kind.label(), telemetry.alerts),
+            Colors::ERROR,
+        )
     };
     draw_ui_text(
         &format!(

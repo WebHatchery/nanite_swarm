@@ -674,6 +674,7 @@ impl Game {
                 self.stage_interplanetary_scene();
                 self.campaign.colonize(1);
                 self.campaign.travel_to(1);
+                self.campaign.current_mut().power_balance = -1.0;
             }
             _ => {
                 // Default: jump straight into gameplay on the starting planet.

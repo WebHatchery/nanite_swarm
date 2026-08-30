@@ -29,6 +29,31 @@ pub struct DirectiveRecord {
 /// swarm has already reached. These are copied values rather than references
 /// so the map can assemble one stable snapshot while the campaign remains
 /// mutable behind the screen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WorldAlert {
+    Nominal,
+    Collapse,
+    Power,
+    Hibernation,
+    Stalled,
+    Starved,
+    Blocked,
+}
+
+impl WorldAlert {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Nominal => "NOMINAL",
+            Self::Collapse => "COLLAPSE",
+            Self::Power => "POWER",
+            Self::Hibernation => "HIBERNATION",
+            Self::Stalled => "STALL",
+            Self::Starved => "INPUT",
+            Self::Blocked => "BLOCKED",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct WorldTelemetry {
     pub minerals: f32,
@@ -39,6 +64,7 @@ pub struct WorldTelemetry {
     pub structures: usize,
     pub drones: usize,
     pub alerts: usize,
+    pub alert_kind: WorldAlert,
 }
 
 /// Step length for worlds the player is not looking at. Coarse on purpose: a
@@ -256,12 +282,33 @@ impl Campaign {
     /// rather than pretending its theoretical capacity is live output.
     pub fn world_telemetry(&self, index: usize) -> Option<WorldTelemetry> {
         let planet = self.planet(index)?;
-        let alerts = usize::from(planet.power_balance < 0.0)
-            + usize::from(planet.battery_seconds <= 0.0)
-            + usize::from(planet.power_collapse_shutdown > 0.0)
-            + usize::from(planet.stalled_drone_count() > 0)
-            + usize::from(!planet.starved_factories().is_empty())
-            + usize::from(!planet.blocked_factories().is_empty());
+        let power_alert = planet.power_balance < 0.0;
+        let hibernating = planet.battery_seconds <= 0.0;
+        let collapse = planet.power_collapse_shutdown > 0.0;
+        let stalled = planet.stalled_drone_count() > 0;
+        let starved = !planet.starved_factories().is_empty();
+        let blocked = !planet.blocked_factories().is_empty();
+        let alerts = usize::from(power_alert)
+            + usize::from(hibernating)
+            + usize::from(collapse)
+            + usize::from(stalled)
+            + usize::from(starved)
+            + usize::from(blocked);
+        let alert_kind = if collapse {
+            WorldAlert::Collapse
+        } else if power_alert {
+            WorldAlert::Power
+        } else if hibernating {
+            WorldAlert::Hibernation
+        } else if stalled {
+            WorldAlert::Stalled
+        } else if starved {
+            WorldAlert::Starved
+        } else if blocked {
+            WorldAlert::Blocked
+        } else {
+            WorldAlert::Nominal
+        };
         Some(WorldTelemetry {
             minerals: planet.resources.minerals,
             ore_rate: planet.throughput.last().unwrap_or(0.0),
@@ -271,6 +318,7 @@ impl Campaign {
             structures: planet.grid.total_buildings(),
             drones: planet.drones.total_count(),
             alerts,
+            alert_kind,
         })
     }
 

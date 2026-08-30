@@ -82,6 +82,7 @@ fn the_solar_map_reads_live_telemetry_for_colonized_worlds() {
     assert_eq!(fresh.structures, 1);
     assert_eq!(fresh.drones, 0);
     assert_eq!(fresh.alerts, 0);
+    assert_eq!(fresh.alert_kind, WorldAlert::Nominal);
 
     let mercury = campaign.planet_mut(0).unwrap();
     mercury.resources.minerals = 123.0;
@@ -90,6 +91,20 @@ fn the_solar_map_reads_live_telemetry_for_colonized_worlds() {
     assert_eq!(live.minerals, 123.0);
     assert_eq!(live.power_balance, -1.0);
     assert_eq!(live.alerts, 1);
+    assert_eq!(live.alert_kind, WorldAlert::Power);
+}
+
+#[test]
+fn the_solar_map_prioritizes_collapse_over_secondary_world_alerts() {
+    let mut campaign = campaign();
+    let world = campaign.current_mut();
+    world.power_balance = -1.0;
+    world.battery_seconds = 0.0;
+    world.power_collapse_shutdown = 5.0;
+
+    let telemetry = campaign.world_telemetry(STARTING_PLANET).unwrap();
+    assert_eq!(telemetry.alerts, 3);
+    assert_eq!(telemetry.alert_kind, WorldAlert::Collapse);
 }
 
 #[test]
