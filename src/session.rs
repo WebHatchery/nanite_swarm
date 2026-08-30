@@ -52,6 +52,7 @@ impl GameSession {
 
     pub fn new_campaign(&mut self, config: GameConfig, seed: u64) {
         self.campaign = Campaign::new_with_data(config, seed, self.data.clone());
+        self.shipping_edit_world = state::STARTING_PLANET;
     }
 
     pub fn save_campaign(&mut self) -> Result<(), io::Error> {
@@ -67,6 +68,7 @@ impl GameSession {
     pub fn load_campaign(&mut self) -> Result<LoadSource, io::Error> {
         let (mut campaign, source) = state::load_from_file(&self.active_save_path())?;
         campaign.attach_data(self.data.clone());
+        self.shipping_edit_world = campaign.current_index();
         self.campaign = campaign;
         self.has_save = true;
         Ok(source)
@@ -76,3 +78,6 @@ impl GameSession {
         self.has_save = state::save_exists(&self.active_save_path());
     }
 }
+
+#[cfg(test)]
+mod tests;
