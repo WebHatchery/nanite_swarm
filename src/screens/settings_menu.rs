@@ -27,6 +27,7 @@ struct SettingsLayout {
     row_gap: f32,
     section_gap: f32,
     compact_mobile: bool,
+    compact_desktop: bool,
 }
 
 /// Render the settings menu and return any action taken
@@ -162,12 +163,13 @@ pub fn render_settings_menu(
 fn settings_layout(screen_w: f32, screen_h: f32) -> SettingsLayout {
     let mobile = screen_w < 600.0;
     let compact_mobile = mobile && screen_h < 440.0;
+    let compact_desktop = !mobile && screen_h < 600.0;
     let panel_w = if mobile {
         (screen_w - 24.0).max(240.0)
     } else {
         320.0
     };
-    let panel_y = if compact_mobile {
+    let panel_y = if compact_mobile || compact_desktop {
         76.0
     } else if mobile {
         84.0
@@ -176,6 +178,8 @@ fn settings_layout(screen_w: f32, screen_h: f32) -> SettingsLayout {
     };
     let panel_h = if compact_mobile {
         (screen_h - panel_y - 16.0).max(280.0)
+    } else if compact_desktop {
+        (screen_h - panel_y - 32.0).clamp(280.0, 400.0)
     } else if mobile {
         332.0
     } else {
@@ -189,13 +193,20 @@ fn settings_layout(screen_w: f32, screen_h: f32) -> SettingsLayout {
         row_h: 30.0,
         row_gap: if compact_mobile {
             6.0
+        } else if compact_desktop {
+            8.0
         } else if mobile {
             12.0
         } else {
             18.0
         },
-        section_gap: if compact_mobile { 18.0 } else { 30.0 },
+        section_gap: if compact_mobile || compact_desktop {
+            18.0
+        } else {
+            30.0
+        },
         compact_mobile,
+        compact_desktop,
     }
 }
 

@@ -61,3 +61,40 @@ fn established_phone_settings_keep_the_existing_geometry() {
     assert!((layout.row_gap - 12.0).abs() < 0.001);
     assert!((layout.section_gap - 30.0).abs() < 0.001);
 }
+
+#[test]
+fn short_desktop_settings_keep_display_controls_above_the_footer() {
+    let layout = settings_layout(800.0, 400.0);
+    let content_y = layout.panel_y + 78.0;
+    let motion_y = content_y + (layout.row_h + layout.row_gap) * 2.0;
+    let key_y = motion_y + layout.row_h + layout.section_gap;
+    let speed_y = key_y + layout.row_h + layout.section_gap;
+
+    assert!(layout.compact_desktop);
+    assert!(!layout.compact_mobile);
+    assert!((layout.panel_y - 76.0).abs() < 0.001);
+    assert!(layout.panel_y + layout.panel_h <= 400.0);
+    assert!(speed_y + layout.row_h <= 400.0 - 32.0);
+    assert!((layout.row_gap - 8.0).abs() < 0.001);
+    assert!((layout.section_gap - 18.0).abs() < 0.001);
+}
+
+#[test]
+fn short_desktop_settings_keep_audio_test_signal_above_the_footer() {
+    let layout = settings_layout(800.0, 400.0);
+    let content_y = layout.panel_y + 90.0;
+    let test_y = content_y + (layout.row_h + layout.row_gap) * 3.0;
+
+    assert!(test_y + layout.row_h <= 400.0 - 32.0);
+}
+
+#[test]
+fn roomy_desktop_settings_keep_the_existing_geometry() {
+    let layout = settings_layout(1280.0, 720.0);
+
+    assert!(!layout.compact_desktop);
+    assert!((layout.panel_y - 216.0).abs() < 0.001);
+    assert!((layout.panel_h - 400.0).abs() < 0.001);
+    assert!((layout.row_gap - 18.0).abs() < 0.001);
+    assert!((layout.section_gap - 30.0).abs() < 0.001);
+}

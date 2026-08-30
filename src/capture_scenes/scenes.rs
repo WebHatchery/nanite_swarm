@@ -71,7 +71,15 @@ impl Game {
                 self.phase = GamePhase::Settings;
                 self.settings_tab = crate::screens::SettingsTab::Display;
             }
+            "desktop_settings_short" => {
+                self.phase = GamePhase::Settings;
+                self.settings_tab = crate::screens::SettingsTab::Display;
+            }
             "settings_audio" | "mobile_settings_audio" | "mobile_settings_audio_narrow" => {
+                self.phase = GamePhase::Settings;
+                self.settings_tab = crate::screens::SettingsTab::Audio;
+            }
+            "desktop_settings_audio_short" => {
                 self.phase = GamePhase::Settings;
                 self.settings_tab = crate::screens::SettingsTab::Audio;
             }
