@@ -172,6 +172,35 @@ fn ore_is_carried_to_a_driver_that_has_somewhere_to_throw_it() {
 }
 
 #[test]
+fn changing_a_route_does_not_relabel_typed_cargo_in_the_hopper() {
+    let mut campaign = two_world_campaign();
+    let driver = driver_on_current(&mut campaign);
+    set_route(&mut campaign, VENUS, ResourceType::Minerals);
+    let key = (driver.x, driver.y);
+    let mut hoppers = std::collections::HashMap::new();
+    hoppers.insert(ResourceType::Minerals, 60.0);
+    hoppers.insert(ResourceType::Alloy, 60.0);
+    campaign.current_mut().input_buffers.insert(key, 120.0);
+    campaign.current_mut().input_hoppers.insert(key, hoppers);
+
+    // The first cycle advances the standing order from Minerals to Alloy.
+    campaign.cycle_export_cargo();
+    run(&mut campaign, 25.0);
+
+    assert_eq!(campaign.shipments().len(), 1);
+    assert_eq!(campaign.shipments()[0].cargo, ResourceType::Alloy);
+    assert_eq!(
+        campaign
+            .current()
+            .input_hoppers
+            .get(&key)
+            .and_then(|hoppers| hoppers.get(&ResourceType::Minerals)),
+        Some(&60.0),
+        "the old resource must remain available for a later order"
+    );
+}
+
+#[test]
 fn a_full_pod_is_thrown_and_lands_on_the_pad_waiting_for_it() {
     let mut campaign = two_world_campaign();
     let pad = pad_on(&mut campaign, VENUS);

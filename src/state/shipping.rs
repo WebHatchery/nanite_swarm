@@ -220,7 +220,14 @@ impl PlanetState {
 
         for pos in self.powered_positions(BuildingType::MassDriver) {
             let key = (pos.x, pos.y);
-            let hopper = self.input_buffers.get(&key).copied().unwrap_or(0.0);
+            // The total buffer is retained for old saves and readable
+            // summaries, but a standing order must draw from its typed
+            // hopper. Otherwise changing Minerals to Alloy halfway through
+            // a load would silently relabel cargo already on the pad.
+            let hopper = match self.input_hoppers.get(&key) {
+                Some(hoppers) => hoppers.get(&order.cargo).copied().unwrap_or(0.0),
+                None => self.input_buffers.get(&key).copied().unwrap_or(0.0),
+            };
             if order.surplus_only && self.resources.get(order.cargo) <= order.reserve_source {
                 continue;
             }
@@ -231,10 +238,20 @@ impl PlanetState {
             if let Some(buffer) = self.input_buffers.get_mut(&key) {
                 *buffer = (*buffer - pulled).max(0.0);
             }
+            if let Some(buffer) = self
+                .input_hoppers
+                .get_mut(&key)
+                .and_then(|hoppers| hoppers.get_mut(&order.cargo))
+            {
+                *buffer = (*buffer - pulled).max(0.0);
+            }
             let loaded = self.pod_loads.entry(key).or_insert(0.0);
             *loaded += pulled;
-            while *loaded >= capacity {
-                *loaded -= capacity;
+            // Fixed-step accumulation can leave a nominally full pod a few
+            // millionths short of its capacity. Treat that as full, then
+            // clamp the remainder so the drift cannot become negative cargo.
+            while *loaded + 0.001 >= capacity {
+                *loaded = (*loaded - capacity).max(0.0);
                 self.launched_pods.push(Shipment {
                     from: self.planet_index,
                     to: order.target,
