@@ -42,6 +42,9 @@ Audit date: 2026-08-20
 - Split Solar System planet rows, dossiers, and the legend from
   `interplanetary_view.rs` into `interplanetary_view/planet_panel.rs`, leaving
   the map coordinator focused on orbit layout, routes, and transitions.
+- Split Solar System planet rows, dossiers, and the legend from
+  `interplanetary_view.rs` into `interplanetary_view/planet_panel.rs`, leaving
+  the map coordinator focused on orbit layout, routes, and transitions.
 
 ## Remaining debt
 
