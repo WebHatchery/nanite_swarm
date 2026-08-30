@@ -452,23 +452,36 @@ fn draw_planet_list(
                 Color::new(0.0, 0.7, 0.9, 0.12)
             };
             draw_rectangle(row.x, row.y, row.w, row.h, fill);
+        } else if view.launch_confirmation_target == Some(index) {
+            draw_rectangle(row.x, row.y, row.w, row.h, Color::new(1.0, 0.45, 0.1, 0.14));
         }
+        let confirming = view.launch_confirmation_target == Some(index);
         let label_color = if is_current {
             Colors::PRIMARY
         } else if is_colonized {
             Colors::SUCCESS
+        } else if confirming {
+            Colors::WARNING
         } else {
             Colors::TEXT_DIM
         };
         draw_ui_text(&planet.name, x + 12.0, row_y, 13.0, label_color);
         let telemetry = view.telemetry.get(index).copied().flatten();
-        let alert_code = world_alert_code(telemetry);
+        let alert_code = if confirming {
+            "CONFIRM".to_string()
+        } else {
+            world_alert_code(telemetry)
+        };
         draw_ui_text(
             &alert_code,
             x + w - 104.0,
             row_y,
             9.0,
-            world_alert_color(telemetry),
+            if confirming {
+                Colors::WARNING
+            } else {
+                world_alert_color(telemetry)
+            },
         );
         if let Some(Some(minerals)) = view.stockpiles.get(index) {
             draw_ui_text(

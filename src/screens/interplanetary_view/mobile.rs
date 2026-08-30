@@ -41,7 +41,9 @@ pub(super) fn draw(
     };
 
     draw_ui_text(
-        if panel == InterplanetaryMobilePanel::Worlds {
+        if panel == InterplanetaryMobilePanel::Worlds && view.launch_confirmation_target.is_some() {
+            "Tap CONFIRM again to launch | Tap Shipping for routes"
+        } else if panel == InterplanetaryMobilePanel::Worlds {
             "Tap a world to travel | Tap Shipping for routes"
         } else {
             "Drag panel to scroll | Tap controls | Tap Worlds to return"

@@ -94,8 +94,9 @@ inside the portrait Shipping drawer.
 Its header distinguishes a Mass Driver that is not built from one that is
 built but offline, and explains when a finished Seed Ship still needs a live
 driver.
-Tap an untouched world once to prepare a launch, then tap it again to confirm;
-travel to an already-colonized world remains one tap.
+Tap an untouched world once to prepare a launch, then tap its highlighted
+`CONFIRM` row again to confirm; travel to an already-colonized world remains
+one tap.
 At compact browser sizes, the resource cards abbreviate and the build/right
 panels use short summaries so touch controls remain separated and visible.
 After a world change, the mobile header briefly names the arrival as
