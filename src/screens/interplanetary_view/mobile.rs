@@ -1,7 +1,9 @@
 //! Touch-first solar-system sections for portrait screens.
 
 use super::shipping_panel::{route_status_color, route_status_for};
-use super::world_dossier::{compact_shipping_status, shipping_status_line, storage_resource_label};
+use super::world_dossier::{
+    compact_shipping_status, core_stage_summary, shipping_status_line, storage_resource_label,
+};
 use super::*;
 use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text, truncate_text_to_width, Pointer};
 
@@ -252,8 +254,11 @@ fn draw_mobile_planet_info(
             compact_shipping_status(&view.data.planet(order.target).name, status)
         } else if let Some(telemetry) = telemetry {
             format!(
-                "Stock M {:.0}  D {:.0}  B {:.0}",
-                telemetry.minerals, telemetry.data, telemetry.biomass
+                "{} | M {:.0} D {:.0} B {:.0}",
+                core_stage_summary(&telemetry),
+                telemetry.minerals,
+                telemetry.data,
+                telemetry.biomass
             )
         } else {
             world_rule_lines(view.data, index)
@@ -319,7 +324,8 @@ fn draw_mobile_planet_info(
             draw_ui_text(
                 &truncate_text_to_width(
                     &format!(
-                        "Stock M {:.0} D {:.0} B {:.0}{}",
+                        "{} | Stock M {:.0} D {:.0} B {:.0}{}",
+                        core_stage_summary(&telemetry),
                         telemetry.minerals,
                         telemetry.data,
                         telemetry.biomass,
@@ -446,8 +452,11 @@ fn draw_mobile_planet_info(
     let mut next_y = y + 124.0;
     if let Some(telemetry) = telemetry {
         let live = format!(
-            "Live O +{:.1}/s  A +{:.1}/s  Parts +{:.1}/s",
-            telemetry.ore_rate, telemetry.alloy_rate, telemetry.components_rate
+            "{} | Live O +{:.1}/s  A +{:.1}/s  Parts +{:.1}/s",
+            core_stage_summary(&telemetry),
+            telemetry.ore_rate,
+            telemetry.alloy_rate,
+            telemetry.components_rate
         );
         draw_ui_text(
             &truncate_text_to_width(&live, text_w, 9.0),

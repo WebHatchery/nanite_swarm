@@ -56,6 +56,13 @@ pub(super) fn maintenance_cause_label(cause: Option<UpkeepAlertCause>) -> Option
     cause.map(UpkeepAlertCause::label)
 }
 
+pub(super) fn core_stage_summary(telemetry: &WorldTelemetry) -> String {
+    format!(
+        "Core {}/{}",
+        telemetry.core_stage, telemetry.core_stage_count
+    )
+}
+
 pub(super) fn draw_world_telemetry(telemetry: &WorldTelemetry, x: f32, y: f32) {
     let storage_suffix = storage_resource_label(telemetry.storage_full_resource)
         .map(|label| format!("  FULL {label}"))
@@ -117,8 +124,12 @@ pub(super) fn draw_world_telemetry(telemetry: &WorldTelemetry, x: f32, y: f32) {
     };
     draw_ui_text(
         &format!(
-            "Grid {:+.1}/s  DR {}  S {}  {}",
-            telemetry.power_balance, telemetry.drones, telemetry.structures, health.0
+            "{}  Grid {:+.1}/s  DR {}  S {}  {}",
+            core_stage_summary(telemetry),
+            telemetry.power_balance,
+            telemetry.drones,
+            telemetry.structures,
+            health.0
         ),
         x,
         world_telemetry_row_y(y, 3),

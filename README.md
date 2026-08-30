@@ -31,6 +31,8 @@ The swarm is powerful, but every expansion changes the terrain, stresses the gri
 - A colonized world's dossier also names its standing freight route, nominal
   cargo rate, and live route status, so remote supply chains can be checked
   from the Worlds view before opening Shipping controls.
+- The same remote dossier shows each world's current Core stage, so strategic
+  growth remains visible even when the swarm is managing another world.
 
 ## Goal
 

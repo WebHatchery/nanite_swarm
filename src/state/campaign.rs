@@ -75,6 +75,11 @@ pub struct WorldTelemetry {
     pub power_balance: f32,
     pub structures: usize,
     pub drones: usize,
+    /// The world's earned Core evolution, one-based for player-facing
+    /// telemetry. The total travels with it so the dossier remains honest if
+    /// the data file gains another stage later.
+    pub core_stage: usize,
+    pub core_stage_count: usize,
     pub alerts: usize,
     pub alert_kind: WorldAlert,
     /// The first stored resource at its live ceiling while that resource has
@@ -443,6 +448,8 @@ impl Campaign {
             power_balance: planet.power_balance,
             structures: planet.grid.total_buildings(),
             drones: planet.drones.total_count(),
+            core_stage: planet.core_stage_index() + 1,
+            core_stage_count: planet.core_stages().len(),
             alerts,
             alert_kind,
             storage_full_resource,

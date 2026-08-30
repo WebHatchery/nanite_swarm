@@ -41,7 +41,7 @@ fn shipping_status_distinguishes_absent_and_offline_landing_pads() {
     );
 }
 use super::world_dossier::{
-    maintenance_cause_label, storage_resource_label, world_telemetry_row_y,
+    core_stage_summary, maintenance_cause_label, storage_resource_label, world_telemetry_row_y,
 };
 use super::{
     shipping_summary, solar_map_layout, world_alert_code, world_rule_lines, world_telemetry_height,
@@ -137,6 +137,8 @@ fn telemetry(alerts: usize, alert_kind: crate::state::WorldAlert) -> crate::stat
         power_balance: 0.0,
         structures: 0,
         drones: 0,
+        core_stage: 1,
+        core_stage_count: 5,
         alerts,
         alert_kind,
         storage_full_resource: None,
@@ -192,6 +194,14 @@ fn planet_list_alert_codes_keep_remote_failures_scannable() {
     assert_eq!(
         maintenance_cause_label(Some(crate::state::UpkeepAlertCause::Acid)),
         Some("ACID")
+    );
+}
+
+#[test]
+fn remote_dossiers_name_the_worlds_core_stage() {
+    assert_eq!(
+        core_stage_summary(&telemetry(0, crate::state::WorldAlert::Nominal)),
+        "Core 1/5"
     );
 }
 
