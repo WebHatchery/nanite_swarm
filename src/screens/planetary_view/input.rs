@@ -156,7 +156,7 @@ pub(super) fn handle_input(
         }
         // Right click or Escape puts the wrecking ball down.
         if is_mouse_button_pressed(MouseButton::Right) || is_key_pressed(KeyCode::Escape) {
-            state.demolish_mode = false;
+            state.cancel_interaction_modes();
             return PlanetaryAction::None;
         }
         if is_key_pressed(KeyCode::R) {
@@ -283,19 +283,16 @@ pub(super) fn handle_input(
     if is_mouse_button_pressed(MouseButton::Right) {
         if let Some(pos) = hovered_pos {
             if !state.try_harvest_terrain(pos) {
-                state.clear_selection();
+                state.cancel_interaction_modes();
             }
         } else {
-            state.clear_selection();
+            state.cancel_interaction_modes();
         }
-        state.selected_tile = None;
-        state.smart_drag_source = None;
     }
 
     // Navigation keys
     if is_key_pressed(KeyCode::Escape) {
-        state.selected_tile = None;
-        state.smart_drag_source = None;
+        state.cancel_interaction_modes();
         return PlanetaryAction::OpenMenu;
     }
     if is_key_pressed(KeyCode::R) {

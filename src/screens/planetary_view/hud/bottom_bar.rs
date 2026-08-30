@@ -26,6 +26,7 @@ pub(super) enum ClockAction {
     ToggleDeck,
     RetrySave,
     FocusAlert,
+    CancelModes,
     ToggleMobileBuild,
     ToggleMobileInfo,
     CloseMobilePanel,
@@ -392,7 +393,13 @@ pub(super) fn draw(
     }
 
     let mode_y = bottom_y + metrics.bottom_bar_height - 8.0;
-    let (mode_label, mode_color) = if state.demolish_mode {
+    let (mode_label, mode_color) = if state.relocation_source.is_some() {
+        ("RELOCATE MODE", colors.warning)
+    } else if state.box_select_mode {
+        ("BOX SELECT MODE", primary_soft)
+    } else if state.bulk_purge_armed || state.purge_armed.is_some() {
+        ("PURGE CONFIRM", colors.error)
+    } else if state.demolish_mode {
         ("DEMOLISH MODE", colors.error)
     } else if state.selected_building.is_some() {
         ("BUILD MODE", primary_soft)
@@ -473,6 +480,17 @@ pub(super) fn draw(
     }
 
     clock
+}
+
+pub(super) fn has_pending_interaction(state: &PlanetState) -> bool {
+    state.selected_building.is_some()
+        || state.demolish_mode
+        || state.relocation_source.is_some()
+        || state.box_select_mode
+        || state.purge_armed.is_some()
+        || state.bulk_purge_armed
+        || state.drag_last_pos.is_some()
+        || state.smart_drag_source.is_some()
 }
 
 fn draw_zoom_controls(theme: &UiTheme, slot_x: f32, y: f32, slot_w: f32) -> Option<ClockAction> {

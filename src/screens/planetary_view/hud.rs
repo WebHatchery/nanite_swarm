@@ -219,6 +219,7 @@ pub(super) fn draw_ui_panels(
                 }
             }
         }
+        bottom_bar::ClockAction::CancelModes => state.cancel_interaction_modes(),
         bottom_bar::ClockAction::ZoomOut => {
             change_map_zoom(state, theme, metrics, screen_w, screen_h, -1.0);
         }

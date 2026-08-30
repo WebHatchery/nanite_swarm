@@ -1,4 +1,6 @@
-use super::{alert_button, has_flow_alert, zoom_button_rects, ClockAction};
+use super::{
+    alert_button, has_flow_alert, has_pending_interaction, zoom_button_rects, ClockAction,
+};
 use crate::data::GameConfig;
 use crate::state::{GraphMode, PlanetState};
 
@@ -42,6 +44,24 @@ fn depleted_battery_exposes_the_flow_recovery_surface() {
         alert_button(false, false, true, false, false),
         Some(("FLOW", ClockAction::ToggleFlow))
     );
+}
+
+#[test]
+fn pending_map_actions_expose_a_mobile_cancel_surface() {
+    let mut state = PlanetState::new(2, 42, GameConfig::default());
+    state.cancel_interaction_modes();
+    assert!(!has_pending_interaction(&state));
+
+    state.relocation_source = Some(crate::engine::GridPos::new(2, 2));
+    assert!(has_pending_interaction(&state));
+
+    state.cancel_interaction_modes();
+    state.box_select_mode = true;
+    assert!(has_pending_interaction(&state));
+
+    state.cancel_interaction_modes();
+    state.selected_building = Some(crate::engine::BuildingType::Drill);
+    assert!(has_pending_interaction(&state));
 }
 
 #[test]

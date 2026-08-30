@@ -382,9 +382,7 @@ pub(super) fn draw(
         ),
         "CANCEL",
     ) {
-        state.clear_selection();
-        state.selected_tile = None;
-        state.demolish_mode = false;
+        state.cancel_interaction_modes();
     }
     if draw_hud_button(
         theme,

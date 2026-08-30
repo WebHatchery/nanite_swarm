@@ -41,6 +41,8 @@ blueprints, lossless relocation, undo, speed, and pause. RELOCATE moves a
 structure with its staged cargo and drill crew intact. Tap FOCUS to collapse both
 sidebars for route planning, then tap PANELS to restore them. When freight is
 moving, its map key identifies the colour and silhouette of every live cargo.
+Tap CANCEL to abandon a build, relocation, box-selection, or pending purge
+confirmation before the next map tap.
 The bottom graph records observed ore, alloy, and parts flow; tap its visible
 FLOW button to cycle through live power and Data production/consumption. Warning
 triangles and the Operations count identify powered processors that are missing a feed.

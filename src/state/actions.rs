@@ -300,10 +300,16 @@ impl PlanetState {
     }
 
     pub fn begin_box_select(&mut self) {
-        self.box_select_mode = true;
+        self.selected_building = None;
+        self.demolish_mode = false;
+        self.relocation_source = None;
         self.box_select_start = None;
-        self.box_selected.clear();
         self.bulk_purge_armed = false;
+        self.purge_armed = None;
+        self.drag_last_pos = None;
+        self.smart_drag_source = None;
+        self.box_select_mode = true;
+        self.box_selected.clear();
         self.notifications
             .info("Drag across the grid, or tap two opposite corners");
     }
@@ -434,6 +440,15 @@ impl PlanetState {
         {
             return false;
         }
+        self.selected_building = None;
+        self.demolish_mode = false;
+        self.box_select_mode = false;
+        self.box_select_start = None;
+        self.box_selected.clear();
+        self.bulk_purge_armed = false;
+        self.purge_armed = None;
+        self.drag_last_pos = None;
+        self.smart_drag_source = None;
         self.relocation_source = Some(source);
         self.notifications
             .info("Relocation armed - tap a destination tile");

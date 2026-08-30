@@ -8,7 +8,7 @@ use macroquad_toolkit::ui::draw_ui_text;
 
 use super::super::super::metrics::HudMetrics;
 use super::super::PanelColors;
-use super::{alert_button, has_flow_alert, next_event_code, ClockAction};
+use super::{alert_button, has_flow_alert, has_pending_interaction, next_event_code, ClockAction};
 
 pub(super) fn draw(
     state: &PlanetState,
@@ -100,7 +100,10 @@ pub(super) fn draw(
         state.flow_overlay,
         focusable_alert,
     );
-    let first_row_label = if let Some((label, _)) = alert {
+    let cancel_available = has_pending_interaction(state) && alert.is_none();
+    let first_row_label = if cancel_available {
+        "CANCEL".to_string()
+    } else if let Some((label, _)) = alert {
         label.to_string()
     } else {
         state
@@ -113,9 +116,13 @@ pub(super) fn draw(
         Rect::new(10.0, row_y, alert_width, 22.0),
         &first_row_label,
     ) {
-        action = alert
-            .map(|(_, alert_action)| alert_action)
-            .unwrap_or(ClockAction::NextEvent);
+        action = if cancel_available {
+            ClockAction::CancelModes
+        } else {
+            alert
+                .map(|(_, alert_action)| alert_action)
+                .unwrap_or(ClockAction::NextEvent)
+        };
     }
     if draw_hud_button(theme, Rect::new(96.0, row_y, 32.0, 22.0), "-") {
         action = ClockAction::Slower;
