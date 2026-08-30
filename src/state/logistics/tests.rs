@@ -1,5 +1,6 @@
 use super::*;
 use crate::data::GameConfig;
+use crate::state::ExportOrder;
 
 /// One full drone load at the shipped drill rate: 10 minerals at 5/s.
 const FILL_SECONDS: f32 = 2.0;
@@ -78,7 +79,7 @@ fn ore_delivered(state: &mut PlanetState, seconds: f32) -> u32 {
 /// number moves.
 #[test]
 fn alloy_is_carried_to_whatever_eats_it_rather_than_always_to_the_core() {
-    let (mut state, core, _drill) = state_with_run(4);
+    let (mut state, core, drill) = state_with_run(4);
     // A Smelter on the run, and a Server Bank beside the Core that wants
     // what the Smelter makes.
     let smelter = GridPos::new(core.x + 2, core.y - 1);
@@ -116,6 +117,50 @@ fn a_resource_nothing_wants_still_goes_home_to_the_core() {
         .delivery_for(drill, core, ResourceType::Biomass)
         .expect("a route home");
     assert_eq!(delivery.0, core);
+}
+
+#[test]
+fn a_source_reserve_keeps_refined_cargo_on_the_core_route_until_ready() {
+    let (mut state, core, drill) = state_with_run(4);
+    let driver = GridPos::new(core.x - 1, core.y);
+    state.grid.get_mut(driver).unwrap().terrain = crate::engine::TerrainType::Empty;
+    state.unlock_building(BuildingType::MassDriver);
+    assert!(state.grid.place_building(driver, BuildingType::MassDriver));
+    state.grid.update_power_grid();
+    state.export = Some(ExportOrder {
+        cargo: ResourceType::Alloy,
+        target: 1,
+        reserve_source: 100.0,
+        surplus_only: true,
+        ..ExportOrder::default()
+    });
+
+    assert!(
+        !state.consumers_of(ResourceType::Alloy).contains(&driver),
+        "a held reserve must stop refined cargo bypassing the Core"
+    );
+    assert_eq!(
+        state
+            .delivery_for(drill, core, ResourceType::Alloy)
+            .unwrap()
+            .0,
+        core,
+        "refined cargo should fall back to the Core while the reserve is held"
+    );
+
+    state.resources.alloy = 101.0;
+    assert!(
+        state.consumers_of(ResourceType::Alloy).contains(&driver),
+        "a surplus refined stockpile may feed the Mass Driver"
+    );
+    assert_eq!(
+        state
+            .delivery_for(drill, core, ResourceType::Alloy)
+            .unwrap()
+            .0,
+        driver,
+        "refined cargo may resume its freight route above the reserve"
+    );
 }
 
 fn two_smelter_run() -> (PlanetState, GridPos, GridPos, GridPos, GridPos) {

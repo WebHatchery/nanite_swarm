@@ -438,14 +438,24 @@ impl PlanetState {
         // throwing, and nothing at all while there is nowhere to throw it. It
         // is fed over the network like any other consumer: an export is a
         // logistics run that happens to end in orbit.
-        if self
-            .export
-            .is_some_and(|order| order.cargo == resource && order.target != self.planet_index)
-        {
+        if self.export.is_some_and(|order| {
+            order.cargo == resource
+                && order.target != self.planet_index
+                && self.export_can_claim_surplus(order)
+        }) {
             consumers.extend(self.powered_positions(BuildingType::MassDriver));
         }
 
         consumers
+    }
+
+    /// A surplus order only lets a Mass Driver claim new cargo while the Core
+    /// stockpile is above its protected floor. Keeping the check here as well
+    /// as in `update_exports` matters for refined goods: Alloy and Components
+    /// can otherwise be routed straight from a processor to the driver and
+    /// never pass through the stockpile that the order is meant to protect.
+    fn export_can_claim_surplus(&self, order: crate::state::shipping::ExportOrder) -> bool {
+        !order.surplus_only || self.resources.get(order.cargo) > order.reserve_source
     }
 
     /// Cut ore into each drill's buffer.
