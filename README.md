@@ -11,6 +11,9 @@ The swarm is powerful, but every expansion changes the terrain, stresses the gri
 - Use drones to move minerals and keep production flowing.
 - Route ore and alloy through multi-input precision assemblers to make flight-grade components.
 - Harvest terrain for short-term gain with lasting consequences.
+- Preserve forests to buffer nearby pollution, harvest them for biomass, or
+  convert them into stronger dust filters. Select an intact forest to see its
+  green buffer radius on the map.
 - Research upgrades and prepare for interplanetary expansion.
 - Manage dust, power failures, and resource bottlenecks.
 

@@ -40,6 +40,14 @@ fn default_min_start_region() -> f32 {
     0.3
 }
 
+fn default_forest_buffer_radius() -> i32 {
+    3
+}
+
+fn default_forest_buffer_multiplier() -> f32 {
+    0.75
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceConfig {
     pub starting_energy: f32,
@@ -136,10 +144,15 @@ pub struct UpkeepConfig {
     /// Dust one Sweeper clears per second, and how far it reaches.
     pub sweeper_rate: f32,
     pub sweeper_radius: i32,
-    /// A preserved forest filter's reach, and what it does to the rate inside
+    /// A converted forest filter's reach, and what it does to the rate inside
     /// it.
     pub filter_radius: i32,
     pub filter_multiplier: f32,
+    /// An intact forest's reach, and the dust share that remains inside it.
+    #[serde(default = "default_forest_buffer_radius")]
+    pub forest_buffer_radius: i32,
+    #[serde(default = "default_forest_buffer_multiplier")]
+    pub forest_buffer_multiplier: f32,
     /// Cleared forest's reach, and what it does to the rate inside it.
     pub pollution_radius: i32,
     pub pollution_multiplier: f32,
@@ -239,6 +252,8 @@ impl Default for UpkeepConfig {
             sweeper_radius: 3,
             filter_radius: 3,
             filter_multiplier: 0.6,
+            forest_buffer_radius: 3,
+            forest_buffer_multiplier: 0.75,
             pollution_radius: 3,
             pollution_multiplier: 1.3,
             acid_multiplier: 4.0,

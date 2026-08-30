@@ -129,8 +129,30 @@ pub(super) fn draw_coverage(state: &PlanetState, metrics: HudMetrics, hovered: O
     }
 
     for (center, radius, emphasised) in shown {
-        draw_coverage_area(center, radius, emphasised, metrics);
+        draw_coverage_area(center, radius, emphasised, metrics, Colors::PRIMARY);
     }
+
+    let Some(selected) = state.selected_tile else {
+        return;
+    };
+    let Some(tile) = state.grid.get(selected) else {
+        return;
+    };
+    if tile.terrain != crate::engine::TerrainType::Forest || tile.forest_cleared || tile.filter {
+        return;
+    }
+
+    let radius = state.config.upkeep.forest_buffer_radius;
+    draw_coverage_area(selected, radius, true, metrics, Colors::SUCCESS);
+    let reduction = (1.0 - state.config.upkeep.forest_buffer_multiplier.clamp(0.0, 1.0)) * 100.0;
+    let (x, y) = grid_to_screen(selected, metrics);
+    draw_ui_text(
+        &format!("FOREST BUFFER // -{reduction:.0}% DUST"),
+        x + 4.0,
+        y - 6.0,
+        9.0,
+        Colors::SUCCESS,
+    );
 }
 
 /// Mark network and upkeep buildings outside the nearest hazard counter. The
@@ -238,9 +260,15 @@ pub(super) fn draw_hazard_fields(state: &PlanetState, metrics: HudMetrics) {
 
 /// The covered area is a distance test, so draw exactly that: the tiles the
 /// simulation would actually reach, not a circle that only looks like them.
-fn draw_coverage_area(center: GridPos, radius: i32, emphasised: bool, metrics: HudMetrics) {
-    let fill = with_alpha(Colors::PRIMARY, if emphasised { 0.16 } else { 0.08 });
-    let edge = with_alpha(Colors::PRIMARY, if emphasised { 0.85 } else { 0.45 });
+fn draw_coverage_area(
+    center: GridPos,
+    radius: i32,
+    emphasised: bool,
+    metrics: HudMetrics,
+    color: Color,
+) {
+    let fill = with_alpha(color, if emphasised { 0.16 } else { 0.08 });
+    let edge = with_alpha(color, if emphasised { 0.85 } else { 0.45 });
 
     for dx in -radius..=radius {
         for dy in -radius..=radius {

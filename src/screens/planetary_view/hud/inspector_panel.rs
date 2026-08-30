@@ -316,6 +316,7 @@ pub(super) fn draw(
             }
         }
     } else {
+        let (terrain_y, reward_y, bonus_y) = terrain_detail_offsets(inspector_h);
         draw_ui_text(
             "NO STRUCTURE",
             right_x + 16.0,
@@ -327,7 +328,7 @@ pub(super) fn draw(
             draw_ui_text(
                 &format!("Terrain: {}", terrain.name(data)),
                 right_x + 16.0,
-                inspector_y + 82.0,
+                inspector_y + terrain_y,
                 11.0,
                 dim,
             );
@@ -341,7 +342,7 @@ pub(super) fn draw(
                 draw_ui_text(
                     &reward_text,
                     right_x + 16.0,
-                    inspector_y + 106.0,
+                    inspector_y + reward_y,
                     11.0,
                     warning,
                 );
@@ -350,7 +351,7 @@ pub(super) fn draw(
                     draw_ui_text(
                         &bonus_text,
                         right_x + 16.0,
-                        inspector_y + 126.0,
+                        inspector_y + bonus_y,
                         10.0,
                         success,
                     );
@@ -390,6 +391,16 @@ pub(super) fn draw(
                 dim,
             );
         }
+    }
+}
+
+fn terrain_detail_offsets(inspector_h: f32) -> (f32, f32, f32) {
+    if inspector_h < 180.0 {
+        // Forests have two buttons, so their preservation line must clear the
+        // compact action row rather than hiding behind it.
+        (70.0, 86.0, 100.0)
+    } else {
+        (82.0, 106.0, 126.0)
     }
 }
 

@@ -55,6 +55,66 @@ fn dust_accumulates_on_powered_buildings_over_time() {
     assert!(dust > 0.0);
 }
 
+/// Dust on a drill with an optional intact forest placed at a known distance.
+fn drill_dust_with_forest_at(distance: Option<i32>) -> f32 {
+    let mut state = state();
+    state.config.upkeep.forest_buffer_radius = 2;
+    state.config.upkeep.forest_buffer_multiplier = 0.5;
+    // The default temperate world has forests of its own. Clear the fixture
+    // first so the comparison names exactly one preserved tile.
+    for (_, tile) in state.grid.iter_tiles_mut() {
+        if tile.terrain == TerrainType::Forest {
+            tile.terrain = TerrainType::Empty;
+            tile.biomass_amount = 0.0;
+        }
+    }
+
+    let core = state.grid.find_core().unwrap();
+    let drill = GridPos::new(core.x + 1, core.y);
+    state.grid.reveal_around(drill, 4);
+    state.grid.get_mut(drill).unwrap().terrain = TerrainType::Empty;
+    state.select_building(BuildingType::Drill);
+    assert!(state.try_place_building(drill));
+
+    if let Some(distance) = distance {
+        let forest = GridPos::new(drill.x, drill.y + distance);
+        let tile = state.grid.get_mut(forest).unwrap();
+        tile.terrain = TerrainType::Forest;
+        tile.filter = false;
+        tile.forest_cleared = false;
+    }
+
+    state.update_dust(10.0);
+    state
+        .grid
+        .get(drill)
+        .and_then(|tile| tile.building.as_ref())
+        .map(|building| building.dust)
+        .unwrap_or(0.0)
+}
+
+#[test]
+fn an_intact_forest_buffers_nearby_dust() {
+    let bare = drill_dust_with_forest_at(None);
+    let buffered = drill_dust_with_forest_at(Some(1));
+
+    assert!(
+        buffered < bare,
+        "nearby forest left {buffered} dust versus bare ground at {bare}"
+    );
+}
+
+#[test]
+fn a_preserved_forest_stops_buffering_at_its_declared_radius() {
+    let bare = drill_dust_with_forest_at(None);
+    let outside = drill_dust_with_forest_at(Some(3));
+
+    assert!(
+        (outside - bare).abs() < 0.001,
+        "forest outside the radius changed dust from {bare} to {outside}"
+    );
+}
+
 #[test]
 fn advance_runs_whole_ticks_and_banks_the_remainder() {
     let mut state = state();

@@ -133,6 +133,14 @@ impl PlanetState {
                     .is_some_and(|building| building.powered && !building.is_dust_stalled())
             })
             .collect();
+        let preserved_forest_positions: Vec<_> = self
+            .grid
+            .iter_tiles()
+            .filter_map(|(pos, tile)| {
+                (tile.terrain == TerrainType::Forest && !tile.forest_cleared && !tile.filter)
+                    .then_some(pos)
+            })
+            .collect();
         let filter_positions: Vec<_> = self
             .grid
             .iter_tiles()
@@ -171,6 +179,12 @@ impl PlanetState {
                 }
             }
 
+            if preserved_forest_positions
+                .iter()
+                .any(|forest_pos| pos.distance(*forest_pos) as i32 <= upkeep.forest_buffer_radius)
+            {
+                rate *= upkeep.forest_buffer_multiplier.clamp(0.0, 1.0);
+            }
             if filter_positions
                 .iter()
                 .any(|filter_pos| pos.distance(*filter_pos) as i32 <= upkeep.filter_radius)

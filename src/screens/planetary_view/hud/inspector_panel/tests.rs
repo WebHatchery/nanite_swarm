@@ -20,6 +20,14 @@ fn regular_inspector_keeps_the_building_art_and_four_rows() {
 }
 
 #[test]
+fn compact_terrain_bonus_clears_the_two_button_action_row() {
+    let (_, _, bonus_y) = terrain_detail_offsets(148.0);
+    let button_top = 148.0 - 38.0;
+
+    assert!(bonus_y + 10.0 <= button_top);
+}
+
+#[test]
 fn multi_input_flow_is_structured_and_names_the_missing_feed() {
     let mut state = PlanetState::new(2, 42, GameConfig::default());
     let pos = state.grid.find_core().unwrap();

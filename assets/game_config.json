@@ -52,6 +52,8 @@
     "sweeper_radius": 3,
     "filter_radius": 3,
     "filter_multiplier": 0.6,
+    "forest_buffer_radius": 3,
+    "forest_buffer_multiplier": 0.75,
     "pollution_radius": 3,
     "pollution_multiplier": 1.3,
     "acid_multiplier": 4.0,

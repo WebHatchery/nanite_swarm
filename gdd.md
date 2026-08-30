@@ -76,8 +76,12 @@ The map is composed of tiles with distinct properties. The player must choose be
 
 #### Forests
 
-- **Option A:** Consume for Biomass/Carbon.
-- **Option B:** Keep as a buffer against pollution/heat mechanics.
+- **Option A:** Consume for Biomass/Carbon. The cleared ground increases nearby
+  dust pressure permanently.
+- **Option B:** Keep the forest intact as a local pollution buffer, reducing
+  dust accumulation around it.
+- **Option C:** Convert it into a stronger dust filter, giving up the biomass
+  and the living forest for an engineered reduction zone.
 
 #### Decision: a deposit is spent down to ordinary ground, never past it (2026-08-02)
 

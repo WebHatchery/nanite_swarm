@@ -29,7 +29,7 @@
       "harvestable": true,
       "harvest_rewards": { "minerals": 0.0, "biomass": 30.0 },
       "harvested_to": "empty",
-      "preservation_bonus": "Pollution buffer (future)",
+      "preservation_bonus": "Pollution buffer (-25% dust nearby)",
       "texture": "assets/tiles/terrain_forest.png",
       "color": [0.15, 0.3, 0.15, 1.0]
     },

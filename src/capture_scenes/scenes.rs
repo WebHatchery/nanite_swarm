@@ -108,6 +108,27 @@ impl Game {
                     .current_mut()
                     .select_building(engine::BuildingType::Drill);
             }
+            "forest_buffer" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                let planet = self.campaign.current_mut();
+                let Some(core) = planet.grid.find_core() else {
+                    return;
+                };
+                let forest = engine::GridPos::new(core.x - 2, core.y + 2);
+                let biomass = planet.config.resources.forest_biomass;
+                if let Some(tile) = planet.grid.get_mut(forest) {
+                    tile.terrain = engine::TerrainType::Forest;
+                    tile.building = None;
+                    tile.filter = false;
+                    tile.forest_cleared = false;
+                    tile.biomass_amount = biomass;
+                }
+                planet.grid.reveal_around(forest, 4);
+                planet.selected_building = None;
+                planet.selected_tile = Some(forest);
+                planet.notifications.clear();
+            }
             // A Core that has grown past its landing pod.
             "core_stage" => {
                 self.phase = GamePhase::Playing;
