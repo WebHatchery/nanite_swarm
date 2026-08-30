@@ -1,6 +1,6 @@
 //! Keyboard and mouse input handling for the planetary view
 
-use crate::engine::{BuildingType, GridPos};
+use crate::engine::{BuildingType, GridPos, TerrainType};
 use crate::state::PlanetState;
 use macroquad::prelude::*;
 use macroquad_toolkit::input::TouchGestureFrame;
@@ -8,6 +8,69 @@ use macroquad_toolkit::input::TouchGestureFrame;
 use super::format::keycode_from_hotkey;
 use super::metrics::HudMetrics;
 use super::PlanetaryAction;
+
+fn placement_block_message(
+    state: &PlanetState,
+    pos: GridPos,
+    building_type: BuildingType,
+) -> Option<&'static str> {
+    let Some(tile) = state.grid.get(pos) else {
+        return Some("That tile is outside the surveyed grid");
+    };
+    if !tile.revealed {
+        return Some("Survey this tile before building");
+    }
+    if tile.filter {
+        return Some("This tile is already a dust filter");
+    }
+    if tile.building.is_some() {
+        return Some("This tile is already occupied");
+    }
+    let data_context = state.data.clone();
+    let data = data_context.data();
+    let buildable = match building_type {
+        BuildingType::Conduit => tile.terrain.is_buildable(data),
+        BuildingType::Bridge => matches!(tile.terrain, TerrainType::Water | TerrainType::Void),
+        BuildingType::BiomassHarvester => tile.terrain == TerrainType::Forest,
+        BuildingType::WindTurbine => {
+            matches!(tile.terrain, TerrainType::Empty | TerrainType::Mountain)
+        }
+        _ => tile.terrain.is_buildable(data),
+    };
+    (!buildable).then_some(match building_type {
+        BuildingType::Bridge => "Bridges need a water or void gap",
+        BuildingType::BiomassHarvester => "Biomass harvesters need a forest",
+        BuildingType::WindTurbine => "Wind turbines need open ground or a mountain",
+        BuildingType::Conduit => "Conduits need buildable ground",
+        _ => "That terrain cannot hold this building",
+    })
+}
+
+fn try_place_selected_building(
+    state: &mut PlanetState,
+    pos: GridPos,
+    building_type: BuildingType,
+) -> bool {
+    if let Some(message) = placement_block_message(state, pos, building_type) {
+        state.notifications.warning(message);
+        return false;
+    }
+    if !state.is_building_unlocked(building_type) {
+        state
+            .notifications
+            .warning("Research this building before placing it");
+        return false;
+    }
+    let (mineral_cost, energy_cost) = building_type.cost(state.data());
+    if !state.resources.can_afford(mineral_cost, energy_cost) {
+        state.notifications.warning(format!(
+            "Need M {:.0} and E {:.0} to build",
+            mineral_cost, energy_cost
+        ));
+        return false;
+    }
+    state.try_place_building(pos)
+}
 
 /// Drag the map with the middle mouse button, zoom with the wheel.
 ///
@@ -237,9 +300,7 @@ pub(super) fn handle_input(
                 state.drag_last_pos = Some(pos);
                 state.selected_tile = Some(pos);
             } else if let Some(building_type) = state.selected_building {
-                if state.grid.can_place_building(pos, building_type) {
-                    placed = state.try_place_building(pos);
-                }
+                placed = try_place_selected_building(state, pos, building_type);
             }
 
             if placed {
@@ -307,3 +368,6 @@ pub(super) fn handle_input(
 
     PlanetaryAction::None
 }
+
+#[cfg(test)]
+mod tests;
