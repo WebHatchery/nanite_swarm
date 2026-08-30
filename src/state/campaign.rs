@@ -25,6 +25,22 @@ pub struct DirectiveRecord {
     pub tier: i32,
 }
 
+/// The small live dossier the Solar System map can show for every world the
+/// swarm has already reached. These are copied values rather than references
+/// so the map can assemble one stable snapshot while the campaign remains
+/// mutable behind the screen.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WorldTelemetry {
+    pub minerals: f32,
+    pub ore_rate: f32,
+    pub alloy_rate: f32,
+    pub components_rate: f32,
+    pub power_balance: f32,
+    pub structures: usize,
+    pub drones: usize,
+    pub alerts: usize,
+}
+
 /// Step length for worlds the player is not looking at. Coarse on purpose: a
 /// left-behind world only has to keep producing, not animate.
 const BACKGROUND_TICK_SECONDS: f32 = 1.0;
@@ -232,6 +248,30 @@ impl Campaign {
             .get(index)
             .and_then(Option::as_ref)
             .map(|planet| planet.resources.minerals)
+    }
+
+    /// Read the operational pulse of a colonized world without travelling to
+    /// it. The map uses the same observed production windows as the planetary
+    /// HUD, so a background world can say that it is quiet or bottlenecked
+    /// rather than pretending its theoretical capacity is live output.
+    pub fn world_telemetry(&self, index: usize) -> Option<WorldTelemetry> {
+        let planet = self.planet(index)?;
+        let alerts = usize::from(planet.power_balance < 0.0)
+            + usize::from(planet.battery_seconds <= 0.0)
+            + usize::from(planet.power_collapse_shutdown > 0.0)
+            + usize::from(planet.stalled_drone_count() > 0)
+            + usize::from(!planet.starved_factories().is_empty())
+            + usize::from(!planet.blocked_factories().is_empty());
+        Some(WorldTelemetry {
+            minerals: planet.resources.minerals,
+            ore_rate: planet.throughput.last().unwrap_or(0.0),
+            alloy_rate: planet.observed_alloy_rate(),
+            components_rate: planet.observed_components_rate(),
+            power_balance: planet.power_balance,
+            structures: planet.grid.total_buildings(),
+            drones: planet.drones.total_count(),
+            alerts,
+        })
     }
 
     /// Enough has happened that the campaign is worth writing down.

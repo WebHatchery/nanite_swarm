@@ -2,7 +2,7 @@
 
 mod shipping_panel;
 
-use crate::state::{ExportOrder, Shipment};
+use crate::state::{ExportOrder, Shipment, WorldTelemetry};
 use crate::ui::{color_from_rgba, draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::{draw_ui_text, note_neighbour, touch_area, Pointer, ScrollArea};
@@ -39,6 +39,8 @@ pub struct MapView<'a> {
     pub seed_ship_ready: bool,
     pub colonized: &'a [bool],
     pub stockpiles: &'a [Option<f32>],
+    /// Live snapshots for the worlds the swarm has already reached.
+    pub telemetry: &'a [Option<WorldTelemetry>],
     /// Powered Mass Drivers standing on the world underfoot.
     pub current_drivers_online: usize,
     /// Powered Mass Drivers on every colonized world, for remote order edits.
@@ -333,7 +335,7 @@ fn draw_planet_info(
     let is_current = index == view.current_planet;
 
     let panel_w = 300.0;
-    let panel_h = 250.0;
+    let panel_h = 282.0;
     let panel_x = screen_w - panel_w - 16.0;
     let panel_y = header_height + 12.0;
     draw_panel(panel_x, panel_y, panel_w, panel_h);
@@ -374,10 +376,17 @@ fn draw_planet_info(
         11.0,
         hazard_color(planet),
     );
+
+    let telemetry = view.telemetry.get(index).copied().flatten();
+    if let Some(telemetry) = telemetry {
+        draw_world_telemetry(&telemetry, panel_x + 15.0, panel_y + 147.0);
+    }
+
+    let rules_y = panel_y + if telemetry.is_some() { 185.0 } else { 149.0 };
     draw_ui_text(
         "World rules:",
         panel_x + 15.0,
-        panel_y + 149.0,
+        rules_y,
         11.0,
         Colors::TEXT_DIM,
     );
@@ -391,17 +400,18 @@ fn draw_planet_info(
         draw_ui_text(
             line,
             panel_x + 15.0,
-            panel_y + 165.0 + line_index as f32 * 16.0,
+            rules_y + 16.0 + line_index as f32 * 16.0,
             10.0,
             rules_color,
         );
     }
 
+    let action_y = panel_y + if telemetry.is_some() { 255.0 } else { 213.0 };
     if is_current {
         draw_ui_text(
             "(Current Location)",
             panel_x + 15.0,
-            panel_y + 213.0,
+            action_y,
             11.0,
             Colors::PRIMARY,
         );
@@ -409,7 +419,7 @@ fn draw_planet_info(
         draw_ui_text(
             "Tap to travel",
             panel_x + 15.0,
-            panel_y + 213.0,
+            action_y,
             12.0,
             Colors::PRIMARY,
         );
@@ -417,7 +427,7 @@ fn draw_planet_info(
         draw_ui_text(
             "Tap to launch the Seed Ship",
             panel_x + 15.0,
-            panel_y + 213.0,
+            action_y,
             12.0,
             Colors::SUCCESS,
         );
@@ -429,13 +439,7 @@ fn draw_planet_info(
         } else {
             "Requires: a finished Seed Ship"
         };
-        draw_ui_text(
-            blocker,
-            panel_x + 15.0,
-            panel_y + 213.0,
-            11.0,
-            Colors::ERROR,
-        );
+        draw_ui_text(blocker, panel_x + 15.0, action_y, 11.0, Colors::ERROR);
     }
 
     if !activated {
@@ -448,6 +452,38 @@ fn draw_planet_info(
     } else {
         None
     }
+}
+
+fn draw_world_telemetry(telemetry: &WorldTelemetry, x: f32, y: f32) {
+    draw_ui_text(
+        &format!(
+            "Live: O +{:.1}/s  A +{:.1}/s  Parts +{:.1}/s",
+            telemetry.ore_rate, telemetry.alloy_rate, telemetry.components_rate
+        ),
+        x,
+        y,
+        9.0,
+        Colors::TEXT,
+    );
+    let health = if telemetry.alerts == 0 {
+        ("NOMINAL", Colors::SUCCESS)
+    } else {
+        ("ALERT", Colors::ERROR)
+    };
+    draw_ui_text(
+        &format!(
+            "Stock M {:.0}  Grid {:+.1}/s  D {}  S {}  {}",
+            telemetry.minerals,
+            telemetry.power_balance,
+            telemetry.drones,
+            telemetry.structures,
+            health.0
+        ),
+        x,
+        y + 16.0,
+        9.0,
+        health.1,
+    );
 }
 
 fn hazard_summary(planet: &crate::data::PlanetDef) -> String {

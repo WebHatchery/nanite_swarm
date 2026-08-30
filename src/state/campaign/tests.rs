@@ -72,6 +72,27 @@ fn colonizing_twice_does_not_wipe_the_world() {
 }
 
 #[test]
+fn the_solar_map_reads_live_telemetry_for_colonized_worlds() {
+    let mut campaign = campaign();
+    assert!(campaign.world_telemetry(0).is_none());
+
+    assert!(campaign.colonize(0));
+    let fresh = campaign.world_telemetry(0).unwrap();
+    assert_eq!(fresh.minerals, 50.0);
+    assert_eq!(fresh.structures, 1);
+    assert_eq!(fresh.drones, 0);
+    assert_eq!(fresh.alerts, 0);
+
+    let mercury = campaign.planet_mut(0).unwrap();
+    mercury.resources.minerals = 123.0;
+    mercury.power_balance = -1.0;
+    let live = campaign.world_telemetry(0).unwrap();
+    assert_eq!(live.minerals, 123.0);
+    assert_eq!(live.power_balance, -1.0);
+    assert_eq!(live.alerts, 1);
+}
+
+#[test]
 fn every_world_is_built_from_its_own_entry_in_the_data() {
     let mut campaign = campaign();
     for index in 0..PLANET_COUNT {

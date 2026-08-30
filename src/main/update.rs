@@ -211,6 +211,8 @@ impl Game {
         self.advance_simulation();
         let stockpiles: [Option<f32>; state::PLANET_COUNT] =
             std::array::from_fn(|index| self.campaign.stockpile(index));
+        let telemetry: [Option<state::WorldTelemetry>; state::PLANET_COUNT] =
+            std::array::from_fn(|index| self.campaign.world_telemetry(index));
         let colonized = self.campaign.colonized_flags();
         let pads: [usize; state::PLANET_COUNT] = std::array::from_fn(|index| {
             self.campaign
@@ -252,6 +254,7 @@ impl Game {
             seed_ship_ready,
             colonized: &colonized,
             stockpiles: &stockpiles,
+            telemetry: &telemetry,
             current_drivers_online: drivers_online[current_world],
             drivers_online: &drivers_online,
             pads: &pads,

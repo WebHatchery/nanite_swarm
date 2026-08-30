@@ -16,6 +16,8 @@ The swarm is powerful, but every expansion changes the terrain, stresses the gri
   green buffer radius on the map.
 - Research upgrades and prepare for interplanetary expansion.
 - Manage dust, power failures, and resource bottlenecks.
+- Read each colonized world's live output, power balance, workforce, and alert
+  state from the Solar System dossier before travelling there.
 
 ## Goal
 
