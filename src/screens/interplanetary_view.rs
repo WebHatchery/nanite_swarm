@@ -44,6 +44,12 @@ const PLANET_INFO_WIDTH: f32 = 300.0;
 const PLANET_INFO_MARGIN: f32 = 16.0;
 const SOLAR_MAP_GAP: f32 = 12.0;
 const MIN_SOLAR_MAP_SCALE: f32 = 0.22;
+const COMPACT_LAYOUT_WIDTH: f32 = 960.0;
+const COMPACT_LAYOUT_HEIGHT: f32 = 560.0;
+
+fn compact_interplanetary_layout(screen_w: f32, screen_h: f32) -> bool {
+    screen_w < COMPACT_LAYOUT_WIDTH || screen_h < COMPACT_LAYOUT_HEIGHT
+}
 
 /// Keep the orbit diagram inside the space left between the touch panels.
 /// Wide screens retain the authored orbit scale; narrow windows scale the
@@ -164,7 +170,7 @@ pub fn render_interplanetary_view(
     } else {
         Colors::TEXT_DIM
     };
-    if screen_w < 600.0 {
+    if compact_interplanetary_layout(screen_w, screen_h) {
         draw_ui_text(driver_label, 18.0, header_height + 14.0, 10.0, driver_color);
         draw_ui_text(ship_label, 18.0, header_height + 30.0, 10.0, ship_color);
         return mobile::draw(view, shipping_scroll, mobile_panel, screen_h, can_launch);

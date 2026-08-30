@@ -113,6 +113,8 @@ Tap an untouched world once to prepare a launch, then tap its highlighted
 one tap.
 At compact browser sizes, the resource cards abbreviate and the build/right
 panels use short summaries so touch controls remain separated and visible.
+At short desktop heights or tablet widths, Solar System uses full-width Worlds
+and Shipping panels so the dossier, route controls, and footer do not collide.
 After a world change, the mobile header briefly names the arrival as
 `ARRIVED <WORLD>` while the desktop banner keeps the full arrival line.
 Portrait world dossiers repeat the selected world's alert code in the status

@@ -1,3 +1,4 @@
+use super::compact_interplanetary_layout;
 use super::shipping_panel::{
     remote_section_shift, reserve_status_text, route_hit_test, route_segment, route_status_label,
     shipment_route_label, target_pad_available,
@@ -111,6 +112,14 @@ fn solar_map_scales_and_recenters_between_panels_on_narrow_windows() {
     assert!(narrow.0 > 248.0 && narrow.0 < 472.0);
     assert!(narrow.1 > 72.0 && narrow.1 < 570.0);
     assert!(compressed.2 < MIN_SOLAR_MAP_SCALE);
+}
+
+#[test]
+fn short_or_tablet_worlds_use_the_full_width_compact_layout() {
+    assert!(compact_interplanetary_layout(800.0, 400.0));
+    assert!(compact_interplanetary_layout(1280.0, 400.0));
+    assert!(compact_interplanetary_layout(800.0, 720.0));
+    assert!(!compact_interplanetary_layout(1280.0, 720.0));
 }
 
 fn telemetry(alerts: usize, alert_kind: crate::state::WorldAlert) -> crate::state::WorldTelemetry {
