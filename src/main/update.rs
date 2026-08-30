@@ -91,7 +91,7 @@ impl Game {
 
     fn update_settings(&mut self) {
         let before = self.settings.clone();
-        let action = render_settings_menu(&mut self.settings);
+        let action = render_settings_menu(&mut self.settings, &mut self.settings_tab);
         if self.settings != before {
             self.settings.sanitize();
             display::apply_display_settings(&self.settings, Some(&before));

@@ -1,7 +1,7 @@
 //! Data-driven audio events.
 //!
-//! The shipped build deliberately has no sound files yet. Keeping event names
-//! in the simulation means a future backend can bind macroquad::audio or kira
+//! The shipped build deliberately has no sound files. Keeping event names in
+//! the simulation lets the app-owned procedural backend bind macroquad::audio
 //! without teaching gameplay about file paths, autoplay, or channel volume.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -11,8 +11,17 @@ pub enum SettingsAction {
     Back,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SettingsTab {
+    Display,
+    Audio,
+}
+
 /// Render the settings menu and return any action taken
-pub fn render_settings_menu(settings: &mut GameSettings) -> SettingsAction {
+pub fn render_settings_menu(
+    settings: &mut GameSettings,
+    selected_tab: &mut SettingsTab,
+) -> SettingsAction {
     clear_background(Colors::BACKGROUND);
 
     let screen_w = screen_width();
@@ -21,7 +30,13 @@ pub fn render_settings_menu(settings: &mut GameSettings) -> SettingsAction {
 
     draw_panel(0.0, 0.0, screen_w, header_height);
     draw_ui_text("Settings", 18.0, 30.0, 18.0, Colors::PRIMARY);
-    draw_ui_text("Display", 18.0, 52.0, 12.0, Colors::TEXT_DIM);
+    draw_ui_text(
+        "Tune the command shell.",
+        18.0,
+        52.0,
+        12.0,
+        Colors::TEXT_DIM,
+    );
 
     if draw_button_sized(screen_w - 110.0, 18.0, 80.0, 34.0, "Back") {
         return SettingsAction::Back;
@@ -33,23 +48,106 @@ pub fn render_settings_menu(settings: &mut GameSettings) -> SettingsAction {
     } else {
         320.0
     };
-    let panel_h = if mobile { 324.0 } else { 400.0 };
+    let panel_h = if mobile { 332.0 } else { 400.0 };
     let panel_y = if mobile { 84.0 } else { screen_h * 0.3 };
     let display_x = screen_w * 0.5 - panel_w * 0.5;
     let row_w = panel_w - 32.0;
     let row_h = 30.0;
-    let row_gap = 18.0;
+    let row_gap = if mobile { 12.0 } else { 18.0 };
 
     draw_panel(display_x, panel_y, panel_w, panel_h);
+    let tab_y = panel_y + 40.0;
+    let tab_gap = 8.0;
+    let tab_w = (row_w - tab_gap) * 0.5;
+    if draw_button_sized(display_x + 16.0, tab_y, tab_w, 26.0, "Display") {
+        *selected_tab = SettingsTab::Display;
+    }
+    if draw_button_sized(
+        display_x + 16.0 + tab_w + tab_gap,
+        tab_y,
+        tab_w,
+        26.0,
+        "Audio",
+    ) {
+        *selected_tab = SettingsTab::Audio;
+    }
     draw_ui_text(
-        "Display",
+        match *selected_tab {
+            SettingsTab::Display => "Display",
+            SettingsTab::Audio => "Audio",
+        },
         display_x + 16.0,
         panel_y + 28.0,
         16.0,
         Colors::PRIMARY,
     );
 
-    let scale_row = Rect::new(display_x + 16.0, panel_y + 54.0, row_w, row_h);
+    match *selected_tab {
+        SettingsTab::Display => {
+            draw_display_settings(settings, display_x, panel_y, row_w, row_h, row_gap)
+        }
+        SettingsTab::Audio => {
+            draw_audio_settings(settings, display_x, panel_y, row_w, row_h, row_gap)
+        }
+    }
+
+    if mobile {
+        draw_ui_text(
+            "Tap Back to return.",
+            20.0,
+            screen_h - 32.0,
+            11.0,
+            Colors::TEXT_DIM,
+        );
+        draw_ui_text(
+            &truncate_text_to_width(
+                match *selected_tab {
+                    SettingsTab::Display => {
+                        "Initial speed is separate from each world's pause state."
+                    }
+                    SettingsTab::Audio => "Volume changes are saved immediately.",
+                },
+                screen_w - 40.0,
+                10.0,
+            ),
+            20.0,
+            screen_h - 16.0,
+            10.0,
+            Colors::TEXT_DIM,
+        );
+    } else {
+        let footer = match *selected_tab {
+            SettingsTab::Display => {
+                "Tap Back to return. Initial speed is separate from each world's pause state."
+            }
+            SettingsTab::Audio => "Tap Back to return. Volume changes are saved immediately.",
+        };
+        draw_ui_text(
+            footer,
+            20.0,
+            screen_h - 20.0,
+            Dimensions::FONT_SIZE_SMALL,
+            Colors::TEXT_DIM,
+        );
+    }
+
+    if is_key_pressed(KeyCode::Escape) {
+        return SettingsAction::Back;
+    }
+
+    SettingsAction::None
+}
+
+fn draw_display_settings(
+    settings: &mut GameSettings,
+    display_x: f32,
+    panel_y: f32,
+    row_w: f32,
+    row_h: f32,
+    row_gap: f32,
+) {
+    let content_y = panel_y + 78.0;
+    let scale_row = Rect::new(display_x + 16.0, content_y, row_w, row_h);
     let scale_step = stepper_row(
         scale_row,
         "UI Scale",
@@ -60,17 +158,12 @@ pub fn render_settings_menu(settings: &mut GameSettings) -> SettingsAction {
             (settings.ui_text_scale + scale_step as f32 * 0.05).clamp(0.75, 1.5);
     }
 
-    let fps_row = Rect::new(
-        display_x + 16.0,
-        panel_y + 54.0 + row_h + row_gap,
-        row_w,
-        row_h,
-    );
+    let fps_row = Rect::new(display_x + 16.0, content_y + row_h + row_gap, row_w, row_h);
     toggle_row(fps_row, "Show FPS", &mut settings.show_fps);
 
     let motion_row = Rect::new(
         display_x + 16.0,
-        panel_y + 54.0 + (row_h + row_gap) * 2.0,
+        content_y + (row_h + row_gap) * 2.0,
         row_w,
         row_h,
     );
@@ -122,39 +215,57 @@ pub fn render_settings_menu(settings: &mut GameSettings) -> SettingsAction {
             settings.default_speed + 1
         };
     }
-
-    if mobile {
-        draw_ui_text(
-            "Tap Back to return.",
-            20.0,
-            screen_h - 32.0,
-            11.0,
-            Colors::TEXT_DIM,
-        );
-        draw_ui_text(
-            &truncate_text_to_width(
-                "Initial speed is separate from each world's pause state.",
-                screen_w - 40.0,
-                10.0,
-            ),
-            20.0,
-            screen_h - 16.0,
-            10.0,
-            Colors::TEXT_DIM,
-        );
-    } else {
-        draw_ui_text(
-            "Tap Back to return. Initial speed is separate from each world's pause state.",
-            20.0,
-            screen_h - 20.0,
-            Dimensions::FONT_SIZE_SMALL,
-            Colors::TEXT_DIM,
-        );
-    }
-
-    if is_key_pressed(KeyCode::Escape) {
-        return SettingsAction::Back;
-    }
-
-    SettingsAction::None
 }
+
+fn draw_audio_settings(
+    settings: &mut GameSettings,
+    display_x: f32,
+    panel_y: f32,
+    row_w: f32,
+    row_h: f32,
+    row_gap: f32,
+) {
+    draw_ui_text(
+        "Tap +/- to adjust. Changes apply immediately.",
+        display_x + 16.0,
+        panel_y + 78.0,
+        10.0,
+        Colors::TEXT_DIM,
+    );
+    let content_y = panel_y + 90.0;
+    adjust_volume_row(
+        Rect::new(display_x + 16.0, content_y, row_w, row_h),
+        "Master volume",
+        &mut settings.master_volume,
+    );
+    adjust_volume_row(
+        Rect::new(display_x + 16.0, content_y + row_h + row_gap, row_w, row_h),
+        "Sound effects",
+        &mut settings.sfx_volume,
+    );
+    adjust_volume_row(
+        Rect::new(
+            display_x + 16.0,
+            content_y + (row_h + row_gap) * 2.0,
+            row_w,
+            row_h,
+        ),
+        "Music",
+        &mut settings.music_volume,
+    );
+}
+
+fn adjust_volume_row(rect: Rect, label: &str, volume: &mut f32) {
+    let direction = stepper_row(rect, label, &format!("{:.0}%", *volume * 100.0));
+    if direction != 0 {
+        *volume = step_volume(*volume, direction);
+    }
+}
+
+fn step_volume(volume: f32, direction: i32) -> f32 {
+    let current = (volume * 10.0).round() as i32;
+    ((current + direction).clamp(0, 10) as f32) / 10.0
+}
+
+#[cfg(test)]
+mod tests;
