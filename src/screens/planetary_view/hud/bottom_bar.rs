@@ -22,6 +22,7 @@ pub(super) enum ClockAction {
     ToggleFocus,
     ToggleFlow,
     ToggleDeck,
+    OpenMenu,
 }
 
 fn next_event_code(label: &str) -> &'static str {
@@ -133,13 +134,15 @@ pub(super) fn draw(
         11.0,
         if alert_count > 0 { error } else { success },
     );
-    if let Some(flow_label) = alert_flow_label(flow_alert, state.flow_overlay) {
+    if let Some((alert_label, alert_action)) =
+        alert_button(state.save_failed, flow_alert, state.flow_overlay)
+    {
         if draw_hud_button(
             theme,
             Rect::new(10.0 + alert_w - 62.0, bottom_y + 10.0, 54.0, 22.0),
-            flow_label,
+            alert_label,
         ) {
-            clock = ClockAction::ToggleFlow;
+            clock = alert_action;
         }
     }
 
@@ -443,8 +446,21 @@ pub(super) fn draw(
     clock
 }
 
-fn alert_flow_label(flow_alert: bool, flow_overlay: bool) -> Option<&'static str> {
-    flow_alert.then_some(if flow_overlay { "FLOW ON" } else { "FLOW" })
+fn alert_button(
+    save_failed: bool,
+    flow_alert: bool,
+    flow_overlay: bool,
+) -> Option<(&'static str, ClockAction)> {
+    if save_failed {
+        Some(("MENU", ClockAction::OpenMenu))
+    } else if flow_alert {
+        Some((
+            if flow_overlay { "FLOW ON" } else { "FLOW" },
+            ClockAction::ToggleFlow,
+        ))
+    } else {
+        None
+    }
 }
 
 /// Ore banked at the Core per second, across the whole session.

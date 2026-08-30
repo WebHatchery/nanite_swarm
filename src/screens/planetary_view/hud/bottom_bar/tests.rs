@@ -1,8 +1,18 @@
-use super::alert_flow_label;
+use super::{alert_button, ClockAction};
 
 #[test]
-fn flow_button_only_appears_for_diagnosable_alerts() {
-    assert_eq!(alert_flow_label(false, false), None);
-    assert_eq!(alert_flow_label(true, false), Some("FLOW"));
-    assert_eq!(alert_flow_label(true, true), Some("FLOW ON"));
+fn alert_button_points_at_the_relevant_recovery_surface() {
+    assert_eq!(alert_button(false, false, false), None);
+    assert_eq!(
+        alert_button(false, true, false),
+        Some(("FLOW", ClockAction::ToggleFlow))
+    );
+    assert_eq!(
+        alert_button(false, true, true),
+        Some(("FLOW ON", ClockAction::ToggleFlow))
+    );
+    assert_eq!(
+        alert_button(true, true, false),
+        Some(("MENU", ClockAction::OpenMenu))
+    );
 }
