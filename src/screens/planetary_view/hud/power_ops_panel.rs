@@ -4,8 +4,7 @@ use crate::data::UiTheme;
 use crate::state::PlanetState;
 use crate::ui::{color_from_rgba, draw_hud_panel, draw_hud_progress_bar, draw_status_row};
 use macroquad::prelude::*;
-use macroquad_toolkit::input::is_hovered;
-use macroquad_toolkit::ui::draw_ui_text;
+use macroquad_toolkit::ui::{draw_ui_text, note_neighbour, touch_area, Pointer};
 
 use super::super::PlanetaryAction;
 use super::{PanelColors, RightStackLayout};
@@ -16,6 +15,7 @@ pub(super) fn draw(
     colors: &PanelColors,
     right: &RightStackLayout,
 ) -> PlanetaryAction {
+    let pointer = Pointer::read(|position| position);
     let text = colors.text;
     let dim = colors.dim;
     let primary_soft = colors.primary_soft;
@@ -128,12 +128,11 @@ pub(super) fn draw(
         right_w - 16.0,
         18.0,
     );
-    let hovered = is_hovered(
-        achievements_row.x,
-        achievements_row.y,
-        achievements_row.w,
-        achievements_row.h,
-    );
+    note_neighbour(achievements_row);
+    let achievements_hit = touch_area(achievements_row);
+    let hovered = pointer.hovering_over(achievements_hit)
+        || pointer.pressing(achievements_hit)
+        || pointer.released_on(achievements_hit);
     if hovered {
         draw_rectangle(
             achievements_row.x,
@@ -157,11 +156,19 @@ pub(super) fn draw(
         },
     );
 
-    if hovered && is_mouse_button_pressed(MouseButton::Left) {
-        return PlanetaryAction::OpenRecords;
-    }
-    PlanetaryAction::None
+    records_action(&pointer, achievements_hit)
 }
+
+fn records_action(pointer: &Pointer, hit_rect: Rect) -> PlanetaryAction {
+    if pointer.released_on(hit_rect) {
+        PlanetaryAction::OpenRecords
+    } else {
+        PlanetaryAction::None
+    }
+}
+
+#[cfg(test)]
+mod tests;
 
 fn draw_compact_power(
     state: &PlanetState,

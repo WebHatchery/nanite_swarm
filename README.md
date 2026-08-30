@@ -55,6 +55,8 @@ FLOW button to cycle through live power and Data production/consumption. Warning
 triangles and the Operations count identify powered processors that are missing a feed.
 The top resource cards show live rates from active drills, the Core and Server
 Banks, and biomass harvesters.
+The desktop Operations panel's Achievements row is touch-sized as well as
+mouse-clickable, so Records remains reachable without a physical keyboard.
 The selected-structure Power row follows the standing building's live draw or
 generation, including dust, overclock, standby, focus, and research effects;
 build previews continue to show nominal power.
