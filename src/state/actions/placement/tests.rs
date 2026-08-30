@@ -68,6 +68,31 @@ fn a_conduit_drag_reports_the_next_segment_cost_when_resources_run_out() {
 }
 
 #[test]
+fn a_blocked_conduit_segment_warns_once_until_the_gesture_ends() {
+    let mut state = state();
+    let core = state.grid.find_core().unwrap();
+    let first = GridPos::new(core.x + 1, core.y);
+    let second = GridPos::new(core.x + 2, core.y);
+    for pos in [first, second] {
+        let tile = state.grid.get_mut(pos).unwrap();
+        tile.terrain = TerrainType::Empty;
+    }
+    state.grid.reveal_around(second, 1);
+    state.unlock_building(BuildingType::Conduit);
+    state.resources.minerals = 0.0;
+    state.resources.energy = 0.0;
+
+    assert!(!state.try_place_conduit_path(core, second));
+    assert_eq!(state.notifications.count(), 1);
+    assert!(!state.try_place_conduit_path(core, second));
+    assert_eq!(state.notifications.count(), 1);
+
+    state.cancel_interaction_modes();
+    assert!(!state.try_place_conduit_path(core, second));
+    assert_eq!(state.notifications.count(), 2);
+}
+
+#[test]
 fn placement_reason_treats_world_requirements_as_a_separate_block() {
     let mut state = PlanetState::new(0, 42, GameConfig::default());
     let core = state.grid.find_core().unwrap();

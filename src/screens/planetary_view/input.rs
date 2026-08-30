@@ -175,6 +175,7 @@ pub(super) fn handle_input(
         }
         if is_mouse_button_released(MouseButton::Left) {
             state.drag_last_pos = None;
+            state.route_resource_blocked_at = None;
         }
         // Right click or Escape puts the wrecking ball down.
         if is_mouse_button_pressed(MouseButton::Right) || is_key_pressed(KeyCode::Escape) {
@@ -231,6 +232,7 @@ pub(super) fn handle_input(
         } else if !touch.active {
             // The release frame carries no active touch position.
             state.drag_last_pos = None;
+            state.route_resource_blocked_at = None;
             state.smart_drag_source = None;
         }
     }
@@ -296,6 +298,7 @@ pub(super) fn handle_input(
 
     if is_mouse_button_released(MouseButton::Left) {
         state.drag_last_pos = None;
+        state.route_resource_blocked_at = None;
         state.smart_drag_source = None;
     }
 
