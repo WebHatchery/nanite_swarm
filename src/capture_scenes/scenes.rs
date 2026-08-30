@@ -239,6 +239,23 @@ impl Game {
                 planet.selected_building = None;
                 planet.selected_tile = planet.grid.find_core();
             }
+            // The final Core stage makes its planetary-scale silhouette
+            // visible in the ordinary map, not only in the inspector text.
+            "core_ring" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                let planet = self.campaign.current_mut();
+                planet.core_stage = (planet.core_stages().len().saturating_sub(1)) as u8;
+                planet.refresh_stats();
+                if let Some(core) = planet.grid.find_core() {
+                    planet.grid.reveal_around(core, 24);
+                }
+                planet.tutorial_hidden = true;
+                planet.tutorial_done = true;
+                planet.notifications.clear();
+                planet.selected_building = None;
+                planet.selected_tile = planet.grid.find_core();
+            }
             // A run cut in the middle, with drones stalled beyond the break.
             "severed" => {
                 self.phase = GamePhase::Playing;

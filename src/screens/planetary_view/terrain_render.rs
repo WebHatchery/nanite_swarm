@@ -13,7 +13,11 @@ use super::format::hash01;
 use super::metrics::{grid_to_screen, HudMetrics};
 
 mod core;
-use core::draw_core_visual;
+use core::{draw_core_stage_ambient, draw_core_visual};
+
+pub(super) fn draw_core_stage_ambient_for_map(state: &PlanetState, metrics: HudMetrics, time: f32) {
+    draw_core_stage_ambient(state, metrics, time);
+}
 
 pub(super) fn draw_planetary_background(
     screen_w: f32,

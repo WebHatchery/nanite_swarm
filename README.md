@@ -34,6 +34,8 @@ The swarm is powerful, but every expansion changes the terrain, stresses the gri
 - The same remote dossier shows each world's current and next Core stage plus
   its first remaining Core milestone, so strategic growth remains actionable
   even when the swarm is managing another world.
+- At Space Elevator and Planetary Ring stages, the map grows a live tether and
+  orbital ring around the Core so late evolution is visible beyond its tile.
 
 ## Goal
 

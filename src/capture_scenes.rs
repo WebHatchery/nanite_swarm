@@ -9,7 +9,7 @@ mod fixtures;
 mod research;
 
 #[allow(dead_code)]
-pub const REQUIRED_CAPTURE_SCENES: [&str; 40] = [
+pub const REQUIRED_CAPTURE_SCENES: [&str; 41] = [
     "mainmenu",
     "desktop_mainmenu_short",
     "desktop_settings_short",
@@ -23,6 +23,7 @@ pub const REQUIRED_CAPTURE_SCENES: [&str; 40] = [
     "desktop_seedship_short",
     "mobile_seedship",
     "logistics",
+    "core_ring",
     "assembly",
     "focus",
     "freight",

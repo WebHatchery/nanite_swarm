@@ -18,6 +18,7 @@ fn required_capture_scenes_are_registered() {
             "desktop_seedship_short",
             "mobile_seedship",
             "logistics",
+            "core_ring",
             "assembly",
             "focus",
             "freight",
