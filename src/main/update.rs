@@ -261,6 +261,7 @@ impl Game {
             InterplanetaryAction::Close => self.phase = GamePhase::Playing,
             InterplanetaryAction::SelectPlanet(index) => {
                 if self.campaign.travel_to(index) {
+                    self.shipping_edit_world = index;
                     self.sync_research_to_planet();
                     self.sync_building_unlocks();
                     self.save_campaign();
@@ -270,6 +271,7 @@ impl Game {
             InterplanetaryAction::LaunchSeedShip(index) => {
                 let origin = self.campaign.current_index();
                 if self.has_mass_driver() && self.campaign.launch_seed_ship(index) {
+                    self.shipping_edit_world = index;
                     self.sync_research_to_planet();
                     self.sync_building_unlocks();
                     self.save_campaign();
