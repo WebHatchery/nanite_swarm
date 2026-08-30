@@ -9,7 +9,9 @@ use crate::state::{MobilePanel, PlanetState};
 use super::super::metrics::HudMetrics;
 use super::super::PlanetaryAction;
 use super::RightStackLayout;
-use super::{build_palette, directive_panel, inspector_panel, power_ops_panel, PanelColors};
+use super::{
+    build_palette, directive_panel, inspector_panel, power_ops_panel, top_bar, PanelColors,
+};
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn draw(
@@ -25,7 +27,12 @@ pub(super) fn draw(
 ) -> PlanetaryAction {
     match state.mobile_panel {
         MobilePanel::Map => {
-            if state.tutorial_current().is_some()
+            let offline_report = !state.show_help
+                && !state.flow_overlay
+                && !state.factory_deck_open
+                && top_bar::draw_mobile_offline_report(state, screen_w, metrics, theme, colors);
+            if !offline_report
+                && state.tutorial_current().is_some()
                 && !state.tutorial_hidden
                 && !state.flow_overlay
                 && !state.factory_deck_open

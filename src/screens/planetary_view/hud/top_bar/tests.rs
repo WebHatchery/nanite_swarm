@@ -1,4 +1,7 @@
-use super::{mobile_offline_work_label, mobile_status_text, offline_work_label, top_bar_layout};
+use super::{
+    mobile_offline_report_lines, mobile_offline_work_label, mobile_status_text, offline_work_label,
+    top_bar_layout,
+};
 use crate::state::OfflineReport;
 
 #[test]
@@ -34,6 +37,32 @@ fn offline_work_status_is_short_enough_for_the_mobile_header() {
         .as_deref(),
         Some("Seed Ship +2 stages")
     );
+}
+
+#[test]
+fn offline_report_keeps_data_spent_and_ship_stages_visible() {
+    let report = OfflineReport {
+        elapsed_seconds: 21_600.0,
+        capped_seconds: 14_400.0,
+        minerals_gained: 740.0,
+        alloy_gained: 120.0,
+        components_gained: 64.0,
+        data_gained: 360.0,
+        power_gained: 18.0,
+        research_data_spent: 110.0,
+        research_completed: true,
+        seed_ship_stages_completed: 1,
+        ..OfflineReport::default()
+    };
+    assert_eq!(
+        offline_work_label(report).as_deref(),
+        Some("research complete (-110 data) | Seed Ship +1 stage")
+    );
+    let lines = mobile_offline_report_lines(report, 21_600.0, 14_400.0);
+    assert_eq!(lines[0], "Away 6h 0m | Sim 4h 0m | CAPPED");
+    assert!(lines[1].contains("+360 data"));
+    assert!(lines[2].contains("-110 data"));
+    assert!(lines[2].contains("Seed Ship +1 stage"));
 }
 
 #[test]

@@ -4,7 +4,7 @@ use crate::data::UiTheme;
 use crate::state::{OfflineReport, PlanetState};
 use crate::ui::{color_from_rgba, draw_hud_button, draw_hud_panel, draw_metric_card};
 use macroquad::prelude::*;
-use macroquad_toolkit::ui::draw_ui_text;
+use macroquad_toolkit::ui::{draw_ui_text, truncate_text_to_width};
 
 use super::super::format::{format_hours_minutes, format_power_delta};
 use super::super::metrics::HudMetrics;
@@ -80,7 +80,14 @@ fn mobile_status_text(
 fn offline_work_label(report: OfflineReport) -> Option<String> {
     let mut work = Vec::new();
     if report.research_completed {
-        work.push("research complete".to_string());
+        if report.research_data_spent > 0.001 {
+            work.push(format!(
+                "research complete (-{:.0} data)",
+                report.research_data_spent
+            ));
+        } else {
+            work.push("research complete".to_string());
+        }
     } else if report.research_data_spent > 0.001 {
         work.push(format!("research -{:.0} data", report.research_data_spent));
     }
@@ -108,6 +115,77 @@ fn mobile_offline_work_label(report: OfflineReport) -> &'static str {
     } else {
         ""
     }
+}
+
+fn mobile_offline_report_lines(
+    report: OfflineReport,
+    elapsed_seconds: f32,
+    simulated_seconds: f32,
+) -> [String; 3] {
+    let (off_h, off_m) = format_hours_minutes(elapsed_seconds);
+    let (sim_h, sim_m) = format_hours_minutes(simulated_seconds);
+    let capped_note = if report.capped_seconds < report.elapsed_seconds {
+        " | CAPPED"
+    } else {
+        ""
+    };
+    let clock_note = if report.tamper_guarded {
+        " | CLOCK CHECK"
+    } else {
+        ""
+    };
+    let work = offline_work_label(report).unwrap_or_else(|| "no queued work".to_string());
+    [
+        format!("Away {off_h}h {off_m}m | Sim {sim_h}h {sim_m}m{capped_note}{clock_note}"),
+        format!(
+            "Gains +{:.0} ore +{:.0} alloy +{:.0} parts +{:.0} data P {:+.0}",
+            report.minerals_gained,
+            report.alloy_gained,
+            report.components_gained,
+            report.data_gained,
+            report.power_gained
+        ),
+        format!("Work: {work}"),
+    ]
+}
+
+pub(super) fn draw_mobile_offline_report(
+    state: &PlanetState,
+    screen_w: f32,
+    metrics: HudMetrics,
+    theme: &UiTheme,
+    colors: &PanelColors,
+) -> bool {
+    if state.offline_notice_timer <= 0.0 || state.last_offline_seconds <= 0.0 {
+        return false;
+    }
+    let x = 10.0;
+    let y = metrics.top_bar_height + 8.0;
+    let width = (screen_w - 20.0).max(0.0);
+    draw_hud_panel(theme, Rect::new(x, y, width, 82.0), None);
+    draw_ui_text("OFFLINE RETURN", x + 12.0, y + 18.0, 11.0, colors.primary);
+    let text_width = (width - 24.0).max(40.0);
+    for (index, line) in mobile_offline_report_lines(
+        state.last_offline_report,
+        state.last_offline_seconds,
+        state.last_offline_simulated,
+    )
+    .iter()
+    .enumerate()
+    {
+        draw_ui_text(
+            &truncate_text_to_width(line, text_width, 8.0),
+            x + 12.0,
+            y + 40.0 + index as f32 * 12.0,
+            8.0,
+            if index == 2 {
+                colors.primary_soft
+            } else {
+                colors.success
+            },
+        );
+    }
+    true
 }
 
 #[allow(clippy::too_many_arguments)]
