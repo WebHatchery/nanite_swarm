@@ -38,3 +38,24 @@ fn narrow_focus_copy_stays_short_enough_for_touch_cards() {
         assert!(narrow_focus_description(focus).len() <= 25);
     }
 }
+
+#[test]
+fn factory_deck_names_live_requirements_for_the_next_core_stage() {
+    let state = PlanetState::new(2, 42, crate::data::GameConfig::default());
+    let line = core_progress_text(&state, true);
+
+    assert!(line.starts_with("CORE 1/5 -> FOUNDRY"));
+    assert!(line.contains("STR "));
+    assert!(line.contains("NET "));
+}
+
+#[test]
+fn factory_deck_marks_a_fully_evolved_core() {
+    let mut state = PlanetState::new(2, 42, crate::data::GameConfig::default());
+    state.core_stage = (state.core_stages().len() - 1) as u8;
+
+    assert_eq!(
+        core_progress_text(&state, true),
+        "CORE 5/5 // FULLY EVOLVED"
+    );
+}
