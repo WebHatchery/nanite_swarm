@@ -1,3 +1,4 @@
+use super::shipping_panel::route_segment;
 use super::status::{
     driver_operation_status, landing_pad_operation_status, launch_action, launch_prompt,
     mass_driver_status_label, seed_ship_status_label,
@@ -204,4 +205,16 @@ fn dossier_can_name_a_worlds_standing_shipping_route() {
         Some("Shipping: Minerals -> Saturn @ 180/min".to_string())
     );
     assert!(shipping_summary(data.data(), None, 0.0).is_none());
+}
+
+#[test]
+fn standing_route_map_skips_self_routes_and_stale_endpoints() {
+    let positions = [(10.0, 20.0), (30.0, 50.0)];
+
+    assert_eq!(
+        route_segment(0, 1, &positions),
+        Some(((10.0, 20.0), (30.0, 50.0)))
+    );
+    assert!(route_segment(0, 0, &positions).is_none());
+    assert!(route_segment(0, 2, &positions).is_none());
 }

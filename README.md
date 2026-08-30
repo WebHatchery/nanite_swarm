@@ -73,6 +73,8 @@ Tap the event-coded NEXT button to jump to the next recovery, research-unlock,
 or mass-driver timer while keeping the whole campaign clock in sync.
 The Solar System map recentres and scales its orbit rings on narrow windows;
 the planet list remains a touch-sized travel and launch control.
+Established freight orders stay visible as cargo-coloured lanes with direction
+markers between the worlds, even while every pod is on the ground.
 Its header distinguishes a Mass Driver that is not built from one that is
 built but offline, and explains when a finished Seed Ship still needs a live
 driver.

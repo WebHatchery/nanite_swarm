@@ -340,6 +340,7 @@ pub fn render_interplanetary_view(
         }
     }
 
+    shipping_panel::draw_routes(view.orders, &positions);
     shipping_panel::draw_pods(view.shipments, &positions);
 
     // Info panel for hovered planet
@@ -619,7 +620,7 @@ fn draw_planet_info(
 }
 
 fn draw_legend(screen_w: f32, screen_h: f32) {
-    draw_panel(screen_w - 190.0, screen_h - 110.0, 180.0, 100.0);
+    draw_panel(screen_w - 190.0, screen_h - 130.0, 180.0, 120.0);
     draw_circle(screen_w - 175.0, screen_h - 85.0, 6.0, Colors::SUCCESS);
     draw_ui_text(
         "Colonized",
@@ -641,6 +642,21 @@ fn draw_legend(screen_w: f32, screen_h: f32) {
         "Current",
         screen_w - 160.0,
         screen_h - 40.0,
+        12.0,
+        Colors::TEXT_DIM,
+    );
+    draw_line(
+        screen_w - 181.0,
+        screen_h - 25.0,
+        screen_w - 169.0,
+        screen_h - 25.0,
+        2.0,
+        Colors::ACCENT,
+    );
+    draw_ui_text(
+        "Freight lane",
+        screen_w - 160.0,
+        screen_h - 20.0,
         12.0,
         Colors::TEXT_DIM,
     );

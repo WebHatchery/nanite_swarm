@@ -1,6 +1,7 @@
 //! The solar map's shipping controls, and the pods crossing between orbits.
 
-use crate::state::{cargo_name, Shipment};
+use crate::engine::ResourceType;
+use crate::state::{cargo_name, ExportOrder, Shipment};
 use crate::ui::{draw_button_sized, draw_panel, Colors};
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::{draw_ui_text, is_fully_visible, truncate_text_to_width, ScrollArea};
@@ -436,5 +437,73 @@ pub(super) fn draw_pods(shipments: &[Shipment], positions: &[(f32, f32)]) {
         );
         draw_circle(px, py, 3.0, Colors::ACCENT);
         draw_circle(px, py, 1.5, Colors::TEXT);
+    }
+}
+
+/// Resolve a standing order into map coordinates without trusting a stale
+/// save to point outside the currently authored system.
+pub(super) fn route_segment(
+    source: usize,
+    target: usize,
+    positions: &[(f32, f32)],
+) -> Option<((f32, f32), (f32, f32))> {
+    if source == target {
+        return None;
+    }
+    Some((
+        positions.get(source).copied()?,
+        positions.get(target).copied()?,
+    ))
+}
+
+/// Draw the routes that exist even when every pod is on the ground. The
+/// translucent lane is cargo-coloured and the arrowhead points at the target
+/// world, so a settled network remains legible between shipments.
+pub(super) fn draw_routes(orders: &[Option<ExportOrder>], positions: &[(f32, f32)]) {
+    for (source, order) in orders
+        .iter()
+        .enumerate()
+        .filter_map(|(source, order)| order.as_ref().map(|order| (source, *order)))
+    {
+        let Some((from, to)) = route_segment(source, order.target, positions) else {
+            continue;
+        };
+        let delta = vec2(to.0 - from.0, to.1 - from.1);
+        let length = delta.length();
+        if length < 1.0 {
+            continue;
+        }
+        let direction = delta / length;
+        let perpendicular = vec2(-direction.y, direction.x);
+        let color = route_color(order.cargo);
+        draw_line(from.0, from.1, to.0, to.1, 1.5, color);
+
+        let tip = vec2(to.0, to.1) - direction * 10.0;
+        let wing_start = tip - direction * 7.0;
+        draw_line(
+            tip.x,
+            tip.y,
+            (wing_start + perpendicular * 4.0).x,
+            (wing_start + perpendicular * 4.0).y,
+            1.5,
+            color,
+        );
+        draw_line(
+            tip.x,
+            tip.y,
+            (wing_start - perpendicular * 4.0).x,
+            (wing_start - perpendicular * 4.0).y,
+            1.5,
+            color,
+        );
+    }
+}
+
+fn route_color(cargo: ResourceType) -> Color {
+    match cargo {
+        ResourceType::Minerals => Color::new(1.0, 0.42, 0.21, 0.36),
+        ResourceType::Alloy => Color::new(1.0, 0.6, 0.0, 0.42),
+        ResourceType::Components => Color::new(0.0, 0.851, 1.0, 0.42),
+        _ => Color::new(0.67, 0.67, 0.67, 0.3),
     }
 }
