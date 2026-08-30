@@ -30,6 +30,9 @@ Audit date: 2026-08-20
 - Split the desktop command-bar graph renderer into `bottom_bar/graph.rs`,
   reducing the command-bar coordinator from 773 to 555 lines and adding direct
   coverage for its mode-specific scaling and readouts.
+- Split the cross-world research contract from the campaign test coordinator
+  into `src/state/campaign/tests/research.rs`, keeping the parent suite below
+  the source-size restructure signal as research and background simulation grow.
 
 ## Remaining debt
 
