@@ -776,6 +776,7 @@ impl Game {
                     self.interplanetary_mobile_panel = state::InterplanetaryMobilePanel::Shipping;
                 }
             }
+            "interplanetary_pad_offline" => self.stage_interplanetary_pad_offline_scene(),
             "mobile_shipping" => {
                 self.stage_interplanetary_scene();
                 self.interplanetary_mobile_panel = state::InterplanetaryMobilePanel::Shipping;

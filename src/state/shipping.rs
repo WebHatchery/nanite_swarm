@@ -110,6 +110,12 @@ impl PlanetState {
         self.powered_positions(BuildingType::MassDriver).len()
     }
 
+    /// Landing Pads standing on this world, including pads that have lost
+    /// power and therefore cannot catch a pod yet.
+    pub fn landing_pads_built(&self) -> usize {
+        self.grid.find_buildings(BuildingType::LandingPad).len()
+    }
+
     /// Powered Landing Pads standing on this world. A world with none of these
     /// cannot be shipped to, however many drivers are pointed at it.
     pub fn landing_pads_online(&self) -> usize {

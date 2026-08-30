@@ -17,6 +17,25 @@ pub(super) fn driver_operation_status(built: usize, online: usize, world_name: &
     }
 }
 
+pub(super) fn landing_pad_operation_status(
+    built: usize,
+    online: usize,
+    world_name: &str,
+) -> String {
+    if online > 0 {
+        format!(
+            "{} landing pad{} online on {}",
+            online,
+            if online == 1 { "" } else { "s" },
+            world_name
+        )
+    } else if built > 0 {
+        format!("Landing Pad offline on {}", world_name)
+    } else {
+        format!("No Landing Pad on {}", world_name)
+    }
+}
+
 pub(super) fn launch_action(index: usize, confirming: bool) -> InterplanetaryAction {
     if confirming {
         InterplanetaryAction::LaunchSeedShip(index)

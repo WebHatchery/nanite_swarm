@@ -256,6 +256,12 @@ impl Game {
                 .map(|planet| planet.landing_pads_online())
                 .unwrap_or(0)
         });
+        let pads_built: [usize; state::PLANET_COUNT] = std::array::from_fn(|index| {
+            self.campaign
+                .planet(index)
+                .map(|planet| planet.landing_pads_built())
+                .unwrap_or(0)
+        });
         let orders: [Option<state::ExportOrder>; state::PLANET_COUNT] =
             std::array::from_fn(|index| self.campaign.export_order_for(index));
         let drivers_online: [usize; state::PLANET_COUNT] = std::array::from_fn(|index| {
@@ -303,6 +309,7 @@ impl Game {
             drivers_online: &drivers_online,
             drivers_built: &drivers_built,
             pads: &pads,
+            pads_built: &pads_built,
             pod_fractions: &pod_fractions,
             shipments: campaign.shipments(),
             orders: &orders,

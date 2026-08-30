@@ -1,6 +1,6 @@
 use super::status::{
-    driver_operation_status, launch_action, launch_prompt, mass_driver_status_label,
-    seed_ship_status_label,
+    driver_operation_status, landing_pad_operation_status, launch_action, launch_prompt,
+    mass_driver_status_label, seed_ship_status_label,
 };
 
 #[test]
@@ -16,6 +16,22 @@ fn shipping_status_distinguishes_absent_and_offline_drivers() {
     assert_eq!(
         driver_operation_status(2, 2, "Mars"),
         "2 drivers online on Mars"
+    );
+}
+
+#[test]
+fn shipping_status_distinguishes_absent_and_offline_landing_pads() {
+    assert_eq!(
+        landing_pad_operation_status(0, 0, "Saturn"),
+        "No Landing Pad on Saturn"
+    );
+    assert_eq!(
+        landing_pad_operation_status(1, 0, "Saturn"),
+        "Landing Pad offline on Saturn"
+    );
+    assert_eq!(
+        landing_pad_operation_status(2, 2, "Saturn"),
+        "2 landing pads online on Saturn"
     );
 }
 use super::world_dossier::world_telemetry_row_y;

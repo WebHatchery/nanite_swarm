@@ -5,7 +5,7 @@ use crate::ui::{draw_button_sized, draw_panel, Colors};
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::{draw_ui_text, is_fully_visible, ScrollArea};
 
-use super::status::driver_operation_status;
+use super::status::{driver_operation_status, landing_pad_operation_status};
 use super::{InterplanetaryAction, MapView};
 
 /// How many in-flight pods the panel lists before it starts counting them.
@@ -210,13 +210,23 @@ pub(super) fn draw(
     // A route to a world with nothing to catch a pod is not an error, but the
     // pods will circle it until one gets built, so say so where it is set.
     if let Some(order) = edited_order {
-        if view.pads.get(order.target).copied().unwrap_or(0) == 0 {
+        let pads_online = view.pads.get(order.target).copied().unwrap_or(0);
+        let pads_built = view.pads_built.get(order.target).copied().unwrap_or(0);
+        if pads_online == 0 {
             draw_scrolled_text(
-                &format!("{} has no Landing Pad", view.data.planet(order.target).name),
+                &landing_pad_operation_status(
+                    pads_built,
+                    pads_online,
+                    view.data.planet(order.target).name.as_str(),
+                ),
                 x + 12.0,
                 offset_y + 264.0,
                 10.0,
-                Colors::ERROR,
+                if pads_built > 0 {
+                    Colors::WARNING
+                } else {
+                    Colors::ERROR
+                },
                 content_view,
             );
         } else if view.pending_pods.get(order.target).copied().unwrap_or(0)

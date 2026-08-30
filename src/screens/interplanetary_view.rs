@@ -97,6 +97,8 @@ pub struct MapView<'a> {
     /// Powered Landing Pads on each world, so the panel can say when the
     /// target has nothing to catch a pod with.
     pub pads: &'a [usize],
+    /// Landing Pads standing on each world, including offline pads.
+    pub pads_built: &'a [usize],
     /// The fullest live outbound pod on each world, for remote order edits.
     pub pod_fractions: &'a [f32],
     pub shipments: &'a [Shipment],

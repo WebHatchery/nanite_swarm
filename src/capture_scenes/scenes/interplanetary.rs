@@ -51,4 +51,25 @@ impl Game {
         }
         self.seed_shipping_scene(4);
     }
+
+    pub(super) fn stage_interplanetary_pad_offline_scene(&mut self) {
+        self.stage_interplanetary_scene();
+        let pad = self.campaign.planet(4).and_then(|planet| {
+            planet
+                .grid
+                .find_buildings(engine::BuildingType::LandingPad)
+                .first()
+                .copied()
+        });
+        if let Some(pad) = pad {
+            if let Some(building) = self
+                .campaign
+                .planet_mut(4)
+                .and_then(|planet| planet.grid.get_mut(pad))
+                .and_then(|tile| tile.building.as_mut())
+            {
+                building.standby = true;
+            }
+        }
+    }
 }

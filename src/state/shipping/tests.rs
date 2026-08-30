@@ -71,6 +71,7 @@ fn pad_on(campaign: &mut Campaign, index: usize) -> GridPos {
     assert!(planet.try_place_building(pos), "pad beside the Core");
     planet.grid.update_power_grid();
     assert_eq!(planet.landing_pads_online(), 1);
+    assert_eq!(planet.landing_pads_built(), 1);
     pos
 }
 
