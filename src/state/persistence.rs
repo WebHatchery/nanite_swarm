@@ -29,7 +29,7 @@ fn unix_seconds_now() -> i64 {
 
 /// Serialize the campaign to a JSON string
 pub fn save_to_json(campaign: &mut Campaign) -> Result<String, serde_json::Error> {
-    campaign.current_mut().last_saved_unix = unix_seconds_now();
+    campaign.stamp_saved_at(unix_seconds_now());
     let save = SaveGame {
         version: SAVE_VERSION,
         campaign: campaign.clone(),

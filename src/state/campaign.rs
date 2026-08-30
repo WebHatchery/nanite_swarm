@@ -343,6 +343,15 @@ impl Campaign {
         planet.restored_from_backup = false;
     }
 
+    /// Give every persisted world the same save boundary. Background worlds
+    /// are simulated before the campaign is written, so leaving their older
+    /// timestamps in place would replay that same offline interval on reload.
+    pub(crate) fn stamp_saved_at(&mut self, unix_seconds: i64) {
+        for planet in self.planets.iter_mut().flatten() {
+            planet.last_saved_unix = unix_seconds;
+        }
+    }
+
     fn generate(&self, index: usize, config: &GameConfig) -> PlanetState {
         // Derived from the campaign seed so a campaign replays identically.
         let planet_seed = self.seed ^ (index as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);

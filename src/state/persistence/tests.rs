@@ -360,11 +360,17 @@ fn json_roundtrip_preserves_every_colonized_world() {
 }
 
 #[test]
-fn a_save_stamps_the_current_planet_with_the_time() {
+fn a_save_stamps_every_colonized_planet_with_the_same_time() {
     let mut campaign = campaign();
     campaign.current_mut().last_saved_unix = 0;
+    campaign.colonize(0);
+    campaign.planet_mut(0).unwrap().last_saved_unix = 0;
     save_to_json(&mut campaign).unwrap();
     assert!(campaign.current().last_saved_unix > 0);
+    assert_eq!(
+        campaign.planet(0).unwrap().last_saved_unix,
+        campaign.current().last_saved_unix
+    );
 }
 
 #[test]
