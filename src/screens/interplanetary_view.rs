@@ -28,6 +28,17 @@ pub enum InterplanetaryAction {
     ToggleRemoteExportSurplus,
 }
 
+const WORLD_TELEMETRY_LINE_HEIGHT: f32 = 16.0;
+const WORLD_TELEMETRY_BOTTOM_GAP: f32 = 6.0;
+
+fn world_telemetry_row_y(y: f32, row: usize) -> f32 {
+    y + row as f32 * WORLD_TELEMETRY_LINE_HEIGHT
+}
+
+fn world_telemetry_height() -> f32 {
+    WORLD_TELEMETRY_LINE_HEIGHT * 3.0 + WORLD_TELEMETRY_BOTTOM_GAP
+}
+
 /// Everything the map reads out of the campaign. One struct rather than a
 /// growing row of positional booleans, which is how a caller ends up passing
 /// "ready" where "colonized" was wanted.
@@ -392,7 +403,12 @@ fn draw_planet_info(
         draw_world_telemetry(&telemetry, panel_x + 15.0, panel_y + 147.0);
     }
 
-    let rules_y = panel_y + if telemetry.is_some() { 201.0 } else { 149.0 };
+    let rules_y = panel_y
+        + if telemetry.is_some() {
+            147.0 + world_telemetry_height()
+        } else {
+            149.0
+        };
     draw_ui_text(
         "World rules:",
         panel_x + 15.0,
@@ -481,7 +497,7 @@ fn draw_world_telemetry(telemetry: &WorldTelemetry, x: f32, y: f32) {
             telemetry.data_rate, telemetry.biomass_rate
         ),
         x,
-        y + 16.0,
+        world_telemetry_row_y(y, 1),
         9.0,
         Colors::TEXT,
     );
@@ -505,7 +521,7 @@ fn draw_world_telemetry(telemetry: &WorldTelemetry, x: f32, y: f32) {
             health.0
         ),
         x,
-        y + 16.0,
+        world_telemetry_row_y(y, 2),
         9.0,
         health.1,
     );

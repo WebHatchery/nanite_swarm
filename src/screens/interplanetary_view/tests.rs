@@ -1,4 +1,14 @@
-use super::{world_alert_code, world_rule_lines};
+use super::{world_alert_code, world_rule_lines, world_telemetry_height, world_telemetry_row_y};
+
+#[test]
+fn dossier_telemetry_rows_leave_room_for_the_stock_line() {
+    let base_y = 100.0;
+    assert_eq!(world_telemetry_row_y(base_y, 0), 100.0);
+    assert_eq!(world_telemetry_row_y(base_y, 1), 116.0);
+    assert_eq!(world_telemetry_row_y(base_y, 2), 132.0);
+    assert_eq!(world_telemetry_height(), 54.0);
+    assert!(world_telemetry_row_y(base_y, 2) < base_y + world_telemetry_height());
+}
 
 fn telemetry(alerts: usize, alert_kind: crate::state::WorldAlert) -> crate::state::WorldTelemetry {
     crate::state::WorldTelemetry {
