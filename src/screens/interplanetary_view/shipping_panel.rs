@@ -3,7 +3,7 @@
 use crate::state::{cargo_name, Shipment};
 use crate::ui::{draw_button_sized, draw_panel, Colors};
 use macroquad::prelude::*;
-use macroquad_toolkit::ui::{draw_ui_text, is_fully_visible, ScrollArea};
+use macroquad_toolkit::ui::{draw_ui_text, is_fully_visible, truncate_text_to_width, ScrollArea};
 
 use super::status::{driver_operation_status, landing_pad_operation_status};
 use super::{InterplanetaryAction, MapView};
@@ -86,8 +86,19 @@ pub(super) fn draw(
     } else {
         Colors::TEXT_DIM
     };
+    let rate = view
+        .export_rates
+        .get(view.editing_world)
+        .copied()
+        .unwrap_or(0.0);
+    let status_line = if edited_order.is_some() {
+        format!("{status}  |  {:.0}/min", rate)
+    } else {
+        format!("{status}  |  no route")
+    };
+    let status_line = truncate_text_to_width(&status_line, (w - 24.0).max(40.0), 11.0);
     draw_scrolled_text(
-        &status,
+        &status_line,
         x + 12.0,
         offset_y + 48.0,
         11.0,

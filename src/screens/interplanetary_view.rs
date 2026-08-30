@@ -101,6 +101,8 @@ pub struct MapView<'a> {
     pub pads_built: &'a [usize],
     /// The fullest live outbound pod on each world, for remote order edits.
     pub pod_fractions: &'a [f32],
+    /// Nominal throughput of each world's standing order, in units per minute.
+    pub export_rates: &'a [f32],
     pub shipments: &'a [Shipment],
     pub orders: &'a [Option<ExportOrder>],
     pub pending_pods: &'a [usize],

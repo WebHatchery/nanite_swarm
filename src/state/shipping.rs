@@ -198,6 +198,29 @@ impl PlanetState {
             / capacity
     }
 
+    /// The nominal cargo rate for this world's standing order, in units per
+    /// minute. Each powered driver fills its own pod; the schedule is a pause
+    /// after a full pod leaves, so it lowers the shared route rate without
+    /// changing the load speed. This is a planning number, not a promise that
+    /// the source has cargo or that the destination has a free pad.
+    pub fn export_rate_per_minute(&self) -> f32 {
+        let Some(order) = self.export else {
+            return 0.0;
+        };
+        let drivers = self.mass_drivers_online() as f32;
+        let load_rate = self.config.mass_driver.load_rate;
+        let pod_capacity = self.config.mass_driver.pod_capacity;
+        if drivers <= 0.0 || load_rate <= 0.0 || pod_capacity <= 0.0 {
+            return 0.0;
+        }
+        let fill_seconds = pod_capacity / load_rate;
+        let cycle_seconds = fill_seconds + order.schedule_seconds.max(0.0);
+        if cycle_seconds <= 0.0 || !cycle_seconds.is_finite() {
+            return 0.0;
+        }
+        (drivers * pod_capacity / cycle_seconds * 60.0).max(0.0)
+    }
+
     /// What one driver is doing, for the inspector: its route and its pod.
     pub fn export_summary(&self, pos: GridPos) -> String {
         let Some(order) = self.export else {

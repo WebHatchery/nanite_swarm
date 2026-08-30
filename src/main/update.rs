@@ -286,6 +286,12 @@ impl Game {
                 .map(|planet| planet.pod_fraction())
                 .unwrap_or(0.0)
         });
+        let export_rates: [f32; state::PLANET_COUNT] = std::array::from_fn(|index| {
+            self.campaign
+                .planet(index)
+                .map(|planet| planet.export_rate_per_minute())
+                .unwrap_or(0.0)
+        });
         let pending_pods: [usize; state::PLANET_COUNT] =
             std::array::from_fn(|index| self.campaign.pending_pod_count(index));
         let pod_caps: [usize; state::PLANET_COUNT] =
@@ -315,6 +321,7 @@ impl Game {
             pads: &pads,
             pads_built: &pads_built,
             pod_fractions: &pod_fractions,
+            export_rates: &export_rates,
             shipments: campaign.shipments(),
             orders: &orders,
             pending_pods: &pending_pods,

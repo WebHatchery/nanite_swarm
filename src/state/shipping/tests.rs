@@ -174,6 +174,51 @@ fn ore_is_carried_to_a_driver_that_has_somewhere_to_throw_it() {
 }
 
 #[test]
+fn export_rate_explains_the_effect_of_a_shipping_cooldown() {
+    let mut campaign = two_world_campaign();
+    driver_on_current(&mut campaign);
+    set_route(&mut campaign, VENUS, ResourceType::Minerals);
+
+    assert!((campaign.current().export_rate_per_minute() - 180.0).abs() < 0.001);
+
+    campaign
+        .current_mut()
+        .export
+        .as_mut()
+        .unwrap()
+        .schedule_seconds = 10.0;
+    assert!((campaign.current().export_rate_per_minute() - 120.0).abs() < 0.001);
+}
+
+#[test]
+fn export_rate_is_zero_without_a_route_or_online_driver() {
+    let mut campaign = two_world_campaign();
+    assert_eq!(campaign.current().export_rate_per_minute(), 0.0);
+
+    driver_on_current(&mut campaign);
+    set_route(&mut campaign, VENUS, ResourceType::Minerals);
+    let driver = campaign
+        .current()
+        .grid
+        .find_buildings(BuildingType::MassDriver)
+        .first()
+        .copied()
+        .unwrap();
+    campaign
+        .current_mut()
+        .grid
+        .get_mut(driver)
+        .unwrap()
+        .building
+        .as_mut()
+        .unwrap()
+        .standby = true;
+    campaign.current_mut().grid.update_power_grid();
+
+    assert_eq!(campaign.current().export_rate_per_minute(), 0.0);
+}
+
+#[test]
 fn changing_a_route_does_not_relabel_typed_cargo_in_the_hopper() {
     let mut campaign = two_world_campaign();
     let driver = driver_on_current(&mut campaign);
