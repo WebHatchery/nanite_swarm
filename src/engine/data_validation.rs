@@ -4,6 +4,9 @@ use crate::data::GameData;
 
 use super::{parse_modifier, BuildingType, ResourceType, StatId};
 
+#[cfg(test)]
+mod tests;
+
 pub(crate) fn validate_game_data(data: &GameData) -> Result<(), String> {
     validate_buildings(data)?;
     validate_research(data)?;
@@ -16,6 +19,20 @@ fn validate_buildings(data: &GameData) -> Result<(), String> {
         if BuildingType::from_id(&def.id).is_none() {
             return Err(format!(
                 "assets/buildings.json building \"{}\" has no engine type",
+                def.id
+            ));
+        }
+        if !is_nonnegative_finite(def.cost.minerals) || !is_nonnegative_finite(def.cost.energy) {
+            return Err(format!(
+                "assets/buildings.json building \"{}\" has invalid construction cost",
+                def.id
+            ));
+        }
+        if !is_nonnegative_finite(def.power_generation)
+            || !is_nonnegative_finite(def.power_consumption)
+        {
+            return Err(format!(
+                "assets/buildings.json building \"{}\" has invalid power values",
                 def.id
             ));
         }
@@ -78,6 +95,18 @@ fn validate_research(data: &GameData) -> Result<(), String> {
         }
     }
     for node in &data.research.nodes {
+        if !is_nonnegative_finite(node.data_cost) {
+            return Err(format!(
+                "assets/research.json node \"{}\" has an invalid data cost",
+                node.id
+            ));
+        }
+        if !node.position.0.is_finite() || !node.position.1.is_finite() {
+            return Err(format!(
+                "assets/research.json node \"{}\" has invalid map position",
+                node.id
+            ));
+        }
         for modifier in &node.modifiers {
             parse_modifier(modifier)
                 .map_err(|problem| format!("research node \"{}\": {problem}", node.id))?;
@@ -87,7 +116,36 @@ fn validate_research(data: &GameData) -> Result<(), String> {
 }
 
 fn validate_seed_ship(data: &GameData) -> Result<(), String> {
+    let intake = data.seed_ship.intake_per_second;
+    if [
+        intake.minerals,
+        intake.data,
+        intake.biomass,
+        intake.alloy,
+        intake.components,
+    ]
+    .into_iter()
+    .any(|value| !is_nonnegative_finite(value))
+    {
+        return Err("assets/seed_ship.json has invalid intake rates".to_string());
+    }
     for stage in &data.seed_ship.stages {
+        let cost = stage.cost;
+        if [
+            cost.minerals,
+            cost.data,
+            cost.biomass,
+            cost.alloy,
+            cost.components,
+        ]
+        .into_iter()
+        .any(|value| !is_nonnegative_finite(value))
+        {
+            return Err(format!(
+                "assets/seed_ship.json stage \"{}\" has an invalid cost",
+                stage.id
+            ));
+        }
         for modifier in &stage.modifiers {
             parse_modifier(modifier).map_err(|problem| {
                 format!("assets/seed_ship.json stage \"{}\": {problem}", stage.id)
@@ -106,4 +164,8 @@ fn validate_core_stages(data: &GameData) -> Result<(), String> {
         }
     }
     Ok(())
+}
+
+fn is_nonnegative_finite(value: f32) -> bool {
+    value.is_finite() && value >= 0.0
 }

@@ -208,6 +208,12 @@ pub fn parse_modifier(def: &ModifierDef) -> Result<(StatId, ModifierOp, f32), St
             def.op
         )
     })?;
+    if !def.value.is_finite() {
+        return Err(format!(
+            "modifier value for \"{}\" must be finite",
+            def.stat
+        ));
+    }
     Ok((stat, op, def.value))
 }
 

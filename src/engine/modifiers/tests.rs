@@ -86,6 +86,12 @@ fn parse_modifier_rejects_an_unknown_op() {
 }
 
 #[test]
+fn parse_modifier_rejects_a_nonfinite_value() {
+    let error = parse_modifier(&modifier("drill_output", "percent", f32::NAN)).unwrap_err();
+    assert!(error.contains("finite"), "{error}");
+}
+
+#[test]
 fn an_empty_sheet_leaves_every_base_value_alone() {
     let stats = Stats::default();
     for stat in StatId::ALL {

@@ -167,6 +167,30 @@ fn validate_planets(
 ) -> Result<(), String> {
     for planet in &data.planets {
         validate_planet_dimensions(planet)?;
+        if !planet.orbit_radius.is_finite()
+            || planet.orbit_radius <= 0.0
+            || !planet.size.is_finite()
+            || planet.size <= 0.0
+            || planet
+                .color
+                .iter()
+                .any(|value| !value.is_finite() || !(0.0..=1.0).contains(value))
+        {
+            return Err(format!(
+                "assets/planets.json planet \"{}\" has invalid map presentation values",
+                planet.id
+            ));
+        }
+        if !planet.hazards.acid_rain.is_finite()
+            || planet.hazards.acid_rain < 0.0
+            || !planet.hazards.freeze.is_finite()
+            || planet.hazards.freeze < 0.0
+        {
+            return Err(format!(
+                "assets/planets.json planet \"{}\" has invalid hazard strength",
+                planet.id
+            ));
+        }
         for id in planet
             .banned_buildings
             .iter()
@@ -189,11 +213,12 @@ fn validate_planets(
         }
         validate_planet_constraints(planet)?;
         for feature in &planet.features {
-            if feature.width <= 0.0
+            if !feature.width.is_finite()
+                || !feature.height.is_finite()
+                || feature.width <= 0.0
                 || feature.height <= 0.0
                 || feature.width > 1.0
                 || feature.height > 1.0
-                || feature.width + feature.height <= 0.0
             {
                 return Err(format!(
                     "assets/planets.json planet \"{}\" feature \"{}\" has invalid bounds",
@@ -232,11 +257,19 @@ fn validate_planet_dimensions(planet: &super::PlanetDef) -> Result<(), String> {
             planet.id
         ));
     }
-    let terrain_sum = planet.terrain.mountain
-        + planet.terrain.forest
-        + planet.terrain.water
-        + planet.terrain.void;
-    if !terrain_sum.is_finite() || !(0.0..=1.0).contains(&terrain_sum) {
+    let weights = [
+        planet.terrain.mountain,
+        planet.terrain.forest,
+        planet.terrain.water,
+        planet.terrain.void,
+    ];
+    let terrain_sum = weights.into_iter().sum::<f32>();
+    if weights
+        .into_iter()
+        .any(|weight| !weight.is_finite() || weight < 0.0)
+        || !terrain_sum.is_finite()
+        || !(0.0..=1.0).contains(&terrain_sum)
+    {
         return Err(format!(
             "assets/planets.json planet \"{}\" has invalid terrain weights",
             planet.id

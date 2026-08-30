@@ -66,3 +66,29 @@ fn invalid_planet_shape_is_rejected_before_runtime_use() {
         "assets/planets.json planet \"broken\" has an empty map"
     );
 }
+
+#[test]
+fn negative_terrain_weight_is_rejected_before_generation() {
+    let mut data = sample_data();
+    data.planets[2].terrain.mountain = -0.1;
+
+    let error = validate_game_data(&data).unwrap_err();
+
+    assert_eq!(
+        error,
+        "assets/planets.json planet \"mars\" has invalid terrain weights"
+    );
+}
+
+#[test]
+fn nonfinite_feature_bounds_are_rejected_before_rendering() {
+    let mut data = sample_data();
+    data.planets[2].features[0].width = f32::NAN;
+
+    let error = validate_game_data(&data).unwrap_err();
+
+    assert_eq!(
+        error,
+        "assets/planets.json planet \"mars\" feature \"landing_crater\" has invalid bounds"
+    );
+}
