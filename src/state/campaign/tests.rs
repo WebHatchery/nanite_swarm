@@ -4,6 +4,7 @@ use crate::engine::{BuildingType, GridPos};
 mod directives;
 mod launch;
 mod research;
+mod tutorial;
 
 fn campaign() -> Campaign {
     Campaign::new(GameConfig::default(), 42)

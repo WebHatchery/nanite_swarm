@@ -581,6 +581,11 @@ impl Campaign {
         // the caller is how a freshly colonized world ends up simulating on
         // starting-tier research.
         planet.adopt_research(&self.research);
+        // The tutorial is the opening lesson, not a per-world checklist. A
+        // later world can ban one of its early building goals (Venus and
+        // Saturn both reject Wind Turbines), so restarting it here would trap
+        // a successful launch behind an impossible step.
+        planet.tutorial_done = true;
         self.planets[index] = Some(planet);
         true
     }

@@ -11,6 +11,9 @@ The swarm is powerful, but every expansion changes the terrain, stresses the gri
   Efficient Drills and Power Efficiency prerequisites to the researched and
   built Mass Driver that opens the campaign's next world; research lessons
   pulse and center the next neural node on touch-sized views.
+- The opening lesson belongs to the starting world; newly colonized worlds
+  keep the arrival notice and visible controls without replaying steps that
+  may be forbidden by their own terrain and power rules.
 - Completing the opening lesson points to the visible SHIP control for the
   Seed Ship yard, then MAP for choosing the next world.
 - Connect structures through conduits and power networks.
