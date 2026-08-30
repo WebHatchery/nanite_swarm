@@ -164,15 +164,25 @@ impl Game {
     fn update_research_screen(&mut self) {
         self.advance_simulation();
         let data_context = self.session.data.clone();
+        let (data_available, research_locked, tutorial_target, active_condition) = {
+            let planet = self.campaign.current();
+            (
+                planet.resources.data,
+                planet.research_lock_timer > 0.0,
+                planet.tutorial_research_target().map(str::to_owned),
+                planet.active_planet_condition().map(str::to_owned),
+            )
+        };
         let sheet = self.campaign.current().stat_sheet();
         match render_research_view(screens::ResearchViewContext {
             data: data_context.data(),
             research_state: &self.research_state,
             research_tree: &self.research_tree,
-            data_available: self.campaign.current().resources.data,
-            research_locked: self.campaign.current().research_lock_timer > 0.0,
+            data_available,
+            research_locked,
+            tutorial_target: tutorial_target.as_deref(),
             sheet: &sheet,
-            active_condition: self.campaign.current().active_planet_condition(),
+            active_condition: active_condition.as_deref(),
             viewport: &mut self.research_viewport,
         }) {
             ResearchAction::Close => self.phase = self.research_return_phase,

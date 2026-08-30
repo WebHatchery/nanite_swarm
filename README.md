@@ -8,7 +8,9 @@ The swarm is powerful, but every expansion changes the terrain, stresses the gri
 
 - Place buildings on a tile grid to harvest and process resources.
 - The opening tutorial now carries the player from the first drill through the
-  researched and built Mass Driver that opens the campaign's next world.
+  Efficient Drills and Power Efficiency prerequisites to the researched and
+  built Mass Driver that opens the campaign's next world; research lessons
+  pulse and center the next neural node on touch-sized views.
 - Connect structures through conduits and power networks.
 - Use drones to move minerals and keep production flowing.
 - Route ore and alloy through multi-input precision assemblers to make flight-grade components.

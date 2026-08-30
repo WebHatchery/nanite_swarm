@@ -67,6 +67,7 @@ pub struct ResearchViewContext<'a> {
     pub research_tree: &'a ResearchTree,
     pub data_available: f32,
     pub research_locked: bool,
+    pub tutorial_target: Option<&'a str>,
     pub sheet: &'a [StatReading],
     pub active_condition: Option<&'a str>,
     pub viewport: &'a mut ResearchViewport,
@@ -80,6 +81,7 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
         research_tree,
         data_available,
         research_locked,
+        tutorial_target,
         sheet,
         active_condition,
         viewport,
@@ -124,6 +126,7 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
             research_state,
             view.tree,
             active_condition,
+            tutorial_target,
         );
         update_compact_viewport(viewport, view.tree);
         draw_compact_viewport_controls(viewport, screen_w, screen_w < 600.0);
@@ -340,6 +343,7 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
         );
         let is_current = research_state.current_research.as_ref() == Some(&node.id);
         let has_parked_progress = !is_current && research_state.progress_for(&node.id) > 0.001;
+        let is_tutorial_target = tutorial_target == Some(node.id.as_str()) && !is_unlocked;
 
         let target_radius = node_radius.max(22.0);
         let target = Rect::new(
@@ -394,6 +398,18 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
                 node_y,
                 glow_inner,
                 Color::new(0.0, 0.85, 1.0, 0.25 + pulse * 0.1),
+            );
+        }
+
+        if is_tutorial_target {
+            let target_radius = node_radius + 11.0 + pulse * 3.0;
+            draw_circle_lines(node_x, node_y, target_radius, 3.0, Colors::ACCENT);
+            draw_circle_lines(
+                node_x,
+                node_y,
+                target_radius + 5.0,
+                1.0,
+                Color::new(1.0, 0.7, 0.2, 0.55),
             );
         }
 

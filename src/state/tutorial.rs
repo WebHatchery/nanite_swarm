@@ -70,6 +70,14 @@ impl PlanetState {
         TutorialGoal::parse(&step.goal)?.highlighted_building()
     }
 
+    /// The research node the current lesson wants the player to open, if any.
+    /// The research screen uses this to keep a cross-screen instruction
+    /// actionable without making the player search the neural tree.
+    pub fn tutorial_research_target(&self) -> Option<&str> {
+        let step = self.tutorial_current()?;
+        (step.goal.kind == "research").then_some(step.goal.target.as_str())
+    }
+
     /// Has the current step's goal been met?
     fn tutorial_goal_met(&self, goal: &TutorialGoal) -> bool {
         match goal {

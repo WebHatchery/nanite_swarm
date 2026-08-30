@@ -31,6 +31,18 @@
       "goal": { "kind": "build", "target": "wind_turbine" }
     },
     {
+      "id": "efficient_drills_research",
+      "title": "Cut faster",
+      "instruction": "Tap RESEARCH, then tap EFFICIENT DRILLS. More ore makes the rail arrive sooner.",
+      "goal": { "kind": "research", "target": "efficient_drills" }
+    },
+    {
+      "id": "power_efficiency_research",
+      "title": "Make room on the grid",
+      "instruction": "Tap RESEARCH, then tap POWER EFFICIENCY. The rail needs room on the grid.",
+      "goal": { "kind": "research", "target": "power_efficiency" }
+    },
+    {
       "id": "mass_driver_research",
       "title": "Prepare the launch rail",
       "instruction": "Tap RESEARCH, then tap MASS DRIVER. The next world needs a live rail.",

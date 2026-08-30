@@ -151,7 +151,14 @@ fn compact_viewport_focuses_the_active_research_node() {
     let tree = Rect::new(12.0, 172.0, 296.0, 98.0);
     let mut viewport = ResearchViewport::default();
 
-    focus_compact_viewport(&mut viewport, &research_tree, &research_state, tree, None);
+    focus_compact_viewport(
+        &mut viewport,
+        &research_tree,
+        &research_state,
+        tree,
+        None,
+        None,
+    );
 
     let layout = TreeLayout::fit_with_min_scale(&research_tree.nodes, tree, 60.0)
         .with_view(viewport.zoom, (viewport.pan.x, viewport.pan.y));
@@ -176,9 +183,101 @@ fn short_phone_focus_uses_one_to_one_zoom_for_the_small_tree() {
     let tree = Rect::new(12.0, 172.0, 216.0, 70.0);
     let mut viewport = ResearchViewport::default();
 
-    focus_compact_viewport(&mut viewport, &research_tree, &research_state, tree, None);
+    focus_compact_viewport(
+        &mut viewport,
+        &research_tree,
+        &research_state,
+        tree,
+        None,
+        None,
+    );
 
     assert_eq!(viewport.zoom, 1.0);
+    let layout = TreeLayout::fit_with_min_scale(&research_tree.nodes, tree, 60.0)
+        .with_view(viewport.zoom, (viewport.pan.x, viewport.pan.y));
+    let focused = layout.to_screen((-3.5, -5.0));
+    let center = vec2(tree.x + tree.w * 0.5, tree.y + tree.h * 0.5);
+    assert!(vec2(focused.0, focused.1).distance(center) < 0.001);
+}
+
+#[test]
+fn compact_viewport_prioritizes_the_tutorial_research_target() {
+    let research_tree = ResearchTree::from_nodes(vec![
+        crate::engine::ResearchNode::new("core", "Core", "", 0.0, vec![], (0.0, 0.0)),
+        crate::engine::ResearchNode::new(
+            "tutorial",
+            "Tutorial",
+            "",
+            100.0,
+            vec!["core"],
+            (4.0, -6.0),
+        ),
+        crate::engine::ResearchNode::new("active", "Active", "", 100.0, vec!["core"], (-3.5, -5.0)),
+    ]);
+    let research_state = ResearchState {
+        unlocked: vec!["core".to_string()],
+        current_research: Some("active".to_string()),
+        research_progress: 20.0,
+        parked_progress: std::collections::HashMap::new(),
+    };
+    let tree = Rect::new(12.0, 172.0, 296.0, 98.0);
+    let mut viewport = ResearchViewport::default();
+
+    focus_compact_viewport(
+        &mut viewport,
+        &research_tree,
+        &research_state,
+        tree,
+        None,
+        Some("tutorial"),
+    );
+
+    let layout = TreeLayout::fit_with_min_scale(&research_tree.nodes, tree, 60.0)
+        .with_view(viewport.zoom, (viewport.pan.x, viewport.pan.y));
+    let focused = layout.to_screen((4.0, -6.0));
+    let center = vec2(tree.x + tree.w * 0.5, tree.y + tree.h * 0.5);
+    assert!(vec2(focused.0, focused.1).distance(center) < 0.001);
+}
+
+#[test]
+fn tutorial_target_focus_ignores_a_node_already_unlocked() {
+    let research_tree = ResearchTree::from_nodes(vec![
+        crate::engine::ResearchNode::new("core", "Core", "", 0.0, vec![], (0.0, 0.0)),
+        crate::engine::ResearchNode::new(
+            "unlocked_target",
+            "Unlocked",
+            "",
+            100.0,
+            vec!["core"],
+            (4.0, -6.0),
+        ),
+        crate::engine::ResearchNode::new(
+            "available",
+            "Available",
+            "",
+            100.0,
+            vec!["core"],
+            (-3.5, -5.0),
+        ),
+    ]);
+    let research_state = ResearchState {
+        unlocked: vec!["core".to_string(), "unlocked_target".to_string()],
+        current_research: None,
+        research_progress: 0.0,
+        parked_progress: std::collections::HashMap::new(),
+    };
+    let tree = Rect::new(12.0, 172.0, 296.0, 98.0);
+    let mut viewport = ResearchViewport::default();
+
+    focus_compact_viewport(
+        &mut viewport,
+        &research_tree,
+        &research_state,
+        tree,
+        None,
+        Some("unlocked_target"),
+    );
+
     let layout = TreeLayout::fit_with_min_scale(&research_tree.nodes, tree, 60.0)
         .with_view(viewport.zoom, (viewport.pan.x, viewport.pan.y));
     let focused = layout.to_screen((-3.5, -5.0));

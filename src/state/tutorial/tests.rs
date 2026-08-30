@@ -77,6 +77,7 @@ fn a_research_step_waits_for_the_research() {
     state.tutorial_step = 1;
     assert_eq!(state.tutorial_current().unwrap().id, "power_grid");
     assert_eq!(state.tutorial_highlight(), None, "nothing to point at");
+    assert_eq!(state.tutorial_research_target(), Some("power_grid"));
 
     state.update_tutorial();
     assert_eq!(state.tutorial_step, 1);
@@ -84,11 +85,36 @@ fn a_research_step_waits_for_the_research() {
     state.research.unlocked_techs.push("power_grid".to_string());
     state.update_tutorial();
     assert_eq!(state.tutorial_step, 2);
+    assert_eq!(state.tutorial_research_target(), None);
 }
 
 #[test]
 fn the_opening_lesson_reaches_the_first_campaign_launch_rail() {
     let steps = crate::data::test_data().data().tutorial.clone();
+    let efficient_drills = steps
+        .iter()
+        .position(|step| step.id == "efficient_drills_research")
+        .expect("the tutorial should teach efficient drills first");
+    let power_efficiency = steps
+        .iter()
+        .position(|step| step.id == "power_efficiency_research")
+        .expect("the tutorial should teach power efficiency first");
+    let mass_driver_research_index = steps
+        .iter()
+        .position(|step| step.id == "mass_driver_research")
+        .expect("the tutorial should teach the launch-rail research");
+    assert!(efficient_drills < mass_driver_research_index);
+    assert!(power_efficiency < mass_driver_research_index);
+
+    let efficient_drills_step = &steps[efficient_drills];
+    assert_eq!(efficient_drills_step.goal.kind, "research");
+    assert_eq!(efficient_drills_step.goal.target, "efficient_drills");
+    assert!(efficient_drills_step.instruction.contains("Tap RESEARCH"));
+    let power_efficiency_step = &steps[power_efficiency];
+    assert_eq!(power_efficiency_step.goal.kind, "research");
+    assert_eq!(power_efficiency_step.goal.target, "power_efficiency");
+    assert!(power_efficiency_step.instruction.contains("Tap RESEARCH"));
+
     let research = steps
         .iter()
         .find(|step| step.id == "mass_driver_research")

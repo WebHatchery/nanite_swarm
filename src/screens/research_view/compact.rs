@@ -88,6 +88,7 @@ pub(super) fn focus_compact_viewport(
     research_state: &ResearchState,
     tree: Rect,
     active_condition: Option<&str>,
+    tutorial_target: Option<&str>,
 ) {
     if !viewport.focus_pending {
         return;
@@ -100,22 +101,25 @@ pub(super) fn focus_compact_viewport(
         viewport.zoom = 1.0;
     }
 
-    let focus_position = research_state
-        .current_research
-        .as_deref()
-        .and_then(|id| research_tree.get_node(id))
+    let focus_position = tutorial_target_position(research_tree, research_state, tutorial_target)
         .or_else(|| {
-            research_tree.nodes.iter().find(|node| {
-                !research_state.is_unlocked(&node.id)
-                    && research_tree.can_select_on(
-                        &node.id,
-                        &research_state.unlocked,
-                        active_condition,
-                    )
-            })
-        })
-        .or_else(|| research_tree.nodes.first())
-        .map(|node| node.position);
+            research_state
+                .current_research
+                .as_deref()
+                .and_then(|id| research_tree.get_node(id))
+                .or_else(|| {
+                    research_tree.nodes.iter().find(|node| {
+                        !research_state.is_unlocked(&node.id)
+                            && research_tree.can_select_on(
+                                &node.id,
+                                &research_state.unlocked,
+                                active_condition,
+                            )
+                    })
+                })
+                .or_else(|| research_tree.nodes.first())
+                .map(|node| node.position)
+        });
 
     if let Some(position) = focus_position {
         let layout = TreeLayout::fit_with_min_scale(&research_tree.nodes, tree, 60.0)
@@ -128,6 +132,15 @@ pub(super) fn focus_compact_viewport(
     viewport.center_pan = viewport.pan;
     viewport.center_zoom = viewport.zoom;
     viewport.focus_pending = false;
+}
+
+fn tutorial_target_position(
+    research_tree: &ResearchTree,
+    research_state: &ResearchState,
+    tutorial_target: Option<&str>,
+) -> Option<(f32, f32)> {
+    let target = tutorial_target.and_then(|id| research_tree.get_node(id))?;
+    (!research_state.is_unlocked(&target.id)).then_some(target.position)
 }
 
 /// Track a drag from the shared pointer so a finger can pan the same compact
