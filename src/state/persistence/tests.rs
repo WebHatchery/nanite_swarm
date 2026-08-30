@@ -165,6 +165,21 @@ fn json_roundtrip_preserves_grid_and_resources() {
 }
 
 #[test]
+fn seed_ship_commitment_survives_a_save_roundtrip() {
+    let mut campaign = campaign();
+    campaign.current_mut().toggle_seed_ship_commitment();
+    assert!(campaign.current().seed_ship.committed);
+
+    let json = save_to_json(&mut campaign).unwrap();
+    let loaded = load_from_json(&json).unwrap();
+
+    assert!(
+        loaded.current().seed_ship.committed,
+        "the yard must remain committed after a save/load"
+    );
+}
+
+#[test]
 fn parked_research_progress_survives_a_save_roundtrip() {
     let mut campaign = campaign();
     campaign

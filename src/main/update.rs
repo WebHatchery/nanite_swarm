@@ -222,6 +222,10 @@ impl Game {
             SeedShipAction::OpenResearch => self.open_research_screen(GamePhase::SeedShip),
             SeedShipAction::ToggleCommitment => {
                 self.campaign.current_mut().toggle_seed_ship_commitment();
+                // Commitment changes the durable production plan. Save before
+                // the player can leave the yard so a quick menu exit or tab
+                // close cannot erase the decision.
+                self.save_campaign();
             }
             SeedShipAction::None => {}
         }
