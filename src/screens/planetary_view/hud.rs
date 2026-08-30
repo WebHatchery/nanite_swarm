@@ -133,6 +133,22 @@ pub(super) fn draw_ui_panels(
                 ui_action = PlanetaryAction::RetrySave;
             }
         }
+        bottom_bar::ClockAction::FocusAlert => {
+            if ui_action == PlanetaryAction::None {
+                if let Some(position) = state.focus_next_alert() {
+                    let grid_size = (
+                        state.grid.width as f32 * metrics.tile_size,
+                        state.grid.height as f32 * metrics.tile_size,
+                    );
+                    state.camera.center_on_grid(
+                        position,
+                        metrics.viewport(screen_w, screen_h),
+                        metrics.tile_size,
+                        grid_size,
+                    );
+                }
+            }
+        }
         bottom_bar::ClockAction::None => {}
     }
 

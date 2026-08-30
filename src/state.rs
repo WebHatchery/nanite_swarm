@@ -6,6 +6,7 @@
 
 mod achievements;
 mod actions;
+mod alerts;
 mod audio;
 mod auto_clock;
 mod camera;

@@ -1,4 +1,5 @@
 use super::*;
+use crate::engine::GridPos;
 
 #[test]
 fn a_fresh_camera_shows_the_map_unscaled_from_its_origin() {
@@ -14,6 +15,24 @@ fn panning_accumulates() {
     camera.pan_by(10.0, -5.0);
     camera.pan_by(2.0, 1.0);
     assert_eq!((camera.pan_x, camera.pan_y), (12.0, -4.0));
+}
+
+#[test]
+fn centering_places_a_tile_in_the_middle_of_the_viewport() {
+    let mut camera = Camera::default();
+    camera.center_on_grid(GridPos::new(8, 6), (800.0, 600.0), 28.0, (560.0, 448.0));
+
+    assert!((camera.pan_x - 162.0).abs() < 0.001);
+    assert!((camera.pan_y - 118.0).abs() < 0.001);
+}
+
+#[test]
+fn centering_keeps_the_map_inside_its_visibility_clamp() {
+    let mut camera = Camera::default();
+    camera.center_on_grid(GridPos::new(0, 0), (300.0, 220.0), 28.0, (560.0, 448.0));
+
+    assert_eq!(camera.pan_x, 136.0);
+    assert_eq!(camera.pan_y, 96.0);
 }
 
 #[test]

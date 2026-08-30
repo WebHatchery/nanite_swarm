@@ -23,6 +23,7 @@ pub(super) enum ClockAction {
     ToggleFlow,
     ToggleDeck,
     RetrySave,
+    FocusAlert,
 }
 
 fn next_event_code(label: &str) -> &'static str {
@@ -87,6 +88,7 @@ pub(super) fn draw(
         + i32::from(starved > 0)
         + i32::from(blocked > 0)
         + i32::from(stalled > 0);
+    let focusable_alert = congested > 0 || starved > 0 || blocked > 0 || stalled > 0;
     let flow_alert = state.power_collapse_shutdown > 0.0
         || state.power_balance < 0.0
         || congested > 0
@@ -139,6 +141,7 @@ pub(super) fn draw(
         state.restored_from_backup,
         flow_alert,
         state.flow_overlay,
+        focusable_alert,
     ) {
         if draw_hud_button(
             theme,
@@ -454,16 +457,21 @@ fn alert_button(
     restored_from_backup: bool,
     flow_alert: bool,
     flow_overlay: bool,
+    focusable_alert: bool,
 ) -> Option<(&'static str, ClockAction)> {
     if save_failed {
         Some(("RETRY", ClockAction::RetrySave))
     } else if restored_from_backup {
         Some(("SAVE NOW", ClockAction::RetrySave))
     } else if flow_alert {
-        Some((
-            if flow_overlay { "FLOW ON" } else { "FLOW" },
-            ClockAction::ToggleFlow,
-        ))
+        if focusable_alert {
+            Some(("JUMP", ClockAction::FocusAlert))
+        } else {
+            Some((
+                if flow_overlay { "FLOW ON" } else { "FLOW" },
+                ClockAction::ToggleFlow,
+            ))
+        }
     } else {
         None
     }

@@ -7,6 +7,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::engine::GridPos;
+
 pub const MIN_ZOOM: f32 = 0.5;
 pub const MAX_ZOOM: f32 = 2.5;
 /// Multiplier per wheel notch.
@@ -36,6 +38,27 @@ impl Camera {
     pub fn pan_by(&mut self, dx: f32, dy: f32) {
         self.pan_x += dx;
         self.pan_y += dy;
+    }
+
+    /// Center a grid tile in the available map viewport, then apply the same
+    /// visibility clamp used after manual panning.
+    pub fn center_on_grid(
+        &mut self,
+        position: GridPos,
+        viewport: (f32, f32),
+        tile_size: f32,
+        grid_size: (f32, f32),
+    ) {
+        if !tile_size.is_finite()
+            || tile_size <= 0.0
+            || !viewport.0.is_finite()
+            || !viewport.1.is_finite()
+        {
+            return;
+        }
+        self.pan_x = viewport.0 * 0.5 - (position.x as f32 + 0.5) * tile_size;
+        self.pan_y = viewport.1 * 0.5 - (position.y as f32 + 0.5) * tile_size;
+        self.clamp_to_viewport(viewport, grid_size);
     }
 
     /// Zoom by `notches` wheel steps, keeping whatever is under the cursor
