@@ -23,6 +23,7 @@ use world_dossier::{
 pub enum InterplanetaryAction {
     None,
     Close,
+    CancelLaunch,
     SelectPlanet(usize),
     RequestLaunch(usize),
     LaunchSeedShip(usize),
@@ -144,8 +145,17 @@ pub fn render_interplanetary_view(
     draw_panel(0.0, 0.0, screen_w, header_height);
     draw_ui_text("Solar System", 18.0, 30.0, 18.0, Colors::PRIMARY);
     draw_ui_text("Planetary Map", 18.0, 52.0, 12.0, Colors::TEXT_DIM);
-    if draw_button_sized(screen_w - 110.0, 18.0, 80.0, 34.0, "Back") {
-        return InterplanetaryAction::Close;
+    let back_label = if view.launch_confirmation_target.is_some() {
+        "Cancel"
+    } else {
+        "Back"
+    };
+    if draw_button_sized(screen_w - 110.0, 18.0, 80.0, 34.0, back_label) {
+        return if view.launch_confirmation_target.is_some() {
+            InterplanetaryAction::CancelLaunch
+        } else {
+            InterplanetaryAction::Close
+        };
     }
 
     let driver_label = mass_driver_status_label(
@@ -418,8 +428,13 @@ pub fn render_interplanetary_view(
     draw_legend(screen_w, screen_h);
 
     // Instructions
+    let footer = if view.launch_confirmation_target.is_some() {
+        "Tap CONFIRM row to launch | Tap Cancel to clear | Tap a freight lane to inspect"
+    } else {
+        "Tap a planet to travel or launch | Tap a freight lane to inspect | Tap Back"
+    };
     draw_ui_text(
-        "Tap a planet to travel or launch | Tap a freight lane to inspect | Tap Back",
+        footer,
         20.0,
         screen_h - 20.0,
         Dimensions::FONT_SIZE_SMALL,

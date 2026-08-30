@@ -46,9 +46,9 @@ pub(super) fn launch_action(index: usize, confirming: bool) -> InterplanetaryAct
 
 pub(super) fn launch_prompt(confirming: bool) -> &'static str {
     if confirming {
-        "Tap again to launch the Seed Ship"
+        "Tap CONFIRM row to launch Seed Ship"
     } else {
-        "Tap to prepare launch"
+        "Tap world row to prepare launch"
     }
 }
 

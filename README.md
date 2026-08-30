@@ -133,8 +133,8 @@ Its header distinguishes a Mass Driver that is not built from one that is
 built but offline, and explains when a finished Seed Ship still needs a live
 driver.
 Tap an untouched world once to prepare a launch, then tap its highlighted
-`CONFIRM` row again to confirm; travel to an already-colonized world remains
-one tap.
+`CONFIRM` row again to confirm; tap `CANCEL` to clear the armed launch.
+Travel to an already-colonized world remains one tap.
 At compact browser sizes, the resource cards abbreviate and the build/right
 panels use short summaries so touch controls remain separated and visible.
 At short desktop heights or tablet widths, Solar System uses full-width Worlds

@@ -545,7 +545,7 @@ fn draw_mobile_planet_info(
     } else if is_colonized {
         "Tap world row to travel"
     } else if can_launch {
-        "Tap world row to launch the Seed Ship"
+        super::launch_prompt(view.launch_confirmation_target == Some(index))
     } else if !view.mass_driver_researched {
         "Requires Mass Driver research"
     } else if view.current_drivers_online == 0 {

@@ -371,6 +371,12 @@ impl Game {
                 self.save_campaign();
                 self.phase = GamePhase::Playing;
             }
+            InterplanetaryAction::CancelLaunch => {
+                self.launch_confirmation_target = None;
+                self.campaign
+                    .current_mut()
+                    .emit_audio(state::AudioEvent::UiBack);
+            }
             InterplanetaryAction::SelectPlanet(index) => {
                 self.launch_confirmation_target = None;
                 if self.campaign.travel_to(index) {

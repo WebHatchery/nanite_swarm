@@ -86,8 +86,8 @@ fn launching_an_untouched_world_requires_a_second_tap() {
         launch_action(0, true),
         super::InterplanetaryAction::LaunchSeedShip(0)
     );
-    assert_eq!(launch_prompt(false), "Tap to prepare launch");
-    assert_eq!(launch_prompt(true), "Tap again to launch the Seed Ship");
+    assert_eq!(launch_prompt(true), "Tap CONFIRM row to launch Seed Ship");
+    assert_eq!(launch_prompt(false), "Tap world row to prepare launch");
 }
 
 #[test]
