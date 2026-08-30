@@ -2,7 +2,8 @@
 
 use crate::data::UiTheme;
 use crate::engine::GridPos;
-use crate::state::Camera;
+use crate::state::{Camera, MobilePanel};
+use macroquad::prelude::{vec2, Rect};
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct HudMetrics {
@@ -17,6 +18,7 @@ pub(super) struct HudMetrics {
     pub(super) panel_gap: f32,
     pub(super) panel_padding: f32,
     pub(super) build_row_height: f32,
+    pub(super) mobile: bool,
 }
 
 impl HudMetrics {
@@ -29,6 +31,7 @@ impl HudMetrics {
     ) -> Self {
         let compact_height = screen_h < 760.0;
         let compact_width = screen_w < 1260.0;
+        let mobile = screen_w < 600.0;
         Self {
             tile_size: theme.layout.tile_size * camera.zoom,
             pan_x: camera.pan_x,
@@ -38,14 +41,14 @@ impl HudMetrics {
             } else {
                 theme.layout.top_bar_height
             },
-            left_panel_width: if focus_mode {
+            left_panel_width: if focus_mode || mobile {
                 0.0
             } else if compact_width {
                 260.0
             } else {
                 theme.layout.left_panel_width
             },
-            right_panel_width: if focus_mode {
+            right_panel_width: if focus_mode || mobile {
                 0.0
             } else if compact_width {
                 292.0
@@ -64,6 +67,25 @@ impl HudMetrics {
             } else {
                 theme.layout.build_row_height
             },
+            mobile,
+        }
+    }
+
+    pub(super) fn mobile_build_panel(self, screen_w: f32) -> Self {
+        Self {
+            left_panel_width: (screen_w - 5.0).max(0.0),
+            right_panel_width: 0.0,
+            mobile: false,
+            ..self
+        }
+    }
+
+    pub(super) fn mobile_info_panel(self, screen_w: f32) -> Self {
+        Self {
+            left_panel_width: 0.0,
+            right_panel_width: (screen_w - 20.0).max(0.0),
+            mobile: false,
+            ..self
         }
     }
 
@@ -123,6 +145,7 @@ pub(super) fn is_cursor_over_ui(
     screen_w: f32,
     screen_h: f32,
     metrics: HudMetrics,
+    mobile_panel: MobilePanel,
 ) -> bool {
     if screen_y <= metrics.top_bar_height || screen_y >= screen_h - metrics.bottom_bar_height {
         return true;
@@ -132,6 +155,21 @@ pub(super) fn is_cursor_over_ui(
     }
     if screen_x >= screen_w - metrics.right_panel_width {
         return true;
+    }
+    if metrics.mobile {
+        let panel_rect = Rect::new(
+            8.0,
+            metrics.top_bar_height + 8.0,
+            (screen_w - 16.0).max(0.0),
+            (screen_h - metrics.top_bar_height - metrics.bottom_bar_height - 16.0).max(0.0),
+        );
+        if mobile_panel != MobilePanel::Map {
+            return panel_rect.contains(vec2(screen_x, screen_y));
+        }
+        let tutorial_rect = Rect::new(panel_rect.x, panel_rect.y, panel_rect.w, 82.0);
+        if tutorial_rect.contains(vec2(screen_x, screen_y)) {
+            return true;
+        }
     }
     false
 }

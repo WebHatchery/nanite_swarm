@@ -61,12 +61,25 @@ pub fn render_planetary_view(
     // so drawing and hit-testing agree about which tile is under the cursor.
     let (mouse_x, mouse_y) = mouse_position();
     let layout = HudMetrics::for_screen(theme, screen_w, screen_h, state.camera, state.focus_mode);
-    let cursor_over_ui = is_cursor_over_ui(mouse_x, mouse_y, screen_w, screen_h, layout);
+    let cursor_over_ui = is_cursor_over_ui(
+        mouse_x,
+        mouse_y,
+        screen_w,
+        screen_h,
+        layout,
+        state.mobile_panel,
+    );
     let touch = state.touch_gesture.update();
     if touch.active && !state.touch_gesture_routed {
         state.touch_gesture_routed = true;
-        state.touch_camera_active =
-            !is_cursor_over_ui(touch.center.x, touch.center.y, screen_w, screen_h, layout);
+        state.touch_camera_active = !is_cursor_over_ui(
+            touch.center.x,
+            touch.center.y,
+            screen_w,
+            screen_h,
+            layout,
+            state.mobile_panel,
+        );
         let starts_on_building = state.touch_camera_active
             && touches().len() == 1
             && screen_to_grid(touch.center.x, touch.center.y, layout)

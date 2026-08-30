@@ -20,6 +20,7 @@ mod launch;
 mod logistics;
 mod migrations;
 mod milestone;
+mod mobile;
 mod particles;
 #[cfg(test)]
 mod performance;
@@ -42,6 +43,7 @@ pub use factory::*;
 pub use game_state::*;
 pub use launch::*;
 pub use milestone::*;
+pub use mobile::*;
 pub use persistence::*;
 pub use seed_ship::*;
 pub use shipping::*;

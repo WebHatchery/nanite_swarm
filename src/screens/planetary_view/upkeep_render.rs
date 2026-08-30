@@ -2,7 +2,7 @@
 //! how worn a building is, and how far its upkeep reaches.
 
 use crate::engine::GridPos;
-use crate::state::PlanetState;
+use crate::state::{MobilePanel, PlanetState};
 use crate::ui::Colors;
 use macroquad::prelude::*;
 use macroquad_toolkit::colors::with_alpha;
@@ -321,6 +321,20 @@ fn draw_coverage_area(
 /// already a panel, so the placement is done by hand and only the drawing is
 /// borrowed.
 pub(super) fn draw_notifications(state: &PlanetState, metrics: HudMetrics, screen_w: f32) {
+    if metrics.mobile {
+        // A drawer owns the whole portrait center; toasts would otherwise be
+        // painted over building cards and their touch targets. The map still
+        // has a reserved strip below the tutorial for transient notices.
+        if state.mobile_panel != MobilePanel::Map {
+            return;
+        }
+        let anchor = crate::screens::ToastAnchor {
+            x: 12.0,
+            y: metrics.top_bar_height + 96.0,
+        };
+        crate::screens::draw_toasts(state, anchor);
+        return;
+    }
     // Clear of the right-hand panel stack, which the full-screen menus do not
     // have and so anchor differently.
     let anchor = crate::screens::ToastAnchor {

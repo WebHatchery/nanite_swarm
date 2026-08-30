@@ -3,7 +3,7 @@
 use crate::assets::GameTextures;
 use crate::data::UiTheme;
 use crate::engine::BuildingType;
-use crate::state::PlanetState;
+use crate::state::{MobilePanel, PlanetState};
 use crate::ui::{color_from_rgba, draw_hud_button, draw_hud_panel};
 use macroquad::prelude::*;
 use macroquad_toolkit::colors::with_alpha;
@@ -51,6 +51,7 @@ fn draw_build_row(
     height: f32,
     building_type: BuildingType,
     interactive: bool,
+    close_on_select: bool,
 ) -> f32 {
     let data_context = state.data.clone();
     let data = data_context.data();
@@ -238,6 +239,9 @@ fn draw_build_row(
 
     if unlocked && interactive && pointer.released_on(rect) {
         state.select_building(building_type);
+        if close_on_select {
+            state.mobile_panel = MobilePanel::Map;
+        }
     }
 
     height
@@ -250,6 +254,7 @@ pub(super) fn draw(
     metrics: HudMetrics,
     colors: &PanelColors,
     screen_h: f32,
+    close_on_select: bool,
 ) {
     let data_context = state.data.clone();
     let data = data_context.data();
@@ -340,6 +345,7 @@ pub(super) fn draw(
             metrics.build_row_height,
             building,
             rows_interactive,
+            close_on_select,
         );
     }
 

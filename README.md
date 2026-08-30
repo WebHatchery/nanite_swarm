@@ -63,6 +63,8 @@ The Solar System map recentres and scales its orbit rings on narrow windows;
 the planet list remains a touch-sized travel and launch control.
 At compact browser sizes, the resource cards abbreviate and the build/right
 panels use short summaries so touch controls remain separated and visible.
+On portrait screens, BUILD and INFO open one full-width drawer at a time;
+MAP returns to the live grid between actions.
 
 Factory controls:
 

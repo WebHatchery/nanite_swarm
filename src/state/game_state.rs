@@ -367,6 +367,10 @@ pub struct PlanetState {
     pub camera_drag_anchor: Option<(f32, f32)>,
     #[serde(skip, default)]
     pub show_help: bool,
+    /// Portrait-only drawer selection; this is session UI, never campaign
+    /// state, so loading a save returns to the map.
+    #[serde(skip, default)]
+    pub mobile_panel: super::mobile::MobilePanel,
     /// Hide both side stacks while planning dense routes. Persisted per world
     /// because a returning touch player should keep the viewport they chose.
     #[serde(default)]
@@ -587,6 +591,7 @@ impl PlanetState {
             touch_gesture_routed: false,
             camera_drag_anchor: None,
             show_help: false,
+            mobile_panel: super::mobile::MobilePanel::Map,
             focus_mode: false,
             flow_overlay: false,
             auto_clocking: false,

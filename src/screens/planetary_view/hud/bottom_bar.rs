@@ -1,5 +1,7 @@
 //! Bottom command bar: alerts, controls legend, mission time, speed, and help overlay
 
+mod mobile;
+
 use crate::data::UiTheme;
 use crate::state::{GraphMode, PlanetState};
 use crate::ui::{color_from_rgba, draw_hud_button, draw_hud_panel};
@@ -24,6 +26,10 @@ pub(super) enum ClockAction {
     ToggleDeck,
     RetrySave,
     FocusAlert,
+    ToggleMobileBuild,
+    ToggleMobileInfo,
+    CloseMobilePanel,
+    ToggleHelp,
     ZoomOut,
     ZoomIn,
     CycleGraph,
@@ -48,6 +54,9 @@ pub(super) fn draw(
     metrics: HudMetrics,
     colors: &PanelColors,
 ) -> ClockAction {
+    if metrics.mobile {
+        return mobile::draw(state, screen_w, screen_h, theme, metrics, colors);
+    }
     let text = colors.text;
     let dim = colors.dim;
     let primary = colors.primary;

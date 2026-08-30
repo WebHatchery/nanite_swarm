@@ -61,6 +61,9 @@ pub(super) fn draw(
     theme: &UiTheme,
     colors: &PanelColors,
 ) -> PlanetaryAction {
+    if metrics.mobile {
+        return draw_mobile(state, screen_w, metrics, theme, colors);
+    }
     let mut ui_action = PlanetaryAction::None;
     let dim = colors.dim;
     let primary = colors.primary;
@@ -377,6 +380,71 @@ pub(super) fn draw(
     }
 
     ui_action
+}
+
+fn draw_mobile(
+    state: &PlanetState,
+    screen_w: f32,
+    metrics: HudMetrics,
+    theme: &UiTheme,
+    colors: &PanelColors,
+) -> PlanetaryAction {
+    draw_hud_panel(
+        theme,
+        Rect::new(0.0, 0.0, screen_w, metrics.top_bar_height),
+        None,
+    );
+    draw_line(24.0, 24.0, 36.0, 14.0, 1.5, colors.primary);
+    draw_line(24.0, 24.0, 36.0, 34.0, 1.5, colors.primary);
+    draw_line(48.0, 24.0, 36.0, 14.0, 1.5, colors.primary_soft);
+    draw_line(48.0, 24.0, 36.0, 34.0, 1.5, colors.primary_soft);
+    draw_circle(36.0, 24.0, 4.0, colors.primary);
+    draw_ui_text("NANITE SWARM", 58.0, 18.0, 11.0, colors.primary);
+    draw_ui_text(
+        &format!(
+            "E{:.0}  M{:.0}  D{:.0}  C{:.0}",
+            state.resources.energy,
+            state.resources.minerals,
+            state.resources.data,
+            state.resources.components
+        ),
+        58.0,
+        31.0,
+        8.0,
+        colors.dim,
+    );
+    let status = if state.save_failed {
+        "SAVE FAILED".to_string()
+    } else if state.power_collapse_shutdown > 0.0 {
+        "POWER COLLAPSE".to_string()
+    } else if state.battery_seconds <= 0.0 {
+        "HIBERNATION".to_string()
+    } else {
+        state.hazard_label()
+    };
+    if !status.is_empty() {
+        draw_ui_text(&status, screen_w - 108.0, 20.0, 8.0, colors.warning);
+    }
+
+    let gap = 6.0;
+    let button_w = ((screen_w - 20.0 - gap * 3.0) / 4.0).max(48.0);
+    let labels = ["RESEARCH", "SHIP", "MAP", "MENU"];
+    let mut action = PlanetaryAction::None;
+    for (index, label) in labels.iter().enumerate() {
+        if draw_hud_button(
+            theme,
+            Rect::new(10.0 + (button_w + gap) * index as f32, 38.0, button_w, 30.0),
+            label,
+        ) {
+            action = match index {
+                0 => PlanetaryAction::OpenResearch,
+                1 => PlanetaryAction::OpenSeedShip,
+                2 => PlanetaryAction::OpenInterplanetary,
+                _ => PlanetaryAction::OpenMenu,
+            };
+        }
+    }
+    action
 }
 
 #[cfg(test)]

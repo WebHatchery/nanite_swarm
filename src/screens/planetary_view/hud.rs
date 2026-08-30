@@ -4,6 +4,7 @@ mod bottom_bar;
 mod build_palette;
 mod directive_panel;
 mod inspector_panel;
+mod mobile;
 mod power_ops_panel;
 mod top_bar;
 
@@ -11,7 +12,7 @@ use crate::assets::GameTextures;
 use crate::data::UiTheme;
 use crate::directives::Directive;
 use crate::engine::GridPos;
-use crate::state::PlanetState;
+use crate::state::{MobilePanel, PlanetState};
 use crate::ui::color_from_rgba;
 use macroquad::prelude::*;
 
@@ -99,6 +100,21 @@ impl RightStackLayout {
             directive: Rect::new(right_x, directive_y, right_w, directive_h),
         }
     }
+
+    pub(super) fn mobile_tutorial(screen_w: f32, metrics: HudMetrics) -> Self {
+        let right_x = 10.0;
+        let right_w = (screen_w - 20.0).max(0.0);
+        let directive = Rect::new(right_x, metrics.top_bar_height + 8.0, right_w, 82.0);
+        Self {
+            right_x,
+            right_w,
+            compact: true,
+            inspector: Rect::new(right_x, 0.0, right_w, 0.0),
+            power: Rect::new(right_x, 0.0, right_w, 0.0),
+            ops: Rect::new(right_x, 0.0, right_w, 0.0),
+            directive,
+        }
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -116,8 +132,23 @@ pub(super) fn draw_ui_panels(
 
     let mut ui_action = top_bar::draw(state, screen_w, metrics, theme, &colors);
 
-    if !state.focus_mode {
-        build_palette::draw(state, theme, textures, metrics, &colors, screen_h);
+    if metrics.mobile {
+        let mobile_action = mobile::draw(
+            state,
+            screen_w,
+            screen_h,
+            hovered_pos,
+            directive,
+            textures,
+            theme,
+            &colors,
+            metrics,
+        );
+        if ui_action == PlanetaryAction::None {
+            ui_action = mobile_action;
+        }
+    } else if !state.focus_mode {
+        build_palette::draw(state, theme, textures, metrics, &colors, screen_h, false);
 
         let right = RightStackLayout::compute(screen_w, screen_h, metrics);
         inspector_panel::draw(state, hovered_pos, textures, theme, &colors, &right);
@@ -138,6 +169,22 @@ pub(super) fn draw_ui_panels(
             }
         }
         bottom_bar::ClockAction::ToggleFocus => state.focus_mode = !state.focus_mode,
+        bottom_bar::ClockAction::ToggleMobileBuild => {
+            state.mobile_panel = if state.mobile_panel == MobilePanel::Build {
+                MobilePanel::Map
+            } else {
+                MobilePanel::Build
+            };
+        }
+        bottom_bar::ClockAction::ToggleMobileInfo => {
+            state.mobile_panel = if state.mobile_panel == MobilePanel::Info {
+                MobilePanel::Map
+            } else {
+                MobilePanel::Info
+            };
+        }
+        bottom_bar::ClockAction::CloseMobilePanel => state.mobile_panel = MobilePanel::Map,
+        bottom_bar::ClockAction::ToggleHelp => state.show_help = !state.show_help,
         bottom_bar::ClockAction::ToggleFlow => state.flow_overlay = !state.flow_overlay,
         bottom_bar::ClockAction::ToggleDeck => state.factory_deck_open = !state.factory_deck_open,
         bottom_bar::ClockAction::CycleGraph => state.graph_mode = state.graph_mode.next(),

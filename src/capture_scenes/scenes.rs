@@ -13,6 +13,7 @@ impl Game {
         // Batched captures reuse one game process; view-only state from one
         // scene must not leak into the next image.
         self.campaign.current_mut().focus_mode = false;
+        self.campaign.current_mut().mobile_panel = state::MobilePanel::Map;
         self.campaign.current_mut().flow_overlay = false;
         self.campaign.current_mut().auto_clocking = false;
         self.campaign.current_mut().save_failed = false;
@@ -47,6 +48,24 @@ impl Game {
                 // screen is one the game actually raised.
                 self.campaign.directive.completed = true;
                 self.campaign.update_directive(0.1);
+            }
+            "mobile_build" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                let planet = self.campaign.current_mut();
+                planet.mobile_panel = state::MobilePanel::Build;
+                planet.select_building(engine::BuildingType::Drill);
+            }
+            "mobile_info" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                let planet = self.campaign.current_mut();
+                planet.mobile_panel = state::MobilePanel::Info;
+                planet.selected_building = None;
+                planet.selected_tile = planet
+                    .grid
+                    .find_buildings(engine::BuildingType::Drill)
+                    .pop();
             }
             "logistics" => {
                 self.phase = GamePhase::Playing;
