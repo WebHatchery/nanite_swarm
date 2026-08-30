@@ -51,7 +51,12 @@ pub(super) fn draw(
             (world != view.editing_world && order.is_some()).then_some(world)
         })
         .collect();
-    let bar_y = 340.0f32.max(318.0 + remote_worlds.len() as f32 * REMOTE_ROW_HEIGHT + 8.0);
+    let route_note_lines = edited_order
+        .map(|order| route_note_count(view, view.editing_world, order))
+        .unwrap_or(0);
+    let remote_section_shift = remote_section_shift(route_note_lines);
+    let bar_y = 340.0f32
+        .max(318.0 + remote_section_shift + remote_worlds.len() as f32 * REMOTE_ROW_HEIGHT + 8.0);
     let listed_flights = view.shipments.len().min(LISTED_SHIPMENTS);
     let extra_flight_line = if view.shipments.len() > LISTED_SHIPMENTS {
         16.0
@@ -287,12 +292,12 @@ pub(super) fn draw(
         draw_scrolled_text(
             "Remote standing orders",
             x + 12.0,
-            offset_y + 300.0,
+            offset_y + 300.0 + remote_section_shift,
             10.0,
             Colors::PRIMARY,
             content_view,
         );
-        let mut row_y = 318.0;
+        let mut row_y = 318.0 + remote_section_shift;
         for world in remote_worlds {
             let Some(order) = view.orders.get(world).copied().flatten() else {
                 continue;
@@ -428,6 +433,25 @@ fn route_status_color(status: &str) -> Color {
         "DRIVER OFFLINE" | "PAD OFFLINE" | "HOLDING" | "RESERVE HELD" => Colors::WARNING,
         _ => Colors::ERROR,
     }
+}
+
+fn route_note_count(view: &MapView, world: usize, order: ExportOrder) -> usize {
+    let mut count = usize::from(source_reserve_text(view, world, order).is_some());
+    let pads_online = view.pads.get(order.target).copied().unwrap_or(0);
+    if pads_online == 0
+        || view.pending_pods.get(order.target).copied().unwrap_or(0)
+            >= view.pod_caps.get(order.target).copied().unwrap_or(1)
+    {
+        count += 1;
+    }
+    if view.overflow_pods.get(order.target).copied().unwrap_or(0) > 0 {
+        count += 1;
+    }
+    count
+}
+
+pub(super) fn remote_section_shift(route_note_lines: usize) -> f32 {
+    route_note_lines.saturating_sub(2) as f32 * 16.0
 }
 
 /// Read the central stockpile for the cargo a standing order is protecting.

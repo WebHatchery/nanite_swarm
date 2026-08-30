@@ -1,5 +1,6 @@
 use super::shipping_panel::{
-    reserve_status_text, route_hit_test, route_segment, route_status_label, shipment_route_label,
+    remote_section_shift, reserve_status_text, route_hit_test, route_segment, route_status_label,
+    shipment_route_label,
 };
 use super::status::{
     driver_operation_status, landing_pad_operation_status, launch_action, launch_prompt,
@@ -242,6 +243,14 @@ fn shipping_reserve_status_explains_when_surplus_is_available() {
         reserve_status_text(145.0, 100.0),
         ("Source surplus available: +45".to_string(), false)
     );
+}
+
+#[test]
+fn shipping_route_notes_make_room_for_remote_orders() {
+    assert_eq!(remote_section_shift(0), 0.0);
+    assert_eq!(remote_section_shift(2), 0.0);
+    assert_eq!(remote_section_shift(3), 16.0);
+    assert_eq!(remote_section_shift(4), 32.0);
 }
 
 #[test]
