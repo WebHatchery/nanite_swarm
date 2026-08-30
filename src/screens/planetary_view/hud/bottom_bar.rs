@@ -81,6 +81,7 @@ pub(super) fn draw(
     let starved = state.starved_factories().len();
     let blocked = state.blocked_factories().len();
     let stalled = state.stalled_drone_count();
+    let upkeep = state.upkeep_alert_positions().len();
     let alert_count = i32::from(state.save_failed)
         + i32::from(state.restored_from_backup)
         + i32::from(state.power_balance < 0.0)
@@ -89,14 +90,16 @@ pub(super) fn draw(
         + i32::from(congested > 0)
         + i32::from(starved > 0)
         + i32::from(blocked > 0)
-        + i32::from(stalled > 0);
-    let focusable_alert = congested > 0 || starved > 0 || blocked > 0 || stalled > 0;
+        + i32::from(stalled > 0)
+        + i32::from(upkeep > 0);
+    let focusable_alert = congested > 0 || starved > 0 || blocked > 0 || stalled > 0 || upkeep > 0;
     let flow_alert = state.power_collapse_shutdown > 0.0
         || state.power_balance < 0.0
         || congested > 0
         || starved > 0
         || blocked > 0
-        || stalled > 0;
+        || stalled > 0
+        || upkeep > 0;
     draw_ui_text("ALERTS", 30.0, bottom_y + 31.0, 12.0, warning);
     draw_ui_text(
         &format!("{}", alert_count),
@@ -121,6 +124,8 @@ pub(super) fn draw(
         "NEGATIVE POWER"
     } else if stalled > 0 {
         "ROUTE SEVERED"
+    } else if upkeep > 0 {
+        "UPKEEP DEGRADED"
     } else if starved > 0 {
         "INPUT STARVED"
     } else if blocked > 0 {

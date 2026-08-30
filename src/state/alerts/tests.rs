@@ -55,3 +55,42 @@ fn alert_focus_is_empty_when_the_world_is_nominal() {
     assert!(state.alert_positions().is_empty());
     assert_eq!(state.focus_next_alert(), None);
 }
+
+#[test]
+fn alert_positions_include_buildings_when_upkeep_starts_reducing_output() {
+    let mut state = state();
+    let core = state.grid.find_core().expect("generated Core");
+    let drill = GridPos::new(core.x + 1, core.y);
+    state.grid.reveal_around(drill, 1);
+    state.select_building(BuildingType::Drill);
+    assert!(state.try_place_building(drill));
+
+    let threshold = state.resolved_dust_response().efficiency_threshold;
+    state
+        .grid
+        .get_mut(drill)
+        .expect("drill tile")
+        .building
+        .as_mut()
+        .expect("drill building")
+        .dust = threshold;
+
+    assert_eq!(state.upkeep_alert_positions(), vec![drill]);
+    assert_eq!(state.alert_positions(), vec![drill]);
+}
+
+#[test]
+fn corrosion_joins_the_upkeep_alert_before_network_failure() {
+    let mut state = state();
+    let core = state.grid.find_core().expect("generated Core");
+    state
+        .grid
+        .get_mut(core)
+        .expect("core tile")
+        .building
+        .as_mut()
+        .expect("core building")
+        .acid_wear = 75.0;
+
+    assert_eq!(state.upkeep_alert_positions(), vec![core]);
+}

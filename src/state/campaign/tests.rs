@@ -108,6 +108,26 @@ fn the_solar_map_prioritizes_collapse_over_secondary_world_alerts() {
 }
 
 #[test]
+fn the_solar_map_reports_upkeep_degradation_on_a_remote_world() {
+    let mut campaign = campaign();
+    assert!(campaign.colonize(0));
+    let world = campaign.planet_mut(0).expect("colonized Mercury");
+    let core = world.grid.find_core().expect("generated Core");
+    world
+        .grid
+        .get_mut(core)
+        .expect("core tile")
+        .building
+        .as_mut()
+        .expect("core building")
+        .dust = world.resolved_dust_response().efficiency_threshold;
+
+    let telemetry = campaign.world_telemetry(0).unwrap();
+    assert_eq!(telemetry.alerts, 1);
+    assert_eq!(telemetry.alert_kind, WorldAlert::Maintenance);
+}
+
+#[test]
 fn every_world_is_built_from_its_own_entry_in_the_data() {
     let mut campaign = campaign();
     for index in 0..PLANET_COUNT {

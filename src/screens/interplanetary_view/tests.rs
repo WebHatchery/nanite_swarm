@@ -29,6 +29,10 @@ fn planet_list_alert_codes_keep_remote_failures_scannable() {
         world_alert_code(Some(telemetry(3, crate::state::WorldAlert::Collapse))),
         "COLL x3"
     );
+    assert_eq!(
+        world_alert_code(Some(telemetry(1, crate::state::WorldAlert::Maintenance))),
+        "MAINT"
+    );
 }
 
 #[test]

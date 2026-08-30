@@ -38,6 +38,7 @@ pub enum WorldAlert {
     Stalled,
     Starved,
     Blocked,
+    Maintenance,
 }
 
 impl WorldAlert {
@@ -50,6 +51,7 @@ impl WorldAlert {
             Self::Stalled => "STALL",
             Self::Starved => "INPUT",
             Self::Blocked => "BLOCKED",
+            Self::Maintenance => "MAINTENANCE",
         }
     }
 }
@@ -288,12 +290,14 @@ impl Campaign {
         let stalled = planet.stalled_drone_count() > 0;
         let starved = !planet.starved_factories().is_empty();
         let blocked = !planet.blocked_factories().is_empty();
+        let maintenance = !planet.upkeep_alert_positions().is_empty();
         let alerts = usize::from(power_alert)
             + usize::from(hibernating)
             + usize::from(collapse)
             + usize::from(stalled)
             + usize::from(starved)
-            + usize::from(blocked);
+            + usize::from(blocked)
+            + usize::from(maintenance);
         let alert_kind = if collapse {
             WorldAlert::Collapse
         } else if power_alert {
@@ -306,6 +310,8 @@ impl Campaign {
             WorldAlert::Starved
         } else if blocked {
             WorldAlert::Blocked
+        } else if maintenance {
+            WorldAlert::Maintenance
         } else {
             WorldAlert::Nominal
         };

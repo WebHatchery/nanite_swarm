@@ -41,6 +41,9 @@ and the Operations count identify powered processors that are missing a feed.
 When the bottom alert card reports a logistics problem, tap its JUMP button to
 cycle through the affected structures or network tiles; power-only problems
 keep the FLOW button for the network diagnosis overlay.
+The same JUMP path points to buildings where dust has started reducing output
+or corrosion is nearing a network failure, and the Solar System dossier marks
+those remote worlds MAINT.
 When it reports SAVE FAILED, tap RETRY to attempt the campaign save again.
 When it reports BACKUP RECOVERED, tap SAVE NOW to establish a fresh primary
 save after recovery.

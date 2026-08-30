@@ -511,6 +511,7 @@ fn world_alert_code(telemetry: Option<WorldTelemetry>) -> String {
         WorldAlert::Stalled => "STALL",
         WorldAlert::Starved => "INPUT",
         WorldAlert::Blocked => "FULL",
+        WorldAlert::Maintenance => "MAINT",
     };
     if telemetry.alerts > 1 {
         format!("{} x{}", code, telemetry.alerts)

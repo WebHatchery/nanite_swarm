@@ -2,13 +2,41 @@
 //!
 //! The HUD already knows when logistics are stalled, starved, blocked, or
 //! congested. This module turns that summary into a deterministic sequence of
-//! tiles the player can inspect without searching the whole map.
+//! tiles the player can inspect without searching the whole map. It also
+//! surfaces upkeep before dust or corrosion becomes a silent production loss.
 
 use crate::engine::{DroneState, GridPos};
 
 use super::PlanetState;
 
+/// Dust begins reducing work at the configured efficiency threshold. Acid has
+/// no intermediate production penalty, so late corrosion uses the same
+/// warning point as the network's dust leak response.
+const CORROSION_ALERT_AT: f32 = 75.0;
+
 impl PlanetState {
+    /// Return buildings whose upkeep has started to affect the colony.
+    ///
+    /// The map already paints lower wear as a warning, but a player needs a
+    /// single actionable threshold for the alert card and remote telemetry.
+    /// Sort by map position so alert cycling remains stable across frames and
+    /// save/load boundaries.
+    pub fn upkeep_alert_positions(&self) -> Vec<GridPos> {
+        let response = self.resolved_dust_response();
+        let dust_threshold = response.efficiency_threshold.clamp(0.0, 100.0);
+        let mut positions: Vec<_> = self
+            .grid
+            .iter_tiles()
+            .filter_map(|(position, tile)| {
+                let building = tile.building.as_ref()?;
+                (building.dust >= dust_threshold || building.acid_wear >= CORROSION_ALERT_AT)
+                    .then_some(position)
+            })
+            .collect();
+        positions.sort_by_key(|position| (position.y, position.x));
+        positions
+    }
+
     /// Return the locations that can explain a live logistics alert.
     ///
     /// The order is intentional: a stranded crew is the most urgent thing to
@@ -35,6 +63,9 @@ impl PlanetState {
             add(position);
         }
         for position in self.blocked_factories() {
+            add(position);
+        }
+        for position in self.upkeep_alert_positions() {
             add(position);
         }
 
