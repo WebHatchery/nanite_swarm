@@ -77,12 +77,12 @@ pub(super) fn draw(
     let energy_value = format!("{:.0}", state.resources.energy);
     let energy_rate = format_power_delta(state.power_balance);
     let minerals_value = format!("{:.0}", state.resources.minerals);
-    let minerals_rate = format!("+{:.1}/s", state.drill_output_rate());
+    let minerals_rate = format!("+{:.1}/s", state.mineral_output_rate());
     let minerals_cap = format!("/ {:.0}", state.mineral_capacity());
     let data_value = format!("{:.0}", state.resources.data);
-    let data_rate = format!("+{:.2}/s", state.config.resources.core_data_rate);
+    let data_rate = format!("+{:.2}/s", state.data_generation_rate());
     let biomass_value = format!("{:.0}", state.resources.biomass);
-    let biomass_rate = format!("+{:.1}/s", state.biomass_power_bonus.max(0.0));
+    let biomass_rate = format!("+{:.1}/s", state.biomass_harvest_rate());
     let alloy_value = format!("{:.0}", state.resources.alloy);
     let alloy_rate = format!("+{:.1}/s", state.observed_alloy_rate());
     let components_value = format!("{:.0}", state.resources.components);

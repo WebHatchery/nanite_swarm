@@ -6,7 +6,7 @@
 //! drill produces. This resolves every stat against the base it started from,
 //! on this world, with everything currently standing counted in.
 
-use crate::engine::StatId;
+use crate::engine::{BuildingType, StatId};
 
 use super::game_state::PlanetState;
 
@@ -82,7 +82,94 @@ impl PlanetState {
     pub fn drill_output_rate(&self) -> f32 {
         self.stats
             .apply(StatId::DrillOutput, self.config.buildings.drill_output_rate)
-            * self.factory_focus_multiplier(crate::engine::BuildingType::Drill)
+            * self.factory_focus_multiplier(BuildingType::Drill)
+    }
+
+    /// The current mineral capacity of every powered drill, including the
+    /// ground under each drill and its live dust response.
+    pub fn mineral_output_rate(&self) -> f32 {
+        let dust_response = self.resolved_dust_response();
+        let rate = self.drill_output_rate();
+        self.grid
+            .find_buildings(BuildingType::Drill)
+            .into_iter()
+            .filter_map(|pos| {
+                let tile = self.grid.get(pos)?;
+                let building = tile.building.as_ref()?;
+                (building.powered && !building.is_dust_stalled_with(&dust_response)).then_some(
+                    rate * tile.ore_richness * building.dust_efficiency_with(&dust_response),
+                )
+            })
+            .sum()
+    }
+
+    /// Passive Data from the Core and Server Banks at their current health,
+    /// heat, focus, and research settings. Recipe-fed Data is still measured
+    /// by the factory flow graph; this is the always-available generation rate
+    /// that belongs on the global resource card.
+    pub fn data_generation_rate(&self) -> f32 {
+        let dust_response = self.resolved_dust_response();
+        let core_rate = self
+            .grid
+            .find_core()
+            .and_then(|pos| self.grid.get(pos).and_then(|tile| tile.building.as_ref()))
+            .filter(|building| building.powered && !building.is_dust_stalled_with(&dust_response))
+            .map(|building| {
+                self.stats
+                    .apply(StatId::DataGeneration, self.config.resources.core_data_rate)
+                    * building.dust_efficiency_with(&dust_response)
+            })
+            .unwrap_or(0.0);
+        let server_rate = self.stats.apply(
+            StatId::DataGeneration,
+            self.config.resources.server_data_rate,
+        );
+        let server_total = self
+            .grid
+            .find_buildings(BuildingType::ServerBank)
+            .into_iter()
+            .filter_map(|pos| self.grid.get(pos).and_then(|tile| tile.building.as_ref()))
+            .filter(|building| {
+                building.powered
+                    && !building.standby
+                    && !building.is_dust_stalled_with(&dust_response)
+            })
+            .map(|building| {
+                let heat_efficiency =
+                    if building.is_overheated(self.config.buildings.server_bank_heat_capacity) {
+                        self.config.buildings.overheat_penalty
+                    } else {
+                        1.0
+                    };
+                server_rate
+                    * building.dust_efficiency_with(&dust_response)
+                    * building.work_multiplier()
+                    * self.factory_focus_multiplier(BuildingType::ServerBank)
+                    * heat_efficiency
+            })
+            .sum::<f32>();
+        core_rate + server_total
+    }
+
+    /// The biomass a powered harvester can gather per second from living
+    /// forest. Biomass is a stored resource, so its card needs a collection
+    /// rate rather than the separate power bonus produced by that resource.
+    pub fn biomass_harvest_rate(&self) -> f32 {
+        let dust_response = self.resolved_dust_response();
+        let rate = self.config.resources.biomass_consumption_rate.max(0.0);
+        self.grid
+            .iter_tiles()
+            .filter(|(_, tile)| {
+                tile.terrain == crate::engine::TerrainType::Forest && tile.biomass_amount > 0.0
+            })
+            .filter_map(|(_, tile)| tile.building.as_ref())
+            .filter(|building| {
+                building.building_type == BuildingType::BiomassHarvester
+                    && building.powered
+                    && !building.is_dust_stalled_with(&dust_response)
+            })
+            .count() as f32
+            * rate
     }
 
     /// Every stat, resolved against this world. In `StatId::ALL` order, so the

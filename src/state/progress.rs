@@ -509,16 +509,10 @@ impl PlanetState {
         let active_seconds = capped.min(self.battery_seconds.max(0.0));
         let hibernation_seconds = (capped - active_seconds).max(0.0) * 0.1;
         let simulated = active_seconds + hibernation_seconds;
-        let drill_count = self.powered_positions(BuildingType::Drill).len() as f32;
-        let mineral_rate = drill_count * self.drill_output_rate();
+        let mineral_rate = self.mineral_output_rate();
         let alloy_rate = self.alloy_rate();
         let components_rate = self.components_rate();
-        let data_rate = self.stats.apply(
-            StatId::DataGeneration,
-            self.config.resources.core_data_rate
-                + self.config.resources.server_data_rate
-                    * self.grid.find_buildings(BuildingType::ServerBank).len() as f32,
-        );
+        let data_rate = self.data_generation_rate();
         let power_rate = self.net_power();
         let cap = self.config.offline.max_resource_gain.max(0.0);
         let minerals = (mineral_rate * simulated).clamp(-cap, cap);

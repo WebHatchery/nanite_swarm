@@ -1,6 +1,6 @@
 use super::PlanetState;
 use crate::data::GameConfig;
-use crate::engine::BuildingType;
+use crate::engine::{BuildingType, GridPos};
 
 fn state() -> PlanetState {
     PlanetState::new(2, 7, GameConfig::default())
@@ -99,6 +99,73 @@ fn researching_power_efficiency_lowers_consumption() {
         .push("power_efficiency".into());
     state.refresh_stats();
     assert!(approx_eq(state.power_consumption(), before * 0.75, 1e-4));
+}
+
+#[test]
+fn live_resource_rates_follow_active_buildings_and_dust_research() {
+    let mut plain = state();
+    let plain_core = plain.grid.find_core().unwrap();
+    plain
+        .grid
+        .get_mut(plain_core)
+        .unwrap()
+        .building
+        .as_mut()
+        .unwrap()
+        .dust = 26.0;
+    let plain_data = plain.data_generation_rate();
+
+    let mut researched = state();
+    let researched_core = researched.grid.find_core().unwrap();
+    researched
+        .grid
+        .get_mut(researched_core)
+        .unwrap()
+        .building
+        .as_mut()
+        .unwrap()
+        .dust = 26.0;
+    researched
+        .research
+        .unlocked_techs
+        .push("self_cleaning_servos".to_string());
+    researched.refresh_stats();
+    assert!(researched.data_generation_rate() > plain_data);
+
+    let mut server_state = state();
+    let server_core = server_state.grid.find_core().unwrap();
+    let server = GridPos::new(server_core.x + 1, server_core.y);
+    server_state.grid.reveal_around(server, 1);
+    server_state.grid.get_mut(server).unwrap().terrain = crate::engine::TerrainType::Empty;
+    server_state.unlock_building(BuildingType::ServerBank);
+    server_state.select_building(BuildingType::ServerBank);
+    assert!(server_state.try_place_building(server));
+    assert!(server_state.data_generation_rate() > state().data_generation_rate());
+
+    let drill = GridPos::new(researched_core.x + 1, researched_core.y);
+    researched.grid.reveal_around(drill, 1);
+    researched.grid.get_mut(drill).unwrap().terrain = crate::engine::TerrainType::Empty;
+    researched.select_building(BuildingType::Drill);
+    assert!(researched.try_place_building(drill));
+    researched
+        .grid
+        .get_mut(drill)
+        .unwrap()
+        .building
+        .as_mut()
+        .unwrap()
+        .dust = 26.0;
+    assert_eq!(researched.mineral_output_rate(), 5.0);
+
+    let biomass = GridPos::new(researched_core.x - 1, researched_core.y);
+    researched.grid.reveal_around(biomass, 1);
+    let biomass_tile = researched.grid.get_mut(biomass).unwrap();
+    biomass_tile.terrain = crate::engine::TerrainType::Forest;
+    biomass_tile.biomass_amount = researched.config.resources.forest_biomass;
+    researched.unlock_building(BuildingType::BiomassHarvester);
+    researched.select_building(BuildingType::BiomassHarvester);
+    assert!(researched.try_place_building(biomass));
+    assert_eq!(researched.biomass_harvest_rate(), 1.0);
 }
 
 #[test]

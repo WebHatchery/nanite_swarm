@@ -234,7 +234,7 @@ impl PlanetState {
             self.throughput_timer -= THROUGHPUT_SAMPLE_SECONDS;
             let rate = self.delivered_since_sample / THROUGHPUT_SAMPLE_SECONDS;
             self.throughput.push(rate);
-            let data_produced = self.config.resources.core_data_rate;
+            let data_produced = self.data_generation_rate();
             let data_consumed = self
                 .research
                 .current_research
