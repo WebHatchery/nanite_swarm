@@ -1,4 +1,7 @@
-use super::{mobile_info_height, mobile_status_text, mobile_worlds_layout};
+use super::{
+    mobile_footer_hint_text, mobile_info_height, mobile_status_text, mobile_worlds_layout,
+};
+use crate::state::InterplanetaryMobilePanel;
 
 #[test]
 fn mobile_dossier_status_keeps_the_remote_alert_reason_visible() {
@@ -54,4 +57,16 @@ fn regular_phone_worlds_layout_keeps_the_existing_rows() {
 fn regular_phone_dossier_keeps_the_full_world_summary() {
     assert_eq!(mobile_info_height(640.0, true, false), 250.0);
     assert_eq!(mobile_info_height(640.0, true, true), 282.0);
+}
+
+#[test]
+fn narrow_footer_hints_keep_the_next_visible_control_named() {
+    let worlds = mobile_footer_hint_text(InterplanetaryMobilePanel::Worlds, false, 240.0);
+    let confirm = mobile_footer_hint_text(InterplanetaryMobilePanel::Worlds, true, 240.0);
+    let shipping = mobile_footer_hint_text(InterplanetaryMobilePanel::Shipping, false, 240.0);
+
+    assert!(worlds.contains("SHIPPING"));
+    assert!(worlds.contains("world"));
+    assert!(confirm.contains("CONFIRM"));
+    assert!(shipping.contains("WORLDS"));
 }

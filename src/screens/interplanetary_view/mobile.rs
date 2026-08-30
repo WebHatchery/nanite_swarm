@@ -60,14 +60,13 @@ pub(super) fn draw(
         ),
     };
 
+    let footer_hint = truncate_text_to_width(
+        mobile_footer_hint_text(panel, view.launch_confirmation_target.is_some(), screen_w),
+        (screen_w - MOBILE_EDGE * 2.0).max(40.0),
+        10.0,
+    );
     draw_ui_text(
-        if panel == InterplanetaryMobilePanel::Worlds && view.launch_confirmation_target.is_some() {
-            "Tap CONFIRM again to launch | Tap Shipping for routes"
-        } else if panel == InterplanetaryMobilePanel::Worlds {
-            "Tap a world to travel | Tap Shipping for routes"
-        } else {
-            "Drag panel to scroll | Tap controls | Tap Worlds to return"
-        },
+        &footer_hint,
         MOBILE_EDGE,
         screen_h - 18.0,
         10.0,
@@ -77,6 +76,32 @@ pub(super) fn draw(
         return InterplanetaryAction::Close;
     }
     action
+}
+
+fn mobile_footer_hint_text(
+    panel: InterplanetaryMobilePanel,
+    confirming: bool,
+    screen_w: f32,
+) -> &'static str {
+    if screen_w < 360.0 {
+        match (panel, confirming) {
+            (InterplanetaryMobilePanel::Worlds, true) => "Tap CONFIRM | SHIPPING for routes",
+            (InterplanetaryMobilePanel::Worlds, false) => "Tap world | SHIPPING for routes",
+            (InterplanetaryMobilePanel::Shipping, _) => "Drag to scroll | WORLDS to return",
+        }
+    } else {
+        match (panel, confirming) {
+            (InterplanetaryMobilePanel::Worlds, true) => {
+                "Tap CONFIRM again to launch | Tap Shipping for routes"
+            }
+            (InterplanetaryMobilePanel::Worlds, false) => {
+                "Tap a world to travel | Tap Shipping for routes"
+            }
+            (InterplanetaryMobilePanel::Shipping, _) => {
+                "Drag panel to scroll | Tap controls | Tap Worlds to return"
+            }
+        }
+    }
 }
 
 fn draw_tabs(panel: InterplanetaryMobilePanel, screen_w: f32) -> InterplanetaryAction {
