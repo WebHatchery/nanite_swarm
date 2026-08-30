@@ -72,6 +72,8 @@ and Shipping into touch-sized tabs, with the freight controls scrollable below.
 The title and Settings screens also switch to single-column phone layouts so
 the command stack, display toggles, audio controls, and pause-key control
 remain on-screen.
+The Audio tab includes a visible Test signal control for checking the current
+volume mix without entering a campaign.
 The mobile FLOW ledger and Factory Deck use exclusive, full-width overlays;
 HELP reserves the command bar so diagnostics and recovery controls stay clear.
 

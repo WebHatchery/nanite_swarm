@@ -97,8 +97,13 @@ impl Game {
             display::apply_display_settings(&self.settings, Some(&before));
             let _ = self.settings.save(GAME_NAME);
         }
-        if action == SettingsAction::Back {
-            self.phase = GamePhase::MainMenu;
+        match action {
+            SettingsAction::Back => self.phase = GamePhase::MainMenu,
+            SettingsAction::PreviewAudio => self
+                .campaign
+                .current_mut()
+                .emit_audio(state::AudioEvent::UiConfirm),
+            SettingsAction::None => {}
         }
     }
 

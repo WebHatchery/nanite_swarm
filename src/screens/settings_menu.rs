@@ -9,6 +9,7 @@ use macroquad_toolkit::ui::{draw_ui_text, stepper_row, toggle_row, truncate_text
 pub enum SettingsAction {
     None,
     Back,
+    PreviewAudio,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -87,7 +88,9 @@ pub fn render_settings_menu(
             draw_display_settings(settings, display_x, panel_y, row_w, row_h, row_gap)
         }
         SettingsTab::Audio => {
-            draw_audio_settings(settings, display_x, panel_y, row_w, row_h, row_gap)
+            if draw_audio_settings(settings, display_x, panel_y, row_w, row_h, row_gap) {
+                return SettingsAction::PreviewAudio;
+            }
         }
     }
 
@@ -224,7 +227,7 @@ fn draw_audio_settings(
     row_w: f32,
     row_h: f32,
     row_gap: f32,
-) {
+) -> bool {
     draw_ui_text(
         "Tap +/- to adjust. Changes apply immediately.",
         display_x + 16.0,
@@ -253,6 +256,9 @@ fn draw_audio_settings(
         "Music",
         &mut settings.music_volume,
     );
+
+    let test_y = content_y + (row_h + row_gap) * 3.0;
+    draw_button_sized(display_x + 16.0, test_y, row_w, row_h, "Test signal")
 }
 
 fn adjust_volume_row(rect: Rect, label: &str, volume: &mut f32) {
