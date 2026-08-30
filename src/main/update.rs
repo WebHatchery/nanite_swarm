@@ -279,6 +279,7 @@ impl Game {
         let current_world = self.campaign.current_index();
         let mass_driver_researched = self.has_mass_driver();
         let seed_ship_ready = self.campaign.current().seed_ship.is_ready_to_launch();
+        let current_drivers_built = self.campaign.current().mass_drivers_built();
         let editing_world = self.shipping_edit_world;
         let mut shipping_scroll = std::mem::replace(&mut self.shipping_scroll, ScrollArea::new());
         let campaign = &self.campaign;
@@ -292,6 +293,7 @@ impl Game {
             stockpiles: &stockpiles,
             telemetry: &telemetry,
             current_drivers_online: drivers_online[current_world],
+            current_drivers_built,
             drivers_online: &drivers_online,
             pads: &pads,
             pod_fractions: &pod_fractions,

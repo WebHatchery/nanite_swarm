@@ -34,6 +34,7 @@ fn driver_on_current(campaign: &mut Campaign) -> GridPos {
     planet.select_building(BuildingType::MassDriver);
     assert!(planet.try_place_building(pos), "driver beside the Core");
     planet.grid.update_power_grid();
+    assert_eq!(planet.mass_drivers_built(), 1);
     assert_eq!(planet.mass_drivers_online(), 1);
     pos
 }

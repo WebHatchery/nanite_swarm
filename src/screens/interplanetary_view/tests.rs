@@ -1,7 +1,36 @@
+use super::status::{mass_driver_status_label, seed_ship_status_label};
 use super::{
     solar_map_layout, world_alert_code, world_rule_lines, world_telemetry_height,
     world_telemetry_row_y, MIN_SOLAR_MAP_SCALE,
 };
+
+#[test]
+fn launch_header_distinguishes_a_built_driver_that_is_offline() {
+    assert_eq!(mass_driver_status_label(false, 0, 0), "Mass Driver: LOCKED");
+    assert_eq!(
+        mass_driver_status_label(true, 0, 0),
+        "Mass Driver: NOT BUILT"
+    );
+    assert_eq!(mass_driver_status_label(true, 1, 0), "Mass Driver: OFFLINE");
+    assert_eq!(mass_driver_status_label(true, 1, 1), "Mass Driver: ONLINE");
+}
+
+#[test]
+fn launch_header_explains_why_a_finished_ship_cannot_leave() {
+    assert_eq!(
+        seed_ship_status_label(false, 0, 0),
+        "Seed Ship: UNDER CONSTRUCTION"
+    );
+    assert_eq!(
+        seed_ship_status_label(true, 0, 0),
+        "Seed Ship: READY / DRIVER NEEDED"
+    );
+    assert_eq!(
+        seed_ship_status_label(true, 1, 0),
+        "Seed Ship: READY / DRIVER OFFLINE"
+    );
+    assert_eq!(seed_ship_status_label(true, 1, 1), "Seed Ship: READY");
+}
 
 #[test]
 fn dossier_telemetry_rows_leave_room_for_the_stock_line() {

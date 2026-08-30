@@ -2,11 +2,13 @@
 
 mod mobile;
 mod shipping_panel;
+mod status;
 
 use crate::state::{ExportOrder, InterplanetaryMobilePanel, Shipment, WorldAlert, WorldTelemetry};
 use crate::ui::{color_from_rgba, draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::{draw_ui_text, note_neighbour, touch_area, Pointer, ScrollArea};
+use status::{mass_driver_status_label, seed_ship_status_label};
 
 /// Actions from the interplanetary view
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -88,6 +90,8 @@ pub struct MapView<'a> {
     pub telemetry: &'a [Option<WorldTelemetry>],
     /// Powered Mass Drivers standing on the world underfoot.
     pub current_drivers_online: usize,
+    /// Mass Drivers standing on the world underfoot, including offline ones.
+    pub current_drivers_built: usize,
     /// Powered Mass Drivers on every colonized world, for remote order edits.
     pub drivers_online: &'a [usize],
     /// Powered Landing Pads on each world, so the panel can say when the
@@ -128,17 +132,29 @@ pub fn render_interplanetary_view(
         return InterplanetaryAction::Close;
     }
 
-    let (driver_label, driver_color) = if view.current_drivers_online > 0 {
-        ("Mass Driver: ONLINE", Colors::SUCCESS)
+    let driver_label = mass_driver_status_label(
+        view.mass_driver_researched,
+        view.current_drivers_built,
+        view.current_drivers_online,
+    );
+    let driver_color = if view.current_drivers_online > 0 {
+        Colors::SUCCESS
     } else if view.mass_driver_researched {
-        ("Mass Driver: NOT BUILT", Colors::WARNING)
+        Colors::WARNING
     } else {
-        ("Mass Driver: LOCKED", Colors::TEXT_DIM)
+        Colors::TEXT_DIM
     };
-    let (ship_label, ship_color) = if view.seed_ship_ready {
-        ("Seed Ship: READY", Colors::SUCCESS)
+    let ship_label = seed_ship_status_label(
+        view.seed_ship_ready,
+        view.current_drivers_built,
+        view.current_drivers_online,
+    );
+    let ship_color = if view.seed_ship_ready && view.current_drivers_online > 0 {
+        Colors::SUCCESS
+    } else if view.seed_ship_ready {
+        Colors::WARNING
     } else {
-        ("Seed Ship: UNDER CONSTRUCTION", Colors::TEXT_DIM)
+        Colors::TEXT_DIM
     };
     if screen_w < 600.0 {
         draw_ui_text(driver_label, 18.0, header_height + 14.0, 10.0, driver_color);

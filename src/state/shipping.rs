@@ -99,6 +99,12 @@ pub fn transit_seconds(
 }
 
 impl PlanetState {
+    /// Every Mass Driver standing on this world, whether it currently has
+    /// power, is on standby, or is stalled by dust.
+    pub fn mass_drivers_built(&self) -> usize {
+        self.grid.find_buildings(BuildingType::MassDriver).len()
+    }
+
     /// Powered Mass Drivers standing on this world.
     pub fn mass_drivers_online(&self) -> usize {
         self.powered_positions(BuildingType::MassDriver).len()

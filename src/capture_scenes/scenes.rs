@@ -745,6 +745,27 @@ impl Game {
                 camera.pan_y = -180.0;
             }
             "interplanetary" => self.stage_interplanetary_scene(),
+            "interplanetary_driver_offline" => {
+                self.stage_interplanetary_scene();
+                let driver = self
+                    .campaign
+                    .current()
+                    .grid
+                    .find_buildings(engine::BuildingType::MassDriver)
+                    .first()
+                    .copied();
+                if let Some(driver) = driver {
+                    if let Some(building) = self
+                        .campaign
+                        .current_mut()
+                        .grid
+                        .get_mut(driver)
+                        .and_then(|tile| tile.building.as_mut())
+                    {
+                        building.standby = true;
+                    }
+                }
+            }
             "mobile_shipping" => {
                 self.stage_interplanetary_scene();
                 self.interplanetary_mobile_panel = state::InterplanetaryMobilePanel::Shipping;
