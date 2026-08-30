@@ -220,8 +220,9 @@ pub fn render_interplanetary_view(
         draw_circle(center_x, center_y, sun_radius, Colors::WARNING);
     }
 
-    let (list_focus, list_action) =
-        draw_planet_list(view, list_x, list_y, list_w, list_h, can_launch, pointer);
+    let (list_focus, list_action) = draw_planet_list(
+        view, list_x, list_y, list_w, list_h, can_launch, pointer, false,
+    );
     if list_focus.is_some() {
         hovered_planet = list_focus;
     }
@@ -420,6 +421,7 @@ pub fn render_interplanetary_view(
 /// so the map says so rather than making the player fly there to find out.
 /// Rows are controls as well as labels: the list remains usable when an orbit
 /// is crowded, off-screen, or too small to comfortably tap.
+#[allow(clippy::too_many_arguments)]
 fn draw_planet_list(
     view: &MapView,
     x: f32,
@@ -428,6 +430,7 @@ fn draw_planet_list(
     h: f32,
     can_launch: bool,
     pointer: Pointer,
+    compact: bool,
 ) -> (Option<usize>, InterplanetaryAction) {
     draw_panel(x, y, w, h);
     draw_ui_text("Planets", x + 12.0, y + 28.0, 16.0, Colors::PRIMARY);
@@ -436,12 +439,13 @@ fn draw_planet_list(
 
     let mut focused = None;
     let mut action = InterplanetaryAction::None;
-    let row_height = 24.0;
-    let mut row_y = y + 56.0;
+    let row_height = if compact { 19.0 } else { 24.0 };
+    let row_top_offset = if compact { 14.0 } else { 18.0 };
+    let mut row_y = y + if compact { 45.0 } else { 56.0 };
     for (index, planet) in view.data.planets.iter().enumerate() {
         let is_current = index == view.current_planet;
         let is_colonized = view.colonized.get(index).copied().unwrap_or(false);
-        let row = Rect::new(x + 8.0, row_y - 18.0, w - 16.0, row_height);
+        let row = Rect::new(x + 8.0, row_y - row_top_offset, w - 16.0, row_height);
         note_neighbour(row);
         let hit_row = touch_area(row);
         let is_focused = pointer.hovering_over(hit_row)

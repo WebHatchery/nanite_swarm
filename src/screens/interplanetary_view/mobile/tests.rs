@@ -1,4 +1,4 @@
-use super::{mobile_info_height, mobile_status_text};
+use super::{mobile_info_height, mobile_status_text, mobile_worlds_layout};
 
 #[test]
 fn mobile_dossier_status_keeps_the_remote_alert_reason_visible() {
@@ -24,6 +24,30 @@ fn short_phone_dossier_stays_above_the_footer() {
     assert_eq!(mobile_info_height(480.0, false, false), 96.0);
     assert_eq!(mobile_info_height(480.0, true, false), 124.0);
     assert!(dossier_bottom <= 454.0);
+}
+
+#[test]
+fn very_short_worlds_layout_keeps_the_dossier_action_visible() {
+    let layout = mobile_worlds_layout(400.0, crate::state::PLANET_COUNT);
+    let info_y = 156.0 + layout.list_h + layout.info_gap;
+    let dossier_bottom = info_y + mobile_info_height(400.0, true, false);
+
+    assert!(layout.compact);
+    assert!((layout.row_height - 19.0).abs() < 0.001);
+    assert!((layout.list_h - 129.0).abs() < 0.001);
+    assert!((info_y - 291.0).abs() < 0.001);
+    assert!((dossier_bottom - 371.0).abs() < 0.001);
+    assert!(dossier_bottom < 400.0 - 18.0);
+}
+
+#[test]
+fn regular_phone_worlds_layout_keeps_the_existing_rows() {
+    let layout = mobile_worlds_layout(480.0, crate::state::PLANET_COUNT);
+
+    assert!(!layout.compact);
+    assert!((layout.row_height - 24.0).abs() < 0.001);
+    assert!((layout.list_h - 164.0).abs() < 0.001);
+    assert!((layout.info_gap - 10.0).abs() < 0.001);
 }
 
 #[test]

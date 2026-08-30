@@ -8,6 +8,15 @@ use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text, truncate_text_to_widt
 const MOBILE_EDGE: f32 = 12.0;
 const MOBILE_TAB_Y: f32 = 112.0;
 const MOBILE_CONTENT_Y: f32 = 156.0;
+const SHORT_MOBILE_HEIGHT: f32 = 440.0;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct MobileWorldsLayout {
+    list_h: f32,
+    row_height: f32,
+    info_gap: f32,
+    compact: bool,
+}
 
 fn mobile_status_text(is_colonized: bool, alert_code: Option<&str>) -> String {
     let status = if is_colonized {
@@ -119,20 +128,21 @@ fn draw_worlds(
     screen_h: f32,
 ) -> InterplanetaryAction {
     let panel_w = (screen_w - MOBILE_EDGE * 2.0).max(80.0);
-    let list_h = 44.0 + view.data.planets.len() as f32 * 24.0;
+    let layout = mobile_worlds_layout(screen_h, view.data.planets.len());
     let (focused, list_action) = draw_planet_list(
         view,
         MOBILE_EDGE,
         MOBILE_CONTENT_Y,
         panel_w,
-        list_h,
+        layout.list_h,
         can_launch,
         pointer,
+        layout.compact,
     );
     let index = focused
         .or(view.launch_confirmation_target)
         .unwrap_or(view.current_planet);
-    let info_y = MOBILE_CONTENT_Y + list_h + 10.0;
+    let info_y = MOBILE_CONTENT_Y + layout.list_h + layout.info_gap;
     draw_mobile_planet_info(
         view,
         index,
@@ -143,6 +153,18 @@ fn draw_worlds(
         screen_h,
     );
     list_action
+}
+
+fn mobile_worlds_layout(screen_h: f32, planet_count: usize) -> MobileWorldsLayout {
+    let compact = screen_h < SHORT_MOBILE_HEIGHT;
+    let row_height = if compact { 19.0 } else { 24.0 };
+    let list_header_height = if compact { 34.0 } else { 44.0 };
+    MobileWorldsLayout {
+        list_h: list_header_height + planet_count as f32 * row_height,
+        row_height,
+        info_gap: if compact { 6.0 } else { 10.0 },
+        compact,
+    }
 }
 
 fn draw_mobile_planet_info(
@@ -179,6 +201,73 @@ fn draw_mobile_planet_info(
     let panel_h = mobile_info_height(screen_h, telemetry.is_some(), shipping.is_some());
     let text_w = (width - 30.0).max(40.0);
     draw_panel(x, y, width, panel_h);
+    if screen_h < SHORT_MOBILE_HEIGHT {
+        draw_ui_text(
+            &truncate_text_to_width(&planet.name, text_w, 14.0),
+            x + 12.0,
+            y + 18.0,
+            14.0,
+            color_from_rgba(&planet.color),
+        );
+        draw_ui_text(
+            &truncate_text_to_width(&status_line, text_w, 8.0),
+            x + 12.0,
+            y + 34.0,
+            8.0,
+            status_color,
+        );
+        draw_ui_text(
+            &truncate_text_to_width(&format!("Hazard: {}", hazard_summary(planet)), text_w, 7.0),
+            x + 12.0,
+            y + 47.0,
+            7.0,
+            hazard_color(planet),
+        );
+        let compact_detail = if let (Some(order), Some(status)) = (order, route_status) {
+            compact_shipping_status(&view.data.planet(order.target).name, status)
+        } else if let Some(telemetry) = telemetry {
+            format!(
+                "Stock M {:.0}  D {:.0}  B {:.0}",
+                telemetry.minerals, telemetry.data, telemetry.biomass
+            )
+        } else {
+            world_rule_lines(view.data, index)
+                .first()
+                .map(|rule| format!("Rule: {rule}"))
+                .unwrap_or_else(|| "Rule: no special build rules".to_string())
+        };
+        draw_ui_text(
+            &truncate_text_to_width(&compact_detail, text_w, 7.0),
+            x + 12.0,
+            y + 59.0,
+            7.0,
+            Colors::TEXT_DIM,
+        );
+        let action = if is_current {
+            "Current location"
+        } else if is_colonized {
+            "Tap world row to travel"
+        } else if can_launch {
+            super::launch_prompt(view.launch_confirmation_target == Some(index))
+        } else {
+            "World not ready to launch"
+        };
+        let action_color = if is_current || is_colonized {
+            Colors::PRIMARY
+        } else if can_launch {
+            Colors::SUCCESS
+        } else {
+            Colors::ERROR
+        };
+        draw_ui_text(
+            &truncate_text_to_width(action, text_w, 8.0),
+            x + 12.0,
+            y + panel_h - 8.0,
+            8.0,
+            action_color,
+        );
+        return;
+    }
     if screen_h < 560.0 {
         draw_ui_text(
             &truncate_text_to_width(&planet.name, text_w, 16.0),
@@ -446,7 +535,13 @@ fn draw_mobile_planet_info(
 }
 
 fn mobile_info_height(screen_h: f32, has_telemetry: bool, has_shipping: bool) -> f32 {
-    if screen_h < 560.0 {
+    if screen_h < SHORT_MOBILE_HEIGHT {
+        if has_telemetry {
+            80.0
+        } else {
+            68.0
+        }
+    } else if screen_h < 560.0 {
         if has_telemetry {
             124.0
         } else {
