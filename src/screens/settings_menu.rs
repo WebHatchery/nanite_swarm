@@ -3,7 +3,7 @@
 use crate::ui::{draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::settings::GameSettings;
-use macroquad_toolkit::ui::{draw_ui_text, stepper_row, toggle_row};
+use macroquad_toolkit::ui::{draw_ui_text, stepper_row, toggle_row, truncate_text_to_width};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SettingsAction {
@@ -27,9 +27,14 @@ pub fn render_settings_menu(settings: &mut GameSettings) -> SettingsAction {
         return SettingsAction::Back;
     }
 
-    let panel_w = 320.0;
-    let panel_h = 400.0;
-    let panel_y = screen_h * 0.3;
+    let mobile = screen_w < 600.0;
+    let panel_w = if mobile {
+        (screen_w - 24.0).max(240.0)
+    } else {
+        320.0
+    };
+    let panel_h = if mobile { 324.0 } else { 400.0 };
+    let panel_y = if mobile { 84.0 } else { screen_h * 0.3 };
     let display_x = screen_w * 0.5 - panel_w * 0.5;
     let row_w = panel_w - 32.0;
     let row_h = 30.0;
@@ -71,7 +76,11 @@ pub fn render_settings_menu(settings: &mut GameSettings) -> SettingsAction {
     );
     toggle_row(motion_row, "Reduced motion", &mut settings.reduced_motion);
     draw_ui_text(
-        "Stops pulses and impact particles; rules still run.",
+        &truncate_text_to_width(
+            "Stops pulses and impact particles; rules still run.",
+            row_w,
+            10.0,
+        ),
         display_x + 16.0,
         motion_row.y + row_h + 12.0,
         10.0,
@@ -114,13 +123,34 @@ pub fn render_settings_menu(settings: &mut GameSettings) -> SettingsAction {
         };
     }
 
-    draw_ui_text(
-        "Tap Back to return. Initial speed is separate from each world's pause state.",
-        20.0,
-        screen_h - 20.0,
-        Dimensions::FONT_SIZE_SMALL,
-        Colors::TEXT_DIM,
-    );
+    if mobile {
+        draw_ui_text(
+            "Tap Back to return.",
+            20.0,
+            screen_h - 32.0,
+            11.0,
+            Colors::TEXT_DIM,
+        );
+        draw_ui_text(
+            &truncate_text_to_width(
+                "Initial speed is separate from each world's pause state.",
+                screen_w - 40.0,
+                10.0,
+            ),
+            20.0,
+            screen_h - 16.0,
+            10.0,
+            Colors::TEXT_DIM,
+        );
+    } else {
+        draw_ui_text(
+            "Tap Back to return. Initial speed is separate from each world's pause state.",
+            20.0,
+            screen_h - 20.0,
+            Dimensions::FONT_SIZE_SMALL,
+            Colors::TEXT_DIM,
+        );
+    }
 
     if is_key_pressed(KeyCode::Escape) {
         return SettingsAction::Back;

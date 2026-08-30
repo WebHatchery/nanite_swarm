@@ -1,6 +1,7 @@
 //! Main menu screen
 
 mod hero_art;
+mod mobile;
 
 use crate::ui::{draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
@@ -57,6 +58,10 @@ pub fn render_main_menu(has_save: bool, notice: Option<&str>, slot: &str) -> Men
         Dimensions::FONT_SIZE_NORMAL,
         Colors::TEXT_DIM,
     );
+
+    if screen_w < 600.0 {
+        return mobile::draw(strings, has_save, notice, slot, screen_w, screen_h);
+    }
 
     // Briefing panel
     let briefing_w = (screen_w * 0.3).clamp(300.0, 360.0);

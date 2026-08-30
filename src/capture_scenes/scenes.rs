@@ -23,6 +23,7 @@ impl Game {
         self.research_state.research_progress = 0.0;
         match scene {
             "mainmenu" => self.phase = GamePhase::MainMenu,
+            "settings" => self.phase = GamePhase::Settings,
             "research" => {
                 self.phase = GamePhase::Research;
                 // A node that both moves a stat and opens a building, so the
