@@ -61,6 +61,26 @@ fn multi_input_flow_is_structured_and_names_the_missing_feed() {
 }
 
 #[test]
+fn paused_processor_explains_why_boost_is_unavailable() {
+    assert_eq!(
+        processor_action_label(false, false, true, true, false),
+        "BOOST PAUSED"
+    );
+}
+
+#[test]
+fn full_processor_pad_keeps_purge_ahead_of_boost_policy() {
+    assert_eq!(
+        processor_action_label(true, false, true, true, false),
+        "PURGE PAD"
+    );
+    assert_eq!(
+        processor_action_label(true, true, true, true, false),
+        "PURGE AGAIN"
+    );
+}
+
+#[test]
 fn a_full_dispatch_pad_is_named_before_it_can_hide_as_idle() {
     let mut state = PlanetState::new(2, 42, GameConfig::default());
     let pos = state.grid.find_core().unwrap();

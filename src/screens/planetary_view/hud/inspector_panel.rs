@@ -14,6 +14,28 @@ use macroquad_toolkit::ui::draw_ui_text;
 use super::super::format::{dust_status, fit_text_to_width, format_power_delta};
 use super::{PanelColors, RightStackLayout};
 
+fn processor_action_label(
+    output_full: bool,
+    purge_armed: bool,
+    boost_unlocked: bool,
+    standby: bool,
+    overclocked: bool,
+) -> &'static str {
+    if output_full && purge_armed {
+        "PURGE AGAIN"
+    } else if output_full {
+        "PURGE PAD"
+    } else if !boost_unlocked {
+        "BOOST LOCKED"
+    } else if standby {
+        "BOOST PAUSED"
+    } else if overclocked {
+        "BOOST ON"
+    } else {
+        "BOOST"
+    }
+}
+
 pub(super) fn draw(
     state: &mut PlanetState,
     hovered_pos: Option<GridPos>,
@@ -47,6 +69,7 @@ pub(super) fn draw(
     let mut tile_acid = 0.0;
     let mut tile_heat = 0.0;
     let mut tile_overclocked = false;
+    let mut tile_standby = false;
     let mut tile_can_overclock = false;
     let mut tile_output_full = false;
     let boost_unlocked = state
@@ -69,6 +92,7 @@ pub(super) fn draw(
                 tile_acid = building.acid_wear;
                 tile_heat = building.heat;
                 tile_overclocked = building.overclocked;
+                tile_standby = building.standby;
                 tile_can_overclock = building.supports_overclock();
                 tile_output_full = state
                     .output_buffers
@@ -301,17 +325,13 @@ pub(super) fn draw(
                 && draw_hud_button(
                     theme,
                     Rect::new(right_x + right_w - 180.0, inspector_y + 8.0, 92.0, 24.0),
-                    if tile_output_full && state.purge_armed == Some(tile_pos) {
-                        "PURGE AGAIN"
-                    } else if tile_output_full {
-                        "PURGE PAD"
-                    } else if !boost_unlocked {
-                        "BOOST LOCKED"
-                    } else if tile_overclocked {
-                        "BOOST ON"
-                    } else {
-                        "BOOST"
-                    },
+                    processor_action_label(
+                        tile_output_full,
+                        state.purge_armed == Some(tile_pos),
+                        boost_unlocked,
+                        tile_standby,
+                        tile_overclocked,
+                    ),
                 )
             {
                 if tile_output_full {

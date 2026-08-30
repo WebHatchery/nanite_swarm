@@ -2,6 +2,7 @@ use super::*;
 use crate::data::GameConfig;
 
 mod blueprints;
+mod processor_controls;
 
 fn state() -> PlanetState {
     PlanetState::new(2, 42, GameConfig::default())

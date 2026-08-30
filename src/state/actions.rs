@@ -357,6 +357,7 @@ impl PlanetState {
         let selected = self.box_selected.clone();
         self.auto_clocking = false;
         let mut changed = 0;
+        let mut standby_count = 0;
         for pos in selected {
             let Some(building) = self
                 .grid
@@ -365,7 +366,14 @@ impl PlanetState {
             else {
                 continue;
             };
-            if building.supports_overclock() && building.overclocked != enabled {
+            if !building.supports_overclock() {
+                continue;
+            }
+            if building.standby {
+                standby_count += 1;
+                continue;
+            }
+            if building.overclocked != enabled {
                 building.overclocked = enabled;
                 changed += 1;
             }
@@ -377,6 +385,12 @@ impl PlanetState {
             } else {
                 format!("Normalized {} selected processors", changed)
             });
+        } else if enabled && standby_count > 0 {
+            self.notifications.warning(format!(
+                "Resume {} paused processor{} before boosting",
+                standby_count,
+                if standby_count == 1 { "" } else { "s" }
+            ));
         } else {
             self.notifications.warning("No selected processors changed");
         }
@@ -396,32 +410,15 @@ impl PlanetState {
             let pos = GridPos::new(anchor.x + entry.offset.0, anchor.y + entry.offset.1);
             self.selected_building = Some(entry.building_type);
             if self.try_place_building(pos) {
-                if entry.overclocked {
-                    if let Some(building) = self
-                        .grid
-                        .get_mut(pos)
-                        .and_then(|tile| tile.building.as_mut())
-                    {
-                        building.overclocked = building.supports_overclock();
-                    }
-                }
-                if entry.input_priority {
-                    if let Some(building) = self
-                        .grid
-                        .get_mut(pos)
-                        .and_then(|tile| tile.building.as_mut())
-                    {
-                        building.input_priority = building.supports_overclock();
-                    }
-                }
-                if entry.standby {
-                    if let Some(building) = self
-                        .grid
-                        .get_mut(pos)
-                        .and_then(|tile| tile.building.as_mut())
-                    {
-                        building.standby = building.supports_overclock();
-                    }
+                if let Some(building) = self
+                    .grid
+                    .get_mut(pos)
+                    .and_then(|tile| tile.building.as_mut())
+                {
+                    let supports_policy = building.supports_overclock();
+                    building.overclocked = entry.overclocked && supports_policy && !entry.standby;
+                    building.input_priority = entry.input_priority && supports_policy;
+                    building.standby = entry.standby && supports_policy;
                 }
                 placed += 1;
             }
@@ -591,33 +588,18 @@ impl PlanetState {
             ) => {
                 self.select_building(kind);
                 let restored = self.try_place_building(pos);
-                if restored && overclocked {
+                if restored {
                     if let Some(building) = self
                         .grid
                         .get_mut(pos)
                         .and_then(|tile| tile.building.as_mut())
                     {
-                        building.overclocked = building.supports_overclock();
+                        let supports_policy = building.supports_overclock();
+                        building.overclocked = overclocked && supports_policy && !standby;
+                        building.input_priority = input_priority && supports_policy;
+                        building.standby = standby && supports_policy;
                     }
                     self.power_balance = self.net_power();
-                }
-                if restored && input_priority {
-                    if let Some(building) = self
-                        .grid
-                        .get_mut(pos)
-                        .and_then(|tile| tile.building.as_mut())
-                    {
-                        building.input_priority = building.supports_overclock();
-                    }
-                }
-                if restored && standby {
-                    if let Some(building) = self
-                        .grid
-                        .get_mut(pos)
-                        .and_then(|tile| tile.building.as_mut())
-                    {
-                        building.standby = building.supports_overclock();
-                    }
                 }
                 restored
             }
@@ -637,12 +619,18 @@ impl PlanetState {
     pub fn toggle_building_overclock(&mut self, pos: GridPos) -> bool {
         let data_context = self.data.clone();
         let data = data_context.data();
-        let supports_overclock = self
+        let (supports_overclock, standby) = self
             .grid
             .get(pos)
             .and_then(|tile| tile.building.as_ref())
-            .is_some_and(|building| building.supports_overclock());
+            .map(|building| (building.supports_overclock(), building.standby))
+            .unwrap_or((false, false));
         if !supports_overclock {
+            return false;
+        }
+        if standby {
+            self.notifications
+                .warning("Resume the processor before boosting it");
             return false;
         }
         if !self

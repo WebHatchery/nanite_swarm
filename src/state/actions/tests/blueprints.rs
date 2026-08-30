@@ -39,7 +39,7 @@ fn saved_blueprint_restores_processor_flags_when_stamped() {
             .unwrap();
         building.overclocked = true;
         building.input_priority = true;
-        building.standby = true;
+        building.standby = false;
     }
 
     assert!(state.save_blueprint(source, &[source]));
@@ -56,7 +56,7 @@ fn saved_blueprint_restores_processor_flags_when_stamped() {
     assert_eq!(building.position, destination);
     assert!(building.overclocked);
     assert!(building.input_priority);
-    assert!(building.standby);
+    assert!(!building.standby);
 }
 
 #[test]

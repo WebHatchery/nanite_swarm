@@ -508,7 +508,7 @@ pub(super) fn draw(
                 .grid
                 .get(*pos)
                 .and_then(|tile| tile.building.as_ref())
-                .filter(|building| building.supports_overclock())
+                .filter(|building| building.supports_overclock() && !building.standby)
                 .map(|building| building.overclocked)
         })
         .collect();

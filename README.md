@@ -111,6 +111,8 @@ Factory controls:
   preserving demand balancing among equal peers.
 - Tap STANDBY to stop a line's production and base power draw without losing
   either buffer; tap RESUME to restart it.
+- A processor on STANDBY cannot be boosted until it is resumed; bulk BOOST
+  skips paused lines automatically.
 - A full dispatch pad stops its recipe without consuming inputs. Tap PURGE PAD
   then PURGE AGAIN, or use the equivalent two-tap district purge.
 - Processor floor art shows intake fill, product stacks, active packets,
