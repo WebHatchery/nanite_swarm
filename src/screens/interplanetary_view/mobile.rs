@@ -9,6 +9,17 @@ const MOBILE_EDGE: f32 = 12.0;
 const MOBILE_TAB_Y: f32 = 112.0;
 const MOBILE_CONTENT_Y: f32 = 156.0;
 
+fn mobile_status_text(is_colonized: bool, alert_code: Option<&str>) -> String {
+    let status = if is_colonized {
+        "Status: COLONIZED"
+    } else {
+        "Status: UNEXPLORED"
+    };
+    alert_code
+        .map(|code| format!("{status} / {code}"))
+        .unwrap_or_else(|| status.to_string())
+}
+
 pub(super) fn draw(
     view: &MapView,
     shipping_scroll: &mut ScrollArea,
@@ -147,6 +158,17 @@ fn draw_mobile_planet_info(
     let is_colonized = view.colonized.get(index).copied().unwrap_or(false);
     let is_current = index == view.current_planet;
     let telemetry = view.telemetry.get(index).copied().flatten();
+    let alert_code = telemetry
+        .filter(|telemetry| telemetry.alerts > 0)
+        .map(|telemetry| super::world_alert_code(Some(telemetry)));
+    let status_line = mobile_status_text(is_colonized, alert_code.as_deref());
+    let status_color = if alert_code.is_some() {
+        Colors::ERROR
+    } else if is_colonized {
+        Colors::SUCCESS
+    } else {
+        Colors::WARNING
+    };
     let order = view.orders.get(index).copied().flatten();
     let shipping = super::shipping_summary(
         view.data,
@@ -166,19 +188,11 @@ fn draw_mobile_planet_info(
             color_from_rgba(&planet.color),
         );
         draw_ui_text(
-            if is_colonized {
-                "Status: COLONIZED"
-            } else {
-                "Status: UNEXPLORED"
-            },
+            &truncate_text_to_width(&status_line, text_w, 10.0),
             x + 15.0,
             y + 44.0,
             10.0,
-            if is_colonized {
-                Colors::SUCCESS
-            } else {
-                Colors::WARNING
-            },
+            status_color,
         );
         draw_ui_text(
             &truncate_text_to_width(&format!("Hazard: {}", hazard_summary(planet)), text_w, 8.0),
@@ -297,19 +311,11 @@ fn draw_mobile_planet_info(
         Colors::TEXT_DIM,
     );
     draw_ui_text(
-        if is_colonized {
-            "Status: COLONIZED"
-        } else {
-            "Status: UNEXPLORED"
-        },
+        &truncate_text_to_width(&status_line, text_w, 11.0),
         x + 15.0,
         y + 86.0,
         11.0,
-        if is_colonized {
-            Colors::SUCCESS
-        } else {
-            Colors::WARNING
-        },
+        status_color,
     );
     draw_ui_text(
         &truncate_text_to_width(

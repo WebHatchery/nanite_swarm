@@ -89,4 +89,10 @@ impl Game {
             });
         }
     }
+
+    pub(super) fn stage_mobile_interplanetary_alert_scene(&mut self) {
+        self.stage_interplanetary_scene();
+        self.campaign.travel_to(4);
+        self.interplanetary_mobile_panel = state::InterplanetaryMobilePanel::Worlds;
+    }
 }

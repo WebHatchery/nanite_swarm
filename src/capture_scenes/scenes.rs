@@ -606,6 +606,9 @@ impl Game {
                 self.campaign.travel_to(1);
                 self.interplanetary_mobile_panel = state::InterplanetaryMobilePanel::Worlds;
             }
+            "mobile_interplanetary_alert" => {
+                self.stage_mobile_interplanetary_alert_scene();
+            }
             "mobile_shipping_reserve" => {
                 self.stage_interplanetary_scene();
                 self.campaign.cycle_export_reserve_for(2);

@@ -1,4 +1,20 @@
-use super::mobile_info_height;
+use super::{mobile_info_height, mobile_status_text};
+
+#[test]
+fn mobile_dossier_status_keeps_the_remote_alert_reason_visible() {
+    assert_eq!(
+        mobile_status_text(true, None),
+        "Status: COLONIZED".to_string()
+    );
+    assert_eq!(
+        mobile_status_text(true, Some("MAINT DUST")),
+        "Status: COLONIZED / MAINT DUST".to_string()
+    );
+    assert_eq!(
+        mobile_status_text(false, None),
+        "Status: UNEXPLORED".to_string()
+    );
+}
 
 #[test]
 fn short_phone_dossier_stays_above_the_footer() {

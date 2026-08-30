@@ -110,6 +110,8 @@ At compact browser sizes, the resource cards abbreviate and the build/right
 panels use short summaries so touch controls remain separated and visible.
 After a world change, the mobile header briefly names the arrival as
 `ARRIVED <WORLD>` while the desktop banner keeps the full arrival line.
+Portrait world dossiers repeat the selected world's alert code in the status
+line, so a remote maintenance cause stays visible after tapping its row.
 On portrait screens, BUILD and INFO open one full-width drawer at a time;
 MAP returns to the live grid between actions.
 The mobile gameplay header also keeps the active research job's DATA progress
