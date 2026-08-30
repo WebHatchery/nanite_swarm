@@ -33,6 +33,9 @@ Audit date: 2026-08-20
 - Split the cross-world research contract from the campaign test coordinator
   into `src/state/campaign/tests/research.rs`, keeping the parent suite below
   the source-size restructure signal as research and background simulation grow.
+- Split relocation and undo behavior from `src/state/actions.rs` into
+  `src/state/actions/relocation.rs`, leaving the action coordinator at 567
+  lines before the next construction feature.
 
 ## Remaining debt
 
