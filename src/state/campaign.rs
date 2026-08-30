@@ -514,6 +514,19 @@ impl Campaign {
         }
     }
 
+    /// Repair the tutorial scope on campaigns written before later worlds
+    /// stopped replaying the opening lesson. Only the starting world owns that
+    /// lesson; this is safe to run on every load and needs no schema bump.
+    pub(crate) fn normalize_tutorial_scope(&mut self) {
+        for (index, planet) in self.planets.iter_mut().enumerate() {
+            if index != STARTING_PLANET {
+                if let Some(planet) = planet {
+                    planet.tutorial_done = true;
+                }
+            }
+        }
+    }
+
     pub fn current_index(&self) -> usize {
         self.current
     }

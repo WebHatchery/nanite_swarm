@@ -393,6 +393,19 @@ fn json_roundtrip_preserves_every_colonized_world() {
 }
 
 #[test]
+fn loading_an_older_campaign_does_not_restart_a_later_world_tutorial() {
+    let mut campaign = campaign();
+    campaign.colonize(1);
+    campaign.planet_mut(1).unwrap().tutorial_done = false;
+
+    let json = save_to_json(&mut campaign).unwrap();
+    let loaded = load_from_json(&json).unwrap();
+
+    assert!(loaded.planet(1).unwrap().tutorial_done);
+    assert!(loaded.planet(1).unwrap().tutorial_current().is_none());
+}
+
+#[test]
 fn a_save_stamps_every_colonized_planet_with_the_same_time() {
     let mut campaign = campaign();
     campaign.current_mut().last_saved_unix = 0;
