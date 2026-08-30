@@ -392,7 +392,7 @@ fn draw_planet_info(
         draw_world_telemetry(&telemetry, panel_x + 15.0, panel_y + 147.0);
     }
 
-    let rules_y = panel_y + if telemetry.is_some() { 185.0 } else { 149.0 };
+    let rules_y = panel_y + if telemetry.is_some() { 201.0 } else { 149.0 };
     draw_ui_text(
         "World rules:",
         panel_x + 15.0,
@@ -416,7 +416,7 @@ fn draw_planet_info(
         );
     }
 
-    let action_y = panel_y + if telemetry.is_some() { 255.0 } else { 213.0 };
+    let action_y = panel_y + if telemetry.is_some() { 271.0 } else { 213.0 };
     if is_current {
         draw_ui_text(
             "(Current Location)",
@@ -475,6 +475,16 @@ fn draw_world_telemetry(telemetry: &WorldTelemetry, x: f32, y: f32) {
         9.0,
         Colors::TEXT,
     );
+    draw_ui_text(
+        &format!(
+            "Data +{:.2}/s  Biomass +{:.1}/s",
+            telemetry.data_rate, telemetry.biomass_rate
+        ),
+        x,
+        y + 16.0,
+        9.0,
+        Colors::TEXT,
+    );
     let health = if telemetry.alerts == 0 {
         (WorldAlert::Nominal.label().to_string(), Colors::SUCCESS)
     } else {
@@ -485,8 +495,10 @@ fn draw_world_telemetry(telemetry: &WorldTelemetry, x: f32, y: f32) {
     };
     draw_ui_text(
         &format!(
-            "Stock M {:.0}  Grid {:+.1}/s  D {}  S {}  {}",
+            "Stock M {:.0}  D {:.0}  B {:.0}  Grid {:+.1}/s  DR {}  S {}  {}",
             telemetry.minerals,
+            telemetry.data,
+            telemetry.biomass,
             telemetry.power_balance,
             telemetry.drones,
             telemetry.structures,

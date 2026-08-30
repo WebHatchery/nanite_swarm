@@ -59,7 +59,11 @@ impl WorldAlert {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct WorldTelemetry {
     pub minerals: f32,
+    pub data: f32,
+    pub biomass: f32,
     pub ore_rate: f32,
+    pub data_rate: f32,
+    pub biomass_rate: f32,
     pub alloy_rate: f32,
     pub components_rate: f32,
     pub power_balance: f32,
@@ -317,7 +321,11 @@ impl Campaign {
         };
         Some(WorldTelemetry {
             minerals: planet.resources.minerals,
+            data: planet.resources.data,
+            biomass: planet.resources.biomass,
             ore_rate: planet.throughput.last().unwrap_or(0.0),
+            data_rate: planet.data_generation_rate(),
+            biomass_rate: planet.biomass_harvest_rate(),
             alloy_rate: planet.observed_alloy_rate(),
             components_rate: planet.observed_components_rate(),
             power_balance: planet.power_balance,

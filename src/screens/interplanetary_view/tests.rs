@@ -3,7 +3,11 @@ use super::{world_alert_code, world_rule_lines};
 fn telemetry(alerts: usize, alert_kind: crate::state::WorldAlert) -> crate::state::WorldTelemetry {
     crate::state::WorldTelemetry {
         minerals: 0.0,
+        data: 0.0,
+        biomass: 0.0,
         ore_rate: 0.0,
+        data_rate: 0.0,
+        biomass_rate: 0.0,
         alloy_rate: 0.0,
         components_rate: 0.0,
         power_balance: 0.0,
