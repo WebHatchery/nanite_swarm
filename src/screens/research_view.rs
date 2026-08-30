@@ -43,17 +43,29 @@ impl Default for ResearchViewport {
     }
 }
 
+pub struct ResearchViewContext<'a> {
+    pub data: &'a crate::data::GameData,
+    pub research_state: &'a ResearchState,
+    pub research_tree: &'a ResearchTree,
+    pub data_available: f32,
+    pub research_locked: bool,
+    pub sheet: &'a [StatReading],
+    pub active_condition: Option<&'a str>,
+    pub viewport: &'a mut ResearchViewport,
+}
+
 /// Render the research neural network view
-pub fn render_research_view(
-    data: &crate::data::GameData,
-    research_state: &ResearchState,
-    research_tree: &ResearchTree,
-    data_available: f32,
-    research_locked: bool,
-    sheet: &[StatReading],
-    active_condition: Option<&str>,
-    viewport: &mut ResearchViewport,
-) -> ResearchAction {
+pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction {
+    let ResearchViewContext {
+        data,
+        research_state,
+        research_tree,
+        data_available,
+        research_locked,
+        sheet,
+        active_condition,
+        viewport,
+    } = context;
     clear_background(Colors::BACKGROUND);
 
     let screen_w = screen_width();

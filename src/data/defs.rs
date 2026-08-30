@@ -571,7 +571,7 @@ impl GameData {
             terrain_by_id.insert(def.id.clone(), def.clone());
         }
 
-        let data = Self {
+        Self {
             buildings: building_file.buildings,
             buildings_by_id,
             terrain: terrain_file.terrain,
@@ -583,8 +583,7 @@ impl GameData {
             directives,
             achievements: achievement_file.achievements,
             core_stages: core_stage_file.stages,
-        };
-        data
+        }
     }
 
     pub fn building(&self, id: &str) -> &BuildingDef {

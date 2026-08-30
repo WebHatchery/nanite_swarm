@@ -135,16 +135,16 @@ impl Game {
         self.advance_simulation();
         let data_context = self.session.data.clone();
         let sheet = self.campaign.current().stat_sheet();
-        match render_research_view(
-            data_context.data(),
-            &self.research_state,
-            &self.research_tree,
-            self.campaign.current().resources.data,
-            self.campaign.current().research_lock_timer > 0.0,
-            &sheet,
-            self.campaign.current().active_planet_condition(),
-            &mut self.research_viewport,
-        ) {
+        match render_research_view(screens::ResearchViewContext {
+            data: data_context.data(),
+            research_state: &self.research_state,
+            research_tree: &self.research_tree,
+            data_available: self.campaign.current().resources.data,
+            research_locked: self.campaign.current().research_lock_timer > 0.0,
+            sheet: &sheet,
+            active_condition: self.campaign.current().active_planet_condition(),
+            viewport: &mut self.research_viewport,
+        }) {
             ResearchAction::Close => self.phase = GamePhase::Playing,
             ResearchAction::StartResearch(tech_id) => {
                 let condition = self.campaign.current().active_planet_condition();

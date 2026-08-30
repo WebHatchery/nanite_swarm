@@ -102,7 +102,7 @@ impl StatId {
 
     /// What this stat is called where a player can see it. Falls back to the
     /// raw id, which is what an unlabelled stat deserves.
-    pub fn label<'a>(self, data: &'a GameData) -> &'a str {
+    pub fn label(self, data: &GameData) -> &str {
         data.research
             .stats
             .iter()
