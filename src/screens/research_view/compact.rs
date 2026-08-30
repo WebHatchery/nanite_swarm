@@ -65,6 +65,51 @@ pub(super) fn update_compact_viewport(viewport: &mut ResearchViewport, tree: Rec
     viewport.pan.y = viewport.pan.y.clamp(-tree.h * 2.5, tree.h * 2.5);
 }
 
+/// Put the most relevant node in the middle of a compact tree the first time
+/// it is shown. On a short phone viewport the authored network is taller than
+/// the available field, so a neutral world-space center can hide the active
+/// job completely behind the detail drawer.
+pub(super) fn focus_compact_viewport(
+    viewport: &mut ResearchViewport,
+    research_tree: &ResearchTree,
+    research_state: &ResearchState,
+    tree: Rect,
+    active_condition: Option<&str>,
+) {
+    if !viewport.focus_pending {
+        return;
+    }
+
+    let focus_position = research_state
+        .current_research
+        .as_deref()
+        .and_then(|id| research_tree.get_node(id))
+        .or_else(|| {
+            research_tree.nodes.iter().find(|node| {
+                !research_state.is_unlocked(&node.id)
+                    && research_tree.can_select_on(
+                        &node.id,
+                        &research_state.unlocked,
+                        active_condition,
+                    )
+            })
+        })
+        .or_else(|| research_tree.nodes.first())
+        .map(|node| node.position);
+
+    if let Some(position) = focus_position {
+        let layout = TreeLayout::fit_with_min_scale(&research_tree.nodes, tree, 60.0)
+            .with_view(viewport.zoom, (0.0, 0.0));
+        let target = vec2(layout.to_screen(position).0, layout.to_screen(position).1);
+        let center = vec2(tree.x + tree.w * 0.5, tree.y + tree.h * 0.5);
+        viewport.pan = center - target;
+    }
+
+    viewport.center_pan = viewport.pan;
+    viewport.center_zoom = viewport.zoom;
+    viewport.focus_pending = false;
+}
+
 /// Track a drag from the shared pointer so a finger can pan the same compact
 /// tree as a mouse. A gesture that starts outside the tree never steals a
 /// later release from the surrounding controls.
@@ -109,8 +154,8 @@ pub(super) fn draw_compact_viewport_controls(
     }
     x += 38.0;
     if draw_button_sized(x, y, 68.0, 28.0, "Center") {
-        viewport.pan = Vec2::ZERO;
-        viewport.zoom = 1.45;
+        viewport.pan = viewport.center_pan;
+        viewport.zoom = viewport.center_zoom;
     }
 }
 

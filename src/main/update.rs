@@ -157,6 +157,7 @@ impl Game {
 
     fn open_research_screen(&mut self, return_phase: GamePhase) {
         self.research_return_phase = return_phase;
+        self.research_viewport.reset_for_entry();
         self.open_screen(GamePhase::Research);
     }
 

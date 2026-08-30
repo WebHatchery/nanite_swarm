@@ -123,3 +123,28 @@ fn compact_tree_drag_ignores_a_gesture_that_started_outside_the_tree() {
     assert_eq!(viewport.pan, Vec2::ZERO);
     assert_eq!(viewport.drag_distance, 0.0);
 }
+
+#[test]
+fn compact_viewport_focuses_the_active_research_node() {
+    let research_tree = ResearchTree::from_nodes(vec![
+        crate::engine::ResearchNode::new("core", "Core", "", 0.0, vec![], (0.0, 0.0)),
+        crate::engine::ResearchNode::new("active", "Active", "", 100.0, vec!["core"], (-3.5, -5.0)),
+    ]);
+    let research_state = ResearchState {
+        unlocked: vec!["core".to_string()],
+        current_research: Some("active".to_string()),
+        research_progress: 20.0,
+        parked_progress: std::collections::HashMap::new(),
+    };
+    let tree = Rect::new(12.0, 172.0, 296.0, 98.0);
+    let mut viewport = ResearchViewport::default();
+
+    focus_compact_viewport(&mut viewport, &research_tree, &research_state, tree, None);
+
+    let layout = TreeLayout::fit_with_min_scale(&research_tree.nodes, tree, 60.0)
+        .with_view(viewport.zoom, (viewport.pan.x, viewport.pan.y));
+    let focused = layout.to_screen((-3.5, -5.0));
+    let center = vec2(tree.x + tree.w * 0.5, tree.y + tree.h * 0.5);
+    assert!(vec2(focused.0, focused.1).distance(center) < 0.001);
+    assert!(!viewport.focus_pending);
+}

@@ -17,6 +17,7 @@ use layout::{ResearchLayout, TreeLayout};
 use sheet::draw_swarm_sheet;
 
 const HEADER_HEIGHT: f32 = 72.0;
+const DEFAULT_RESEARCH_ZOOM: f32 = 1.45;
 
 /// Actions from the research view
 #[derive(Debug, Clone, PartialEq)]
@@ -33,17 +34,30 @@ pub struct ResearchViewport {
     drag_distance: f32,
     last_pointer: Option<Vec2>,
     drag_active: bool,
+    center_pan: Vec2,
+    center_zoom: f32,
+    focus_pending: bool,
 }
 
 impl Default for ResearchViewport {
     fn default() -> Self {
         Self {
             pan: Vec2::ZERO,
-            zoom: 1.45,
+            zoom: DEFAULT_RESEARCH_ZOOM,
             drag_distance: 0.0,
             last_pointer: None,
             drag_active: false,
+            center_pan: Vec2::ZERO,
+            center_zoom: DEFAULT_RESEARCH_ZOOM,
+            focus_pending: true,
         }
+    }
+}
+
+impl ResearchViewport {
+    /// Reframe the network when the player opens it from another screen.
+    pub fn reset_for_entry(&mut self) {
+        *self = Self::default();
     }
 }
 
@@ -104,6 +118,13 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
     }
 
     if view.compact {
+        focus_compact_viewport(
+            viewport,
+            research_tree,
+            research_state,
+            view.tree,
+            active_condition,
+        );
         update_compact_viewport(viewport, view.tree);
         draw_compact_viewport_controls(viewport, screen_w, screen_w < 600.0);
     }
