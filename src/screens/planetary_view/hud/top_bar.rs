@@ -92,6 +92,15 @@ fn mobile_research_status(
     ))
 }
 
+fn compact_resource_amount(amount: f32) -> String {
+    let amount = amount.max(0.0);
+    if amount >= 1_000.0 {
+        format!("{:.0}k", amount / 1_000.0)
+    } else {
+        format!("{amount:.0}")
+    }
+}
+
 fn resource_rate_label(state: &PlanetState, resource: ResourceType, rate: &str) -> String {
     if state.resource_is_full(resource) && rate.starts_with('+') {
         "FULL".to_string()
@@ -117,11 +126,11 @@ fn compact_resource_readout(state: &PlanetState) -> String {
     let compact = |resource: ResourceType| {
         let value = state.resources.get(resource);
         let capacity = state.resource_capacity(resource);
-        if capacity >= 1_000.0 {
-            format!("{:.0}k/{:.0}k", value / 1_000.0, capacity / 1_000.0)
-        } else {
-            format!("{:.0}/{:.0}", value, capacity)
-        }
+        format!(
+            "{}/{}",
+            compact_resource_amount(value),
+            compact_resource_amount(capacity)
+        )
     };
     format!(
         "E{} M{} D{} C{}",

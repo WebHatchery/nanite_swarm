@@ -1,7 +1,7 @@
 use super::{
-    compact_resource_readout, mobile_offline_report_lines, mobile_offline_work_label,
-    mobile_research_status, mobile_status_text, offline_work_label, resource_rate_label,
-    top_bar_layout,
+    compact_resource_amount, compact_resource_readout, mobile_offline_report_lines,
+    mobile_offline_work_label, mobile_research_status, mobile_status_text, offline_work_label,
+    resource_rate_label, top_bar_layout,
 };
 use crate::engine::ResourceType;
 use crate::state::OfflineReport;
@@ -119,6 +119,13 @@ fn mobile_resource_readout_includes_storage_caps() {
 
     assert_eq!(
         compact_resource_readout(&state),
-        "E50/50 M25/100 D1k/1k C0k/1k"
+        "E50/50 M25/100 D1k/1k C40/1k"
     );
+}
+
+#[test]
+fn compact_resource_amount_keeps_small_pools_visible() {
+    assert_eq!(compact_resource_amount(14.0), "14");
+    assert_eq!(compact_resource_amount(999.0), "999");
+    assert_eq!(compact_resource_amount(1_000.0), "1k");
 }
