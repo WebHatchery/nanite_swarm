@@ -2,7 +2,10 @@
 
 use crate::data::GameData;
 use crate::engine::ResourceType;
-use crate::state::{cargo_name, ExportOrder, UpkeepAlertCause, WorldAlert, WorldTelemetry};
+use crate::state::{
+    cargo_name, CoreRequirementProgress, ExportOrder, Milestone, UpkeepAlertCause, WorldAlert,
+    WorldTelemetry,
+};
 use crate::ui::Colors;
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::draw_ui_text;
@@ -62,7 +65,7 @@ pub(super) fn core_stage_summary(data: &GameData, telemetry: &WorldTelemetry) ->
         .core_stages
         .get(telemetry.core_stage)
         .map(|stage| stage.name.split_whitespace().last().unwrap_or(&stage.name));
-    match next_stage {
+    let stage = match next_stage {
         Some(next) => format!(
             "Core {}/{} > {}",
             telemetry.core_stage, telemetry.core_stage_count, next
@@ -71,6 +74,37 @@ pub(super) fn core_stage_summary(data: &GameData, telemetry: &WorldTelemetry) ->
             "Core {}/{}",
             telemetry.core_stage, telemetry.core_stage_count
         ),
+    };
+    telemetry
+        .core_next_requirement
+        .map(|requirement| format!("{stage} / {}", core_requirement_summary(requirement)))
+        .unwrap_or(stage)
+}
+
+fn core_requirement_summary(progress: CoreRequirementProgress) -> String {
+    format!(
+        "{}{}/{}",
+        core_requirement_label(progress.milestone),
+        compact_requirement_amount(progress.current),
+        compact_requirement_amount(progress.target)
+    )
+}
+
+fn core_requirement_label(milestone: Milestone) -> &'static str {
+    match milestone {
+        Milestone::Structures => "STR",
+        Milestone::NetworkTiles => "NET",
+        Milestone::Technologies => "TECH",
+        Milestone::SeedShipStages => "SHIP",
+        _ => milestone.id(),
+    }
+}
+
+fn compact_requirement_amount(amount: f32) -> String {
+    if amount.fract().abs() > 0.05 {
+        format!("{amount:.1}")
+    } else {
+        format!("{amount:.0}")
     }
 }
 

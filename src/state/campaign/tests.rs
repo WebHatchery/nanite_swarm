@@ -109,6 +109,12 @@ fn the_solar_map_reads_live_telemetry_for_colonized_worlds() {
     assert_eq!(fresh.drones, 0);
     assert_eq!(fresh.core_stage, 1);
     assert_eq!(fresh.core_stage_count, 5);
+    let next_core = fresh
+        .core_next_requirement
+        .expect("fresh Core should expose its first blocker");
+    assert_eq!(next_core.milestone, crate::state::Milestone::Structures);
+    assert_eq!(next_core.current, 1.0);
+    assert_eq!(next_core.target, 10.0);
     assert_eq!(fresh.alerts, 0);
     assert_eq!(fresh.alert_kind, WorldAlert::Nominal);
     assert_eq!(fresh.storage_full_resource, None);

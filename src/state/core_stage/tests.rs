@@ -43,6 +43,17 @@ fn building_enough_of_a_base_grows_the_core() {
 }
 
 #[test]
+fn core_requirement_progress_drops_milestones_as_they_are_met() {
+    let mut state = state();
+    assert_eq!(state.core_requirement_progress().len(), 2);
+
+    build(&mut state, 12);
+
+    assert!(state.core_requirement_progress().is_empty());
+    assert!(state.next_core_requirement().is_none());
+}
+
+#[test]
 fn a_stage_the_core_reached_is_not_given_back_when_the_base_is_torn_down() {
     let mut state = state();
     build(&mut state, 12);

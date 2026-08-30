@@ -12,6 +12,7 @@ use crate::data::{GameConfig, GameDataContext};
 use crate::directives::{pick_directive, Directive};
 use crate::engine::{ResearchTree, ResourceType, StatId};
 
+use super::core_stage::CoreRequirementProgress;
 use super::game_state::{PlanetState, ResearchProgress};
 use super::UpkeepAlertCause;
 
@@ -80,6 +81,10 @@ pub struct WorldTelemetry {
     /// the data file gains another stage later.
     pub core_stage: usize,
     pub core_stage_count: usize,
+    /// The first unmet requirement for the next Core stage, if one exists.
+    /// Keeping this as a copy lets the Solar System explain remote growth
+    /// without borrowing a planet through the rendering layer.
+    pub core_next_requirement: Option<CoreRequirementProgress>,
     pub alerts: usize,
     pub alert_kind: WorldAlert,
     /// The first stored resource at its live ceiling while that resource has
@@ -450,6 +455,7 @@ impl Campaign {
             drones: planet.drones.total_count(),
             core_stage: planet.core_stage_index() + 1,
             core_stage_count: planet.core_stages().len(),
+            core_next_requirement: planet.next_core_requirement(),
             alerts,
             alert_kind,
             storage_full_resource,

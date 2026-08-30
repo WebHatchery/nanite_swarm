@@ -648,25 +648,20 @@ fn core_stage_status_text(state: &PlanetState) -> String {
 
     let current_index = state.core_stage_index();
     let stage_count = stages.len();
-    let Some(next) = stages.get(current_index + 1) else {
+    if stages.get(current_index + 1).is_none() {
         return format!("CORE {stage_count}/{stage_count} // FULLY EVOLVED");
-    };
+    }
 
-    let requirements = next
-        .requires
+    let requirements = state
+        .core_requirement_progress()
         .iter()
-        .filter_map(|requirement| {
-            let milestone = Milestone::from_id(&requirement.kind)?;
-            let current = state.measure(milestone);
-            if current + 0.001 >= requirement.target {
-                return None;
-            }
-            Some(format!(
+        .map(|progress| {
+            format!(
                 "{}{}/{}",
-                core_requirement_label(milestone),
-                compact_requirement_amount(current),
-                compact_requirement_amount(requirement.target)
-            ))
+                core_requirement_label(progress.milestone),
+                compact_requirement_amount(progress.current),
+                compact_requirement_amount(progress.target)
+            )
         })
         .collect::<Vec<_>>()
         .join("+");

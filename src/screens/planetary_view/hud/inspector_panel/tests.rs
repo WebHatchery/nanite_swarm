@@ -97,6 +97,7 @@ fn core_inspector_names_its_current_and_next_evolution() {
 
     assert_eq!(core_stage_status_text(&state), "CORE 1/5 / STR1/10+NET1/6");
     assert_eq!(core_next_stage_label(&state), "Foundry");
+    assert_eq!(state.core_requirement_progress().len(), 2);
 
     state.core_stage = (state.core_stages().len() - 1) as u8;
     assert_eq!(core_stage_status_text(&state), "CORE 5/5 // FULLY EVOLVED");

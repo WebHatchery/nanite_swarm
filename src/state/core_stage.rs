@@ -11,6 +11,17 @@ use crate::data::CoreStageDef;
 use super::game_state::PlanetState;
 use super::milestone::Milestone;
 
+/// Live progress toward one requirement of the next Core stage.
+///
+/// This is a snapshot rather than a reference so remote world telemetry can
+/// carry the same actionable blocker that the local inspector reads.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CoreRequirementProgress {
+    pub milestone: Milestone,
+    pub current: f32,
+    pub target: f32,
+}
+
 impl PlanetState {
     /// Every declared stage, starting with the one a world lands with.
     pub fn core_stages(&self) -> &[CoreStageDef] {
@@ -31,6 +42,37 @@ impl PlanetState {
     pub fn core_stages_reached(&self) -> &[CoreStageDef] {
         let reached = (self.core_stage as usize + 1).min(self.core_stages().len());
         &self.core_stages()[..reached]
+    }
+
+    /// The unmet requirements for the next stage, in authored order.
+    ///
+    /// A stage is normally advanced in the same simulation tick that its last
+    /// requirement is met. Keeping only unmet requirements here makes the
+    /// readout an instruction rather than a second checklist of completed
+    /// work.
+    pub fn core_requirement_progress(&self) -> Vec<CoreRequirementProgress> {
+        let Some(next) = self.core_stages().get(self.core_stage_index() + 1) else {
+            return Vec::new();
+        };
+
+        next.requires
+            .iter()
+            .filter_map(|requirement| {
+                let milestone = Milestone::from_id(&requirement.kind)?;
+                let current = self.measure(milestone);
+                (current + 0.001 < requirement.target).then_some(CoreRequirementProgress {
+                    milestone,
+                    current,
+                    target: requirement.target,
+                })
+            })
+            .collect()
+    }
+
+    /// The first unmet requirement, useful when a compact remote summary has
+    /// room for one clear recovery target rather than the whole checklist.
+    pub fn next_core_requirement(&self) -> Option<CoreRequirementProgress> {
+        self.core_requirement_progress().into_iter().next()
     }
 
     /// Advance the Core through any stage whose milestones are all met.

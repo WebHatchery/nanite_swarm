@@ -139,6 +139,7 @@ fn telemetry(alerts: usize, alert_kind: crate::state::WorldAlert) -> crate::stat
         drones: 0,
         core_stage: 1,
         core_stage_count: 5,
+        core_next_requirement: None,
         alerts,
         alert_kind,
         storage_full_resource: None,
@@ -206,6 +207,17 @@ fn remote_dossiers_name_the_worlds_core_stage() {
             &telemetry(0, crate::state::WorldAlert::Nominal)
         ),
         "Core 1/5 > Foundry"
+    );
+
+    let mut progressing = telemetry(0, crate::state::WorldAlert::Nominal);
+    progressing.core_next_requirement = Some(crate::state::CoreRequirementProgress {
+        milestone: crate::state::Milestone::Structures,
+        current: 3.0,
+        target: 10.0,
+    });
+    assert_eq!(
+        core_stage_summary(data.data(), &progressing),
+        "Core 1/5 > Foundry / STR3/10"
     );
 
     let mut finished = telemetry(0, crate::state::WorldAlert::Nominal);
