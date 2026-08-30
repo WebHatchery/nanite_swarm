@@ -99,7 +99,7 @@ pub fn render_planetary_view(
     // The player can still pan from empty ground, or tap CANCEL before moving
     // the map by touch.
     let touch_route_active = state.touch_route_active;
-    let touch_camera_active = touch_grid_active && !touch_route_active;
+    let touch_camera_active = touch_grid_active && !touch_route_active && !state.factory_deck_open;
     input::handle_camera(
         state,
         layout,
@@ -157,6 +157,7 @@ pub fn render_planetary_view(
     seed_ship_render::draw_seed_ship(state, metrics, time);
     entity_render::draw_drones(state, metrics, theme, time);
     entity_render::draw_particles(state, metrics);
+    flow_render::draw_mobile_ledger(state, metrics, theme);
 
     let ui_action = hud::draw_ui_panels(
         state,

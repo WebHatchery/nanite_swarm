@@ -162,3 +162,16 @@ fn flow_node_output_gauge_uses_the_real_dispatch_pad_capacity() {
     assert!((node.output_pressure - 0.5).abs() < 0.001);
     assert!(node.priority);
 }
+
+#[test]
+fn mobile_flow_ledger_uses_the_full_safe_width() {
+    let theme = crate::data::UiTheme::default();
+    let metrics =
+        HudMetrics::for_screen(&theme, 320.0, 480.0, crate::state::Camera::default(), false);
+    let area = factory_ledger_rect(320.0, metrics);
+
+    assert_eq!(area.x, 10.0);
+    assert_eq!(area.w, 300.0);
+    assert_eq!(area.right(), 310.0);
+    assert_eq!(area.h, 108.0);
+}

@@ -325,7 +325,11 @@ pub(super) fn draw_notifications(state: &PlanetState, metrics: HudMetrics, scree
         // A drawer owns the whole portrait center; toasts would otherwise be
         // painted over building cards and their touch targets. The map still
         // has a reserved strip below the tutorial for transient notices.
-        if state.mobile_panel != MobilePanel::Map {
+        if state.mobile_panel != MobilePanel::Map
+            || state.show_help
+            || state.flow_overlay
+            || state.factory_deck_open
+        {
             return;
         }
         let anchor = crate::screens::ToastAnchor {

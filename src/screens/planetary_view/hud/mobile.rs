@@ -25,7 +25,12 @@ pub(super) fn draw(
 ) -> PlanetaryAction {
     match state.mobile_panel {
         MobilePanel::Map => {
-            if state.tutorial_current().is_some() && !state.tutorial_hidden {
+            if state.tutorial_current().is_some()
+                && !state.tutorial_hidden
+                && !state.flow_overlay
+                && !state.factory_deck_open
+                && !state.show_help
+            {
                 let right = RightStackLayout::mobile_tutorial(screen_w, metrics);
                 directive_panel::draw(state, directive, theme, colors, &right);
             }

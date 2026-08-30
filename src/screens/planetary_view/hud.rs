@@ -185,8 +185,18 @@ pub(super) fn draw_ui_panels(
         }
         bottom_bar::ClockAction::CloseMobilePanel => state.mobile_panel = MobilePanel::Map,
         bottom_bar::ClockAction::ToggleHelp => state.show_help = !state.show_help,
-        bottom_bar::ClockAction::ToggleFlow => state.flow_overlay = !state.flow_overlay,
-        bottom_bar::ClockAction::ToggleDeck => state.factory_deck_open = !state.factory_deck_open,
+        bottom_bar::ClockAction::ToggleFlow => {
+            state.flow_overlay = !state.flow_overlay;
+            if state.flow_overlay {
+                state.factory_deck_open = false;
+            }
+        }
+        bottom_bar::ClockAction::ToggleDeck => {
+            state.factory_deck_open = !state.factory_deck_open;
+            if state.factory_deck_open {
+                state.flow_overlay = false;
+            }
+        }
         bottom_bar::ClockAction::CycleGraph => state.graph_mode = state.graph_mode.next(),
         bottom_bar::ClockAction::RetrySave => {
             if ui_action == PlanetaryAction::None {

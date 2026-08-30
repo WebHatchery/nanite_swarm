@@ -144,17 +144,25 @@ pub(super) fn draw(
         action = ClockAction::ToggleHelp;
     }
 
-    if state.show_help && draw_mobile_help(theme, colors, screen_w, screen_h) {
+    if state.show_help
+        && draw_mobile_help(theme, colors, screen_w, screen_h, metrics.bottom_bar_height)
+    {
         action = ClockAction::ToggleHelp;
     }
     action
 }
 
-fn draw_mobile_help(theme: &UiTheme, colors: &PanelColors, screen_w: f32, screen_h: f32) -> bool {
+fn draw_mobile_help(
+    theme: &UiTheme,
+    colors: &PanelColors,
+    screen_w: f32,
+    screen_h: f32,
+    bottom_bar_height: f32,
+) -> bool {
     let x = 10.0;
     let y = 90.0;
     let w = (screen_w - 20.0).max(0.0);
-    let h = (screen_h - 112.0).clamp(220.0, 430.0);
+    let h = mobile_help_height(screen_h, bottom_bar_height, y);
     draw_hud_panel(theme, Rect::new(x, y, w, h), Some("HELP & CONTROLS"));
     if draw_hud_button(theme, Rect::new(x + w - 68.0, y + 7.0, 56.0, 22.0), "CLOSE") {
         return true;
@@ -178,3 +186,11 @@ fn draw_mobile_help(theme: &UiTheme, colors: &PanelColors, screen_w: f32, screen
     }
     false
 }
+
+fn mobile_help_height(screen_h: f32, bottom_bar_height: f32, top: f32) -> f32 {
+    let available = (screen_h - top - bottom_bar_height - 10.0).max(0.0);
+    (screen_h - 112.0).min(available).clamp(180.0, 430.0)
+}
+
+#[cfg(test)]
+mod tests;

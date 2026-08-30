@@ -13,8 +13,10 @@ fn required_capture_scenes_are_registered() {
             "freight",
             "flow",
             "factory_deck",
+            "mobile_factory_deck",
             "mobile_build",
-            "mobile_info"
+            "mobile_info",
+            "mobile_help"
         ]
     );
 }

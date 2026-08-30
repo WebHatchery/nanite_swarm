@@ -15,6 +15,8 @@ impl Game {
         self.campaign.current_mut().focus_mode = false;
         self.campaign.current_mut().mobile_panel = state::MobilePanel::Map;
         self.campaign.current_mut().flow_overlay = false;
+        self.campaign.current_mut().factory_deck_open = false;
+        self.campaign.current_mut().show_help = false;
         self.campaign.current_mut().auto_clocking = false;
         self.campaign.current_mut().save_failed = false;
         self.campaign.current_mut().restored_from_backup = false;
@@ -67,6 +69,11 @@ impl Game {
                     .grid
                     .find_buildings(engine::BuildingType::Drill)
                     .pop();
+            }
+            "mobile_help" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                self.campaign.current_mut().show_help = true;
             }
             "logistics" => {
                 self.phase = GamePhase::Playing;
@@ -421,7 +428,7 @@ impl Game {
                 }
                 planet.selected_tile = Some(smelter);
             }
-            "assembly" | "flow" | "factory_deck" => {
+            "assembly" | "flow" | "factory_deck" | "mobile_factory_deck" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();
                 for tech in [
@@ -528,7 +535,7 @@ impl Game {
                     planet.camera.pan_y = -72.0;
                     planet.selected_building = None;
                     planet.notifications.clear();
-                } else if scene == "factory_deck" {
+                } else if matches!(scene, "factory_deck" | "mobile_factory_deck") {
                     planet.factory_deck_open = true;
                     planet.factory_focus = state::FactoryFocus::Assembly;
                     planet.core_stage = 2;

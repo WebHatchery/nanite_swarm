@@ -67,16 +67,26 @@ pub(super) fn draw(state: &PlanetState, metrics: HudMetrics, theme: &UiTheme, ti
         draw_node(&node, starved.contains(&node.pos), metrics, theme);
     }
 
-    draw_factory_ledger(&factory_ledger(state), metrics, theme);
+    if screen_width() >= 600.0 {
+        draw_factory_ledger(&factory_ledger(state), metrics, theme);
+        draw_ui_text(
+            "FACTORY FLOW // LIVE ROUTES",
+            metrics.base_offset_x() + 12.0,
+            metrics.base_offset_y() + 53.0,
+            10.0,
+            color_from_rgba(&theme.colors.primary_soft),
+        );
+        draw_node_key(metrics, theme);
+    }
+}
 
-    draw_ui_text(
-        "FACTORY FLOW // LIVE ROUTES",
-        metrics.base_offset_x() + 12.0,
-        metrics.base_offset_y() + 53.0,
-        10.0,
-        color_from_rgba(&theme.colors.primary_soft),
-    );
-    draw_node_key(metrics, theme);
+/// Mobile flow diagnostics belong above world-space freight labels and below
+/// the command bar. The route lines and processor nodes remain in the map
+/// layer so the live ledger cannot be obscured by a passing drone.
+pub(super) fn draw_mobile_ledger(state: &PlanetState, metrics: HudMetrics, theme: &UiTheme) {
+    if state.flow_overlay && screen_width() < 600.0 {
+        draw_factory_ledger(&factory_ledger(state), metrics, theme);
+    }
 }
 
 fn draw_node_key(metrics: HudMetrics, theme: &UiTheme) {
@@ -136,61 +146,99 @@ fn draw_node_key(metrics: HudMetrics, theme: &UiTheme) {
 }
 
 fn draw_factory_ledger(ledger: &FactoryLedger, metrics: HudMetrics, theme: &UiTheme) {
-    let grid_room = screen_width() - metrics.base_offset_x() - metrics.right_panel_width - 14.0;
-    let x = metrics.base_offset_x() + if grid_room >= 500.0 { 210.0 } else { 8.0 };
-    let width = (screen_width() - x - metrics.right_panel_width - 14.0).clamp(250.0, 520.0);
+    let screen_w = screen_width();
+    let narrow = screen_w < 600.0;
+    let area = factory_ledger_rect(screen_w, metrics);
+    let width = area.w;
     let compact = width < 400.0;
-    let area = Rect::new(
-        x,
-        metrics.base_offset_y() + 8.0,
-        width,
-        if compact { 108.0 } else { 88.0 },
+    let height = if compact { 108.0 } else { 88.0 };
+    let area = Rect::new(area.x, area.y, area.w, height);
+    draw_hud_panel(
+        theme,
+        area,
+        Some(if narrow {
+            "FLOW LEDGER"
+        } else {
+            "FACTORY LEDGER"
+        }),
     );
-    draw_hud_panel(theme, area, Some("FACTORY LEDGER"));
 
     let text = color_from_rgba(&theme.colors.text);
     let dim = color_from_rgba(&theme.colors.text_dim);
     let warning = color_from_rgba(&theme.colors.warning);
     let success = color_from_rgba(&theme.colors.success);
-    let summary = format!(
-        "PROC {} ACTIVE {} STARVED {} BLOCKED {} BOOST {} PRIO {} PAUSE {}",
-        ledger.processors,
-        ledger.active,
-        ledger.starved,
-        ledger.blocked,
-        ledger.boosted,
-        ledger.priority,
-        ledger.standby
-    );
+    let summary = if narrow {
+        format!(
+            "PROC {} | ON {} | STARVE {} | FULL {}",
+            ledger.processors, ledger.active, ledger.starved, ledger.blocked
+        )
+    } else {
+        format!(
+            "PROC {} ACTIVE {} STARVED {} BLOCKED {} BOOST {} PRIO {} PAUSE {}",
+            ledger.processors,
+            ledger.active,
+            ledger.starved,
+            ledger.blocked,
+            ledger.boosted,
+            ledger.priority,
+            ledger.standby
+        )
+    };
     draw_ui_text(&summary, area.x + 12.0, area.y + 50.0, 10.0, text);
 
-    let clock_mode = if ledger.auto_clocking {
+    let clock_mode = if narrow {
+        if ledger.auto_clocking {
+            "AUTO"
+        } else {
+            "MANUAL"
+        }
+    } else if ledger.auto_clocking {
         "AUTO CLOCK"
     } else {
         "MANUAL CLOCK"
     };
-    let bottleneck = ledger
-        .bottleneck
-        .map(|resource| {
+    let bottleneck = if narrow {
+        if let Some(resource) = ledger.bottleneck {
             let label = if resource == ResourceType::Minerals {
-                "ORE".to_string()
+                "ORE"
             } else {
-                resource.id().to_uppercase()
+                resource.id()
             };
-            format!("{} // BOTTLENECK {}", clock_mode, label)
-        })
-        .unwrap_or_else(|| {
-            if ledger.blocked > 0 {
-                format!("{} // DISPATCH PAD FULL", clock_mode)
-            } else if ledger.congested > 0 {
-                format!(
-                    "{} // NETWORK SATURATED {}/{}",
-                    clock_mode, ledger.peak_network_load, ledger.network_capacity as u32
-                )
-            } else {
-                format!("{} // FLOW STABLE", clock_mode)
-            }
-        });
+            format!("{} // {} STARVED", clock_mode, label.to_uppercase())
+        } else if ledger.blocked > 0 {
+            format!("{} // PAD FULL", clock_mode)
+        } else if ledger.congested > 0 {
+            format!(
+                "{} // SAT {}/{}",
+                clock_mode, ledger.peak_network_load, ledger.network_capacity as u32
+            )
+        } else {
+            format!("{} // FLOW STABLE", clock_mode)
+        }
+    } else {
+        ledger
+            .bottleneck
+            .map(|resource| {
+                let label = if resource == ResourceType::Minerals {
+                    "ORE".to_string()
+                } else {
+                    resource.id().to_uppercase()
+                };
+                format!("{} // BOTTLENECK {}", clock_mode, label)
+            })
+            .unwrap_or_else(|| {
+                if ledger.blocked > 0 {
+                    format!("{} // DISPATCH PAD FULL", clock_mode)
+                } else if ledger.congested > 0 {
+                    format!(
+                        "{} // NETWORK SATURATED {}/{}",
+                        clock_mode, ledger.peak_network_load, ledger.network_capacity as u32
+                    )
+                } else {
+                    format!("{} // FLOW STABLE", clock_mode)
+                }
+            })
+    };
     draw_ui_text(
         &bottleneck,
         area.x + 12.0,
@@ -267,6 +315,26 @@ fn draw_factory_ledger(ledger: &FactoryLedger, metrics: HudMetrics, theme: &UiTh
             );
         }
     }
+}
+
+fn factory_ledger_rect(screen_w: f32, metrics: HudMetrics) -> Rect {
+    let (x, width) = if screen_w < 600.0 {
+        (10.0, (screen_w - 20.0).max(0.0))
+    } else {
+        let grid_room = screen_w - metrics.base_offset_x() - metrics.right_panel_width - 14.0;
+        let x = metrics.base_offset_x() + if grid_room >= 500.0 { 210.0 } else { 8.0 };
+        (
+            x,
+            (screen_w - x - metrics.right_panel_width - 14.0).clamp(250.0, 520.0),
+        )
+    };
+    let compact = width < 400.0;
+    Rect::new(
+        x,
+        metrics.base_offset_y() + 8.0,
+        width,
+        if compact { 108.0 } else { 88.0 },
+    )
 }
 
 mod model;
