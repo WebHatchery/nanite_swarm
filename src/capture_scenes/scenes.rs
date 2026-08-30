@@ -4,6 +4,7 @@ use super::fixtures::seed_capture_launch_rail;
 use crate::state::{Campaign, LaunchSequence};
 use crate::{engine, slot_name, state, Game, GamePhase};
 
+mod arrival;
 mod interplanetary;
 
 impl Game {
@@ -320,6 +321,7 @@ impl Game {
                 self.launch = Some(sequence);
                 self.phase = GamePhase::Launch;
             }
+            "mobile_arrival_notice" => self.stage_arrival_notice_scene(),
             "venus" => {
                 self.phase = GamePhase::Playing;
                 self.campaign.colonize(1);

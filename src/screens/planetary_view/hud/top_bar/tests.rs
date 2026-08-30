@@ -1,4 +1,20 @@
-use super::top_bar_layout;
+use super::{mobile_status_text, top_bar_layout};
+
+#[test]
+fn mobile_arrival_status_names_the_world_without_hiding_critical_failures() {
+    assert_eq!(
+        mobile_status_text(false, false, false, true, "", "Venus"),
+        ("ARRIVED VENUS".to_string(), true)
+    );
+    assert_eq!(
+        mobile_status_text(true, false, false, true, "", "Venus"),
+        ("SAVE FAILED".to_string(), false)
+    );
+    assert_eq!(
+        mobile_status_text(false, false, false, false, "ACID RAIN", "Venus"),
+        ("ACID RAIN".to_string(), false)
+    );
+}
 
 #[test]
 fn narrow_top_bar_keeps_resource_cards_before_navigation_buttons() {

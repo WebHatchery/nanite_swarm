@@ -70,6 +70,8 @@ Tap an untouched world once to prepare a launch, then tap it again to confirm;
 travel to an already-colonized world remains one tap.
 At compact browser sizes, the resource cards abbreviate and the build/right
 panels use short summaries so touch controls remain separated and visible.
+After a world change, the mobile header briefly names the arrival as
+`ARRIVED <WORLD>` while the desktop banner keeps the full arrival line.
 On portrait screens, BUILD and INFO open one full-width drawer at a time;
 MAP returns to the live grid between actions.
 Research uses a separate control row and full-width detail drawer on phones;

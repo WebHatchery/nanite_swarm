@@ -53,6 +53,27 @@ fn top_bar_layout(screen_width: f32, top_bar_height: f32, panel_gap: f32) -> Top
     }
 }
 
+fn mobile_status_text(
+    save_failed: bool,
+    power_collapse: bool,
+    hibernating: bool,
+    arriving: bool,
+    hazard: &str,
+    world_name: &str,
+) -> (String, bool) {
+    if save_failed {
+        ("SAVE FAILED".to_string(), false)
+    } else if power_collapse {
+        ("POWER COLLAPSE".to_string(), false)
+    } else if hibernating {
+        ("HIBERNATION".to_string(), false)
+    } else if arriving {
+        (format!("ARRIVED {}", world_name.to_uppercase()), true)
+    } else {
+        (hazard.to_string(), false)
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(super) fn draw(
     state: &PlanetState,
@@ -413,17 +434,26 @@ fn draw_mobile(
         8.0,
         colors.dim,
     );
-    let status = if state.save_failed {
-        "SAVE FAILED".to_string()
-    } else if state.power_collapse_shutdown > 0.0 {
-        "POWER COLLAPSE".to_string()
-    } else if state.battery_seconds <= 0.0 {
-        "HIBERNATION".to_string()
-    } else {
-        state.hazard_label()
-    };
+    let (status, arrival_status) = mobile_status_text(
+        state.save_failed,
+        state.power_collapse_shutdown > 0.0,
+        state.battery_seconds <= 0.0,
+        state.arrival_notice_timer > 0.0,
+        &state.hazard_label(),
+        &state.name,
+    );
     if !status.is_empty() {
-        draw_ui_text(&status, screen_w - 108.0, 20.0, 8.0, colors.warning);
+        draw_ui_text(
+            &status,
+            screen_w - 108.0,
+            20.0,
+            8.0,
+            if arrival_status {
+                colors.primary_soft
+            } else {
+                colors.warning
+            },
+        );
     }
 
     let gap = 6.0;
