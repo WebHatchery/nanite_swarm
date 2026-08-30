@@ -268,7 +268,8 @@ fn draw_planet_list(
 ) -> (Option<usize>, InterplanetaryAction) {
     draw_panel(x, y, w, h);
     draw_ui_text("Planets", x + 12.0, y + 28.0, 16.0, Colors::PRIMARY);
-    draw_ui_text("minerals", x + w - 58.0, y + 28.0, 10.0, Colors::TEXT_DIM);
+    draw_ui_text("health", x + w - 104.0, y + 28.0, 9.0, Colors::TEXT_DIM);
+    draw_ui_text("M", x + w - 28.0, y + 28.0, 10.0, Colors::TEXT_DIM);
 
     let mut focused = None;
     let mut action = InterplanetaryAction::None;
@@ -300,10 +301,19 @@ fn draw_planet_list(
             Colors::TEXT_DIM
         };
         draw_ui_text(&planet.name, x + 12.0, row_y, 13.0, label_color);
+        let telemetry = view.telemetry.get(index).copied().flatten();
+        let alert_code = world_alert_code(telemetry);
+        draw_ui_text(
+            &alert_code,
+            x + w - 104.0,
+            row_y,
+            9.0,
+            world_alert_color(telemetry),
+        );
         if let Some(Some(minerals)) = view.stockpiles.get(index) {
             draw_ui_text(
                 &format!("{:.0}", minerals),
-                x + w - 58.0,
+                x + w - 50.0,
                 row_y,
                 12.0,
                 Colors::ACCENT,
@@ -487,6 +497,36 @@ fn draw_world_telemetry(telemetry: &WorldTelemetry, x: f32, y: f32) {
         9.0,
         health.1,
     );
+}
+
+fn world_alert_code(telemetry: Option<WorldTelemetry>) -> String {
+    let Some(telemetry) = telemetry else {
+        return "--".to_string();
+    };
+    let code = match telemetry.alert_kind {
+        WorldAlert::Nominal => "OK",
+        WorldAlert::Collapse => "COLL",
+        WorldAlert::Power => "PWR",
+        WorldAlert::Hibernation => "SLEEP",
+        WorldAlert::Stalled => "STALL",
+        WorldAlert::Starved => "INPUT",
+        WorldAlert::Blocked => "FULL",
+    };
+    if telemetry.alerts > 1 {
+        format!("{} x{}", code, telemetry.alerts)
+    } else {
+        code.to_string()
+    }
+}
+
+fn world_alert_color(telemetry: Option<WorldTelemetry>) -> Color {
+    if telemetry.is_some_and(|telemetry| telemetry.alerts > 0) {
+        Colors::ERROR
+    } else if telemetry.is_some() {
+        Colors::SUCCESS
+    } else {
+        Colors::TEXT_DIM
+    }
 }
 
 fn hazard_summary(planet: &crate::data::PlanetDef) -> String {
