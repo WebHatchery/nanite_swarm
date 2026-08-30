@@ -2,18 +2,31 @@
 
 use super::*;
 
-pub(super) fn draw_compact_legend(x: f32, y: f32) {
-    let entries = [
-        ("Unlocked", Colors::PRIMARY),
-        ("In Progress", Colors::WARNING),
-        ("Available", Colors::SUCCESS),
-        ("Locked", Colors::SECONDARY),
+const SHORT_PHONE_TREE_HEIGHT: f32 = 120.0;
+
+fn compact_legend_labels(screen_w: f32) -> [&'static str; 4] {
+    if screen_w < 300.0 {
+        ["OPEN", "WORK", "READY", "LOCK"]
+    } else {
+        ["Unlocked", "In Progress", "Available", "Locked"]
+    }
+}
+
+pub(super) fn draw_compact_legend(x: f32, y: f32, screen_w: f32) {
+    let labels = compact_legend_labels(screen_w);
+    let colors = [
+        Colors::PRIMARY,
+        Colors::WARNING,
+        Colors::SUCCESS,
+        Colors::SECONDARY,
     ];
+    let font_size = if screen_w < 300.0 { 9 } else { 11 };
+    let entry_gap = if screen_w < 300.0 { 28.0 } else { 36.0 };
     let mut entry_x = x;
-    for (label, color) in entries {
+    for (label, color) in labels.into_iter().zip(colors) {
         draw_circle(entry_x + 5.0, y - 4.0, 5.0, color);
-        draw_ui_text(label, entry_x + 14.0, y, 11.0, Colors::TEXT_DIM);
-        entry_x += measure_ui_text(label, None, 11, 1.0).width + 36.0;
+        draw_ui_text(label, entry_x + 14.0, y, font_size as f32, Colors::TEXT_DIM);
+        entry_x += measure_ui_text(label, None, font_size, 1.0).width + entry_gap;
     }
 }
 
@@ -78,6 +91,13 @@ pub(super) fn focus_compact_viewport(
 ) {
     if !viewport.focus_pending {
         return;
+    }
+
+    if tree.h < SHORT_PHONE_TREE_HEIGHT {
+        // The authored tree is taller than a short phone's field at the
+        // minimum layout scale. A 1x view keeps the active node inside the
+        // pan limits instead of leaving it underneath the Intel drawer.
+        viewport.zoom = 1.0;
     }
 
     let focus_position = research_state

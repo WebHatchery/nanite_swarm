@@ -29,3 +29,21 @@ fn portrait_layout_separates_controls_tree_and_detail_drawer() {
     assert!(layout.tree.bottom() < layout.intel.y);
     assert!(layout.intel.bottom() <= 612.0);
 }
+
+#[test]
+fn short_portrait_layout_keeps_the_research_tree_selectable() {
+    let layout = ResearchLayout::for_screen(240.0, 400.0, 72.0);
+
+    assert!((layout.intel.h - 120.0).abs() < 0.001);
+    assert!((layout.intel.y - 252.0).abs() < 0.001);
+    assert!((layout.tree.y - 172.0).abs() < 0.001);
+    assert!((layout.tree.h - 70.0).abs() < 0.001);
+    assert!(layout.tree.bottom() < layout.intel.y);
+}
+
+#[test]
+fn short_portrait_research_drawer_starts_details_earlier() {
+    assert_eq!(compact_info_offset(true, 120.0), 40.0);
+    assert_eq!(compact_info_offset(true, 190.0), 56.0);
+    assert_eq!(compact_info_offset(false, 120.0), 56.0);
+}

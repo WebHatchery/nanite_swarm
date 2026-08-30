@@ -1,6 +1,18 @@
 use super::*;
 
 #[test]
+fn narrow_research_legend_uses_labels_that_fit_four_states() {
+    assert_eq!(
+        compact_legend_labels(240.0),
+        ["OPEN", "WORK", "READY", "LOCK"]
+    );
+    assert_eq!(
+        compact_legend_labels(360.0),
+        ["Unlocked", "In Progress", "Available", "Locked"]
+    );
+}
+
+#[test]
 fn line_crossing_tree_is_clipped_to_both_edges() {
     let tree = Rect::new(10.0, 20.0, 100.0, 80.0);
     let (from, to) = clip_line(tree, vec2(-20.0, 60.0), vec2(140.0, 60.0)).unwrap();
@@ -147,4 +159,29 @@ fn compact_viewport_focuses_the_active_research_node() {
     let center = vec2(tree.x + tree.w * 0.5, tree.y + tree.h * 0.5);
     assert!(vec2(focused.0, focused.1).distance(center) < 0.001);
     assert!(!viewport.focus_pending);
+}
+
+#[test]
+fn short_phone_focus_uses_one_to_one_zoom_for_the_small_tree() {
+    let research_tree = ResearchTree::from_nodes(vec![
+        crate::engine::ResearchNode::new("core", "Core", "", 0.0, vec![], (0.0, 0.0)),
+        crate::engine::ResearchNode::new("active", "Active", "", 100.0, vec!["core"], (-3.5, -5.0)),
+    ]);
+    let research_state = ResearchState {
+        unlocked: vec!["core".to_string()],
+        current_research: Some("active".to_string()),
+        research_progress: 20.0,
+        parked_progress: std::collections::HashMap::new(),
+    };
+    let tree = Rect::new(12.0, 172.0, 216.0, 70.0);
+    let mut viewport = ResearchViewport::default();
+
+    focus_compact_viewport(&mut viewport, &research_tree, &research_state, tree, None);
+
+    assert_eq!(viewport.zoom, 1.0);
+    let layout = TreeLayout::fit_with_min_scale(&research_tree.nodes, tree, 60.0)
+        .with_view(viewport.zoom, (viewport.pan.x, viewport.pan.y));
+    let focused = layout.to_screen((-3.5, -5.0));
+    let center = vec2(tree.x + tree.w * 0.5, tree.y + tree.h * 0.5);
+    assert!(vec2(focused.0, focused.1).distance(center) < 0.001);
 }

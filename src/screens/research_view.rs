@@ -13,7 +13,7 @@ mod layout;
 mod sheet;
 use compact::*;
 use effects::node_effects;
-use layout::{ResearchLayout, TreeLayout};
+use layout::{compact_info_offset, ResearchLayout, TreeLayout};
 use sheet::draw_swarm_sheet;
 
 const HEADER_HEIGHT: f32 = 72.0;
@@ -156,7 +156,7 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
         );
     } else {
         if screen_w < 600.0 {
-            draw_compact_legend(18.0, HEADER_HEIGHT + 70.0);
+            draw_compact_legend(18.0, HEADER_HEIGHT + 70.0, screen_w);
             draw_ui_text(
                 "Drag tree with mouse or touch; tap - / + to zoom",
                 18.0,
@@ -165,7 +165,7 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
                 Colors::TEXT_DIM,
             );
         } else {
-            draw_compact_legend(18.0, HEADER_HEIGHT + 22.0);
+            draw_compact_legend(18.0, HEADER_HEIGHT + 22.0, screen_w);
             draw_ui_text(
                 "Drag tree with mouse or touch; tap - / + to zoom",
                 screen_w - 390.0,
@@ -176,7 +176,12 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
         }
     }
 
-    let mut left_text_y = left_panel_y + 56.0;
+    let info_offset = if view.compact {
+        compact_info_offset(screen_w < 600.0, view.intel.h)
+    } else {
+        56.0
+    };
+    let mut left_text_y = left_panel_y + info_offset;
     if research_locked {
         let (locked_x, locked_y) = if view.compact {
             (left_panel_x + left_panel_w - 238.0, left_panel_y + 28.0)

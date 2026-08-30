@@ -19,7 +19,11 @@ impl ResearchLayout {
         if compact {
             let mobile = screen_w < 600.0;
             let drawer_h = if mobile {
-                (screen_h * 0.30).clamp(172.0, 190.0)
+                if screen_h < 460.0 {
+                    (screen_h * 0.30).clamp(112.0, 140.0)
+                } else {
+                    (screen_h * 0.30).clamp(172.0, 190.0)
+                }
             } else {
                 184.0_f32.min((screen_h * 0.32).max(144.0))
             };
@@ -64,6 +68,14 @@ impl ResearchLayout {
             intel,
             legend,
         }
+    }
+}
+
+pub(super) fn compact_info_offset(mobile: bool, intel_height: f32) -> f32 {
+    if mobile && intel_height < 150.0 {
+        40.0
+    } else {
+        56.0
     }
 }
 
