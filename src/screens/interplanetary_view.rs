@@ -5,7 +5,7 @@ mod shipping_panel;
 use crate::state::{ExportOrder, Shipment};
 use crate::ui::{color_from_rgba, draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
-use macroquad_toolkit::ui::{draw_ui_text, Pointer};
+use macroquad_toolkit::ui::{draw_ui_text, note_neighbour, touch_area, Pointer};
 
 /// Actions from the interplanetary view
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -98,14 +98,24 @@ pub fn render_interplanetary_view(view: &MapView) -> InterplanetaryAction {
     draw_circle(center_x, center_y, 40.0, Colors::WARNING);
 
     let planets = &view.data.planets;
-    let mut hovered_planet: Option<usize> = None;
+    // Keep a dossier visible when the map opens. This gives touch players a
+    // useful first target and means the planet list can be used for travel
+    // without making the orbit nodes the only way to learn about a world.
+    let mut hovered_planet: Option<usize> = Some(current_planet);
     let mut action = InterplanetaryAction::None;
 
     let list_x = 16.0;
     let list_y = header_height + 12.0;
     let list_w = 220.0;
-    let list_h = 44.0 + planets.len() as f32 * 20.0;
-    draw_planet_list(view, list_x, list_y, list_w, list_h);
+    let list_h = 44.0 + planets.len() as f32 * 24.0;
+    let (list_focus, list_action) =
+        draw_planet_list(view, list_x, list_y, list_w, list_h, can_launch, pointer);
+    if list_focus.is_some() {
+        hovered_planet = list_focus;
+    }
+    if list_action != InterplanetaryAction::None {
+        action = list_action;
+    }
 
     // Under the map's own furniture: the shipping panel takes what the planet
     // list does not need.
@@ -228,15 +238,43 @@ pub fn render_interplanetary_view(view: &MapView) -> InterplanetaryAction {
 
 /// Every world and what is piling up on it. A world left behind keeps working,
 /// so the map says so rather than making the player fly there to find out.
-fn draw_planet_list(view: &MapView, x: f32, y: f32, w: f32, h: f32) {
+/// Rows are controls as well as labels: the list remains usable when an orbit
+/// is crowded, off-screen, or too small to comfortably tap.
+fn draw_planet_list(
+    view: &MapView,
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32,
+    can_launch: bool,
+    pointer: Pointer,
+) -> (Option<usize>, InterplanetaryAction) {
     draw_panel(x, y, w, h);
     draw_ui_text("Planets", x + 12.0, y + 28.0, 16.0, Colors::PRIMARY);
     draw_ui_text("minerals", x + w - 58.0, y + 28.0, 10.0, Colors::TEXT_DIM);
 
+    let mut focused = None;
+    let mut action = InterplanetaryAction::None;
+    let row_height = 24.0;
     let mut row_y = y + 56.0;
     for (index, planet) in view.data.planets.iter().enumerate() {
         let is_current = index == view.current_planet;
         let is_colonized = view.colonized.get(index).copied().unwrap_or(false);
+        let row = Rect::new(x + 8.0, row_y - 18.0, w - 16.0, row_height);
+        note_neighbour(row);
+        let hit_row = touch_area(row);
+        let is_focused = pointer.hovering_over(hit_row)
+            || pointer.pressing(hit_row)
+            || pointer.released_on(hit_row);
+        if is_focused {
+            focused = Some(index);
+            let fill = if pointer.pressing(hit_row) {
+                Colors::PRIMARY_SOFT
+            } else {
+                Color::new(0.0, 0.7, 0.9, 0.12)
+            };
+            draw_rectangle(row.x, row.y, row.w, row.h, fill);
+        }
         let label_color = if is_current {
             Colors::PRIMARY
         } else if is_colonized {
@@ -254,8 +292,16 @@ fn draw_planet_list(view: &MapView, x: f32, y: f32, w: f32, h: f32) {
                 Colors::ACCENT,
             );
         }
-        row_y += 20.0;
+        if pointer.released_on(hit_row) {
+            if is_colonized && !is_current {
+                action = InterplanetaryAction::SelectPlanet(index);
+            } else if !is_colonized && can_launch {
+                action = InterplanetaryAction::LaunchSeedShip(index);
+            }
+        }
+        row_y += row_height;
     }
+    (focused, action)
 }
 
 /// What the hovered world is, and what clicking it would do.
@@ -272,7 +318,7 @@ fn draw_planet_info(
     let is_current = index == view.current_planet;
 
     let panel_w = 300.0;
-    let panel_h = 200.0;
+    let panel_h = 250.0;
     let panel_x = screen_w - panel_w - 16.0;
     let panel_y = header_height + 12.0;
     draw_panel(panel_x, panel_y, panel_w, panel_h);
@@ -306,11 +352,41 @@ fn draw_planet_info(
     };
     draw_ui_text(status, panel_x + 15.0, panel_y + 105.0, 13.0, status_color);
 
+    draw_ui_text(
+        &format!("Hazards: {}", hazard_summary(planet)),
+        panel_x + 15.0,
+        panel_y + 128.0,
+        11.0,
+        hazard_color(planet),
+    );
+    draw_ui_text(
+        "World rules:",
+        panel_x + 15.0,
+        panel_y + 149.0,
+        11.0,
+        Colors::TEXT_DIM,
+    );
+    let rules = world_rule_lines(view, index);
+    let rules_color = if rules.len() == 1 && rules[0] == "No special build rules" {
+        Colors::SUCCESS
+    } else {
+        Colors::WARNING
+    };
+    for (line_index, line) in rules.iter().enumerate() {
+        draw_ui_text(
+            line,
+            panel_x + 15.0,
+            panel_y + 165.0 + line_index as f32 * 16.0,
+            10.0,
+            rules_color,
+        );
+    }
+
     if is_current {
         draw_ui_text(
             "(Current Location)",
             panel_x + 15.0,
-            panel_y + 125.0,
+            panel_y + 213.0,
             11.0,
             Colors::PRIMARY,
         );
@@ -318,7 +394,7 @@ fn draw_planet_info(
         draw_ui_text(
             "Tap to travel",
             panel_x + 15.0,
-            panel_y + 150.0,
+            panel_y + 213.0,
             12.0,
             Colors::PRIMARY,
         );
@@ -326,7 +402,7 @@ fn draw_planet_info(
         draw_ui_text(
             "Tap to launch the Seed Ship",
             panel_x + 15.0,
-            panel_y + 150.0,
+            panel_y + 213.0,
             12.0,
             Colors::SUCCESS,
         );
@@ -339,7 +415,7 @@ fn draw_planet_info(
         draw_ui_text(
             blocker,
             panel_x + 15.0,
-            panel_y + 150.0,
+            panel_y + 213.0,
             11.0,
             Colors::ERROR,
         );
@@ -355,6 +431,83 @@ fn draw_planet_info(
     } else {
         None
     }
+}
+
+fn hazard_summary(planet: &crate::data::PlanetDef) -> String {
+    let mut hazards = Vec::new();
+    if planet.hazards.acid_rain > 0.0
+        || planet
+            .hazard_fields
+            .iter()
+            .any(|field| field.hazard == "acid")
+    {
+        hazards.push("ACID RAIN");
+    }
+    if planet.hazards.freeze > 0.0
+        || planet
+            .hazard_fields
+            .iter()
+            .any(|field| field.hazard == "cold")
+    {
+        hazards.push("COLD");
+    }
+    if hazards.is_empty() {
+        "NONE".to_string()
+    } else {
+        hazards.join(" / ")
+    }
+}
+
+fn hazard_color(planet: &crate::data::PlanetDef) -> Color {
+    if planet.hazards.any() || !planet.hazard_fields.is_empty() {
+        Colors::WARNING
+    } else {
+        Colors::SUCCESS
+    }
+}
+
+fn world_rule_lines(view: &MapView, index: usize) -> Vec<String> {
+    let planet = &view.data.planets[index];
+    let constraints = &planet.constraints;
+    let mut lines = Vec::new();
+    for id in &constraints.required_buildings {
+        let name = view
+            .data
+            .buildings
+            .iter()
+            .find(|building| building.id == *id)
+            .map(|building| building.name.as_str())
+            .unwrap_or(id.as_str());
+        lines.push(format!("Needs {}", name));
+    }
+    for id in &constraints.required_research {
+        let name = view
+            .data
+            .research
+            .nodes
+            .iter()
+            .find(|node| node.id == *id)
+            .map(|node| node.name.as_str())
+            .unwrap_or(id.as_str());
+        lines.push(format!("Needs research: {}", name));
+    }
+    if constraints.minimum_power_generation > 0.0 {
+        lines.push(format!(
+            "Needs {:.0} power generation",
+            constraints.minimum_power_generation
+        ));
+    }
+    if constraints.minimum_power_balance > 0.0 {
+        lines.push(format!(
+            "Needs {:.0} power surplus",
+            constraints.minimum_power_balance
+        ));
+    }
+    if lines.is_empty() {
+        lines.push("No special build rules".to_string());
+    }
+    lines.truncate(3);
+    lines
 }
 
 fn draw_legend(screen_w: f32, screen_h: f32) {
