@@ -1,6 +1,7 @@
 //! Save-state invariants that must hold before the campaign is simulated.
 
 use super::{Campaign, PLANET_COUNT};
+use crate::engine::BuildingType;
 
 impl Campaign {
     /// Reject references that a hand-edited or partially written save could
@@ -24,6 +25,12 @@ impl Campaign {
                 ));
             }
             self.validate_grid_shape(planet, source)?;
+            let core_count = planet.grid.find_buildings(BuildingType::Core).len();
+            if core_count != 1 {
+                return Err(format!(
+                    "save world slot {source} has {core_count} Cores; exactly one is required"
+                ));
+            }
             self.validate_drones(planet, source)?;
             for (index, shipment) in planet.launched_pods.iter().enumerate() {
                 self.validate_shipment(

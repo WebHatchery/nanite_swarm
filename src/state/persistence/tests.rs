@@ -219,6 +219,16 @@ fn a_save_with_a_world_in_the_wrong_campaign_slot_is_rejected() {
 }
 
 #[test]
+fn a_save_with_no_core_is_rejected_before_simulation() {
+    let mut campaign = campaign();
+    let core = campaign.current().grid.find_core().unwrap();
+    campaign.current_mut().grid.remove_building(core);
+
+    let json = save_to_json(&mut campaign).unwrap();
+    assert!(load_from_json(&json).is_err());
+}
+
+#[test]
 fn a_missing_save_with_a_good_backup_still_loads() {
     let mut store = MapStore::default();
     let mut good = campaign();

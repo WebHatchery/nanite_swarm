@@ -130,6 +130,8 @@ Malformed world grids are rejected the same way when their dimensions no
 longer match their stored tiles.
 Persisted drones with broken routes or invalid flight values are rejected
 before their first movement update as well.
+Each saved world must retain exactly one Core, the anchor used to rebuild its
+power and logistics state.
 When it reports LOW BATTERY, tap FLOW to inspect the power network before the
 swarm continues in hibernation.
 While away, the foreground world continues its selected research job and a
