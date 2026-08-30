@@ -78,6 +78,8 @@ The Solar System map recentres and scales its orbit rings on narrow windows;
 the planet list remains a touch-sized travel and launch control.
 Established freight orders stay visible as cargo-coloured lanes with direction
 markers between the worlds, even while every pod is on the ground.
+On desktop, tap a freight lane to select its source order in Shipping; planet
+nodes retain their travel and launch action.
 Remote standing orders show their destination, cargo rate, and the next
 fixable route blocker, so an offline driver or missing landing pad can be found
 without opening each order in turn; the same two-line ledger remains readable

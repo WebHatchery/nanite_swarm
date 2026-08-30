@@ -1,4 +1,6 @@
-use super::shipping_panel::{route_segment, route_status_label, shipment_route_label};
+use super::shipping_panel::{
+    route_hit_test, route_segment, route_status_label, shipment_route_label,
+};
 use super::status::{
     driver_operation_status, landing_pad_operation_status, launch_action, launch_prompt,
     mass_driver_status_label, seed_ship_status_label,
@@ -248,5 +250,31 @@ fn in_flight_ledger_names_both_ends_of_a_shipment() {
     assert_eq!(
         shipment_route_label(data.data(), &shipment),
         "60 Components Mars -> Saturn"
+    );
+}
+
+#[test]
+fn freight_lane_hit_test_selects_the_nearest_route_only_within_tolerance() {
+    let positions = [(10.0, 20.0), (30.0, 50.0), (60.0, 20.0)];
+    let orders = [
+        Some(crate::state::ExportOrder {
+            target: 1,
+            ..crate::state::ExportOrder::default()
+        }),
+        None,
+        Some(crate::state::ExportOrder {
+            target: 1,
+            ..crate::state::ExportOrder::default()
+        }),
+    ];
+
+    assert_eq!(
+        route_hit_test((20.0, 35.0), &orders, &positions, 2.0),
+        Some(0)
+    );
+    assert_eq!(route_hit_test((20.0, 39.0), &orders, &positions, 2.0), None);
+    assert_eq!(
+        route_hit_test((45.0, 35.0), &orders, &positions, 2.0),
+        Some(2)
     );
 }

@@ -340,6 +340,33 @@ pub fn render_interplanetary_view(
         }
     }
 
+    let route_focus = if map_compressed {
+        None
+    } else {
+        shipping_panel::route_hit_test(
+            (pointer.position.x, pointer.position.y),
+            view.orders,
+            &positions,
+            12.0,
+        )
+    };
+    let pointer_on_planet = positions.iter().enumerate().any(|(index, position)| {
+        let radius = ((planets[index].size * orbit_scale).max(4.0) + 5.0).max(22.0);
+        let dx = pointer.position.x - position.0;
+        let dy = pointer.position.y - position.1;
+        dx * dx + dy * dy <= radius * radius
+    });
+    if list_focus.is_none() && !pointer_on_planet {
+        if let Some(source) = route_focus {
+            hovered_planet = Some(source);
+        }
+    }
+    if pointer.released && action == InterplanetaryAction::None && !pointer_on_planet {
+        if let Some(source) = route_focus {
+            action = InterplanetaryAction::SelectOrderWorld(source);
+        }
+    }
+
     shipping_panel::draw_routes(view.orders, &positions);
     shipping_panel::draw_pods(view.shipments, &positions);
 
@@ -371,7 +398,7 @@ pub fn render_interplanetary_view(
 
     // Instructions
     draw_ui_text(
-        "Tap a planet to travel or launch | Tap Back to return",
+        "Tap a planet to travel or launch | Tap a freight lane to inspect | Tap Back",
         20.0,
         screen_h - 20.0,
         Dimensions::FONT_SIZE_SMALL,

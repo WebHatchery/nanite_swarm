@@ -579,6 +579,44 @@ pub(super) fn draw_routes(orders: &[Option<ExportOrder>], positions: &[(f32, f32
     }
 }
 
+/// Find the closest standing lane under a pointer. The map gives the line a
+/// forgiving hit radius because a one-pixel route is a signal to read, not a
+/// touch target to thread with surgical accuracy.
+pub(super) fn route_hit_test(
+    point: (f32, f32),
+    orders: &[Option<ExportOrder>],
+    positions: &[(f32, f32)],
+    tolerance: f32,
+) -> Option<usize> {
+    let point = vec2(point.0, point.1);
+    let tolerance = tolerance.max(0.0);
+    let mut closest: Option<(usize, f32)> = None;
+    for (source, order) in orders
+        .iter()
+        .enumerate()
+        .filter_map(|(source, order)| order.as_ref().map(|order| (source, *order)))
+    {
+        let Some((from, to)) = route_segment(source, order.target, positions) else {
+            continue;
+        };
+        let distance = point_to_segment_distance(point, vec2(from.0, from.1), vec2(to.0, to.1));
+        if distance <= tolerance && closest.is_none_or(|(_, best)| distance < best) {
+            closest = Some((source, distance));
+        }
+    }
+    closest.map(|(source, _)| source)
+}
+
+fn point_to_segment_distance(point: Vec2, from: Vec2, to: Vec2) -> f32 {
+    let segment = to - from;
+    let length_squared = segment.length_squared();
+    if length_squared <= f32::EPSILON {
+        return point.distance(from);
+    }
+    let progress = ((point - from).dot(segment) / length_squared).clamp(0.0, 1.0);
+    point.distance(from + segment * progress)
+}
+
 fn route_color(cargo: ResourceType) -> Color {
     match cargo {
         ResourceType::Minerals => Color::new(1.0, 0.42, 0.21, 0.36),
