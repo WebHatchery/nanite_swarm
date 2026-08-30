@@ -271,7 +271,13 @@ impl Game {
         let action = render_interplanetary_view(&view, &mut shipping_scroll);
         self.shipping_scroll = shipping_scroll;
         match action {
-            InterplanetaryAction::Close => self.phase = GamePhase::Playing,
+            InterplanetaryAction::Close => {
+                // Freight orders are campaign state, not just map controls.
+                // Save on exit so a browser player does not lose a route
+                // configured immediately before leaving this screen.
+                self.save_campaign();
+                self.phase = GamePhase::Playing;
+            }
             InterplanetaryAction::SelectPlanet(index) => {
                 if self.campaign.travel_to(index) {
                     self.shipping_edit_world = index;
@@ -299,41 +305,44 @@ impl Game {
                     self.phase = GamePhase::Launch;
                 }
             }
-            InterplanetaryAction::CycleExportCargo => self.campaign.cycle_export_cargo(),
-            InterplanetaryAction::CycleExportTarget => self.campaign.cycle_export_target(),
+            InterplanetaryAction::CycleExportCargo => {
+                self.save_shipping_edit(|campaign| campaign.cycle_export_cargo())
+            }
+            InterplanetaryAction::CycleExportTarget => {
+                self.save_shipping_edit(|campaign| campaign.cycle_export_target())
+            }
             InterplanetaryAction::CycleExportPad => {
-                self.campaign.cycle_export_pad_for(editing_world)
+                self.save_shipping_edit(|campaign| campaign.cycle_export_pad_for(editing_world))
             }
-            InterplanetaryAction::CycleExportSchedule => {
-                self.campaign.cycle_export_schedule_for(current_world)
-            }
-            InterplanetaryAction::CycleExportPriority => {
-                self.campaign.cycle_export_priority_for(current_world)
-            }
-            InterplanetaryAction::ToggleExportSurplus => {
-                self.campaign.toggle_export_surplus_for(current_world)
-            }
+            InterplanetaryAction::CycleExportSchedule => self
+                .save_shipping_edit(|campaign| campaign.cycle_export_schedule_for(current_world)),
+            InterplanetaryAction::CycleExportPriority => self
+                .save_shipping_edit(|campaign| campaign.cycle_export_priority_for(current_world)),
+            InterplanetaryAction::ToggleExportSurplus => self
+                .save_shipping_edit(|campaign| campaign.toggle_export_surplus_for(current_world)),
             InterplanetaryAction::SelectOrderWorld(index) => {
                 self.shipping_edit_world = index;
                 self.shipping_scroll.set_offset(0.0);
             }
             InterplanetaryAction::CycleRemoteExportCargo => {
-                self.campaign.cycle_export_cargo_for(editing_world)
+                self.save_shipping_edit(|campaign| campaign.cycle_export_cargo_for(editing_world))
             }
             InterplanetaryAction::CycleRemoteExportTarget => {
-                self.campaign.cycle_export_target_for(editing_world)
+                self.save_shipping_edit(|campaign| campaign.cycle_export_target_for(editing_world))
             }
-            InterplanetaryAction::CycleRemoteExportSchedule => {
-                self.campaign.cycle_export_schedule_for(editing_world)
-            }
-            InterplanetaryAction::CycleRemoteExportPriority => {
-                self.campaign.cycle_export_priority_for(editing_world)
-            }
-            InterplanetaryAction::ToggleRemoteExportSurplus => {
-                self.campaign.toggle_export_surplus_for(editing_world)
-            }
+            InterplanetaryAction::CycleRemoteExportSchedule => self
+                .save_shipping_edit(|campaign| campaign.cycle_export_schedule_for(editing_world)),
+            InterplanetaryAction::CycleRemoteExportPriority => self
+                .save_shipping_edit(|campaign| campaign.cycle_export_priority_for(editing_world)),
+            InterplanetaryAction::ToggleRemoteExportSurplus => self
+                .save_shipping_edit(|campaign| campaign.toggle_export_surplus_for(editing_world)),
             InterplanetaryAction::None => {}
         }
+    }
+
+    fn save_shipping_edit(&mut self, edit: impl FnOnce(&mut state::Campaign)) {
+        edit(&mut self.campaign);
+        self.save_campaign();
     }
 
     fn update_launch(&mut self) {

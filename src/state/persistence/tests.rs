@@ -1,6 +1,6 @@
 use super::*;
 use crate::data::GameConfig;
-use crate::engine::{BuildingType, GridPos};
+use crate::engine::{BuildingType, GridPos, ResourceType};
 
 fn campaign() -> Campaign {
     Campaign::new(GameConfig::default(), 7)
@@ -234,6 +234,58 @@ fn processor_operating_mode_survives_a_save_roundtrip() {
             .as_ref()
             .unwrap()
             .standby
+    );
+}
+
+#[test]
+fn freight_orders_and_typed_hoppers_survive_a_save_roundtrip() {
+    let mut campaign = campaign();
+    let key = (3, 4);
+    campaign.current_mut().export = Some(crate::state::ExportOrder {
+        target: 1,
+        cargo: ResourceType::Alloy,
+        target_pad: Some(GridPos::new(8, 9)),
+        schedule_seconds: 10.0,
+        priority: 2,
+        reserve_source: 100.0,
+        surplus_only: true,
+    });
+    campaign.current_mut().input_hoppers.insert(
+        key,
+        std::collections::HashMap::from([
+            (ResourceType::Minerals, 20.0),
+            (ResourceType::Alloy, 40.0),
+        ]),
+    );
+    campaign.current_mut().input_buffers.insert(key, 60.0);
+    campaign.current_mut().pod_loads.insert(key, 12.0);
+    campaign
+        .current_mut()
+        .pad_cargo
+        .insert((5, 6), ResourceType::Components);
+
+    let json = save_to_json(&mut campaign).unwrap();
+    let loaded = load_from_json(&json).unwrap();
+    let order = loaded.current().export.unwrap();
+
+    assert_eq!(order.cargo, ResourceType::Alloy);
+    assert_eq!(order.target_pad, Some(GridPos::new(8, 9)));
+    assert_eq!(order.schedule_seconds, 10.0);
+    assert_eq!(order.priority, 2);
+    assert!(order.surplus_only);
+    assert_eq!(
+        loaded
+            .current()
+            .input_hoppers
+            .get(&key)
+            .and_then(|hoppers| hoppers.get(&ResourceType::Minerals)),
+        Some(&20.0)
+    );
+    assert_eq!(loaded.current().input_buffers.get(&key), Some(&60.0));
+    assert_eq!(loaded.current().pod_loads.get(&key), Some(&12.0));
+    assert_eq!(
+        loaded.current().pad_cargo.get(&(5, 6)),
+        Some(&ResourceType::Components)
     );
 }
 

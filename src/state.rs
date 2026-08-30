@@ -10,6 +10,7 @@ mod audio;
 mod auto_clock;
 mod camera;
 mod campaign;
+pub(crate) mod coordinate_map;
 mod core_stage;
 mod data_validation;
 mod factory;

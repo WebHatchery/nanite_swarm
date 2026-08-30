@@ -233,14 +233,14 @@ pub struct PlanetState {
     #[serde(default)]
     pub export_cooldown: f32,
     /// How much each driver has loaded into the pod it is filling.
-    #[serde(default)]
+    #[serde(default, with = "crate::state::coordinate_map")]
     pub pod_loads: std::collections::HashMap<(i32, i32), f32>,
     /// Pods thrown this step, waiting for the campaign to put them in flight.
     #[serde(default)]
     pub launched_pods: Vec<super::shipping::Shipment>,
     /// What each Landing Pad is currently piled with. A pad holds one cargo at
     /// a time, the same way a drill's pad only ever holds ore.
-    #[serde(default)]
+    #[serde(default, with = "crate::state::coordinate_map")]
     pub pad_cargo: std::collections::HashMap<(i32, i32), ResourceType>,
     /// Everything unlocked research does to the simulation, folded into one
     /// sheet. Derived from `research.unlocked_techs` — never edited directly,
@@ -371,11 +371,11 @@ pub struct PlanetState {
     #[serde(skip)]
     pub output_buffers: std::collections::HashMap<(i32, i32), f32>,
     // Ore delivered to a processing building and not yet consumed
-    #[serde(default)]
+    #[serde(default, with = "crate::state::coordinate_map")]
     pub input_buffers: std::collections::HashMap<(i32, i32), f32>,
     /// Per-resource hopper state. `input_buffers` remains as a total for
     /// readable legacy saves and compact inspector summaries.
-    #[serde(default)]
+    #[serde(default, with = "crate::state::coordinate_map")]
     pub input_hoppers:
         std::collections::HashMap<(i32, i32), std::collections::HashMap<ResourceType, f32>>,
     // Drones currently crossing each network tile, rebuilt every tick
