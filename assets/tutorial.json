@@ -29,6 +29,18 @@
       "title": "Stop borrowing power",
       "instruction": "Tap WIND TURBINE, then tap revealed ground. Mountains give it a bonus.",
       "goal": { "kind": "build", "target": "wind_turbine" }
+    },
+    {
+      "id": "mass_driver_research",
+      "title": "Prepare the launch rail",
+      "instruction": "Tap RESEARCH, then tap MASS DRIVER. The next world needs a live rail.",
+      "goal": { "kind": "research", "target": "mass_driver" }
+    },
+    {
+      "id": "mass_driver",
+      "title": "Build the launch rail",
+      "instruction": "Tap MASS DRIVER, then tap revealed ground beside the Core.",
+      "goal": { "kind": "build", "target": "mass_driver" }
     }
   ]
 }

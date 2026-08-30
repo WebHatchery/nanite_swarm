@@ -87,6 +87,26 @@ fn a_research_step_waits_for_the_research() {
 }
 
 #[test]
+fn the_opening_lesson_reaches_the_first_campaign_launch_rail() {
+    let steps = crate::data::test_data().data().tutorial.clone();
+    let research = steps
+        .iter()
+        .find(|step| step.id == "mass_driver_research")
+        .expect("the tutorial should teach the launch-rail research");
+    let build = steps
+        .iter()
+        .find(|step| step.id == "mass_driver")
+        .expect("the tutorial should teach the launch-rail build");
+
+    assert_eq!(research.goal.kind, "research");
+    assert_eq!(research.goal.target, "mass_driver");
+    assert!(research.instruction.contains("Tap RESEARCH"));
+    assert_eq!(build.goal.kind, "build");
+    assert_eq!(build.goal.target, "mass_driver");
+    assert!(build.instruction.contains("Tap MASS DRIVER"));
+}
+
+#[test]
 fn finishing_the_last_step_ends_the_tutorial() {
     let mut state = state();
     state.tutorial_step = (state.tutorial_step_count() - 1) as u8;
@@ -100,6 +120,14 @@ fn finishing_the_last_step_ends_the_tutorial() {
     let pos = GridPos::new(core.x + 1, core.y);
     state.grid.get_mut(pos).unwrap().terrain = TerrainType::Empty;
     state.grid.reveal_around(pos, 1);
+    if building == BuildingType::MassDriver {
+        state
+            .research
+            .unlocked_techs
+            .push("mass_driver".to_string());
+        state.resources.minerals = 10_000.0;
+        state.resources.energy = 10_000.0;
+    }
     state.unlock_building(building);
     state.select_building(building);
     assert!(state.try_place_building(pos));
