@@ -8,7 +8,7 @@ mod world_dossier;
 
 use crate::state::{ExportOrder, InterplanetaryMobilePanel, Shipment, WorldTelemetry};
 use crate::ui::{color_from_rgba, draw_button_sized, draw_panel, Colors, Dimensions};
-use core_marker::draw_core_stage_marker;
+use core_marker::{core_stage_label, draw_core_stage_marker};
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::{draw_ui_text, note_neighbour, touch_area, Pointer, ScrollArea};
 use shipping_panel::{route_status_color, route_status_for};
@@ -450,6 +450,7 @@ fn draw_planet_list(
 ) -> (Option<usize>, InterplanetaryAction) {
     draw_panel(x, y, w, h);
     draw_ui_text("Planets", x + 12.0, y + 28.0, 16.0, Colors::PRIMARY);
+    draw_ui_text("CORE", x + 92.0, y + 28.0, 9.0, Colors::TEXT_DIM);
     draw_ui_text("alerts", x + w - 104.0, y + 28.0, 9.0, Colors::TEXT_DIM);
     draw_ui_text("MIN", x + w - 40.0, y + 28.0, 9.0, Colors::TEXT_DIM);
 
@@ -490,6 +491,9 @@ fn draw_planet_list(
         };
         draw_ui_text(&planet.name, x + 12.0, row_y, 13.0, label_color);
         let telemetry = view.telemetry.get(index).copied().flatten();
+        if let Some(core_label) = core_stage_label(telemetry) {
+            draw_ui_text(&core_label, x + 92.0, row_y, 9.0, Colors::PRIMARY);
+        }
         let alert_code = if confirming {
             "CONFIRM".to_string()
         } else {

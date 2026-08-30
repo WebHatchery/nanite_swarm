@@ -36,6 +36,8 @@ The swarm is powerful, but every expansion changes the terrain, stresses the gri
   even when the swarm is managing another world.
 - Colonized Solar System nodes carry a `C1-C5` progress marker, with the
   Space Elevator tether and Planetary Ring silhouette echoed on the map.
+- The touch-sized planet list repeats the same `C1-C5` cue when a compact
+  layout hides the orbit diagram.
 - At Space Elevator and Planetary Ring stages, the map grows a live tether and
   orbital ring around the Core; the final stage also projects a quieter ring
   into the planetary backdrop so late evolution is visible beyond its tile.

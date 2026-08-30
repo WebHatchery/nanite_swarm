@@ -25,6 +25,10 @@ fn marker_state(telemetry: Option<WorldTelemetry>) -> Option<CoreStageMarker> {
     Some(CoreStageMarker { stage, stage_count })
 }
 
+pub(super) fn core_stage_label(telemetry: Option<WorldTelemetry>) -> Option<String> {
+    marker_state(telemetry).map(|marker| format!("C{}", marker.stage))
+}
+
 /// Give a colonized node a compact progress silhouette without changing its
 /// existing hit target. The one-based stage label is deliberately explicit:
 /// the dossier can explain the requirement, while the map can answer which

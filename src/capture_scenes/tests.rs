@@ -41,6 +41,7 @@ fn required_capture_scenes_are_registered() {
             "fusion",
             "interplanetary_remote_orders",
             "interplanetary_core_stages",
+            "mobile_interplanetary_core_stages",
             "desktop_interplanetary_short",
             "mobile_remote_orders",
             "mobile_interplanetary_narrow",
