@@ -1,10 +1,12 @@
 //! Seed Ship yard: the megastructure this world is being converted into
 
+mod mobile;
+
 use crate::state::PlanetState;
 use crate::ui::{draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::math::pulse01;
-use macroquad_toolkit::ui::draw_ui_text;
+use macroquad_toolkit::ui::{draw_ui_text, ScrollArea};
 
 const HEADER_HEIGHT: f32 = 72.0;
 const STAGE_HEIGHT: f32 = 102.0;
@@ -21,7 +23,10 @@ pub enum SeedShipAction {
 /// Render the Seed Ship construction screen.
 ///
 /// A pure view: it reads the planet and returns what the player asked for.
-pub fn render_seed_ship_view(state: &PlanetState) -> SeedShipAction {
+pub fn render_seed_ship_view(
+    state: &PlanetState,
+    seed_ship_scroll: &mut ScrollArea,
+) -> SeedShipAction {
     clear_background(Colors::BACKGROUND);
 
     let screen_w = screen_width();
@@ -49,6 +54,10 @@ pub fn render_seed_ship_view(state: &PlanetState) -> SeedShipAction {
     let mut action = SeedShipAction::None;
     if draw_button_sized(screen_w - 110.0, 18.0, 80.0, 34.0, "Back") {
         action = SeedShipAction::Close;
+    }
+
+    if screen_w < 600.0 {
+        return mobile::draw(state, seed_ship_scroll, pulse, screen_h, action);
     }
 
     let panel_w = (screen_w * 0.56).clamp(420.0, 720.0);

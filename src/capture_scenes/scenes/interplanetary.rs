@@ -1,10 +1,11 @@
 //! Interplanetary screenshot staging.
 
-use crate::{engine, Game, GamePhase};
+use crate::{engine, state, Game, GamePhase};
 
 impl Game {
     pub(super) fn stage_interplanetary_scene(&mut self) {
         self.phase = GamePhase::Interplanetary;
+        self.interplanetary_mobile_panel = state::InterplanetaryMobilePanel::Worlds;
         // Every tech the ship's later stages are gated on, or the yard
         // stalls on the Spine and the map's "Seed Ship: READY" is a
         // promise the scene cannot keep.

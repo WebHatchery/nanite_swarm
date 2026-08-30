@@ -65,6 +65,10 @@ At compact browser sizes, the resource cards abbreviate and the build/right
 panels use short summaries so touch controls remain separated and visible.
 On portrait screens, BUILD and INFO open one full-width drawer at a time;
 MAP returns to the live grid between actions.
+Research uses a separate control row and full-width detail drawer on phones;
+the Seed Ship yard compresses each stage into a readable card and keeps the
+diversion control visible. The portrait Solar System screen separates Worlds
+and Shipping into touch-sized tabs, with the freight controls scrollable below.
 
 Factory controls:
 

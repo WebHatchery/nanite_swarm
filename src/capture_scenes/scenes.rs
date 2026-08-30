@@ -707,6 +707,10 @@ impl Game {
                 camera.pan_y = -180.0;
             }
             "interplanetary" => self.stage_interplanetary_scene(),
+            "mobile_shipping" => {
+                self.stage_interplanetary_scene();
+                self.interplanetary_mobile_panel = state::InterplanetaryMobilePanel::Shipping;
+            }
             "interplanetary_rules" => {
                 self.stage_interplanetary_scene();
                 self.campaign.colonize(1);

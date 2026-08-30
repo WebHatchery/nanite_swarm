@@ -1,8 +1,9 @@
 //! Solar system overview screen
 
+mod mobile;
 mod shipping_panel;
 
-use crate::state::{ExportOrder, Shipment, WorldAlert, WorldTelemetry};
+use crate::state::{ExportOrder, InterplanetaryMobilePanel, Shipment, WorldAlert, WorldTelemetry};
 use crate::ui::{color_from_rgba, draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::{draw_ui_text, note_neighbour, touch_area, Pointer, ScrollArea};
@@ -26,6 +27,8 @@ pub enum InterplanetaryAction {
     CycleRemoteExportSchedule,
     CycleRemoteExportPriority,
     ToggleRemoteExportSurplus,
+    ToggleMobileWorlds,
+    ToggleMobileShipping,
 }
 
 const WORLD_TELEMETRY_LINE_HEIGHT: f32 = 16.0;
@@ -104,6 +107,7 @@ pub struct MapView<'a> {
 pub fn render_interplanetary_view(
     view: &MapView,
     shipping_scroll: &mut ScrollArea,
+    mobile_panel: InterplanetaryMobilePanel,
 ) -> InterplanetaryAction {
     // A new world costs a whole Seed Ship, thrown by a Mass Driver.
     let can_launch = view.current_drivers_online > 0 && view.seed_ship_ready;
@@ -131,13 +135,19 @@ pub fn render_interplanetary_view(
     } else {
         ("Mass Driver: LOCKED", Colors::TEXT_DIM)
     };
-    draw_ui_text(driver_label, screen_w - 320.0, 34.0, 12.0, driver_color);
-
     let (ship_label, ship_color) = if view.seed_ship_ready {
         ("Seed Ship: READY", Colors::SUCCESS)
     } else {
         ("Seed Ship: UNDER CONSTRUCTION", Colors::TEXT_DIM)
     };
+    if screen_w < 600.0 {
+        draw_ui_text(driver_label, 18.0, header_height + 14.0, 10.0, driver_color);
+        draw_ui_text(ship_label, 18.0, header_height + 30.0, 10.0, ship_color);
+        return mobile::draw(view, shipping_scroll, mobile_panel, screen_h, can_launch);
+    }
+
+    draw_ui_text(driver_label, screen_w - 320.0, 34.0, 12.0, driver_color);
+
     draw_ui_text(ship_label, screen_w - 320.0, 54.0, 12.0, ship_color);
 
     let planets = &view.data.planets;

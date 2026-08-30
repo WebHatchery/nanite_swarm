@@ -168,7 +168,14 @@ impl Game {
 
     fn update_seed_ship_screen(&mut self) {
         self.advance_simulation();
-        match render_seed_ship_view(self.campaign.current()) {
+        let action = {
+            let planet = self.campaign.current_mut();
+            let mut scroll = std::mem::replace(&mut planet.seed_ship_scroll, ScrollArea::new());
+            let action = render_seed_ship_view(planet, &mut scroll);
+            planet.seed_ship_scroll = scroll;
+            action
+        };
+        match action {
             SeedShipAction::Close => self.phase = GamePhase::Playing,
             SeedShipAction::ToggleCommitment => {
                 self.campaign.current_mut().toggle_seed_ship_commitment();
@@ -268,7 +275,11 @@ impl Game {
             overflow_pods: &overflow_pods,
             editing_world,
         };
-        let action = render_interplanetary_view(&view, &mut shipping_scroll);
+        let action = render_interplanetary_view(
+            &view,
+            &mut shipping_scroll,
+            self.interplanetary_mobile_panel,
+        );
         self.shipping_scroll = shipping_scroll;
         match action {
             InterplanetaryAction::Close => {
@@ -336,6 +347,14 @@ impl Game {
                 .save_shipping_edit(|campaign| campaign.cycle_export_priority_for(editing_world)),
             InterplanetaryAction::ToggleRemoteExportSurplus => self
                 .save_shipping_edit(|campaign| campaign.toggle_export_surplus_for(editing_world)),
+            InterplanetaryAction::ToggleMobileWorlds => {
+                self.interplanetary_mobile_panel = state::InterplanetaryMobilePanel::Worlds;
+                self.shipping_scroll.set_offset(0.0);
+            }
+            InterplanetaryAction::ToggleMobileShipping => {
+                self.interplanetary_mobile_panel = state::InterplanetaryMobilePanel::Shipping;
+                self.shipping_scroll.set_offset(0.0);
+            }
             InterplanetaryAction::None => {}
         }
     }
@@ -372,6 +391,12 @@ impl Game {
     }
 
     fn draw_toasts(&mut self) {
+        // Portrait campaign screens use nearly every pixel for their touch
+        // targets. Keep notifications in the Records log there rather than
+        // painting transient cards over buttons and scrollable content.
+        if screen_width() < 600.0 {
+            return;
+        }
         match self.phase {
             GamePhase::SeedShip => {
                 let anchor = screens::menu_anchor_low(screen_height());

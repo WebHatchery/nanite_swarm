@@ -17,3 +17,15 @@ fn wide_layout_keeps_both_sidebars() {
     assert_eq!(layout.legend.w, 260.0);
     assert!(layout.tree.w > 350.0);
 }
+
+#[test]
+fn portrait_layout_separates_controls_tree_and_detail_drawer() {
+    let layout = ResearchLayout::for_screen(360.0, 640.0, 72.0);
+
+    assert!(layout.compact);
+    assert_eq!(layout.tree.x, 12.0);
+    assert_eq!(layout.tree.w, 336.0);
+    assert!(layout.tree.y > 150.0);
+    assert!(layout.tree.bottom() < layout.intel.y);
+    assert!(layout.intel.bottom() <= 612.0);
+}

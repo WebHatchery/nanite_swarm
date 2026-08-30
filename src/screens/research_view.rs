@@ -101,7 +101,7 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
 
     if view.compact {
         update_compact_viewport(viewport, view.tree);
-        draw_compact_viewport_controls(viewport, screen_w);
+        draw_compact_viewport_controls(viewport, screen_w, screen_w < 600.0);
     }
 
     let left_panel_x = view.intel.x;
@@ -130,14 +130,25 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
             Colors::PRIMARY,
         );
     } else {
-        draw_compact_legend(18.0, HEADER_HEIGHT + 22.0);
-        draw_ui_text(
-            "Drag tree; tap - / + to zoom",
-            screen_w - 390.0,
-            HEADER_HEIGHT + 22.0,
-            11.0,
-            Colors::TEXT_DIM,
-        );
+        if screen_w < 600.0 {
+            draw_compact_legend(18.0, HEADER_HEIGHT + 70.0);
+            draw_ui_text(
+                "Drag tree; tap - / + to zoom",
+                18.0,
+                HEADER_HEIGHT + 88.0,
+                10.0,
+                Colors::TEXT_DIM,
+            );
+        } else {
+            draw_compact_legend(18.0, HEADER_HEIGHT + 22.0);
+            draw_ui_text(
+                "Drag tree; tap - / + to zoom",
+                screen_w - 390.0,
+                HEADER_HEIGHT + 22.0,
+                11.0,
+                Colors::TEXT_DIM,
+            );
+        }
     }
 
     let mut left_text_y = left_panel_y + 56.0;

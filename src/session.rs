@@ -9,7 +9,7 @@
 use std::io;
 
 use crate::data::{GameConfig, GameDataContext};
-use crate::state::{self, Campaign, LaunchSequence, LoadSource};
+use crate::state::{self, Campaign, InterplanetaryMobilePanel, LaunchSequence, LoadSource};
 use macroquad_toolkit::ui::ScrollArea;
 
 const SAVE_PATH: &str = "save.json";
@@ -25,6 +25,8 @@ pub struct GameSession {
     pub shipping_edit_world: usize,
     /// Scroll position for the interplanetary freight control panel.
     pub shipping_scroll: ScrollArea,
+    /// Which section is open on the portrait solar-system screen.
+    pub interplanetary_mobile_panel: InterplanetaryMobilePanel,
     pub active_slot: usize,
 }
 
@@ -38,6 +40,7 @@ impl GameSession {
             launch: None,
             shipping_edit_world: state::STARTING_PLANET,
             shipping_scroll: ScrollArea::new(),
+            interplanetary_mobile_panel: InterplanetaryMobilePanel::Worlds,
             active_slot: 0,
         }
     }
@@ -58,6 +61,7 @@ impl GameSession {
         self.campaign = Campaign::new_with_data(config, seed, self.data.clone());
         self.shipping_edit_world = state::STARTING_PLANET;
         self.shipping_scroll.set_offset(0.0);
+        self.interplanetary_mobile_panel = InterplanetaryMobilePanel::Worlds;
     }
 
     pub fn save_campaign(&mut self) -> Result<(), io::Error> {
@@ -75,6 +79,7 @@ impl GameSession {
         campaign.attach_data(self.data.clone());
         self.shipping_edit_world = campaign.current_index();
         self.shipping_scroll.set_offset(0.0);
+        self.interplanetary_mobile_panel = InterplanetaryMobilePanel::Worlds;
         self.campaign = campaign;
         self.has_save = true;
         Ok(source)

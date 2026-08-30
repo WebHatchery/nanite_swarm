@@ -391,6 +391,9 @@ pub struct PlanetState {
     pub auto_clock_timer: f32,
     #[serde(skip, default)]
     pub build_palette_scroll: ScrollArea,
+    /// Scroll position for the portrait Seed Ship yard.
+    #[serde(skip, default)]
+    pub seed_ship_scroll: ScrollArea,
     /// Where the Records screen's log is scrolled to.
     #[serde(skip, default)]
     pub log_scroll: ScrollArea,
@@ -599,6 +602,7 @@ impl PlanetState {
             factory_deck_open: false,
             auto_clock_timer: 0.0,
             build_palette_scroll: ScrollArea::new(),
+            seed_ship_scroll: ScrollArea::new(),
             log_scroll: ScrollArea::new(),
             records_scroll: ScrollArea::new(),
             notifications: NotificationManager::default(),

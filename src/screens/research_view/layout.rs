@@ -17,17 +17,31 @@ impl ResearchLayout {
     pub fn for_screen(screen_w: f32, screen_h: f32, header_h: f32) -> Self {
         let compact = screen_w < COMPACT_BREAKPOINT;
         if compact {
-            let drawer_h = 184.0_f32.min((screen_h * 0.32).max(144.0));
+            let mobile = screen_w < 600.0;
+            let drawer_h = if mobile {
+                (screen_h * 0.30).clamp(172.0, 190.0)
+            } else {
+                184.0_f32.min((screen_h * 0.32).max(144.0))
+            };
             let intel = Rect::new(16.0, screen_h - drawer_h - 28.0, screen_w - 32.0, drawer_h);
+            let tree_y = if mobile {
+                header_h + 100.0
+            } else {
+                header_h + 38.0
+            };
             return Self {
                 compact,
                 intel,
                 legend: Rect::new(0.0, 0.0, 0.0, 0.0),
                 tree: Rect::new(
-                    16.0,
-                    header_h + 38.0,
-                    screen_w - 32.0,
-                    intel.y - header_h - 46.0,
+                    if mobile { 12.0 } else { 16.0 },
+                    tree_y,
+                    if mobile {
+                        screen_w - 24.0
+                    } else {
+                        screen_w - 32.0
+                    },
+                    (intel.y - tree_y - if mobile { 10.0 } else { 8.0 }).max(1.0),
                 ),
             };
         }

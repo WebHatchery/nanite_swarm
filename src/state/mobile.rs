@@ -10,3 +10,11 @@ pub enum MobilePanel {
     Build,
     Info,
 }
+
+/// The two touch-friendly sections of the solar-system screen.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum InterplanetaryMobilePanel {
+    #[default]
+    Worlds,
+    Shipping,
+}

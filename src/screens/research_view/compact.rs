@@ -35,9 +35,17 @@ pub(super) fn update_compact_viewport(viewport: &mut ResearchViewport, tree: Rec
     viewport.pan.y = viewport.pan.y.clamp(-tree.h * 2.5, tree.h * 2.5);
 }
 
-pub(super) fn draw_compact_viewport_controls(viewport: &mut ResearchViewport, screen_w: f32) {
-    let y = HEADER_HEIGHT + 4.0;
-    let mut x = screen_w - 178.0;
+pub(super) fn draw_compact_viewport_controls(
+    viewport: &mut ResearchViewport,
+    screen_w: f32,
+    mobile: bool,
+) {
+    let y = if mobile {
+        HEADER_HEIGHT + 8.0
+    } else {
+        HEADER_HEIGHT + 4.0
+    };
+    let mut x = if mobile { 16.0 } else { screen_w - 178.0 };
     if draw_button_sized(x, y, 32.0, 28.0, "-") {
         viewport.zoom = (viewport.zoom - 0.15).max(1.0);
     }
@@ -94,6 +102,21 @@ pub(super) fn draw_compact_node_info(
     let Some(node) = research_tree.get_node(node_id) else {
         return;
     };
+    if panel_w < 360.0 {
+        draw_mobile_node_info(
+            data,
+            research_state,
+            research_tree,
+            node_id,
+            heading,
+            panel_x,
+            y,
+            panel_w,
+            data_available,
+            active_condition,
+        );
+        return;
+    }
     let split_x = panel_x + panel_w * 0.52;
     draw_ui_text(heading, panel_x + 12.0, y, 12.0, Colors::TEXT_DIM);
     draw_ui_text(&node.name, panel_x + 12.0, y + 18.0, 14.0, Colors::TEXT);
@@ -152,7 +175,115 @@ pub(super) fn draw_compact_node_info(
             Colors::WARNING,
         )
     };
-    draw_ui_text(&status.0, split_x, detail_y + 18.0, 11.0, status.1);
+    draw_ui_text(
+        &truncate_text_to_width(&status.0, panel_w * 0.46, 11.0),
+        split_x,
+        detail_y + 18.0,
+        11.0,
+        status.1,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn draw_mobile_node_info(
+    data: &crate::data::GameData,
+    research_state: &ResearchState,
+    research_tree: &ResearchTree,
+    node_id: &str,
+    heading: &str,
+    panel_x: f32,
+    y: f32,
+    panel_w: f32,
+    data_available: f32,
+    active_condition: Option<&str>,
+) {
+    let Some(node) = research_tree.get_node(node_id) else {
+        return;
+    };
+    let text_w = (panel_w - 24.0).max(40.0);
+    draw_ui_text(heading, panel_x + 12.0, y, 12.0, Colors::TEXT_DIM);
+    draw_ui_text(
+        &truncate_text_to_width(&node.name, text_w, 14.0),
+        panel_x + 12.0,
+        y + 18.0,
+        14.0,
+        Colors::TEXT,
+    );
+    draw_ui_text(
+        &truncate_text_to_width(&node.description, text_w, 11.0),
+        panel_x + 12.0,
+        y + 38.0,
+        11.0,
+        Colors::TEXT_DIM,
+    );
+
+    let mut detail_y = y + 58.0;
+    for (text, color) in node_effects(data, node_id) {
+        draw_ui_text(
+            &truncate_text_to_width(&text, text_w, 11.0),
+            panel_x + 12.0,
+            detail_y,
+            11.0,
+            color,
+        );
+        detail_y += 15.0;
+    }
+    let (status, color) = if research_state.is_unlocked(node_id) {
+        ("UNLOCKED".to_string(), Colors::SUCCESS)
+    } else {
+        let status = if node
+            .planet_condition
+            .as_deref()
+            .is_some_and(|required| active_condition != Some(required))
+        {
+            format!(
+                "Requires {} world",
+                node.planet_condition.as_deref().unwrap_or("matching")
+            )
+        } else if !node
+            .prerequisites
+            .iter()
+            .all(|id| research_state.is_unlocked(id))
+        {
+            "Prerequisites not met".to_string()
+        } else if research_tree.can_research_on(
+            node_id,
+            &research_state.unlocked,
+            data_available,
+            active_condition,
+        ) {
+            "Tap node to research".to_string()
+        } else {
+            "Tap node to select (insufficient Data)".to_string()
+        };
+        let color = if status.starts_with("Tap node") {
+            if research_tree.can_research_on(
+                node_id,
+                &research_state.unlocked,
+                data_available,
+                active_condition,
+            ) {
+                Colors::SUCCESS
+            } else {
+                Colors::WARNING
+            }
+        } else if status.starts_with("Requires") || status.starts_with("Prerequisites") {
+            Colors::ERROR
+        } else {
+            Colors::WARNING
+        };
+        (
+            format!("Cost {:.0} Data - {}", node.data_cost, status),
+            color,
+        )
+    };
+    draw_ui_text(
+        &truncate_text_to_width(&status, text_w, 11.0),
+        panel_x + 12.0,
+        detail_y + 2.0,
+        11.0,
+        color,
+    );
 }
 
 #[cfg(test)]
