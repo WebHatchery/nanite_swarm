@@ -578,6 +578,7 @@ impl Game {
                     .warning("Seed Ship: Ion Spine under way");
             }
             "ending" => self.stage_ending_scene(),
+            "desktop_ending" => self.stage_ending_scene(),
             // The banner reports a shutdown that scales with the base, so it
             // has to be looked at on a base that has some size to it.
             "collapse" => {

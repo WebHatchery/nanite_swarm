@@ -39,6 +39,8 @@ fn required_capture_scenes_are_registered() {
             "mobile_offline",
             "geothermal",
             "fusion",
+            "ending",
+            "desktop_ending",
             "interplanetary_remote_orders",
             "interplanetary_core_stages",
             "mobile_interplanetary_core_stages",

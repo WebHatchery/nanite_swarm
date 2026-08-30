@@ -2,12 +2,14 @@
 //! to go.
 
 mod mobile;
+mod report;
 
 use crate::state::Campaign;
 use crate::ui::{draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::math::pulse01;
 use macroquad_toolkit::ui::draw_ui_text;
+use report::completion_world_rows;
 
 /// Actions from the ending screen.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -34,7 +36,7 @@ pub fn render_campaign_complete_view(campaign: &Campaign) -> CampaignCompleteAct
     }
 
     let panel_w = (screen_w * 0.55).clamp(460.0, 760.0);
-    let panel_h = 330.0;
+    let panel_h = 420.0;
     let panel_x = (screen_w - panel_w) * 0.5;
     let panel_y = (screen_h - panel_h) * 0.42;
     draw_panel(panel_x, panel_y, panel_w, panel_h);
@@ -87,6 +89,33 @@ pub fn render_campaign_complete_view(campaign: &Campaign) -> CampaignCompleteAct
         let y = panel_y + 146.0 + index as f32 * 24.0;
         draw_ui_text(label, panel_x + 28.0, y, 13.0, Colors::TEXT_DIM);
         draw_ui_text(value, panel_x + panel_w - 120.0, y, 13.0, Colors::SUCCESS);
+    }
+
+    let world_rows = completion_world_rows(campaign);
+    draw_ui_text(
+        "WORLD CORE LEDGER",
+        panel_x + 28.0,
+        panel_y + 245.0,
+        11.0,
+        Colors::TEXT_DIM,
+    );
+    for (index, row) in world_rows.iter().enumerate() {
+        let y = panel_y + 267.0 + index as f32 * 18.0;
+        draw_ui_text(&row.name, panel_x + 28.0, y, 10.0, Colors::TEXT);
+        draw_ui_text(
+            &row.stage_label,
+            panel_x + panel_w - 205.0,
+            y,
+            10.0,
+            Colors::PRIMARY,
+        );
+        draw_ui_text(
+            &format!("{} structures", row.structures),
+            panel_x + panel_w - 120.0,
+            y,
+            10.0,
+            Colors::SUCCESS,
+        );
     }
 
     let button_w = (panel_w - 76.0) * 0.5;

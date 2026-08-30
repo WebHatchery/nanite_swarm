@@ -1,5 +1,6 @@
 //! Compact completion report for portrait screens.
 
+use super::report::{compact_core_stage_line, completion_world_rows};
 use super::*;
 use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text, truncate_text_to_width};
 
@@ -73,6 +74,22 @@ pub(super) fn draw(campaign: &Campaign, pulse: f32) -> CampaignCompleteAction {
             Colors::SUCCESS,
         );
     }
+
+    let world_rows = completion_world_rows(campaign);
+    draw_ui_text(
+        "WORLD CORE LEDGER",
+        PANEL_X + 16.0,
+        panel_y + 260.0,
+        10.0,
+        Colors::TEXT_DIM,
+    );
+    draw_ui_text(
+        &truncate_text_to_width(&compact_core_stage_line(&world_rows), panel_w - 32.0, 9.0),
+        PANEL_X + 16.0,
+        panel_y + 280.0,
+        9.0,
+        Colors::PRIMARY,
+    );
 
     let button_w = ((panel_w - 44.0) * 0.5).max(50.0);
     let button_y = panel_y + panel_h - 58.0;
