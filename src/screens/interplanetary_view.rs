@@ -11,8 +11,8 @@ use macroquad::prelude::*;
 use macroquad_toolkit::ui::{draw_ui_text, note_neighbour, touch_area, Pointer, ScrollArea};
 use status::{launch_action, launch_prompt, mass_driver_status_label, seed_ship_status_label};
 use world_dossier::{
-    draw_world_telemetry, hazard_color, hazard_summary, world_alert_code, world_alert_color,
-    world_rule_lines, world_telemetry_height,
+    draw_world_telemetry, hazard_color, hazard_summary, shipping_summary, world_alert_code,
+    world_alert_color, world_rule_lines, world_telemetry_height,
 };
 
 /// Actions from the interplanetary view
@@ -474,9 +474,15 @@ fn draw_planet_info(
     let planet = &view.data.planets[index];
     let is_colonized = view.colonized.get(index).copied().unwrap_or(false);
     let is_current = index == view.current_planet;
+    let shipping = shipping_summary(
+        view.data,
+        view.orders.get(index).copied().flatten(),
+        view.export_rates.get(index).copied().unwrap_or(0.0),
+    );
 
     let panel_w = PLANET_INFO_WIDTH;
-    let panel_h = 300.0;
+    let shipping_offset = if shipping.is_some() { 20.0 } else { 0.0 };
+    let panel_h = 300.0 + shipping_offset;
     let panel_x = screen_w - panel_w - PLANET_INFO_MARGIN;
     let panel_y = header_height + 12.0;
     draw_panel(panel_x, panel_y, panel_w, panel_h);
@@ -523,12 +529,21 @@ fn draw_planet_info(
         draw_world_telemetry(&telemetry, panel_x + 15.0, panel_y + 147.0);
     }
 
-    let rules_y = panel_y
-        + if telemetry.is_some() {
-            147.0 + world_telemetry_height()
-        } else {
-            149.0
-        };
+    let info_end = if telemetry.is_some() {
+        147.0 + world_telemetry_height()
+    } else {
+        149.0
+    };
+    if let Some(shipping) = shipping.as_deref() {
+        draw_ui_text(
+            shipping,
+            panel_x + 15.0,
+            panel_y + info_end,
+            10.0,
+            Colors::PRIMARY,
+        );
+    }
+    let rules_y = panel_y + info_end + shipping_offset;
     draw_ui_text(
         "World rules:",
         panel_x + 15.0,
@@ -552,7 +567,7 @@ fn draw_planet_info(
         );
     }
 
-    let action_y = panel_y + if telemetry.is_some() { 289.0 } else { 213.0 };
+    let action_y = panel_y + if telemetry.is_some() { 289.0 } else { 213.0 } + shipping_offset;
     if is_current {
         draw_ui_text(
             "(Current Location)",

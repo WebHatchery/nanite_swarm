@@ -143,7 +143,12 @@ fn draw_mobile_planet_info(
     let is_colonized = view.colonized.get(index).copied().unwrap_or(false);
     let is_current = index == view.current_planet;
     let telemetry = view.telemetry.get(index).copied().flatten();
-    let panel_h = mobile_info_height(screen_h, telemetry.is_some());
+    let shipping = super::shipping_summary(
+        view.data,
+        view.orders.get(index).copied().flatten(),
+        view.export_rates.get(index).copied().unwrap_or(0.0),
+    );
+    let panel_h = mobile_info_height(screen_h, telemetry.is_some(), shipping.is_some());
     let text_w = (width - 30.0).max(40.0);
     draw_panel(x, y, width, panel_h);
     if screen_h < 560.0 {
@@ -342,6 +347,16 @@ fn draw_mobile_planet_info(
         );
         next_y += 46.0;
     }
+    if let Some(shipping) = shipping.as_deref() {
+        draw_ui_text(
+            &truncate_text_to_width(shipping, text_w, 9.0),
+            x + 15.0,
+            next_y,
+            9.0,
+            Colors::PRIMARY,
+        );
+        next_y += 18.0;
+    }
     draw_ui_text("World rules:", x + 15.0, next_y, 10.0, Colors::TEXT_DIM);
     let rules = world_rule_lines(view.data, index);
     for (rule_index, rule) in rules.iter().take(3).enumerate() {
@@ -386,7 +401,7 @@ fn draw_mobile_planet_info(
     );
 }
 
-fn mobile_info_height(screen_h: f32, has_telemetry: bool) -> f32 {
+fn mobile_info_height(screen_h: f32, has_telemetry: bool, has_shipping: bool) -> f32 {
     if screen_h < 560.0 {
         if has_telemetry {
             124.0
@@ -394,7 +409,7 @@ fn mobile_info_height(screen_h: f32, has_telemetry: bool) -> f32 {
             96.0
         }
     } else {
-        250.0
+        250.0 + if has_shipping { 18.0 } else { 0.0 }
     }
 }
 

@@ -1,6 +1,6 @@
 //! World dossier details shared by the desktop map and portrait map.
 
-use crate::state::{WorldAlert, WorldTelemetry};
+use crate::state::{cargo_name, ExportOrder, WorldAlert, WorldTelemetry};
 use crate::ui::Colors;
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::draw_ui_text;
@@ -14,6 +14,22 @@ pub(super) fn world_telemetry_row_y(y: f32, row: usize) -> f32 {
 
 pub(super) fn world_telemetry_height() -> f32 {
     TELEMETRY_LINE_HEIGHT * 4.0 + TELEMETRY_BOTTOM_GAP
+}
+
+/// The standing freight order for a world, short enough to share its dossier
+/// with the live telemetry and construction rules.
+pub(super) fn shipping_summary(
+    data: &crate::data::GameData,
+    order: Option<ExportOrder>,
+    rate_per_minute: f32,
+) -> Option<String> {
+    let order = order?;
+    Some(format!(
+        "Shipping: {} -> {} @ {:.0}/min",
+        cargo_name(order.cargo),
+        data.planet(order.target).name,
+        rate_per_minute.max(0.0)
+    ))
 }
 
 pub(super) fn draw_world_telemetry(telemetry: &WorldTelemetry, x: f32, y: f32) {

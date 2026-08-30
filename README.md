@@ -26,6 +26,9 @@ The swarm is powerful, but every expansion changes the terrain, stresses the gri
 - The Solar System dossier also previews each world's construction bans and
   infrastructure requirements before the Seed Ship leaves, including the
   authored Geothermal and Fusion power routes for hostile worlds.
+- A colonized world's dossier also names its standing freight route and
+  nominal cargo rate, so remote supply chains can be checked from the Worlds
+  view before opening Shipping controls.
 
 ## Goal
 

@@ -36,7 +36,7 @@ fn shipping_status_distinguishes_absent_and_offline_landing_pads() {
 }
 use super::world_dossier::world_telemetry_row_y;
 use super::{
-    solar_map_layout, world_alert_code, world_rule_lines, world_telemetry_height,
+    shipping_summary, solar_map_layout, world_alert_code, world_rule_lines, world_telemetry_height,
     MIN_SOLAR_MAP_SCALE,
 };
 
@@ -188,4 +188,20 @@ fn dossier_rules_name_the_power_route_for_hostile_worlds() {
     assert!(world_rule_lines(data.data(), 3)
         .iter()
         .any(|line| line == "Power source: Fusion Reactor"));
+}
+
+#[test]
+fn dossier_can_name_a_worlds_standing_shipping_route() {
+    let data = crate::data::test_data();
+    let order = crate::state::ExportOrder {
+        target: 4,
+        cargo: crate::engine::ResourceType::Minerals,
+        ..crate::state::ExportOrder::default()
+    };
+
+    assert_eq!(
+        shipping_summary(data.data(), Some(order), 180.0),
+        Some("Shipping: Minerals -> Saturn @ 180/min".to_string())
+    );
+    assert!(shipping_summary(data.data(), None, 0.0).is_none());
 }
