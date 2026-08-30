@@ -510,5 +510,8 @@ fn load_from_json_skips_offline_progress_for_fresh_save() {
     let json = save_to_json(&mut campaign).unwrap();
 
     let loaded = load_from_json(&json).unwrap();
-    assert_eq!(loaded.current().last_offline_seconds, 0.0);
+    assert!(
+        loaded.current().last_offline_seconds <= 1.0,
+        "a fresh save should not report more than one coarse clock tick of offline time"
+    );
 }

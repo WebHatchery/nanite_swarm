@@ -18,7 +18,8 @@ fn required_capture_scenes_are_registered() {
             "mobile_info",
             "mobile_help",
             "mobile_launch",
-            "mobile_arrival"
+            "mobile_arrival",
+            "hibernation"
         ]
     );
 }

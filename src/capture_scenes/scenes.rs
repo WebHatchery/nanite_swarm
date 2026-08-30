@@ -601,6 +601,13 @@ impl Game {
                 planet.restored_from_backup_generation = 1;
                 planet.notifications.clear();
             }
+            "hibernation" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                let planet = self.campaign.current_mut();
+                planet.battery_seconds = 0.0;
+                planet.notifications.clear();
+            }
             "demolish" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();

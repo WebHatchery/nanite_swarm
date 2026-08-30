@@ -8,7 +8,7 @@ use macroquad_toolkit::ui::draw_ui_text;
 
 use super::super::super::metrics::HudMetrics;
 use super::super::PanelColors;
-use super::{alert_button, next_event_code, ClockAction};
+use super::{alert_button, has_flow_alert, next_event_code, ClockAction};
 
 pub(super) fn draw(
     state: &PlanetState,
@@ -90,13 +90,7 @@ pub(super) fn draw(
     let stalled = state.stalled_drone_count();
     let upkeep = state.upkeep_alert_positions().len();
     let focusable_alert = congested > 0 || starved > 0 || blocked > 0 || stalled > 0 || upkeep > 0;
-    let flow_alert = state.power_collapse_shutdown > 0.0
-        || state.power_balance < 0.0
-        || congested > 0
-        || starved > 0
-        || blocked > 0
-        || stalled > 0
-        || upkeep > 0;
+    let flow_alert = has_flow_alert(state);
     let row_y = bottom_y + 36.0;
     let alert_width = 80.0_f32.min((screen_w - 20.0).max(48.0));
     let alert = alert_button(

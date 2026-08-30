@@ -103,13 +103,7 @@ pub(super) fn draw(
         + i32::from(stalled > 0)
         + i32::from(upkeep > 0);
     let focusable_alert = congested > 0 || starved > 0 || blocked > 0 || stalled > 0 || upkeep > 0;
-    let flow_alert = state.power_collapse_shutdown > 0.0
-        || state.power_balance < 0.0
-        || congested > 0
-        || starved > 0
-        || blocked > 0
-        || stalled > 0
-        || upkeep > 0;
+    let flow_alert = has_flow_alert(state);
     draw_ui_text("ALERTS", 30.0, bottom_y + 31.0, 12.0, warning);
     draw_ui_text(
         &format!("{}", alert_count),
@@ -526,6 +520,17 @@ fn alert_button(
     } else {
         None
     }
+}
+
+fn has_flow_alert(state: &PlanetState) -> bool {
+    state.power_collapse_shutdown > 0.0
+        || state.power_balance < 0.0
+        || state.battery_seconds <= 0.0
+        || state.congested_tiles() > 0
+        || !state.starved_factories().is_empty()
+        || !state.blocked_factories().is_empty()
+        || state.stalled_drone_count() > 0
+        || !state.upkeep_alert_positions().is_empty()
 }
 
 /// Ore banked at the Core per second, across the whole session.

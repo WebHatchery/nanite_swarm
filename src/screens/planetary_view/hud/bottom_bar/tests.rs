@@ -1,5 +1,6 @@
-use super::{alert_button, zoom_button_rects, ClockAction};
-use crate::state::GraphMode;
+use super::{alert_button, has_flow_alert, zoom_button_rects, ClockAction};
+use crate::data::GameConfig;
+use crate::state::{GraphMode, PlanetState};
 
 #[test]
 fn alert_button_points_at_the_relevant_recovery_surface() {
@@ -28,6 +29,18 @@ fn alert_button_points_at_the_relevant_recovery_surface() {
     assert_eq!(
         alert_button(false, false, true, false, true),
         Some(("JUMP", ClockAction::FocusAlert))
+    );
+}
+
+#[test]
+fn depleted_battery_exposes_the_flow_recovery_surface() {
+    let mut state = PlanetState::new(2, 42, GameConfig::default());
+    state.battery_seconds = 0.0;
+
+    assert!(has_flow_alert(&state));
+    assert_eq!(
+        alert_button(false, false, true, false, false),
+        Some(("FLOW", ClockAction::ToggleFlow))
     );
 }
 
