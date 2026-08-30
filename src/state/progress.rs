@@ -97,6 +97,7 @@ impl PlanetState {
             self.purge_armed = None;
             self.drag_last_pos = None;
             self.route_resource_blocked_at = None;
+            self.route_path_blocked_at = None;
             self.smart_drag_source = None;
         }
     }
@@ -114,6 +115,7 @@ impl PlanetState {
             self.purge_armed = None;
             self.drag_last_pos = None;
             self.route_resource_blocked_at = None;
+            self.route_path_blocked_at = None;
             self.smart_drag_source = None;
         }
     }
@@ -139,6 +141,7 @@ impl PlanetState {
         self.bulk_purge_armed = false;
         self.drag_last_pos = None;
         self.route_resource_blocked_at = None;
+        self.route_path_blocked_at = None;
         self.smart_drag_source = None;
         self.touch_camera_active = false;
         self.touch_route_active = false;

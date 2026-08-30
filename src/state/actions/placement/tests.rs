@@ -127,6 +127,30 @@ fn a_blocked_conduit_segment_warns_once_until_the_gesture_ends() {
 }
 
 #[test]
+fn a_conduit_route_explains_a_water_gap_and_deduplicates_until_reset() {
+    let mut state = state();
+    let core = state.grid.find_core().unwrap();
+    let water = GridPos::new(core.x + 1, core.y);
+    let tile = state.grid.get_mut(water).unwrap();
+    tile.terrain = TerrainType::Water;
+    tile.revealed = true;
+    state.unlock_building(BuildingType::Conduit);
+
+    assert!(!state.try_place_conduit_path(core, water));
+    assert_eq!(state.notifications.count(), 1);
+    assert_eq!(
+        state.notifications.get_notifications()[0].message,
+        "Route blocked: place a Bridge on the water or void gap first"
+    );
+    assert!(!state.try_place_conduit_path(core, water));
+    assert_eq!(state.notifications.count(), 1);
+
+    state.cancel_interaction_modes();
+    assert!(!state.try_place_conduit_path(core, water));
+    assert_eq!(state.notifications.count(), 2);
+}
+
+#[test]
 fn a_conduit_route_started_on_empty_ground_owns_its_first_tile() {
     let mut state = state();
     let core = state.grid.find_core().unwrap();

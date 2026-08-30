@@ -347,6 +347,10 @@ pub struct PlanetState {
     /// the current drag gesture.
     #[serde(skip, default)]
     pub route_resource_blocked_at: Option<GridPos>,
+    /// The route destination that already explained a no-path failure during
+    /// the current drag gesture.
+    #[serde(skip, default)]
+    pub route_path_blocked_at: Option<GridPos>,
     /// Existing building that began the current Smart Drag route.
     #[serde(skip, default)]
     pub smart_drag_source: Option<GridPos>,
@@ -594,6 +598,7 @@ impl PlanetState {
             offline_notice_timer: 0.0,
             drag_last_pos: None,
             route_resource_blocked_at: None,
+            route_path_blocked_at: None,
             smart_drag_source: None,
             selected_tile: None,
             demolish_mode: false,

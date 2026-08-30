@@ -83,8 +83,15 @@ impl PlanetState {
             return false;
         }
         let Some(mut path) = self.grid.find_conduit_path(from, to) else {
+            let should_warn = self.route_path_blocked_at != Some(to);
+            self.route_path_blocked_at = Some(to);
+            if should_warn {
+                self.notifications
+                    .warning(self.conduit_route_block_message(from, to));
+            }
             return false;
         };
+        self.route_path_blocked_at = None;
 
         // Touch route gestures can begin on empty ground. Include that first
         // tile here so the route action has one owner and cannot warn once for
@@ -148,6 +155,35 @@ impl PlanetState {
         }
 
         placed_any
+    }
+
+    fn conduit_route_block_message(&self, from: GridPos, to: GridPos) -> &'static str {
+        let Some(tile) = self.grid.get(to) else {
+            return "Route blocked: destination is outside the surveyed grid";
+        };
+        if !tile.revealed {
+            return "Route blocked: survey the destination first";
+        }
+        if tile.filter {
+            return "Route blocked: route around the dust filter";
+        }
+        if matches!(tile.terrain, TerrainType::Water | TerrainType::Void)
+            && !tile
+                .building
+                .as_ref()
+                .is_some_and(|building| building.building_type == BuildingType::Bridge)
+        {
+            return "Route blocked: place a Bridge on the water or void gap first";
+        }
+        if let Some(tile) = self.grid.get(from) {
+            if !tile.revealed {
+                return "Route blocked: survey the starting tile first";
+            }
+            if tile.filter {
+                return "Route blocked: route around the dust filter";
+            }
+        }
+        "Route blocked: no open conduit path to destination"
     }
 
     /// Lay a conduit route that starts at an existing building.
