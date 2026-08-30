@@ -57,6 +57,8 @@ The top resource cards show live rates from active drills, the Core and Server
 Banks, and biomass harvesters.
 The desktop Operations panel's Achievements row is touch-sized as well as
 mouse-clickable, so Records remains reachable without a physical keyboard.
+Records keeps achievements, directive progress, and the durable event log in
+one touch-scrolling view; its footer names both lists as scroll targets.
 The selected-structure Power row follows the standing building's live draw or
 generation, including dust, overclock, standby, focus, and research effects;
 build previews continue to show nominal power.

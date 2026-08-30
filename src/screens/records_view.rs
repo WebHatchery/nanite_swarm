@@ -116,19 +116,40 @@ pub fn render_records_view(
         draw_log(log, scroll, Rect::new(area_x, log_y, area_w, log_h));
     }
 
-    draw_ui_text(
-        "Drag the log to scroll | Tap Back to return",
-        20.0,
-        screen_h - 20.0,
-        Dimensions::FONT_SIZE_SMALL,
-        Colors::TEXT_DIM,
-    );
+    draw_records_footer(screen_w, screen_h);
 
     if is_key_pressed(KeyCode::Escape) || is_key_pressed(KeyCode::A) {
         return RecordsAction::Close;
     }
 
     action
+}
+
+fn draw_records_footer(screen_w: f32, screen_h: f32) {
+    if screen_w < 600.0 {
+        draw_ui_text(
+            "Drag RECORDS or LOG to scroll",
+            20.0,
+            screen_h - 28.0,
+            Dimensions::FONT_SIZE_SMALL,
+            Colors::TEXT_DIM,
+        );
+        draw_ui_text(
+            "Tap BACK to return",
+            20.0,
+            screen_h - 12.0,
+            Dimensions::FONT_SIZE_SMALL,
+            Colors::TEXT_DIM,
+        );
+    } else {
+        draw_ui_text(
+            "Drag RECORDS or LOG to scroll | Tap BACK to return",
+            20.0,
+            screen_h - 20.0,
+            Dimensions::FONT_SIZE_SMALL,
+            Colors::TEXT_DIM,
+        );
+    }
 }
 
 fn records_grid_height(screen_h: f32, area_y: f32) -> f32 {
