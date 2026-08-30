@@ -20,6 +20,7 @@ fn required_capture_scenes_are_registered() {
             "logistics",
             "core_ring",
             "core_ring_focus",
+            "mobile_core_ring",
             "assembly",
             "focus",
             "freight",

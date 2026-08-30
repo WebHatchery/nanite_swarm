@@ -241,7 +241,7 @@ impl Game {
             }
             // The final Core stage makes its planetary-scale silhouette
             // visible in the ordinary map, not only in the inspector text.
-            "core_ring" | "core_ring_focus" => {
+            "core_ring" | "core_ring_focus" | "mobile_core_ring" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();
                 let planet = self.campaign.current_mut();
@@ -260,6 +260,11 @@ impl Game {
                     // map for a stable visual regression frame.
                     planet.focus_mode = true;
                     planet.camera.pan_x = 240.0;
+                    planet.camera.pan_y = -100.0;
+                } else if scene == "mobile_core_ring" {
+                    // Mirror the visible mobile CORE recenter action so the
+                    // late-stage world can be checked in its touch layout.
+                    planet.camera.pan_x = -230.0;
                     planet.camera.pan_y = -100.0;
                 }
             }
