@@ -76,6 +76,7 @@ pub(super) fn draw(
     let congested = state.congested_tiles();
     let starved = state.starved_factories().len();
     let blocked = state.blocked_factories().len();
+    let stalled = state.stalled_drone_count();
     let alert_count = i32::from(state.save_failed)
         + i32::from(state.restored_from_backup)
         + i32::from(state.power_balance < 0.0)
@@ -84,7 +85,13 @@ pub(super) fn draw(
         + i32::from(congested > 0)
         + i32::from(starved > 0)
         + i32::from(blocked > 0)
-        + i32::from(state.stalled_drone_count() > 0);
+        + i32::from(stalled > 0);
+    let flow_alert = state.power_collapse_shutdown > 0.0
+        || state.power_balance < 0.0
+        || congested > 0
+        || starved > 0
+        || blocked > 0
+        || stalled > 0;
     draw_ui_text("ALERTS", 30.0, bottom_y + 31.0, 12.0, warning);
     draw_ui_text(
         &format!("{}", alert_count),
@@ -107,7 +114,7 @@ pub(super) fn draw(
         "LOW BATTERY"
     } else if state.power_balance < 0.0 {
         "NEGATIVE POWER"
-    } else if state.stalled_drone_count() > 0 {
+    } else if stalled > 0 {
         "ROUTE SEVERED"
     } else if starved > 0 {
         "INPUT STARVED"
@@ -126,7 +133,7 @@ pub(super) fn draw(
         11.0,
         if alert_count > 0 { error } else { success },
     );
-    if let Some(flow_label) = alert_flow_label(alert_count, state.flow_overlay) {
+    if let Some(flow_label) = alert_flow_label(flow_alert, state.flow_overlay) {
         if draw_hud_button(
             theme,
             Rect::new(10.0 + alert_w - 62.0, bottom_y + 10.0, 54.0, 22.0),
@@ -436,8 +443,8 @@ pub(super) fn draw(
     clock
 }
 
-fn alert_flow_label(alert_count: i32, flow_overlay: bool) -> Option<&'static str> {
-    (alert_count > 0).then_some(if flow_overlay { "FLOW ON" } else { "FLOW" })
+fn alert_flow_label(flow_alert: bool, flow_overlay: bool) -> Option<&'static str> {
+    flow_alert.then_some(if flow_overlay { "FLOW ON" } else { "FLOW" })
 }
 
 /// Ore banked at the Core per second, across the whole session.

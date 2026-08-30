@@ -36,8 +36,8 @@ sidebars for route planning, then tap PANELS to restore them. When freight is
 moving, its map key identifies the colour and silhouette of every live cargo.
 The bottom graph records observed ore, alloy, and parts flow; warning triangles
 and the Operations count identify powered processors that are missing a feed.
-When the bottom alert card reports a live problem, tap its FLOW button to open
-the network diagnosis overlay.
+When the bottom alert card reports a network or power problem, tap its FLOW
+button to open the network diagnosis overlay.
 Tap the event-coded NEXT button to jump to the next recovery, research-unlock,
 or mass-driver timer while keeping the whole campaign clock in sync.
 
