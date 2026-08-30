@@ -23,6 +23,7 @@ impl Game {
         self.campaign.current_mut().restored_from_backup_generation = 0;
         self.research_state.current_research = None;
         self.research_state.research_progress = 0.0;
+        self.launch_confirmation_target = None;
         match scene {
             "mainmenu" => {
                 self.phase = GamePhase::MainMenu;
@@ -745,6 +746,10 @@ impl Game {
                 camera.pan_y = -180.0;
             }
             "interplanetary" => self.stage_interplanetary_scene(),
+            "interplanetary_launch_confirm" => {
+                self.stage_interplanetary_scene();
+                self.launch_confirmation_target = Some(0);
+            }
             "interplanetary_driver_offline" => {
                 self.stage_interplanetary_scene();
                 let driver = self

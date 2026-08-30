@@ -8,7 +8,7 @@ use crate::state::{ExportOrder, InterplanetaryMobilePanel, Shipment, WorldAlert,
 use crate::ui::{color_from_rgba, draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::{draw_ui_text, note_neighbour, touch_area, Pointer, ScrollArea};
-use status::{mass_driver_status_label, seed_ship_status_label};
+use status::{launch_action, launch_prompt, mass_driver_status_label, seed_ship_status_label};
 
 /// Actions from the interplanetary view
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -16,6 +16,7 @@ pub enum InterplanetaryAction {
     None,
     Close,
     SelectPlanet(usize),
+    RequestLaunch(usize),
     LaunchSeedShip(usize),
     CycleExportCargo,
     CycleExportTarget,
@@ -92,6 +93,8 @@ pub struct MapView<'a> {
     pub current_drivers_online: usize,
     /// Mass Drivers standing on the world underfoot, including offline ones.
     pub current_drivers_built: usize,
+    /// Untouched world awaiting the second tap required to launch.
+    pub launch_confirmation_target: Option<usize>,
     /// Powered Mass Drivers on every colonized world, for remote order edits.
     pub drivers_online: &'a [usize],
     /// Powered Landing Pads on each world, so the panel can say when the
@@ -170,7 +173,7 @@ pub fn render_interplanetary_view(
     // Keep a dossier visible when the map opens. This gives touch players a
     // useful first target and means the planet list can be used for travel
     // without making the orbit nodes the only way to learn about a world.
-    let mut hovered_planet: Option<usize> = Some(current_planet);
+    let mut hovered_planet = view.launch_confirmation_target.or(Some(current_planet));
     let mut action = InterplanetaryAction::None;
 
     let list_x = 16.0;
@@ -450,7 +453,7 @@ fn draw_planet_list(
             if is_colonized && !is_current {
                 action = InterplanetaryAction::SelectPlanet(index);
             } else if !is_colonized && can_launch {
-                action = InterplanetaryAction::LaunchSeedShip(index);
+                action = launch_action(index, view.launch_confirmation_target == Some(index));
             }
         }
         row_y += row_height;
@@ -567,7 +570,7 @@ fn draw_planet_info(
         );
     } else if can_launch {
         draw_ui_text(
-            "Tap to launch the Seed Ship",
+            launch_prompt(view.launch_confirmation_target == Some(index)),
             panel_x + 15.0,
             action_y,
             12.0,
@@ -590,7 +593,10 @@ fn draw_planet_info(
     if is_colonized && !is_current {
         Some(InterplanetaryAction::SelectPlanet(index))
     } else if can_launch && !is_colonized {
-        Some(InterplanetaryAction::LaunchSeedShip(index))
+        Some(launch_action(
+            index,
+            view.launch_confirmation_target == Some(index),
+        ))
     } else {
         None
     }

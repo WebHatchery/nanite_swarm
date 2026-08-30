@@ -114,7 +114,9 @@ fn draw_worlds(
         can_launch,
         pointer,
     );
-    let index = focused.unwrap_or(view.current_planet);
+    let index = focused
+        .or(view.launch_confirmation_target)
+        .unwrap_or(view.current_planet);
     let info_y = MOBILE_CONTENT_Y + list_h + 10.0;
     draw_mobile_planet_info(
         view,
@@ -195,7 +197,7 @@ fn draw_mobile_planet_info(
         } else if is_colonized {
             "Tap world row to travel"
         } else if can_launch {
-            "Tap world row to launch"
+            super::launch_prompt(view.launch_confirmation_target == Some(index))
         } else {
             "World not ready to launch"
         };

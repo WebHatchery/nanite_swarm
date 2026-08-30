@@ -303,6 +303,7 @@ impl Game {
             pod_caps: &pod_caps,
             overflow_pods: &overflow_pods,
             editing_world,
+            launch_confirmation_target: self.launch_confirmation_target,
         };
         let action = render_interplanetary_view(
             &view,
@@ -312,6 +313,7 @@ impl Game {
         self.shipping_scroll = shipping_scroll;
         match action {
             InterplanetaryAction::Close => {
+                self.launch_confirmation_target = None;
                 // Freight orders are campaign state, not just map controls.
                 // Save on exit so a browser player does not lose a route
                 // configured immediately before leaving this screen.
@@ -319,6 +321,7 @@ impl Game {
                 self.phase = GamePhase::Playing;
             }
             InterplanetaryAction::SelectPlanet(index) => {
+                self.launch_confirmation_target = None;
                 if self.campaign.travel_to(index) {
                     self.shipping_edit_world = index;
                     self.shipping_scroll.set_offset(0.0);
@@ -328,7 +331,16 @@ impl Game {
                     self.phase = GamePhase::Playing;
                 }
             }
+            InterplanetaryAction::RequestLaunch(index) => {
+                if !self.campaign.is_colonized(index) {
+                    self.launch_confirmation_target = Some(index);
+                    self.campaign
+                        .current_mut()
+                        .emit_audio(state::AudioEvent::UiConfirm);
+                }
+            }
             InterplanetaryAction::LaunchSeedShip(index) => {
+                self.launch_confirmation_target = None;
                 let origin = self.campaign.current_index();
                 if self.has_mass_driver() && self.campaign.launch_seed_ship(index) {
                     self.shipping_edit_world = index;
@@ -377,10 +389,12 @@ impl Game {
             InterplanetaryAction::ToggleRemoteExportSurplus => self
                 .save_shipping_edit(|campaign| campaign.toggle_export_surplus_for(editing_world)),
             InterplanetaryAction::ToggleMobileWorlds => {
+                self.launch_confirmation_target = None;
                 self.interplanetary_mobile_panel = state::InterplanetaryMobilePanel::Worlds;
                 self.shipping_scroll.set_offset(0.0);
             }
             InterplanetaryAction::ToggleMobileShipping => {
+                self.launch_confirmation_target = None;
                 self.interplanetary_mobile_panel = state::InterplanetaryMobilePanel::Shipping;
                 self.shipping_scroll.set_offset(0.0);
             }

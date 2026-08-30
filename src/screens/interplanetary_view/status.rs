@@ -1,5 +1,23 @@
 //! Header status copy for interplanetary launch readiness.
 
+use super::InterplanetaryAction;
+
+pub(super) fn launch_action(index: usize, confirming: bool) -> InterplanetaryAction {
+    if confirming {
+        InterplanetaryAction::LaunchSeedShip(index)
+    } else {
+        InterplanetaryAction::RequestLaunch(index)
+    }
+}
+
+pub(super) fn launch_prompt(confirming: bool) -> &'static str {
+    if confirming {
+        "Tap again to launch the Seed Ship"
+    } else {
+        "Tap to prepare launch"
+    }
+}
+
 pub(super) fn mass_driver_status_label(
     researched: bool,
     built: usize,

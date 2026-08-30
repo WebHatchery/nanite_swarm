@@ -66,6 +66,8 @@ the planet list remains a touch-sized travel and launch control.
 Its header distinguishes a Mass Driver that is not built from one that is
 built but offline, and explains when a finished Seed Ship still needs a live
 driver.
+Tap an untouched world once to prepare a launch, then tap it again to confirm;
+travel to an already-colonized world remains one tap.
 At compact browser sizes, the resource cards abbreviate and the build/right
 panels use short summaries so touch controls remain separated and visible.
 On portrait screens, BUILD and INFO open one full-width drawer at a time;

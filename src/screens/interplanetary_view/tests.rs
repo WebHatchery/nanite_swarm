@@ -1,4 +1,6 @@
-use super::status::{mass_driver_status_label, seed_ship_status_label};
+use super::status::{
+    launch_action, launch_prompt, mass_driver_status_label, seed_ship_status_label,
+};
 use super::{
     solar_map_layout, world_alert_code, world_rule_lines, world_telemetry_height,
     world_telemetry_row_y, MIN_SOLAR_MAP_SCALE,
@@ -30,6 +32,20 @@ fn launch_header_explains_why_a_finished_ship_cannot_leave() {
         "Seed Ship: READY / DRIVER OFFLINE"
     );
     assert_eq!(seed_ship_status_label(true, 1, 1), "Seed Ship: READY");
+}
+
+#[test]
+fn launching_an_untouched_world_requires_a_second_tap() {
+    assert_eq!(
+        launch_action(0, false),
+        super::InterplanetaryAction::RequestLaunch(0)
+    );
+    assert_eq!(
+        launch_action(0, true),
+        super::InterplanetaryAction::LaunchSeedShip(0)
+    );
+    assert_eq!(launch_prompt(false), "Tap to prepare launch");
+    assert_eq!(launch_prompt(true), "Tap again to launch the Seed Ship");
 }
 
 #[test]

@@ -68,6 +68,7 @@ pub struct Game {
     ui_theme: data::UiTheme,
     research_viewport: screens::ResearchViewport,
     research_return_phase: GamePhase,
+    launch_confirmation_target: Option<usize>,
 }
 
 fn slot_name(index: usize) -> &'static str {
@@ -144,6 +145,7 @@ impl Game {
             ui_theme,
             research_viewport: screens::ResearchViewport::default(),
             research_return_phase: GamePhase::Playing,
+            launch_confirmation_target: None,
         };
         let preferred_speed = game.settings.default_speed;
         game.session.campaign.apply_preferred_speed(preferred_speed);
