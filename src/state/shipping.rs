@@ -189,7 +189,7 @@ impl PlanetState {
     /// What one driver is doing, for the inspector: its route and its pod.
     pub fn export_summary(&self, pos: GridPos) -> String {
         let Some(order) = self.export else {
-            return "No route - set one on the map (M)".to_string();
+            return "No route - set one on the Solar System map".to_string();
         };
         let loaded = self.pod_loads.get(&(pos.x, pos.y)).copied().unwrap_or(0.0);
         format!(
