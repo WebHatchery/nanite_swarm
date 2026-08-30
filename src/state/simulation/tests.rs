@@ -89,6 +89,19 @@ fn the_throughput_graph_starts_with_nothing_to_say() {
 }
 
 #[test]
+fn graph_samples_retain_power_and_data_signals_before_any_delivery() {
+    let mut state = state();
+    state.sample_throughput(1.0);
+
+    let sample = state.graph_samples.last().expect("one telemetry sample");
+    assert_eq!(sample.power_produced, 4.0);
+    assert_eq!(sample.power_consumed, 0.0);
+    assert_eq!(sample.data_produced, 0.25);
+    assert_eq!(sample.data_consumed, 0.0);
+    assert_eq!(state.throughput.last(), Some(0.0));
+}
+
+#[test]
 fn a_second_of_deliveries_becomes_one_point_on_the_graph() {
     let mut state = state();
     state.delivered_since_sample = 12.0;

@@ -128,6 +128,7 @@ pub(super) fn draw_ui_panels(
         bottom_bar::ClockAction::ToggleFocus => state.focus_mode = !state.focus_mode,
         bottom_bar::ClockAction::ToggleFlow => state.flow_overlay = !state.flow_overlay,
         bottom_bar::ClockAction::ToggleDeck => state.factory_deck_open = !state.factory_deck_open,
+        bottom_bar::ClockAction::CycleGraph => state.graph_mode = state.graph_mode.next(),
         bottom_bar::ClockAction::RetrySave => {
             if ui_action == PlanetaryAction::None {
                 ui_action = PlanetaryAction::RetrySave;

@@ -1,4 +1,5 @@
 use super::{alert_button, zoom_button_rects, ClockAction};
+use crate::state::GraphMode;
 
 #[test]
 fn alert_button_points_at_the_relevant_recovery_surface() {
@@ -40,4 +41,13 @@ fn zoom_buttons_fit_both_wide_and_compact_command_slots() {
         assert!(zoom_in.x + zoom_in.w <= slot_x + slot_w);
         assert!(zoom_out.x + zoom_out.w < zoom_in.x);
     }
+}
+
+#[test]
+fn graph_mode_cycles_through_flow_power_and_data() {
+    assert_eq!(GraphMode::default(), GraphMode::Flow);
+    assert_eq!(GraphMode::Flow.next(), GraphMode::Power);
+    assert_eq!(GraphMode::Power.next(), GraphMode::Data);
+    assert_eq!(GraphMode::Data.next(), GraphMode::Flow);
+    assert_eq!(GraphMode::Power.label(), "POWER");
 }

@@ -74,6 +74,37 @@ pub struct GraphSample {
     pub data_consumed: f32,
 }
 
+/// Which telemetry family the compact bottom graph is showing.
+///
+/// This is session UI state rather than campaign state: a save reopens on the
+/// familiar factory-flow view, while the player can tap through power and
+/// Data whenever those signals matter more.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum GraphMode {
+    #[default]
+    Flow,
+    Power,
+    Data,
+}
+
+impl GraphMode {
+    pub fn next(self) -> Self {
+        match self {
+            Self::Flow => Self::Power,
+            Self::Power => Self::Data,
+            Self::Data => Self::Flow,
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Flow => "FLOW",
+            Self::Power => "POWER",
+            Self::Data => "DATA",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct BlueprintEntry {
     pub offset: (i32, i32),
@@ -401,6 +432,9 @@ pub struct PlanetState {
     pub collapse_history: Vec<CollapseRecord>,
     #[serde(default)]
     pub graph_samples: Vec<GraphSample>,
+    /// Session-only graph selector; saves reopen on the factory-flow view.
+    #[serde(skip, default)]
+    pub graph_mode: GraphMode,
     /// Recipe inputs and outputs accumulated until the next one-second graph
     /// sample. Session-only: a loaded game starts a fresh observation window.
     #[serde(skip, default)]
@@ -576,6 +610,7 @@ impl PlanetState {
             route_reservations: std::collections::HashMap::new(),
             collapse_history: Vec::new(),
             graph_samples: Vec::new(),
+            graph_mode: GraphMode::Flow,
             factory_flow_since_sample: GraphSample::default(),
             last_offline_report: super::progress::OfflineReport::default(),
             audio_events: Vec::new(),
