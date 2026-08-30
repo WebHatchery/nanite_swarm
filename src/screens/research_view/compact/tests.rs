@@ -69,3 +69,57 @@ fn parked_research_status_invites_the_player_to_resume_work() {
     );
     assert!(parked_research_status(&state, "other", &node).is_none());
 }
+
+#[test]
+fn compact_tree_drag_tracks_touch_delta_and_preserves_tap_distance() {
+    let tree = Rect::new(10.0, 20.0, 100.0, 80.0);
+    let mut viewport = ResearchViewport::default();
+    let first = Pointer {
+        position: vec2(30.0, 40.0),
+        down: true,
+        ..Pointer::default()
+    };
+    let second = Pointer {
+        position: vec2(42.0, 47.0),
+        down: true,
+        ..Pointer::default()
+    };
+
+    apply_pointer_drag(&mut viewport, first, tree);
+    apply_pointer_drag(&mut viewport, second, tree);
+
+    assert_eq!(viewport.pan, vec2(12.0, 7.0));
+    assert!((viewport.drag_distance - (12.0_f32 * 12.0 + 7.0 * 7.0).sqrt()).abs() < 0.001);
+
+    apply_pointer_drag(&mut viewport, Pointer::default(), tree);
+    assert!(viewport.last_pointer.is_none());
+    assert!(!viewport.drag_active);
+    assert!(viewport.drag_distance > 0.0);
+}
+
+#[test]
+fn compact_tree_drag_ignores_a_gesture_that_started_outside_the_tree() {
+    let tree = Rect::new(10.0, 20.0, 100.0, 80.0);
+    let mut viewport = ResearchViewport::default();
+    apply_pointer_drag(
+        &mut viewport,
+        Pointer {
+            position: vec2(2.0, 4.0),
+            down: true,
+            ..Pointer::default()
+        },
+        tree,
+    );
+    apply_pointer_drag(
+        &mut viewport,
+        Pointer {
+            position: vec2(42.0, 47.0),
+            down: true,
+            ..Pointer::default()
+        },
+        tree,
+    );
+
+    assert_eq!(viewport.pan, Vec2::ZERO);
+    assert_eq!(viewport.drag_distance, 0.0);
+}

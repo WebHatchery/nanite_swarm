@@ -98,6 +98,8 @@ After a world change, the mobile header briefly names the arrival as
 On portrait screens, BUILD and INFO open one full-width drawer at a time;
 MAP returns to the live grid between actions.
 Research uses a separate control row and full-width detail drawer on phones;
+drag the neural tree with a mouse or touch to pan it, then tap `-` / `+` to
+zoom;
 the Seed Ship yard compresses each stage into a readable card, keeps the
 diversion control visible, and opens the neural network directly when a stage
   needs research. Tap Back there to return to the yard. The portrait Solar System

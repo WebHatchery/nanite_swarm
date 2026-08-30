@@ -55,21 +55,38 @@ pub(super) fn parked_research_status(
 }
 
 pub(super) fn update_compact_viewport(viewport: &mut ResearchViewport, tree: Rect) {
-    let mouse = Vec2::from(mouse_position());
-    if is_mouse_button_pressed(MouseButton::Left) && tree.contains(mouse) {
-        viewport.drag_distance = 0.0;
-    }
-    if is_mouse_button_down(MouseButton::Left) && tree.contains(mouse) {
-        let delta = mouse_delta_position();
-        viewport.pan += delta;
-        viewport.drag_distance += delta.length();
-    }
+    let pointer = Pointer::read(|position| position);
+    apply_pointer_drag(viewport, pointer, tree);
     let (_, wheel_y) = mouse_wheel();
-    if wheel_y.abs() > f32::EPSILON && tree.contains(mouse) {
+    if wheel_y.abs() > f32::EPSILON && tree.contains(pointer.position) {
         viewport.zoom = (viewport.zoom + wheel_y.signum() * 0.1).clamp(1.0, 2.4);
     }
     viewport.pan.x = viewport.pan.x.clamp(-tree.w, tree.w);
     viewport.pan.y = viewport.pan.y.clamp(-tree.h * 2.5, tree.h * 2.5);
+}
+
+/// Track a drag from the shared pointer so a finger can pan the same compact
+/// tree as a mouse. A gesture that starts outside the tree never steals a
+/// later release from the surrounding controls.
+fn apply_pointer_drag(viewport: &mut ResearchViewport, pointer: Pointer, tree: Rect) {
+    if !pointer.down {
+        viewport.last_pointer = None;
+        viewport.drag_active = false;
+        return;
+    }
+
+    if viewport.last_pointer.is_none() {
+        viewport.drag_distance = 0.0;
+        viewport.drag_active = tree.contains(pointer.position);
+    }
+    if viewport.drag_active {
+        if let Some(previous) = viewport.last_pointer {
+            let delta = pointer.position - previous;
+            viewport.pan += delta;
+            viewport.drag_distance += delta.length();
+        }
+    }
+    viewport.last_pointer = Some(pointer.position);
 }
 
 pub(super) fn draw_compact_viewport_controls(

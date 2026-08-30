@@ -31,6 +31,8 @@ pub struct ResearchViewport {
     pan: Vec2,
     zoom: f32,
     drag_distance: f32,
+    last_pointer: Option<Vec2>,
+    drag_active: bool,
 }
 
 impl Default for ResearchViewport {
@@ -39,6 +41,8 @@ impl Default for ResearchViewport {
             pan: Vec2::ZERO,
             zoom: 1.45,
             drag_distance: 0.0,
+            last_pointer: None,
+            drag_active: false,
         }
     }
 }
@@ -133,7 +137,7 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
         if screen_w < 600.0 {
             draw_compact_legend(18.0, HEADER_HEIGHT + 70.0);
             draw_ui_text(
-                "Drag tree; tap - / + to zoom",
+                "Drag tree with mouse or touch; tap - / + to zoom",
                 18.0,
                 HEADER_HEIGHT + 88.0,
                 10.0,
@@ -142,7 +146,7 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
         } else {
             draw_compact_legend(18.0, HEADER_HEIGHT + 22.0);
             draw_ui_text(
-                "Drag tree; tap - / + to zoom",
+                "Drag tree with mouse or touch; tap - / + to zoom",
                 screen_w - 390.0,
                 HEADER_HEIGHT + 22.0,
                 11.0,
