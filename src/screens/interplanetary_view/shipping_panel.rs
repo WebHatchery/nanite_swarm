@@ -33,7 +33,12 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
         return InterplanetaryAction::None;
     }
 
-    let (status, status_color) = match view.drivers_online {
+    let drivers_online = view
+        .drivers_online
+        .get(view.editing_world)
+        .copied()
+        .unwrap_or(0);
+    let (status, status_color) = match drivers_online {
         0 => ("No driver on this world".to_string(), Colors::TEXT_DIM),
         1 => (format!("1 driver on {}", home.name), Colors::SUCCESS),
         count => (

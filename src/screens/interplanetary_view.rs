@@ -39,8 +39,10 @@ pub struct MapView<'a> {
     pub seed_ship_ready: bool,
     pub colonized: &'a [bool],
     pub stockpiles: &'a [Option<f32>],
-    /// Powered Mass Drivers standing on the current world.
-    pub drivers_online: usize,
+    /// Powered Mass Drivers standing on the world underfoot.
+    pub current_drivers_online: usize,
+    /// Powered Mass Drivers on every colonized world, for remote order edits.
+    pub drivers_online: &'a [usize],
     /// Powered Landing Pads on each world, so the panel can say when the
     /// target has nothing to catch a pod with.
     pub pads: &'a [usize],
@@ -57,7 +59,7 @@ pub struct MapView<'a> {
 /// Render the interplanetary solar system view
 pub fn render_interplanetary_view(view: &MapView) -> InterplanetaryAction {
     // A new world costs a whole Seed Ship, thrown by a Mass Driver.
-    let can_launch = view.drivers_online > 0 && view.seed_ship_ready;
+    let can_launch = view.current_drivers_online > 0 && view.seed_ship_ready;
     let current_planet = view.current_planet;
     clear_background(Colors::BACKGROUND);
 
@@ -75,7 +77,7 @@ pub fn render_interplanetary_view(view: &MapView) -> InterplanetaryAction {
         return InterplanetaryAction::Close;
     }
 
-    let (driver_label, driver_color) = if view.drivers_online > 0 {
+    let (driver_label, driver_color) = if view.current_drivers_online > 0 {
         ("Mass Driver: ONLINE", Colors::SUCCESS)
     } else if view.mass_driver_researched {
         ("Mass Driver: NOT BUILT", Colors::WARNING)
@@ -412,7 +414,7 @@ fn draw_planet_info(
     } else {
         let blocker = if !view.mass_driver_researched {
             "Requires: Mass Driver research"
-        } else if view.drivers_online == 0 {
+        } else if view.current_drivers_online == 0 {
             "Requires: a powered Mass Driver"
         } else {
             "Requires: a finished Seed Ship"

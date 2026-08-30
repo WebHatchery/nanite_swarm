@@ -219,12 +219,19 @@ impl Game {
         });
         let orders: [Option<state::ExportOrder>; state::PLANET_COUNT] =
             std::array::from_fn(|index| self.campaign.export_order_for(index));
+        let drivers_online: [usize; state::PLANET_COUNT] = std::array::from_fn(|index| {
+            self.campaign
+                .planet(index)
+                .map(|planet| planet.mass_drivers_online())
+                .unwrap_or(0)
+        });
         let pending_pods: [usize; state::PLANET_COUNT] =
             std::array::from_fn(|index| self.campaign.pending_pod_count(index));
         let pod_caps: [usize; state::PLANET_COUNT] =
             std::array::from_fn(|index| self.campaign.pending_pod_cap(index));
         let overflow_pods: [usize; state::PLANET_COUNT] =
             std::array::from_fn(|index| self.campaign.overflow_pod_count(index));
+        let current_world = self.campaign.current_index();
         let view = screens::MapView {
             data: self.data.data(),
             current_planet: self.campaign.current_index(),
@@ -232,7 +239,8 @@ impl Game {
             seed_ship_ready: self.campaign.current().seed_ship.is_ready_to_launch(),
             colonized: &colonized,
             stockpiles: &stockpiles,
-            drivers_online: self.campaign.current().mass_drivers_online(),
+            current_drivers_online: drivers_online[current_world],
+            drivers_online: &drivers_online,
             pads: &pads,
             export: self.campaign.export_order(),
             pod_fraction: self.campaign.current().pod_fraction(),
@@ -244,7 +252,6 @@ impl Game {
             editing_world: self.shipping_edit_world,
         };
         let editing_world = self.shipping_edit_world;
-        let current_world = self.campaign.current_index();
         match render_interplanetary_view(&view) {
             InterplanetaryAction::Close => self.phase = GamePhase::Playing,
             InterplanetaryAction::SelectPlanet(index) => {
