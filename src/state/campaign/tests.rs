@@ -190,6 +190,10 @@ fn the_solar_map_reports_upkeep_degradation_on_a_remote_world() {
     let telemetry = campaign.world_telemetry(0).unwrap();
     assert_eq!(telemetry.alerts, 1);
     assert_eq!(telemetry.alert_kind, WorldAlert::Maintenance);
+    assert_eq!(
+        telemetry.maintenance_cause,
+        Some(crate::state::UpkeepAlertCause::Dust)
+    );
 }
 
 #[test]

@@ -13,6 +13,7 @@ use crate::directives::{pick_directive, Directive};
 use crate::engine::{ResearchTree, ResourceType, StatId};
 
 use super::game_state::{PlanetState, ResearchProgress};
+use super::UpkeepAlertCause;
 
 pub const PLANET_COUNT: usize = 5;
 /// Mars, per the GDD's Zone 1.
@@ -82,6 +83,8 @@ pub struct WorldTelemetry {
     /// The alert count still reports saturation as one distinct condition even
     /// when more than one stored resource is full.
     pub storage_full_resource: Option<ResourceType>,
+    /// Whether remote maintenance is caused by dust, corrosion, or both.
+    pub maintenance_cause: Option<UpkeepAlertCause>,
 }
 
 /// Step length for worlds the player is not looking at. Coarse on purpose: a
@@ -397,7 +400,8 @@ impl Campaign {
             (rate > 0.0 && planet.resource_is_full(resource)).then_some(resource)
         });
         let storage_full = storage_full_resource.is_some();
-        let maintenance = !planet.upkeep_alert_positions().is_empty();
+        let maintenance_cause = planet.upkeep_alert_cause();
+        let maintenance = maintenance_cause.is_some();
         let alerts = usize::from(power_alert)
             + usize::from(hibernating)
             + usize::from(collapse)
@@ -442,6 +446,7 @@ impl Campaign {
             alerts,
             alert_kind,
             storage_full_resource,
+            maintenance_cause,
         })
     }
 

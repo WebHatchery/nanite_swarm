@@ -156,4 +156,36 @@ fn corrosion_joins_the_upkeep_alert_before_network_failure() {
         .acid_wear = 75.0;
 
     assert_eq!(state.upkeep_alert_positions(), vec![core]);
+    assert_eq!(state.upkeep_alert_cause(), Some(UpkeepAlertCause::Acid));
+}
+
+#[test]
+fn upkeep_alert_cause_reports_dust_and_mixed_wear() {
+    let mut state = state();
+    let core = state.grid.find_core().expect("generated Core");
+    let dust_threshold = state.resolved_dust_response().efficiency_threshold;
+
+    {
+        let core_building = state
+            .grid
+            .get_mut(core)
+            .expect("core tile")
+            .building
+            .as_mut()
+            .expect("core building");
+        core_building.dust = dust_threshold;
+    }
+    assert_eq!(state.upkeep_alert_cause(), Some(UpkeepAlertCause::Dust));
+
+    {
+        let core_building = state
+            .grid
+            .get_mut(core)
+            .expect("core tile")
+            .building
+            .as_mut()
+            .expect("core building");
+        core_building.acid_wear = 75.0;
+    }
+    assert_eq!(state.upkeep_alert_cause(), Some(UpkeepAlertCause::Mixed));
 }

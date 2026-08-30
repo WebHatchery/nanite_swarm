@@ -1,7 +1,7 @@
 //! World dossier details shared by the desktop map and portrait map.
 
 use crate::engine::ResourceType;
-use crate::state::{cargo_name, ExportOrder, WorldAlert, WorldTelemetry};
+use crate::state::{cargo_name, ExportOrder, UpkeepAlertCause, WorldAlert, WorldTelemetry};
 use crate::ui::Colors;
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::draw_ui_text;
@@ -52,6 +52,10 @@ pub(super) fn storage_resource_label(resource: Option<ResourceType>) -> Option<&
     }
 }
 
+pub(super) fn maintenance_cause_label(cause: Option<UpkeepAlertCause>) -> Option<&'static str> {
+    cause.map(UpkeepAlertCause::label)
+}
+
 pub(super) fn draw_world_telemetry(telemetry: &WorldTelemetry, x: f32, y: f32) {
     let storage_suffix = storage_resource_label(telemetry.storage_full_resource)
         .map(|label| format!("  FULL {label}"))
@@ -94,8 +98,20 @@ pub(super) fn draw_world_telemetry(telemetry: &WorldTelemetry, x: f32, y: f32) {
     let health = if telemetry.alerts == 0 {
         (WorldAlert::Nominal.label().to_string(), Colors::SUCCESS)
     } else {
+        let detail = if telemetry.alert_kind == WorldAlert::Maintenance {
+            maintenance_cause_label(telemetry.maintenance_cause)
+                .map(|cause| format!(" {cause}"))
+                .unwrap_or_default()
+        } else {
+            String::new()
+        };
         (
-            format!("{} x{}", telemetry.alert_kind.label(), telemetry.alerts),
+            format!(
+                "{}{} x{}",
+                telemetry.alert_kind.label(),
+                detail,
+                telemetry.alerts
+            ),
             Colors::ERROR,
         )
     };
@@ -116,22 +132,19 @@ pub(super) fn world_alert_code(telemetry: Option<WorldTelemetry>) -> String {
         return "--".to_string();
     };
     let code = match telemetry.alert_kind {
-        WorldAlert::Nominal => "OK",
-        WorldAlert::Collapse => "COLL",
-        WorldAlert::Power => "PWR",
-        WorldAlert::Hibernation => "SLEEP",
-        WorldAlert::Stalled => "STALL",
-        WorldAlert::Starved => "INPUT",
-        WorldAlert::Blocked => "FULL",
-        WorldAlert::Storage => "STORE",
-        WorldAlert::Maintenance => "MAINT",
-    };
-    let code = if telemetry.alert_kind == WorldAlert::Storage {
-        storage_resource_label(telemetry.storage_full_resource)
-            .map(|label| format!("{code} {label}"))
-            .unwrap_or_else(|| code.to_string())
-    } else {
-        code.to_string()
+        WorldAlert::Nominal => "OK".to_string(),
+        WorldAlert::Collapse => "COLL".to_string(),
+        WorldAlert::Power => "PWR".to_string(),
+        WorldAlert::Hibernation => "SLEEP".to_string(),
+        WorldAlert::Stalled => "STALL".to_string(),
+        WorldAlert::Starved => "INPUT".to_string(),
+        WorldAlert::Blocked => "FULL".to_string(),
+        WorldAlert::Storage => storage_resource_label(telemetry.storage_full_resource)
+            .map(|label| format!("STORE {label}"))
+            .unwrap_or_else(|| "STORE".to_string()),
+        WorldAlert::Maintenance => maintenance_cause_label(telemetry.maintenance_cause)
+            .map(|cause| format!("MAINT {cause}"))
+            .unwrap_or_else(|| "MAINT".to_string()),
     };
     if telemetry.alerts > 1 {
         format!("{} x{}", code, telemetry.alerts)

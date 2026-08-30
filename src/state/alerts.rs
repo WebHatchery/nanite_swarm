@@ -14,7 +14,47 @@ use super::PlanetState;
 /// warning point as the network's dust leak response.
 const CORROSION_ALERT_AT: f32 = 75.0;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UpkeepAlertCause {
+    Dust,
+    Acid,
+    Mixed,
+}
+
+impl UpkeepAlertCause {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Dust => "DUST",
+            Self::Acid => "ACID",
+            Self::Mixed => "MIXED",
+        }
+    }
+}
+
 impl PlanetState {
+    /// Explain whether a remote maintenance alert is caused by dust, acid, or
+    /// both kinds of wear. This uses the same thresholds as the actionable
+    /// upkeep positions so the map and dossier cannot disagree.
+    pub fn upkeep_alert_cause(&self) -> Option<UpkeepAlertCause> {
+        let response = self.resolved_dust_response();
+        let dust_threshold = response.efficiency_threshold.clamp(0.0, 100.0);
+        let mut dust = false;
+        let mut acid = false;
+        for (_, tile) in self.grid.iter_tiles() {
+            let Some(building) = tile.building.as_ref() else {
+                continue;
+            };
+            dust |= building.dust >= dust_threshold;
+            acid |= building.acid_wear >= CORROSION_ALERT_AT;
+        }
+        match (dust, acid) {
+            (true, true) => Some(UpkeepAlertCause::Mixed),
+            (true, false) => Some(UpkeepAlertCause::Dust),
+            (false, true) => Some(UpkeepAlertCause::Acid),
+            (false, false) => None,
+        }
+    }
+
     /// Return buildings whose upkeep has started to affect the colony.
     ///
     /// The map already paints lower wear as a warning, but a player needs a

@@ -34,6 +34,7 @@ mod stat_sheet;
 mod tutorial;
 
 pub use achievements::*;
+pub use alerts::UpkeepAlertCause;
 pub use audio::*;
 pub use camera::*;
 pub use campaign::*;

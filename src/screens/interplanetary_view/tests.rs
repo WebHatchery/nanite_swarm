@@ -39,7 +39,9 @@ fn shipping_status_distinguishes_absent_and_offline_landing_pads() {
         "2 landing pads online on Saturn"
     );
 }
-use super::world_dossier::{storage_resource_label, world_telemetry_row_y};
+use super::world_dossier::{
+    maintenance_cause_label, storage_resource_label, world_telemetry_row_y,
+};
 use super::{
     shipping_summary, solar_map_layout, world_alert_code, world_rule_lines, world_telemetry_height,
     MIN_SOLAR_MAP_SCALE,
@@ -129,6 +131,7 @@ fn telemetry(alerts: usize, alert_kind: crate::state::WorldAlert) -> crate::stat
         alerts,
         alert_kind,
         storage_full_resource: None,
+        maintenance_cause: None,
     }
 }
 
@@ -151,6 +154,11 @@ fn planet_list_alert_codes_keep_remote_failures_scannable() {
         world_alert_code(Some(telemetry(1, crate::state::WorldAlert::Maintenance))),
         "MAINT"
     );
+    let mut maintenance = telemetry(1, crate::state::WorldAlert::Maintenance);
+    maintenance.maintenance_cause = Some(crate::state::UpkeepAlertCause::Dust);
+    assert_eq!(world_alert_code(Some(maintenance)), "MAINT DUST");
+    maintenance.maintenance_cause = Some(crate::state::UpkeepAlertCause::Mixed);
+    assert_eq!(world_alert_code(Some(maintenance)), "MAINT MIXED");
     assert_eq!(
         world_alert_code(Some(telemetry(1, crate::state::WorldAlert::Storage))),
         "STORE"
@@ -171,6 +179,10 @@ fn planet_list_alert_codes_keep_remote_failures_scannable() {
     assert_eq!(
         storage_resource_label(Some(crate::engine::ResourceType::Energy)),
         None
+    );
+    assert_eq!(
+        maintenance_cause_label(Some(crate::state::UpkeepAlertCause::Acid)),
+        Some("ACID")
     );
 }
 

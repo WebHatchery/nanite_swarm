@@ -61,6 +61,7 @@ The top resource cards show live rates from active drills, the Core and Server
 Banks, and biomass harvesters. Every stored resource also shows its live cap;
 when production has nowhere to go, the rate changes to FULL so the swarm can
 expand storage or redirect the line.
+Remote maintenance rows also name `MAINT DUST`, `MAINT ACID`, or `MAINT MIXED`.
 The desktop Operations panel's Achievements row is touch-sized as well as
 mouse-clickable, so Records remains reachable without a physical keyboard.
 Records keeps achievements, directive progress, and the durable event log in
