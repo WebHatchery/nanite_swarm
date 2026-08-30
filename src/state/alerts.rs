@@ -110,10 +110,12 @@ impl PlanetState {
             None => positions.first().copied(),
         }?;
 
+        // JUMP is an inspection action. Cancel every pending construction or
+        // destructive gesture before selecting the destination, otherwise the
+        // next tap on the newly centred tile can finish an old box selection
+        // or confirm a purge instead of opening the alert's structure.
+        self.cancel_interaction_modes();
         self.selected_tile = Some(next);
-        self.selected_building = None;
-        self.demolish_mode = false;
-        self.relocation_source = None;
         Some(next)
     }
 }

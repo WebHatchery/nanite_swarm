@@ -80,12 +80,34 @@ fn alert_focus_cycles_and_drops_mutually_exclusive_modes() {
     state.select_building(BuildingType::Drill);
     state.demolish_mode = true;
     state.relocation_source = Some(core);
+    state.box_select_mode = true;
+    state.box_select_start = Some(first);
+    state.box_selected = vec![first, second];
+    state.purge_armed = Some(first);
+    state.bulk_purge_armed = true;
+    state.drag_last_pos = Some(first);
+    state.route_resource_blocked_at = Some(second);
+    state.smart_drag_source = Some(core);
+    state.touch_camera_active = true;
+    state.touch_route_active = true;
+    state.touch_gesture_routed = true;
 
     assert_eq!(state.focus_next_alert(), Some(first));
     assert_eq!(state.selected_tile, Some(first));
     assert_eq!(state.selected_building, None);
     assert!(!state.demolish_mode);
     assert_eq!(state.relocation_source, None);
+    assert!(!state.box_select_mode);
+    assert_eq!(state.box_select_start, None);
+    assert!(state.box_selected.is_empty());
+    assert_eq!(state.purge_armed, None);
+    assert!(!state.bulk_purge_armed);
+    assert_eq!(state.drag_last_pos, None);
+    assert_eq!(state.route_resource_blocked_at, None);
+    assert_eq!(state.smart_drag_source, None);
+    assert!(!state.touch_camera_active);
+    assert!(!state.touch_route_active);
+    assert!(!state.touch_gesture_routed);
     assert_eq!(state.focus_next_alert(), Some(second));
     assert_eq!(state.focus_next_alert(), Some(first));
 }
