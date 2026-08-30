@@ -384,6 +384,11 @@ pub(super) fn draw(
     ) {
         state.cancel_interaction_modes();
     }
+    let stamp_label = if state.blueprint.is_empty() {
+        "STAMP EMPTY"
+    } else {
+        "STAMP"
+    };
     if draw_hud_button(
         theme,
         Rect::new(
@@ -451,10 +456,14 @@ pub(super) fn draw(
             half_w,
             action_layout.button_height,
         ),
-        "STAMP",
+        stamp_label,
     ) {
         if let Some(tile) = state.selected_tile {
             state.place_blueprint(tile);
+        } else {
+            state
+                .notifications
+                .warning("Select an anchor tile before stamping");
         }
     }
     let fifth_y = fourth_y + action_layout.button_height + action_layout.row_gap;

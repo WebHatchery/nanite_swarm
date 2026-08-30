@@ -384,6 +384,11 @@ impl PlanetState {
     }
 
     pub fn place_blueprint(&mut self, anchor: GridPos) -> usize {
+        if self.blueprint.is_empty() {
+            self.notifications
+                .warning("Save a blueprint before stamping");
+            return 0;
+        }
         let blueprint = self.blueprint.clone();
         let mut placed = 0;
         for entry in blueprint {
