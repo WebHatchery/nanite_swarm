@@ -185,6 +185,13 @@ pub(super) fn draw_ui_panels(
         }
         bottom_bar::ClockAction::CloseMobilePanel => state.mobile_panel = MobilePanel::Map,
         bottom_bar::ClockAction::ToggleHelp => state.show_help = !state.show_help,
+        bottom_bar::ClockAction::CenterCore => {
+            if ui_action == PlanetaryAction::None {
+                if let Some(position) = state.grid.find_core() {
+                    center_camera_on_position(state, position, metrics, screen_w, screen_h);
+                }
+            }
+        }
         bottom_bar::ClockAction::ToggleFlow => {
             state.flow_overlay = !state.flow_overlay;
             if state.flow_overlay {
@@ -206,16 +213,7 @@ pub(super) fn draw_ui_panels(
         bottom_bar::ClockAction::FocusAlert => {
             if ui_action == PlanetaryAction::None {
                 if let Some(position) = state.focus_next_alert() {
-                    let grid_size = (
-                        state.grid.width as f32 * metrics.tile_size,
-                        state.grid.height as f32 * metrics.tile_size,
-                    );
-                    state.camera.center_on_grid(
-                        position,
-                        metrics.viewport(screen_w, screen_h),
-                        metrics.tile_size,
-                        grid_size,
-                    );
+                    center_camera_on_position(state, position, metrics, screen_w, screen_h);
                 }
             }
         }
@@ -230,6 +228,25 @@ pub(super) fn draw_ui_panels(
     }
 
     ui_action
+}
+
+fn center_camera_on_position(
+    state: &mut PlanetState,
+    position: GridPos,
+    metrics: HudMetrics,
+    screen_w: f32,
+    screen_h: f32,
+) {
+    let grid_size = (
+        state.grid.width as f32 * metrics.tile_size,
+        state.grid.height as f32 * metrics.tile_size,
+    );
+    state.camera.center_on_grid(
+        position,
+        metrics.viewport(screen_w, screen_h),
+        metrics.tile_size,
+        grid_size,
+    );
 }
 
 fn change_map_zoom(

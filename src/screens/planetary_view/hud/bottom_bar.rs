@@ -31,6 +31,7 @@ pub(super) enum ClockAction {
     ToggleMobileInfo,
     CloseMobilePanel,
     ToggleHelp,
+    CenterCore,
     ZoomOut,
     ZoomIn,
     CycleGraph,

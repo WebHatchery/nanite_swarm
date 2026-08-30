@@ -22,6 +22,18 @@ fn compact_jump_label(state: &PlanetState, other_alert: bool) -> &'static str {
     }
 }
 
+fn mobile_command_aux_rects(screen_w: f32, row_y: f32) -> (Rect, Rect) {
+    let utility_x = 218.0;
+    let utility_w = (screen_w - 228.0).max(48.0);
+    let gap = 6.0;
+    let core_w = ((utility_w - gap) * 0.5).max(24.0);
+    let help_w = (utility_w - core_w - gap).max(24.0);
+    (
+        Rect::new(utility_x, row_y, core_w, 22.0),
+        Rect::new(utility_x + core_w + gap, row_y, help_w, 22.0),
+    )
+}
+
 pub(super) fn draw(
     state: &PlanetState,
     screen_w: f32,
@@ -154,11 +166,11 @@ pub(super) fn draw(
     ) {
         action = ClockAction::TogglePause;
     }
-    if draw_hud_button(
-        theme,
-        Rect::new(218.0, row_y, (screen_w - 228.0).max(48.0), 22.0),
-        "HELP",
-    ) {
+    let (core_rect, help_rect) = mobile_command_aux_rects(screen_w, row_y);
+    if draw_hud_button(theme, core_rect, "CORE") {
+        action = ClockAction::CenterCore;
+    }
+    if draw_hud_button(theme, help_rect, "HELP") {
         action = ClockAction::ToggleHelp;
     }
 
@@ -188,7 +200,7 @@ fn draw_mobile_help(
     let lines = [
         "BUILD: tap a card, then tap the map",
         "INFO: inspect the selected tile and network",
-        "Drag the map to pan; use - / + to zoom",
+        "Drag map; tap CORE to recenter; - / + zoom",
         "FLOW and DECK open their live overlays",
         "JUMP / RETRY follows the current alert",
         "Top buttons open Research, Ship, Map, Menu",

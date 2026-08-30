@@ -47,6 +47,7 @@ blueprints, lossless relocation, undo, speed, and pause. RELOCATE moves a
 structure with its staged cargo and drill crew intact. Tap FOCUS to collapse both
 sidebars for route planning, then tap PANELS to restore them. When freight is
 moving, its map key identifies the colour and silhouette of every live cargo.
+On phones, tap `CORE` beside `HELP` to recenter the map after panning.
 The in-flight shipping ledger names both the source and destination world for
 each pod under a `full route` heading, so simultaneous routes remain
 distinguishable.
