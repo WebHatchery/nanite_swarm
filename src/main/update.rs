@@ -398,8 +398,9 @@ impl Game {
                 .save_shipping_edit(|campaign| campaign.cycle_export_schedule_for(current_world)),
             InterplanetaryAction::CycleExportPriority => self
                 .save_shipping_edit(|campaign| campaign.cycle_export_priority_for(current_world)),
-            InterplanetaryAction::ToggleExportSurplus => self
-                .save_shipping_edit(|campaign| campaign.toggle_export_surplus_for(current_world)),
+            InterplanetaryAction::CycleExportReserve => {
+                self.save_shipping_edit(|campaign| campaign.cycle_export_reserve_for(current_world))
+            }
             InterplanetaryAction::SelectOrderWorld(index) => {
                 self.shipping_edit_world = index;
                 self.shipping_scroll.set_offset(0.0);
@@ -414,8 +415,9 @@ impl Game {
                 .save_shipping_edit(|campaign| campaign.cycle_export_schedule_for(editing_world)),
             InterplanetaryAction::CycleRemoteExportPriority => self
                 .save_shipping_edit(|campaign| campaign.cycle_export_priority_for(editing_world)),
-            InterplanetaryAction::ToggleRemoteExportSurplus => self
-                .save_shipping_edit(|campaign| campaign.toggle_export_surplus_for(editing_world)),
+            InterplanetaryAction::CycleRemoteExportReserve => {
+                self.save_shipping_edit(|campaign| campaign.cycle_export_reserve_for(editing_world))
+            }
             InterplanetaryAction::ToggleMobileWorlds => {
                 self.launch_confirmation_target = None;
                 self.interplanetary_mobile_panel = state::InterplanetaryMobilePanel::Worlds;

@@ -89,7 +89,10 @@ diversion control visible, and opens the neural network directly when a stage
   and Shipping into touch-sized tabs, with the freight controls scrollable below.
   Shipping distinguishes a missing Landing Pad from a built but offline one, so
   held pods explain whether the destination needs construction or power; the
-  standing order also shows its nominal cargo throughput per minute.
+  standing order also shows its nominal cargo throughput per minute. Tap
+  Shipping reserve to cycle the source floor through OFF, 100, 250, 500, and
+  1000 units; surplus routes will not drain a world down to that floor. The
+  setting follows remote standing orders as well as the local route.
   The title and Settings screens also switch to single-column phone layouts so
 the command stack, display toggles, audio controls, and pause-key control
 remain on-screen.

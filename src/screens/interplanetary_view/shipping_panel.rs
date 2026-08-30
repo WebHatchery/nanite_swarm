@@ -212,9 +212,9 @@ pub(super) fn draw(
         interactive,
     ) {
         action = if view.editing_world == view.current_planet {
-            InterplanetaryAction::ToggleExportSurplus
+            InterplanetaryAction::CycleExportReserve
         } else {
-            InterplanetaryAction::ToggleRemoteExportSurplus
+            InterplanetaryAction::CycleRemoteExportReserve
         };
     }
 

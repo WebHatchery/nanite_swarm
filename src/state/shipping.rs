@@ -17,6 +17,11 @@ use crate::engine::{BuildingType, GridPos, ResourceType};
 use super::campaign::Campaign;
 use super::game_state::PlanetState;
 
+/// Source-stock thresholds a standing order can protect. Zero means the
+/// driver may pull from all available stock; positive values keep that amount
+/// on the source world before surplus shipping resumes.
+const EXPORT_RESERVE_CHOICES: [f32; 5] = [0.0, 100.0, 250.0, 500.0, 1_000.0];
+
 /// A standing order for a world: what its Mass Drivers load, and where they
 /// throw it.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -465,18 +470,27 @@ impl Campaign {
         }
     }
 
-    pub fn toggle_export_surplus_for(&mut self, world: usize) {
+    /// Cycle the source-stock reserve for a standing order. The reserve and
+    /// the legacy `surplus_only` flag move together so old saves and new UI
+    /// edits keep the same dispatch rule.
+    pub fn cycle_export_reserve_for(&mut self, world: usize) {
         let Some(order) = self.export_order_for(world) else {
             return;
         };
+        let current = if order.surplus_only {
+            order.reserve_source.max(0.0)
+        } else {
+            0.0
+        };
+        let next = EXPORT_RESERVE_CHOICES
+            .iter()
+            .position(|value| (*value - current).abs() < 0.01)
+            .map(|index| EXPORT_RESERVE_CHOICES[(index + 1) % EXPORT_RESERVE_CHOICES.len()])
+            .unwrap_or(EXPORT_RESERVE_CHOICES[1]);
         if let Some(planet) = self.planet_mut(world) {
             planet.export = Some(ExportOrder {
-                surplus_only: !order.surplus_only,
-                reserve_source: if order.surplus_only || order.reserve_source > 0.0 {
-                    order.reserve_source
-                } else {
-                    100.0
-                },
+                surplus_only: next > 0.0,
+                reserve_source: next,
                 ..order
             });
         }

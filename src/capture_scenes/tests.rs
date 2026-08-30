@@ -26,7 +26,8 @@ fn required_capture_scenes_are_registered() {
             "mobile_offline",
             "geothermal",
             "fusion",
-            "mobile_interplanetary_rules"
+            "mobile_interplanetary_rules",
+            "mobile_shipping_reserve"
         ]
     );
 }
