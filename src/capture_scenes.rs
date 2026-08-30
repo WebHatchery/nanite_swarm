@@ -9,7 +9,7 @@ mod fixtures;
 mod research;
 
 #[allow(dead_code)]
-pub const REQUIRED_CAPTURE_SCENES: [&str; 47] = [
+pub const REQUIRED_CAPTURE_SCENES: [&str; 48] = [
     "mainmenu",
     "desktop_mainmenu_short",
     "desktop_settings_short",
@@ -51,6 +51,7 @@ pub const REQUIRED_CAPTURE_SCENES: [&str; 47] = [
     "mobile_interplanetary_core_stages",
     "desktop_interplanetary_short",
     "mobile_remote_orders",
+    "mobile_remote_recovery",
     "mobile_interplanetary_narrow",
     "mobile_interplanetary_rules",
     "mobile_interplanetary_alert",

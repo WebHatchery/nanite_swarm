@@ -113,6 +113,11 @@ The desktop alert card names the same local cause as `UPKEEP DUST`,
 `UPKEEP ACID`, or `UPKEEP MIXED` before JUMP focuses the first recovery.
 On phones, that control keeps the cause compact as `JUMP DUST`, `JUMP ACID`,
 or `JUMP MIXED` when upkeep is the active recovery.
+
+When a remote freight order is selected, switching to WORLDS keeps that
+source's dossier selected. If its route needs a receiving pad, the dossier
+names the destination row to tap; if the driver is the blocker, it names the
+source row instead.
 When it reports SAVE FAILED, tap RETRY to attempt the campaign save again.
 On the title screen, SAVE appears only after New Game or Continue/Load, so an
 existing slot cannot be overwritten before a campaign is selected.

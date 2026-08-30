@@ -46,6 +46,7 @@ fn required_capture_scenes_are_registered() {
             "mobile_interplanetary_core_stages",
             "desktop_interplanetary_short",
             "mobile_remote_orders",
+            "mobile_remote_recovery",
             "mobile_interplanetary_narrow",
             "mobile_interplanetary_rules",
             "mobile_interplanetary_alert",

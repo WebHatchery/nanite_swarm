@@ -90,6 +90,14 @@ impl Game {
         }
     }
 
+    pub(super) fn stage_mobile_remote_recovery_scene(&mut self) {
+        self.stage_interplanetary_remote_orders_scene();
+        // Keep the selected remote source visible in the Worlds tab while its
+        // destination has no pad. The dossier should name the exact row a
+        // touch player can open to repair the receiving world.
+        self.interplanetary_mobile_panel = state::InterplanetaryMobilePanel::Worlds;
+    }
+
     pub(super) fn stage_interplanetary_core_stages_scene(&mut self) {
         self.stage_interplanetary_scene();
         for index in [1, 3] {

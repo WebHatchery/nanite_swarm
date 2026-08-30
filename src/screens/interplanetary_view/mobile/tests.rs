@@ -1,5 +1,6 @@
 use super::{
-    mobile_footer_hint_text, mobile_info_height, mobile_status_text, mobile_worlds_layout,
+    mobile_footer_hint_text, mobile_info_height, mobile_route_action, mobile_status_text,
+    mobile_world_focus, mobile_worlds_layout,
 };
 use crate::state::InterplanetaryMobilePanel;
 
@@ -69,4 +70,57 @@ fn narrow_footer_hints_keep_the_next_visible_control_named() {
     assert!(worlds.contains("world"));
     assert!(confirm.contains("CONFIRM"));
     assert!(shipping.contains("WORLDS"));
+}
+
+#[test]
+fn mobile_worlds_keeps_the_selected_remote_source_after_switching_tabs() {
+    assert_eq!(mobile_world_focus(None, None, 4, 0, 5), 4);
+    assert_eq!(mobile_world_focus(Some(2), None, 4, 0, 5), 2);
+    assert_eq!(mobile_world_focus(None, Some(3), 4, 0, 5), 3);
+    assert_eq!(mobile_world_focus(None, None, 8, 0, 5), 0);
+}
+
+#[test]
+fn mobile_route_recovery_names_the_visible_world_row_to_tap() {
+    assert_eq!(
+        mobile_route_action(
+            "Mars",
+            Some("Venus"),
+            Some("PAD OFFLINE"),
+            false,
+            false,
+            true,
+        ),
+        Some("Tap Venus row to travel".to_string())
+    );
+    assert_eq!(
+        mobile_route_action(
+            "Mars",
+            Some("Venus"),
+            Some("DRIVER OFFLINE"),
+            false,
+            false,
+            true,
+        ),
+        Some("Tap Mars row to travel".to_string())
+    );
+    assert_eq!(
+        mobile_route_action(
+            "Mars",
+            Some("Venus"),
+            Some("PAD OFFLINE"),
+            true,
+            false,
+            true,
+        ),
+        Some("Tap Venus row to travel".to_string())
+    );
+    assert_eq!(
+        mobile_route_action("Mars", Some("Venus"), Some("NO PAD"), false, true, true),
+        Some("Current location - tap Back, then BUILD".to_string())
+    );
+    assert_eq!(
+        mobile_route_action("Mars", Some("Venus"), None, true, false, true),
+        Some("Current location".to_string())
+    );
 }

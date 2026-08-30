@@ -166,9 +166,13 @@ fn draw_worlds(
         pointer,
         layout.compact,
     );
-    let index = focused
-        .or(view.launch_confirmation_target)
-        .unwrap_or(view.current_planet);
+    let index = mobile_world_focus(
+        focused,
+        view.launch_confirmation_target,
+        view.editing_world,
+        view.current_planet,
+        view.data.planets.len(),
+    );
     let info_y = MOBILE_CONTENT_Y + layout.list_h + layout.info_gap;
     draw_mobile_planet_info(
         view,
@@ -180,6 +184,24 @@ fn draw_worlds(
         screen_h,
     );
     list_action
+}
+
+fn mobile_world_focus(
+    focused: Option<usize>,
+    launch_confirmation_target: Option<usize>,
+    editing_world: usize,
+    current_planet: usize,
+    planet_count: usize,
+) -> usize {
+    let fallback = if current_planet < planet_count {
+        current_planet
+    } else {
+        0
+    };
+    focused
+        .or(launch_confirmation_target)
+        .or((editing_world < planet_count).then_some(editing_world))
+        .unwrap_or(fallback)
 }
 
 fn mobile_worlds_layout(screen_h: f32, planet_count: usize) -> MobileWorldsLayout {
@@ -273,14 +295,19 @@ fn draw_mobile_planet_info(
             7.0,
             Colors::TEXT_DIM,
         );
-        let action = if is_current {
-            "Current location"
-        } else if is_colonized {
-            "Tap world row to travel"
+        let action = if let Some(action) = mobile_route_action(
+            &planet.name,
+            order.map(|order| view.data.planet(order.target).name.as_str()),
+            route_status,
+            is_current,
+            order.is_some_and(|order| order.target == view.current_planet),
+            is_colonized,
+        ) {
+            action
         } else if can_launch {
-            super::launch_prompt(view.launch_confirmation_target == Some(index))
+            super::launch_prompt(view.launch_confirmation_target == Some(index)).to_string()
         } else {
-            "World not ready to launch"
+            "World not ready to launch".to_string()
         };
         let action_color = if is_current || is_colonized {
             Colors::PRIMARY
@@ -290,7 +317,7 @@ fn draw_mobile_planet_info(
             Colors::ERROR
         };
         draw_ui_text(
-            &truncate_text_to_width(action, text_w, 8.0),
+            &truncate_text_to_width(&action, text_w, 8.0),
             x + 12.0,
             y + panel_h - 8.0,
             8.0,
@@ -385,17 +412,22 @@ fn draw_mobile_planet_info(
                 rule_color,
             );
         }
-        let action = if is_current {
-            "Current location"
-        } else if is_colonized {
-            "Tap world row to travel"
+        let action = if let Some(action) = mobile_route_action(
+            &planet.name,
+            order.map(|order| view.data.planet(order.target).name.as_str()),
+            route_status,
+            is_current,
+            order.is_some_and(|order| order.target == view.current_planet),
+            is_colonized,
+        ) {
+            action
         } else if can_launch {
-            super::launch_prompt(view.launch_confirmation_target == Some(index))
+            super::launch_prompt(view.launch_confirmation_target == Some(index)).to_string()
         } else {
-            "World not ready to launch"
+            "World not ready to launch".to_string()
         };
         draw_ui_text(
-            &truncate_text_to_width(action, text_w, 9.0),
+            &truncate_text_to_width(&action, text_w, 9.0),
             x + 15.0,
             y + if telemetry.is_some() { 115.0 } else { 89.0 },
             9.0,
@@ -540,21 +572,26 @@ fn draw_mobile_planet_info(
         );
     }
     let action_y = y + panel_h - 14.0;
-    let action = if is_current {
-        "(Current location)"
-    } else if is_colonized {
-        "Tap world row to travel"
+    let action = if let Some(action) = mobile_route_action(
+        &planet.name,
+        order.map(|order| view.data.planet(order.target).name.as_str()),
+        route_status,
+        is_current,
+        order.is_some_and(|order| order.target == view.current_planet),
+        is_colonized,
+    ) {
+        action
     } else if can_launch {
-        super::launch_prompt(view.launch_confirmation_target == Some(index))
+        super::launch_prompt(view.launch_confirmation_target == Some(index)).to_string()
     } else if !view.mass_driver_researched {
-        "Requires Mass Driver research"
+        "Requires Mass Driver research".to_string()
     } else if view.current_drivers_online == 0 {
-        "Requires a powered Mass Driver"
+        "Requires a powered Mass Driver".to_string()
     } else {
-        "Requires a finished Seed Ship"
+        "Requires a finished Seed Ship".to_string()
     };
     draw_ui_text(
-        &truncate_text_to_width(action, text_w, 10.0),
+        &truncate_text_to_width(&action, text_w, 10.0),
         x + 15.0,
         action_y,
         10.0,
@@ -566,6 +603,34 @@ fn draw_mobile_planet_info(
             Colors::ERROR
         },
     );
+}
+
+fn mobile_route_action(
+    source_name: &str,
+    target_name: Option<&str>,
+    status: Option<&str>,
+    is_current: bool,
+    target_is_current: bool,
+    is_colonized: bool,
+) -> Option<String> {
+    if !is_colonized {
+        return None;
+    }
+    let target_needs_attention = matches!(
+        status,
+        Some("NO PAD" | "PAD OFFLINE" | "PAD TARGET UNAVAILABLE" | "HOLDING" | "OVERFLOW")
+    );
+    if target_needs_attention {
+        if target_is_current {
+            return Some("Current location - tap Back, then BUILD".to_string());
+        }
+        return target_name.map(|target| format!("Tap {target} row to travel"));
+    }
+    if is_current {
+        Some("Current location".to_string())
+    } else {
+        Some(format!("Tap {source_name} row to travel"))
+    }
 }
 
 fn mobile_info_height(screen_h: f32, has_telemetry: bool, has_shipping: bool) -> f32 {
