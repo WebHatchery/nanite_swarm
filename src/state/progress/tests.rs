@@ -169,6 +169,30 @@ fn battery_time_left_converts_seconds_to_hours_and_minutes() {
 }
 
 #[test]
+fn next_event_names_the_timer_that_will_be_reached_first() {
+    let mut state = state();
+    state.power_collapse_shutdown = 12.0;
+    state.research_lock_timer = 8.0;
+    state.export_cooldown = 20.0;
+
+    let event = state.next_interesting_event().expect("an event is pending");
+    assert_eq!(event.label, "Research unlock");
+    assert_eq!(event.seconds, 8.0);
+}
+
+#[test]
+fn fast_forward_to_next_event_stops_at_the_selected_timer() {
+    let mut state = state();
+    state.export_cooldown = 2.5;
+    let before = state.time_played;
+
+    assert!(state.fast_forward_to_next_event());
+    assert!((state.time_played - before - 2.5).abs() < 0.001);
+    assert!(state.export_cooldown < 0.001);
+    assert!(state.next_interesting_event().is_none());
+}
+
+#[test]
 fn research_modifies_the_declared_dust_response_thresholds() {
     let mut bare = state();
     let mut researched = state();

@@ -121,7 +121,9 @@ pub(super) fn draw_ui_panels(
         bottom_bar::ClockAction::Faster => state.change_speed(true),
         bottom_bar::ClockAction::Slower => state.change_speed(false),
         bottom_bar::ClockAction::NextEvent => {
-            state.fast_forward_to_next_event();
+            if ui_action == PlanetaryAction::None {
+                ui_action = PlanetaryAction::FastForwardToNextEvent;
+            }
         }
         bottom_bar::ClockAction::ToggleFocus => state.focus_mode = !state.focus_mode,
         bottom_bar::ClockAction::ToggleFlow => state.flow_overlay = !state.flow_overlay,

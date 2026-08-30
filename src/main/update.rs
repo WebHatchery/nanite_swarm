@@ -109,6 +109,7 @@ impl Game {
         let action = render_planetary_view(planet, textures, directive, ui_theme);
         self.remember_preferred_speed();
         match action {
+            PlanetaryAction::FastForwardToNextEvent => self.fast_forward_to_next_event(),
             PlanetaryAction::OpenResearch => self.open_screen(GamePhase::Research),
             PlanetaryAction::OpenSeedShip => self.open_screen(GamePhase::SeedShip),
             PlanetaryAction::OpenInterplanetary => self.open_screen(GamePhase::Interplanetary),
@@ -399,11 +400,36 @@ impl Game {
             return;
         }
         let simulated = ticks as f32 * state::TICK_SECONDS;
+        self.advance_campaign_systems(simulated);
+        self.finish_simulation_update();
+    }
+
+    /// Skip to the next meaningful timer without leaving campaign-level
+    /// research, directives, background worlds, or freight behind.
+    fn fast_forward_to_next_event(&mut self) {
+        let Some(event) = self.campaign.current().next_interesting_event() else {
+            return;
+        };
+        let mut remaining = event.seconds;
+        while remaining > 0.0001 {
+            let delta = remaining.min(state::TICK_SECONDS);
+            self.campaign.current_mut().step(delta, false);
+            self.advance_campaign_systems(delta);
+            remaining -= delta;
+        }
+        self.campaign.current_mut().sim_accumulator = 0.0;
+        self.finish_simulation_update();
+    }
+
+    fn advance_campaign_systems(&mut self, simulated: f32) {
         self.update_research(simulated);
         self.campaign.update_directive(simulated);
         self.campaign.update_background(simulated);
         self.campaign.update_shipments(simulated);
         self.campaign.sync_notification_history();
+    }
+
+    fn finish_simulation_update(&mut self) {
         self.check_campaign_complete();
         if self
             .campaign

@@ -62,7 +62,9 @@ impl PlanetState {
         ticks
     }
 
-    /// One simulation step. Every caller passes a fixed, known step length.
+    /// One simulation step. Normal callers pass the fixed tick length; the
+    /// event skip may use one bounded final remainder to land exactly on a
+    /// timer.
     pub fn step(&mut self, delta_time: f32, allow_visuals: bool) {
         let sim_delta = if self.battery_seconds <= 0.0 {
             delta_time * 0.1

@@ -28,6 +28,7 @@ use metrics::{is_cursor_over_ui, screen_to_grid, HudMetrics};
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PlanetaryAction {
     None,
+    FastForwardToNextEvent,
     OpenResearch,
     OpenSeedShip,
     OpenInterplanetary,

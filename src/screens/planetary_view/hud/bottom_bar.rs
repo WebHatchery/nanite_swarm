@@ -24,6 +24,16 @@ pub(super) enum ClockAction {
     ToggleDeck,
 }
 
+fn next_event_code(label: &str) -> &'static str {
+    match label {
+        "Power recovery" => "PWR",
+        "Collapse recovery" => "COOL",
+        "Research unlock" => "DATA",
+        "Mass Driver ready" => "DRVR",
+        _ => "NEXT",
+    }
+}
+
 #[must_use]
 pub(super) fn draw(
     state: &PlanetState,
@@ -177,7 +187,7 @@ pub(super) fn draw(
     let mut clock = ClockAction::None;
     let next_event = state.next_interesting_event();
     let next_label = next_event
-        .map(|event| format!("NEXT {:.0}s", event.seconds))
+        .map(|event| format!("{} {:.0}s", next_event_code(event.label), event.seconds))
         .unwrap_or_else(|| "NEXT".to_string());
     if draw_hud_button(
         theme,

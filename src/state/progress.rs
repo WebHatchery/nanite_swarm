@@ -451,7 +451,12 @@ impl PlanetState {
         let Some(event) = self.next_interesting_event() else {
             return false;
         };
-        self.step(event.seconds, false);
+        let mut remaining = event.seconds;
+        while remaining > 0.0001 {
+            let delta = remaining.min(crate::state::TICK_SECONDS);
+            self.step(delta, false);
+            remaining -= delta;
+        }
         self.sim_accumulator = 0.0;
         true
     }
