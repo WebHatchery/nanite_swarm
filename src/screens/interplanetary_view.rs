@@ -46,8 +46,8 @@ pub struct MapView<'a> {
     /// Powered Landing Pads on each world, so the panel can say when the
     /// target has nothing to catch a pod with.
     pub pads: &'a [usize],
-    pub export: Option<ExportOrder>,
-    pub pod_fraction: f32,
+    /// The fullest live outbound pod on each world, for remote order edits.
+    pub pod_fractions: &'a [f32],
     pub shipments: &'a [Shipment],
     pub orders: &'a [Option<ExportOrder>],
     pub pending_pods: &'a [usize],

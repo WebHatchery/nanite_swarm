@@ -33,6 +33,11 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
         return InterplanetaryAction::None;
     }
 
+    let pod_fraction = view
+        .pod_fractions
+        .get(view.editing_world)
+        .copied()
+        .unwrap_or(0.0);
     let drivers_online = view
         .drivers_online
         .get(view.editing_world)
@@ -218,16 +223,16 @@ pub(super) fn draw(view: &MapView, x: f32, y: f32, w: f32, h: f32) -> Interplane
     draw_rectangle(
         x + 12.0,
         bar_y,
-        button_w * view.pod_fraction.clamp(0.0, 1.0),
+        button_w * pod_fraction.clamp(0.0, 1.0),
         8.0,
         Colors::ACCENT,
     );
-    let pod_text = if view.editing_world != view.current_planet || view.export.is_none() {
+    let pod_text = if edited_order.is_none() {
         "No route set".to_string()
-    } else if view.pod_fraction <= 0.0 {
+    } else if pod_fraction <= 0.0 {
         "Pod empty - route cargo to the driver".to_string()
     } else {
-        format!("Pod {:.0}% loaded", view.pod_fraction * 100.0)
+        format!("Pod {:.0}% loaded", pod_fraction * 100.0)
     };
     draw_ui_text(&pod_text, x + 12.0, bar_y + 24.0, 10.0, Colors::TEXT_DIM);
 

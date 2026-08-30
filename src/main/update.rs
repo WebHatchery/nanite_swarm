@@ -225,6 +225,12 @@ impl Game {
                 .map(|planet| planet.mass_drivers_online())
                 .unwrap_or(0)
         });
+        let pod_fractions: [f32; state::PLANET_COUNT] = std::array::from_fn(|index| {
+            self.campaign
+                .planet(index)
+                .map(|planet| planet.pod_fraction())
+                .unwrap_or(0.0)
+        });
         let pending_pods: [usize; state::PLANET_COUNT] =
             std::array::from_fn(|index| self.campaign.pending_pod_count(index));
         let pod_caps: [usize; state::PLANET_COUNT] =
@@ -242,8 +248,7 @@ impl Game {
             current_drivers_online: drivers_online[current_world],
             drivers_online: &drivers_online,
             pads: &pads,
-            export: self.campaign.export_order(),
-            pod_fraction: self.campaign.current().pod_fraction(),
+            pod_fractions: &pod_fractions,
             shipments: self.campaign.shipments(),
             orders: &orders,
             pending_pods: &pending_pods,
