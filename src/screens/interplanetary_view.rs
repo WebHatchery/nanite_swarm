@@ -30,6 +30,9 @@ pub enum InterplanetaryAction {
 
 const WORLD_TELEMETRY_LINE_HEIGHT: f32 = 16.0;
 const WORLD_TELEMETRY_BOTTOM_GAP: f32 = 6.0;
+const PLANET_INFO_WIDTH: f32 = 300.0;
+const PLANET_INFO_MARGIN: f32 = 16.0;
+const SOLAR_MAP_GAP: f32 = 12.0;
 
 fn world_telemetry_row_y(y: f32, row: usize) -> f32 {
     y + row as f32 * WORLD_TELEMETRY_LINE_HEIGHT
@@ -37,6 +40,33 @@ fn world_telemetry_row_y(y: f32, row: usize) -> f32 {
 
 fn world_telemetry_height() -> f32 {
     WORLD_TELEMETRY_LINE_HEIGHT * 3.0 + WORLD_TELEMETRY_BOTTOM_GAP
+}
+
+/// Keep the orbit diagram inside the space left between the touch panels.
+/// Wide screens retain the authored orbit scale; narrow windows scale the
+/// rings and move their center so the list remains a fallback for every tap.
+fn solar_map_layout(
+    screen_w: f32,
+    screen_h: f32,
+    header_height: f32,
+    list_x: f32,
+    list_w: f32,
+    max_orbit: f32,
+) -> (f32, f32, f32) {
+    let info_x = screen_w - PLANET_INFO_WIDTH - PLANET_INFO_MARGIN;
+    let map_left = list_x + list_w + SOLAR_MAP_GAP;
+    let map_right = info_x - SOLAR_MAP_GAP;
+    let map_top = header_height + SOLAR_MAP_GAP;
+    let map_bottom = (screen_h - 30.0).max(map_top + 1.0);
+    let horizontal_radius = ((map_right - map_left) * 0.5 - 16.0).max(20.0);
+    let vertical_radius = ((map_bottom - map_top) * 0.5 - 12.0).max(20.0);
+    let radius = horizontal_radius.min(vertical_radius);
+    let orbit_scale = (radius / max_orbit.max(1.0)).clamp(0.05, 1.0);
+    (
+        (map_left + map_right) * 0.5,
+        (map_top + map_bottom) * 0.5,
+        orbit_scale,
+    )
 }
 
 /// Everything the map reads out of the campaign. One struct rather than a
@@ -109,15 +139,6 @@ pub fn render_interplanetary_view(
     };
     draw_ui_text(ship_label, screen_w - 320.0, 54.0, 12.0, ship_color);
 
-    // Draw sun at center
-    let center_x = screen_w / 2.0;
-    let center_y = screen_h / 2.0 + 20.0;
-
-    // Sun glow
-    draw_circle(center_x, center_y, 50.0, Color::new(1.0, 0.8, 0.2, 0.2));
-    draw_circle(center_x, center_y, 45.0, Color::new(1.0, 0.7, 0.1, 0.3));
-    draw_circle(center_x, center_y, 40.0, Colors::WARNING);
-
     let planets = &view.data.planets;
     // Keep a dossier visible when the map opens. This gives touch players a
     // useful first target and means the planet list can be used for travel
@@ -129,6 +150,30 @@ pub fn render_interplanetary_view(
     let list_y = header_height + 12.0;
     let list_w = 220.0;
     let list_h = 44.0 + planets.len() as f32 * 24.0;
+    let max_orbit = planets
+        .iter()
+        .map(|planet| planet.orbit_radius)
+        .fold(1.0, f32::max);
+    let (center_x, center_y, orbit_scale) =
+        solar_map_layout(screen_w, screen_h, header_height, list_x, list_w, max_orbit);
+
+    // Scale the sun with the rings too: a fixed 40px sun swallows the inner
+    // orbits on a narrow window even after the outer rings have been fitted.
+    let sun_radius = (40.0 * orbit_scale).max(16.0);
+    draw_circle(
+        center_x,
+        center_y,
+        sun_radius * 1.25,
+        Color::new(1.0, 0.8, 0.2, 0.2),
+    );
+    draw_circle(
+        center_x,
+        center_y,
+        sun_radius * 1.125,
+        Color::new(1.0, 0.7, 0.1, 0.3),
+    );
+    draw_circle(center_x, center_y, sun_radius, Colors::WARNING);
+
     let (list_focus, list_action) =
         draw_planet_list(view, list_x, list_y, list_w, list_h, can_launch, pointer);
     if list_focus.is_some() {
@@ -164,15 +209,22 @@ pub fn render_interplanetary_view(
         } else {
             Colors::SECONDARY
         };
-        draw_circle_lines(center_x, center_y, planet.orbit_radius, 1.0, orbit_color);
+        draw_circle_lines(
+            center_x,
+            center_y,
+            planet.orbit_radius * orbit_scale,
+            1.0,
+            orbit_color,
+        );
 
         // Calculate planet position
         let angle = (i as f32) * 1.2 + get_time() as f32 * 0.02 * (1.0 / (i as f32 + 1.0));
-        let px = center_x + planet.orbit_radius * angle.cos();
-        let py = center_y + planet.orbit_radius * angle.sin();
+        let px = center_x + planet.orbit_radius * orbit_scale * angle.cos();
+        let py = center_y + planet.orbit_radius * orbit_scale * angle.sin();
         positions.push((px, py));
 
-        let target_radius = (planet.size + 5.0).max(22.0);
+        let rendered_size = (planet.size * orbit_scale).max(4.0);
+        let target_radius = (rendered_size + 5.0).max(22.0);
         let target = Rect::new(
             px - target_radius,
             py - target_radius,
@@ -186,15 +238,20 @@ pub fn render_interplanetary_view(
         }
 
         let planet_size = if i == current_planet {
-            planet.size * 1.3
+            rendered_size * 1.3
         } else {
-            planet.size
+            rendered_size
         };
         let is_colonized = view.colonized.get(i).copied().unwrap_or(false);
 
         // Draw colonization glow
         if is_colonized {
-            draw_circle(px, py, planet_size + 6.0, Color::new(0.0, 1.0, 0.5, 0.2));
+            draw_circle(
+                px,
+                py,
+                planet_size + (6.0 * orbit_scale).max(3.0),
+                Color::new(0.0, 1.0, 0.5, 0.2),
+            );
         }
 
         // Draw planet
@@ -202,12 +259,24 @@ pub fn render_interplanetary_view(
 
         // Hover highlight
         if is_hovered {
-            draw_circle_lines(px, py, planet_size + 4.0, 2.0, Colors::PRIMARY);
+            draw_circle_lines(
+                px,
+                py,
+                planet_size + (4.0 * orbit_scale).max(3.0),
+                2.0,
+                Colors::PRIMARY,
+            );
         }
 
         // Current planet indicator
         if i == current_planet {
-            draw_circle_lines(px, py, planet_size + 8.0, 2.0, Colors::SUCCESS);
+            draw_circle_lines(
+                px,
+                py,
+                planet_size + (8.0 * orbit_scale).max(4.0),
+                2.0,
+                Colors::SUCCESS,
+            );
         }
 
         // Draw name
@@ -219,7 +288,7 @@ pub fn render_interplanetary_view(
         draw_ui_text(
             &planet.name,
             px - 20.0,
-            py + planet_size + 15.0,
+            py + planet_size + (15.0 * orbit_scale.max(0.75)),
             12.0,
             name_color,
         );
@@ -230,7 +299,7 @@ pub fn render_interplanetary_view(
     // Info panel for hovered planet
     if let Some(index) = hovered_planet {
         let target = positions[index];
-        let radius = (planets[index].size + 5.0).max(22.0);
+        let radius = ((planets[index].size * orbit_scale).max(4.0) + 5.0).max(22.0);
         let activated = pointer.released_on(Rect::new(
             target.0 - radius,
             target.1 - radius,
@@ -355,9 +424,9 @@ fn draw_planet_info(
     let is_colonized = view.colonized.get(index).copied().unwrap_or(false);
     let is_current = index == view.current_planet;
 
-    let panel_w = 300.0;
+    let panel_w = PLANET_INFO_WIDTH;
     let panel_h = 282.0;
-    let panel_x = screen_w - panel_w - 16.0;
+    let panel_x = screen_w - panel_w - PLANET_INFO_MARGIN;
     let panel_y = header_height + 12.0;
     draw_panel(panel_x, panel_y, panel_w, panel_h);
 

@@ -59,6 +59,8 @@ When it reports BACKUP RECOVERED, tap SAVE NOW to establish a fresh primary
 save after recovery.
 Tap the event-coded NEXT button to jump to the next recovery, research-unlock,
 or mass-driver timer while keeping the whole campaign clock in sync.
+The Solar System map recentres and scales its orbit rings on narrow windows;
+the planet list remains a touch-sized travel and launch control.
 
 Factory controls:
 
