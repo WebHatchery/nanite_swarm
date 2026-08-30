@@ -68,6 +68,10 @@ fn launching_colonizes_the_target_and_carries_the_swarm_there() {
     assert!(campaign.is_colonized(1));
     assert_eq!(campaign.current_index(), 1);
     assert_eq!(campaign.current().name, "Venus");
+    assert!(
+        campaign.current().arrival_notice_timer > 0.0,
+        "a real launch must leave the arrival notice armed for the first playable frame"
+    );
 }
 
 #[test]

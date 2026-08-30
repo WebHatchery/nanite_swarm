@@ -355,7 +355,10 @@ impl Game {
                     self.sync_research_to_planet();
                     self.sync_building_unlocks();
                     self.save_campaign();
-                    self.campaign.current_mut().arrival_notice_timer = 0.0;
+                    // `launch_seed_ship` already armed the target world's
+                    // arrival notice. Keep it through the cutscene so the
+                    // first playable frame can identify where the swarm
+                    // landed, including on the compact mobile header.
                     self.launch = Some(state::LaunchSequence::new_with_data(
                         self.data.clone(),
                         origin,
