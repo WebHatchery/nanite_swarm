@@ -17,6 +17,8 @@ use super::core_stage::CoreRequirementProgress;
 use super::game_state::{PlanetState, ResearchProgress};
 use super::UpkeepAlertCause;
 
+mod validation;
+
 pub const PLANET_COUNT: usize = 5;
 /// Mars, per the GDD's Zone 1.
 pub const STARTING_PLANET: usize = 2;

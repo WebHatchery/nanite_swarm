@@ -40,6 +40,9 @@ pub fn save_to_json(campaign: &mut Campaign) -> Result<String, serde_json::Error
 /// Deserialize a campaign, accepting saves written before the campaign existed.
 pub fn load_from_json(json: &str) -> Result<Campaign, serde_json::Error> {
     let mut campaign = crate::state::migrations::migrate(json)?.campaign;
+    campaign.validate_loaded_state().map_err(|message| {
+        serde_json::Error::io(io::Error::new(io::ErrorKind::InvalidData, message))
+    })?;
     campaign.normalize_tutorial_scope();
 
     // Older saves kept research only on each world. Restore that campaign

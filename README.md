@@ -124,6 +124,8 @@ existing slot cannot be overwritten before a campaign is selected.
 The slot selector marks the chosen slot as SAVED or EMPTY before you switch it.
 When it reports BACKUP RECOVERED, tap SAVE NOW to establish a fresh primary
 save after recovery.
+Impossible world or freight references in a save are rejected before
+simulation, so the rotated backup can be used instead of crashing on load.
 When it reports LOW BATTERY, tap FLOW to inspect the power network before the
 swarm continues in hibernation.
 While away, the foreground world continues its selected research job and a

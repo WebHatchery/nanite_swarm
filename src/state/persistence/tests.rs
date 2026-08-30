@@ -107,6 +107,60 @@ fn a_corrupt_save_is_recovered_from_the_backup() {
 }
 
 #[test]
+fn a_save_with_an_impossible_current_world_is_recovered_from_the_backup() {
+    let mut store = MapStore::default();
+    let mut good = campaign();
+    good.current_mut().resources.biomass = 33.0;
+    save_campaign(&mut store, "save", &mut good).unwrap();
+
+    let mut newer = campaign();
+    newer.current_mut().resources.biomass = 44.0;
+    save_campaign(&mut store, "save", &mut newer).unwrap();
+
+    let mut malformed: serde_json::Value =
+        serde_json::from_str(&store.read("save").unwrap()).unwrap();
+    malformed["campaign"]["current"] = serde_json::Value::from(99);
+    store
+        .write("save", &serde_json::to_string(&malformed).unwrap())
+        .unwrap();
+
+    let (recovered, source) = load_campaign(&store, "save").unwrap();
+    assert_eq!(source, LoadSource::Backup);
+    assert_eq!(recovered.current().resources.biomass, 33.0);
+}
+
+#[test]
+fn a_save_with_a_freight_order_to_an_untouched_world_is_rejected() {
+    let mut campaign = campaign();
+    campaign.current_mut().export = Some(crate::state::ExportOrder {
+        target: 1,
+        ..crate::state::ExportOrder::default()
+    });
+
+    let json = save_to_json(&mut campaign).unwrap();
+    assert!(load_from_json(&json).is_err());
+}
+
+#[test]
+fn a_save_with_a_queued_pod_from_an_impossible_world_is_rejected() {
+    let mut campaign = campaign();
+    campaign.current_mut().launched_pods.push(Shipment {
+        from: 99,
+        to: super::super::campaign::STARTING_PLANET,
+        cargo: ResourceType::Minerals,
+        amount: 10.0,
+        remaining: 1.0,
+        transit: 1.0,
+        target_pad: None,
+        overflow: false,
+        priority: 0,
+    });
+
+    let json = save_to_json(&mut campaign).unwrap();
+    assert!(load_from_json(&json).is_err());
+}
+
+#[test]
 fn a_missing_save_with_a_good_backup_still_loads() {
     let mut store = MapStore::default();
     let mut good = campaign();
@@ -273,6 +327,7 @@ fn processor_operating_mode_survives_a_save_roundtrip() {
 #[test]
 fn freight_orders_and_typed_hoppers_survive_a_save_roundtrip() {
     let mut campaign = campaign();
+    campaign.colonize(1);
     let key = (3, 4);
     campaign.current_mut().export = Some(crate::state::ExportOrder {
         target: 1,
