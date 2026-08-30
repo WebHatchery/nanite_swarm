@@ -83,6 +83,15 @@ pub(super) fn draw(
     if is_key_pressed(KeyCode::Escape) {
         action = SeedShipAction::Close;
     }
+    if content_h > view.h {
+        draw_ui_text(
+            "Drag the yard to scroll",
+            18.0,
+            screen_h - 34.0,
+            10.0,
+            Colors::TEXT_DIM,
+        );
+    }
     draw_ui_text(
         "Tap Back to return",
         18.0,

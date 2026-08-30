@@ -9,13 +9,15 @@ const PANEL_H: f32 = 432.0;
 
 pub(super) fn draw(campaign: &Campaign, pulse: f32) -> CampaignCompleteAction {
     let screen_w = screen_width();
+    let screen_h = screen_height();
+    let (panel_y, panel_h) = mobile_panel_geometry(screen_h);
     let panel_w = (screen_w - PANEL_X * 2.0).max(120.0);
-    draw_panel(PANEL_X, PANEL_Y, panel_w, PANEL_H);
+    draw_panel(PANEL_X, panel_y, panel_w, panel_h);
     draw_rectangle_lines(
         PANEL_X,
-        PANEL_Y,
+        panel_y,
         panel_w,
-        PANEL_H,
+        panel_h,
         2.0,
         Color::new(0.0, 0.7 + pulse * 0.2, 0.9, 1.0),
     );
@@ -23,7 +25,7 @@ pub(super) fn draw(campaign: &Campaign, pulse: f32) -> CampaignCompleteAction {
     draw_ui_text(
         "SYSTEM CONSUMED",
         PANEL_X + 16.0,
-        PANEL_Y + 38.0,
+        panel_y + 38.0,
         21.0,
         Colors::PRIMARY,
     );
@@ -38,7 +40,7 @@ pub(super) fn draw(campaign: &Campaign, pulse: f32) -> CampaignCompleteAction {
         draw_ui_text(
             &truncate_text_to_width(line, panel_w - 32.0, 11.0),
             PANEL_X + 16.0,
-            PANEL_Y + 70.0 + index as f32 * 18.0,
+            panel_y + 70.0 + index as f32 * 18.0,
             11.0,
             if index == 2 {
                 Colors::TEXT_DIM
@@ -60,7 +62,7 @@ pub(super) fn draw(campaign: &Campaign, pulse: f32) -> CampaignCompleteAction {
         ("Time elapsed", format!("{}h {}m", hours, minutes)),
     ];
     for (index, (label, value)) in rows.iter().enumerate() {
-        let y = PANEL_Y + 156.0 + index as f32 * 25.0;
+        let y = panel_y + 156.0 + index as f32 * 25.0;
         draw_ui_text(label, PANEL_X + 16.0, y, 11.0, Colors::TEXT_DIM);
         let value_w = measure_ui_text(value, None, 11, 1.0).width;
         draw_ui_text(
@@ -73,14 +75,19 @@ pub(super) fn draw(campaign: &Campaign, pulse: f32) -> CampaignCompleteAction {
     }
 
     let button_w = ((panel_w - 44.0) * 0.5).max(50.0);
-    let button_y = PANEL_Y + PANEL_H - 58.0;
+    let button_y = panel_y + panel_h - 58.0;
+    let keep_label = if panel_w < 300.0 {
+        "KEEP GOING"
+    } else {
+        "KEEP OPTIMISING"
+    };
     let mut action = CampaignCompleteAction::None;
     if draw_button_sized(
         PANEL_X + 16.0,
         button_y,
         button_w,
         Dimensions::BUTTON_HEIGHT,
-        "KEEP OPTIMISING",
+        keep_label,
     ) {
         action = CampaignCompleteAction::KeepGoing;
     }
@@ -95,3 +102,16 @@ pub(super) fn draw(campaign: &Campaign, pulse: f32) -> CampaignCompleteAction {
     }
     action
 }
+
+fn mobile_panel_geometry(screen_h: f32) -> (f32, f32) {
+    let panel_y = if screen_h < 560.0 { 36.0 } else { PANEL_Y };
+    let panel_h = if screen_h < 560.0 {
+        (screen_h - panel_y - 16.0).max(360.0)
+    } else {
+        PANEL_H
+    };
+    (panel_y, panel_h)
+}
+
+#[cfg(test)]
+mod tests;

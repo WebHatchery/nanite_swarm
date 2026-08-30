@@ -25,7 +25,9 @@ pub(super) fn draw(
     }
 
     let action = match panel {
-        InterplanetaryMobilePanel::Worlds => draw_worlds(view, can_launch, pointer, screen_w),
+        InterplanetaryMobilePanel::Worlds => {
+            draw_worlds(view, can_launch, pointer, screen_w, screen_h)
+        }
         InterplanetaryMobilePanel::Shipping => shipping_panel::draw(
             view,
             MOBILE_EDGE,
@@ -38,9 +40,9 @@ pub(super) fn draw(
 
     draw_ui_text(
         if panel == InterplanetaryMobilePanel::Worlds {
-            "Tap a world to travel or launch | Tap Shipping for routes"
+            "Tap a world to travel | Tap Shipping for routes"
         } else {
-            "Tap a control to cycle the route | Tap Worlds to return"
+            "Drag panel to scroll | Tap controls | Tap Worlds to return"
         },
         MOBILE_EDGE,
         screen_h - 18.0,
@@ -99,6 +101,7 @@ fn draw_worlds(
     can_launch: bool,
     pointer: Pointer,
     screen_w: f32,
+    screen_h: f32,
 ) -> InterplanetaryAction {
     let panel_w = (screen_w - MOBILE_EDGE * 2.0).max(80.0);
     let list_h = 44.0 + view.data.planets.len() as f32 * 24.0;
@@ -113,7 +116,15 @@ fn draw_worlds(
     );
     let index = focused.unwrap_or(view.current_planet);
     let info_y = MOBILE_CONTENT_Y + list_h + 10.0;
-    draw_mobile_planet_info(view, index, can_launch, MOBILE_EDGE, info_y, panel_w);
+    draw_mobile_planet_info(
+        view,
+        index,
+        can_launch,
+        MOBILE_EDGE,
+        info_y,
+        panel_w,
+        screen_h,
+    );
     list_action
 }
 
@@ -124,13 +135,61 @@ fn draw_mobile_planet_info(
     x: f32,
     y: f32,
     width: f32,
+    screen_h: f32,
 ) {
     let planet = &view.data.planets[index];
     let is_colonized = view.colonized.get(index).copied().unwrap_or(false);
     let is_current = index == view.current_planet;
-    let panel_h = 228.0;
+    let panel_h = mobile_info_height(screen_h);
     let text_w = (width - 30.0).max(40.0);
     draw_panel(x, y, width, panel_h);
+    if screen_h < 560.0 {
+        draw_ui_text(
+            &truncate_text_to_width(&planet.name, text_w, 16.0),
+            x + 15.0,
+            y + 25.0,
+            16.0,
+            color_from_rgba(&planet.color),
+        );
+        draw_ui_text(
+            if is_colonized {
+                "Status: COLONIZED"
+            } else {
+                "Status: UNEXPLORED"
+            },
+            x + 15.0,
+            y + 44.0,
+            10.0,
+            if is_colonized {
+                Colors::SUCCESS
+            } else {
+                Colors::WARNING
+            },
+        );
+        let action = if is_current {
+            "Current location"
+        } else if is_colonized {
+            "Tap world row to travel"
+        } else if can_launch {
+            "Tap world row to launch"
+        } else {
+            "World not ready to launch"
+        };
+        draw_ui_text(
+            &truncate_text_to_width(action, text_w, 9.0),
+            x + 15.0,
+            y + 82.0,
+            9.0,
+            if is_current || is_colonized {
+                Colors::PRIMARY
+            } else if can_launch {
+                Colors::SUCCESS
+            } else {
+                Colors::ERROR
+            },
+        );
+        return;
+    }
     draw_ui_text(
         &truncate_text_to_width(&planet.name, text_w, 18.0),
         x + 15.0,
@@ -256,3 +315,14 @@ fn draw_mobile_planet_info(
         },
     );
 }
+
+fn mobile_info_height(screen_h: f32) -> f32 {
+    if screen_h < 560.0 {
+        96.0
+    } else {
+        228.0
+    }
+}
+
+#[cfg(test)]
+mod tests;
