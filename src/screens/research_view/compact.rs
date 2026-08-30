@@ -17,6 +17,23 @@ pub(super) fn draw_compact_legend(x: f32, y: f32) {
     }
 }
 
+pub(super) fn active_research_status(
+    research_state: &ResearchState,
+    node_id: &str,
+    node: &crate::engine::ResearchNode,
+) -> Option<String> {
+    if research_state.current_research.as_deref() != Some(node_id)
+        || research_state.is_unlocked(node_id)
+    {
+        return None;
+    }
+    Some(format!(
+        "IN PROGRESS {:.0}/{:.0} DATA",
+        research_state.research_progress.min(node.data_cost),
+        node.data_cost
+    ))
+}
+
 pub(super) fn update_compact_viewport(viewport: &mut ResearchViewport, tree: Rect) {
     let mouse = Vec2::from(mouse_position());
     if is_mouse_button_pressed(MouseButton::Left) && tree.contains(mouse) {
@@ -137,6 +154,10 @@ pub(super) fn draw_compact_node_info(
         draw_ui_text("UNLOCKED", split_x, detail_y + 2.0, 11.0, Colors::SUCCESS);
         return;
     }
+    if let Some(status) = active_research_status(research_state, node_id, node) {
+        draw_ui_text(&status, split_x, detail_y + 2.0, 11.0, Colors::WARNING);
+        return;
+    }
     draw_ui_text(
         &format!("Cost {:.0} Data", node.data_cost),
         split_x,
@@ -230,6 +251,8 @@ fn draw_mobile_node_info(
     }
     let (status, color) = if research_state.is_unlocked(node_id) {
         ("UNLOCKED".to_string(), Colors::SUCCESS)
+    } else if let Some(status) = active_research_status(research_state, node_id, node) {
+        (status, Colors::WARNING)
     } else {
         let status = if node
             .planet_condition

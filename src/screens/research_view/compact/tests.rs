@@ -21,3 +21,26 @@ fn line_already_inside_tree_is_unchanged() {
     let to = vec2(90.0, 70.0);
     assert_eq!(clip_line(tree, from, to), Some((from, to)));
 }
+
+#[test]
+fn active_research_status_reports_progress_instead_of_a_selection_prompt() {
+    let node = crate::engine::ResearchNode::new(
+        "adaptive_clocking",
+        "Adaptive Clocking",
+        "A test node",
+        115.0,
+        vec![],
+        (0.0, 0.0),
+    );
+    let state = crate::engine::ResearchState {
+        unlocked: vec![],
+        current_research: Some("adaptive_clocking".to_string()),
+        research_progress: 42.0,
+    };
+
+    assert_eq!(
+        active_research_status(&state, "adaptive_clocking", &node),
+        Some("IN PROGRESS 42/115 DATA".to_string())
+    );
+    assert!(active_research_status(&state, "other", &node).is_none());
+}

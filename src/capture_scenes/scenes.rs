@@ -46,7 +46,7 @@ impl Game {
                 self.phase = GamePhase::Settings;
                 self.settings_tab = crate::screens::SettingsTab::Audio;
             }
-            "research" => {
+            "research" | "mobile_research" => {
                 self.phase = GamePhase::Research;
                 // A node that both moves a stat and opens a building, so the
                 // panel shows everything it can say about one.

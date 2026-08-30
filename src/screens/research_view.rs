@@ -493,57 +493,61 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
                 y += 4.0;
 
                 if !research_state.is_unlocked(node_id) {
-                    let cost_text = format!("Cost {:.0} Data", node.data_cost);
-                    draw_ui_text(&cost_text, left_panel_x + 12.0, y, 12.0, Colors::ACCENT);
-                    y += 18.0;
+                    if let Some(status) = active_research_status(research_state, node_id, node) {
+                        draw_ui_text(&status, left_panel_x + 12.0, y, 12.0, Colors::WARNING);
+                    } else {
+                        let cost_text = format!("Cost {:.0} Data", node.data_cost);
+                        draw_ui_text(&cost_text, left_panel_x + 12.0, y, 12.0, Colors::ACCENT);
+                        y += 18.0;
 
-                    if research_tree.can_select_on(
-                        node_id,
-                        &research_state.unlocked,
-                        active_condition,
-                    ) {
-                        if research_tree.can_research_on(
+                        if research_tree.can_select_on(
                             node_id,
                             &research_state.unlocked,
-                            data_available,
                             active_condition,
                         ) {
+                            if research_tree.can_research_on(
+                                node_id,
+                                &research_state.unlocked,
+                                data_available,
+                                active_condition,
+                            ) {
+                                draw_ui_text(
+                                    "Tap node to research",
+                                    left_panel_x + 12.0,
+                                    y,
+                                    12.0,
+                                    Colors::SUCCESS,
+                                );
+                            } else {
+                                draw_ui_text(
+                                    "Tap node to select (insufficient Data)",
+                                    left_panel_x + 12.0,
+                                    y,
+                                    11.0,
+                                    Colors::WARNING,
+                                );
+                            }
+                        } else if !node
+                            .prerequisites
+                            .iter()
+                            .all(|p| research_state.is_unlocked(p))
+                        {
                             draw_ui_text(
-                                "Tap node to research",
+                                "Prerequisites not met",
                                 left_panel_x + 12.0,
                                 y,
                                 12.0,
-                                Colors::SUCCESS,
+                                Colors::ERROR,
                             );
                         } else {
                             draw_ui_text(
-                                "Tap node to select (insufficient Data)",
+                                "Not enough Data",
                                 left_panel_x + 12.0,
                                 y,
-                                11.0,
+                                12.0,
                                 Colors::WARNING,
                             );
                         }
-                    } else if !node
-                        .prerequisites
-                        .iter()
-                        .all(|p| research_state.is_unlocked(p))
-                    {
-                        draw_ui_text(
-                            "Prerequisites not met",
-                            left_panel_x + 12.0,
-                            y,
-                            12.0,
-                            Colors::ERROR,
-                        );
-                    } else {
-                        draw_ui_text(
-                            "Not enough Data",
-                            left_panel_x + 12.0,
-                            y,
-                            12.0,
-                            Colors::WARNING,
-                        );
                     }
                 } else {
                     draw_ui_text("UNLOCKED", left_panel_x + 12.0, y, 12.0, Colors::SUCCESS);
