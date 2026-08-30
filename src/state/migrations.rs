@@ -7,7 +7,7 @@ use super::campaign::Campaign;
 use super::game_state::PlanetState;
 use super::persistence::SaveGame;
 
-pub const SUPPORTED_SAVE_VERSIONS: &[u32] = &[0, 1, 2];
+pub const SUPPORTED_SAVE_VERSIONS: &[u32] = &[0, 1, 2, 3];
 
 pub fn migrate(json: &str) -> Result<SaveGame, serde_json::Error> {
     let value: Value = serde_json::from_str(json)?;
@@ -22,7 +22,8 @@ pub fn migrate(json: &str) -> Result<SaveGame, serde_json::Error> {
     };
     let migrated = match version as u32 {
         1 => migrate_v1(value),
-        2 => Ok(value),
+        2 => migrate_v2(value),
+        3 => Ok(value),
         unsupported => Err(format!("unsupported save version {unsupported}")),
     }
     .map_err(|message| {
@@ -54,6 +55,23 @@ fn migrate_v1(mut value: Value) -> Result<Value, String> {
     insert_default(campaign, "directive_history", Value::Array(Vec::new()));
     insert_default(campaign, "toast_history", Value::Array(Vec::new()));
     insert_default(campaign, "shipments", Value::Array(Vec::new()));
+    insert_default(campaign, "ending_seen", Value::Bool(false));
+    object.insert(
+        "version".to_string(),
+        Value::from(super::persistence::SAVE_VERSION),
+    );
+    Ok(value)
+}
+
+fn migrate_v2(mut value: Value) -> Result<Value, String> {
+    let object = value
+        .as_object_mut()
+        .ok_or_else(|| "version 2 save root is not an object".to_string())?;
+    let campaign = object
+        .get_mut("campaign")
+        .and_then(Value::as_object_mut)
+        .ok_or_else(|| "version 2 save has no campaign object".to_string())?;
+    insert_default(campaign, "ending_seen", Value::Bool(false));
     object.insert(
         "version".to_string(),
         Value::from(super::persistence::SAVE_VERSION),

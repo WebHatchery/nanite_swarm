@@ -19,8 +19,6 @@ pub struct GameSession {
     pub data: GameDataContext,
     pub has_save: bool,
     pub menu_notice: Option<String>,
-    /// The ending has been shown once; seeing it again is the player's choice.
-    pub ending_seen: bool,
     /// The launch being played out, if one is.
     pub launch: Option<LaunchSequence>,
     pub shipping_edit_world: usize,
@@ -34,7 +32,6 @@ impl GameSession {
             data,
             has_save: state::save_exists(&Self::save_path(0)),
             menu_notice: None,
-            ending_seen: false,
             launch: None,
             shipping_edit_world: state::STARTING_PLANET,
             active_slot: 0,
@@ -55,7 +52,6 @@ impl GameSession {
 
     pub fn new_campaign(&mut self, config: GameConfig, seed: u64) {
         self.campaign = Campaign::new_with_data(config, seed, self.data.clone());
-        self.ending_seen = false;
     }
 
     pub fn save_campaign(&mut self) -> Result<(), io::Error> {

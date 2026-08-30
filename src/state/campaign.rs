@@ -73,6 +73,10 @@ pub struct Campaign {
     /// the event. It survives travel and save/load with the campaign itself.
     #[serde(default)]
     pub toast_history: Vec<LoggedNotification>,
+    /// The completion screen has been acknowledged; persisted so choosing to
+    /// keep building remains a choice after the campaign is reloaded.
+    #[serde(default)]
+    pub ending_seen: bool,
     #[serde(skip, default)]
     notification_cursors: [usize; PLANET_COUNT],
 }
@@ -105,6 +109,7 @@ impl Campaign {
             background_accumulator: 0.0,
             shipments: Vec::new(),
             toast_history: Vec::new(),
+            ending_seen: false,
             notification_cursors: [0; PLANET_COUNT],
         };
         campaign.planets[STARTING_PLANET] = Some(campaign.generate(STARTING_PLANET, &config));
@@ -134,6 +139,7 @@ impl Campaign {
             background_accumulator: 0.0,
             shipments: Vec::new(),
             toast_history: Vec::new(),
+            ending_seen: false,
             notification_cursors: [0; PLANET_COUNT],
         }
     }

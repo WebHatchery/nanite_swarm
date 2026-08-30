@@ -338,7 +338,7 @@ fn an_unversioned_single_planet_save_still_loads() {
 fn every_supported_save_version_has_a_migration_path() {
     assert_eq!(
         super::super::migrations::SUPPORTED_SAVE_VERSIONS,
-        &[0, 1, 2]
+        &[0, 1, 2, 3]
     );
     let planet = PlanetState::new(2, 3, GameConfig::default());
     let legacy = serde_json::to_string(&planet).unwrap();
@@ -359,8 +359,31 @@ fn every_supported_save_version_has_a_migration_path() {
     object.remove("toast_history");
     object.remove("shipments");
     assert!(load_from_json(&serde_json::to_string(&value).unwrap()).is_ok());
+
+    let mut v2 = serde_json::to_value(SaveGame {
+        version: 2,
+        campaign: campaign.clone(),
+    })
+    .unwrap();
+    v2.get_mut("campaign")
+        .and_then(serde_json::Value::as_object_mut)
+        .unwrap()
+        .remove("ending_seen");
+    assert!(load_from_json(&serde_json::to_string(&v2).unwrap()).is_ok());
+
     campaign.current_mut().resources.biomass = 7.0;
     assert!(load_from_json(&save_to_json(&mut campaign).unwrap()).is_ok());
+}
+
+#[test]
+fn completion_acknowledgement_survives_a_save_roundtrip() {
+    let mut campaign = campaign();
+    campaign.ending_seen = true;
+
+    let json = save_to_json(&mut campaign).unwrap();
+    let loaded = load_from_json(&json).unwrap();
+
+    assert!(loaded.ending_seen);
 }
 
 #[test]

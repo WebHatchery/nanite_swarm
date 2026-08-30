@@ -398,10 +398,10 @@ impl Game {
     }
 
     fn check_campaign_complete(&mut self) {
-        if self.ending_seen || !self.campaign.is_complete() {
+        if self.campaign.ending_seen || !self.campaign.is_complete() {
             return;
         }
-        self.ending_seen = true;
+        self.campaign.ending_seen = true;
         self.campaign
             .current_mut()
             .announce_achievement("system_consumed");

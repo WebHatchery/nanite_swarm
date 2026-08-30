@@ -14,7 +14,7 @@ pub const GAME_NAME: &str = "nanite_swarm";
 
 /// Bumped whenever the shape below changes. Version 0 is the unversioned save
 /// that held a single bare `PlanetState`.
-pub(crate) const SAVE_VERSION: u32 = 2;
+pub(crate) const SAVE_VERSION: u32 = 3;
 
 /// What actually goes on disk.
 #[derive(Debug, Serialize, Deserialize)]
