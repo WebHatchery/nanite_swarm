@@ -1,6 +1,8 @@
 //! The end of the campaign: the system is spent and the ship has nowhere left
 //! to go.
 
+mod mobile;
+
 use crate::state::Campaign;
 use crate::ui::{draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
@@ -26,6 +28,10 @@ pub fn render_campaign_complete_view(campaign: &Campaign) -> CampaignCompleteAct
     let pulse = pulse01(3.0);
 
     draw_drifting_field(screen_w, screen_h, pulse);
+
+    if screen_w < 600.0 {
+        return mobile::draw(campaign, pulse);
+    }
 
     let panel_w = (screen_w * 0.55).clamp(460.0, 760.0);
     let panel_h = 330.0;
