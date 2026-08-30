@@ -780,6 +780,10 @@ impl Game {
                 self.stage_interplanetary_scene();
                 self.interplanetary_mobile_panel = state::InterplanetaryMobilePanel::Shipping;
             }
+            "mobile_map" => {
+                self.stage_interplanetary_scene();
+                self.interplanetary_mobile_panel = state::InterplanetaryMobilePanel::Worlds;
+            }
             "interplanetary_rules" => {
                 self.stage_interplanetary_scene();
                 self.campaign.colonize(1);

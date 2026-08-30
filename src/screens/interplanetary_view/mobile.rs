@@ -142,7 +142,8 @@ fn draw_mobile_planet_info(
     let planet = &view.data.planets[index];
     let is_colonized = view.colonized.get(index).copied().unwrap_or(false);
     let is_current = index == view.current_planet;
-    let panel_h = mobile_info_height(screen_h);
+    let telemetry = view.telemetry.get(index).copied().flatten();
+    let panel_h = mobile_info_height(screen_h, telemetry.is_some());
     let text_w = (width - 30.0).max(40.0);
     draw_panel(x, y, width, panel_h);
     if screen_h < 560.0 {
@@ -175,6 +176,36 @@ fn draw_mobile_planet_info(
             8.0,
             hazard_color(planet),
         );
+        if let Some(telemetry) = telemetry {
+            draw_ui_text(
+                &truncate_text_to_width(
+                    &format!(
+                        "Stock M {:.0} D {:.0} B {:.0}",
+                        telemetry.minerals, telemetry.data, telemetry.biomass
+                    ),
+                    text_w,
+                    8.0,
+                ),
+                x + 15.0,
+                y + 73.0,
+                8.0,
+                Colors::TEXT,
+            );
+            draw_ui_text(
+                &truncate_text_to_width(
+                    &format!(
+                        "Refined A {:.0}  Parts {:.0}",
+                        telemetry.alloy, telemetry.components
+                    ),
+                    text_w,
+                    8.0,
+                ),
+                x + 15.0,
+                y + 86.0,
+                8.0,
+                Colors::TEXT,
+            );
+        }
         let rules = world_rule_lines(view.data, index);
         let rule = rules
             .first()
@@ -188,7 +219,7 @@ fn draw_mobile_planet_info(
         draw_ui_text(
             &truncate_text_to_width(&rule, text_w, 8.0),
             x + 15.0,
-            y + 73.0,
+            y + if telemetry.is_some() { 99.0 } else { 73.0 },
             8.0,
             rule_color,
         );
@@ -204,7 +235,7 @@ fn draw_mobile_planet_info(
         draw_ui_text(
             &truncate_text_to_width(action, text_w, 9.0),
             x + 15.0,
-            y + 89.0,
+            y + if telemetry.is_some() { 115.0 } else { 89.0 },
             9.0,
             if is_current || is_colonized {
                 Colors::PRIMARY
@@ -264,7 +295,6 @@ fn draw_mobile_planet_info(
         hazard_color(planet),
     );
 
-    let telemetry = view.telemetry.get(index).copied().flatten();
     let mut next_y = y + 124.0;
     if let Some(telemetry) = telemetry {
         let live = format!(
@@ -296,7 +326,21 @@ fn draw_mobile_planet_info(
                 Colors::ERROR
             },
         );
-        next_y += 32.0;
+        draw_ui_text(
+            &truncate_text_to_width(
+                &format!(
+                    "Refined A {:.0}  Parts {:.0}",
+                    telemetry.alloy, telemetry.components
+                ),
+                text_w,
+                9.0,
+            ),
+            x + 15.0,
+            next_y + 28.0,
+            9.0,
+            Colors::TEXT,
+        );
+        next_y += 46.0;
     }
     draw_ui_text("World rules:", x + 15.0, next_y, 10.0, Colors::TEXT_DIM);
     let rules = world_rule_lines(view.data, index);
@@ -342,9 +386,13 @@ fn draw_mobile_planet_info(
     );
 }
 
-fn mobile_info_height(screen_h: f32) -> f32 {
+fn mobile_info_height(screen_h: f32, has_telemetry: bool) -> f32 {
     if screen_h < 560.0 {
-        96.0
+        if has_telemetry {
+            124.0
+        } else {
+            96.0
+        }
     } else {
         228.0
     }

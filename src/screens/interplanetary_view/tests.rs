@@ -18,9 +18,10 @@ fn shipping_status_distinguishes_absent_and_offline_drivers() {
         "2 drivers online on Mars"
     );
 }
+use super::world_dossier::world_telemetry_row_y;
 use super::{
     solar_map_layout, world_alert_code, world_rule_lines, world_telemetry_height,
-    world_telemetry_row_y, MIN_SOLAR_MAP_SCALE,
+    MIN_SOLAR_MAP_SCALE,
 };
 
 #[test]
@@ -66,13 +67,14 @@ fn launching_an_untouched_world_requires_a_second_tap() {
 }
 
 #[test]
-fn dossier_telemetry_rows_leave_room_for_the_stock_line() {
+fn dossier_telemetry_rows_leave_room_for_refined_stock_and_health() {
     let base_y = 100.0;
     assert_eq!(world_telemetry_row_y(base_y, 0), 100.0);
     assert_eq!(world_telemetry_row_y(base_y, 1), 116.0);
     assert_eq!(world_telemetry_row_y(base_y, 2), 132.0);
-    assert_eq!(world_telemetry_height(), 54.0);
-    assert!(world_telemetry_row_y(base_y, 2) < base_y + world_telemetry_height());
+    assert_eq!(world_telemetry_row_y(base_y, 3), 148.0);
+    assert_eq!(world_telemetry_height(), 70.0);
+    assert!(world_telemetry_row_y(base_y, 3) < base_y + world_telemetry_height());
 }
 
 #[test]
@@ -93,6 +95,8 @@ fn telemetry(alerts: usize, alert_kind: crate::state::WorldAlert) -> crate::stat
         minerals: 0.0,
         data: 0.0,
         biomass: 0.0,
+        alloy: 0.0,
+        components: 0.0,
         ore_rate: 0.0,
         data_rate: 0.0,
         biomass_rate: 0.0,

@@ -18,10 +18,11 @@ The swarm is powerful, but every expansion changes the terrain, stresses the gri
 - Manage dust, power failures, and resource bottlenecks.
 - Dust-response research changes the live production, drone, routing, and
   power thresholds—not just the research readout.
-- Read each colonized world's live output, power balance, workforce, and alert
-  cause from the Solar System dossier before travelling there.
-- The dossier also shows remote Data and biomass stockpiles plus their live
-  generation/harvest rates, so a world can be managed without first travelling.
+- Read each colonized world's live output, power balance, workforce, stockpiles,
+  and alert cause from the Solar System dossier before travelling there.
+- The dossier also shows remote Data, biomass, Alloy, and Components stockpiles
+  plus their live generation/harvest rates, so a world can be managed without
+  first travelling.
 - The Solar System dossier also previews each world's construction bans and
   infrastructure requirements before the Seed Ship leaves.
 

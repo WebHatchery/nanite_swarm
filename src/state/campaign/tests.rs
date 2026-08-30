@@ -81,6 +81,8 @@ fn the_solar_map_reads_live_telemetry_for_colonized_worlds() {
     assert_eq!(fresh.minerals, 50.0);
     assert_eq!(fresh.data, 0.0);
     assert_eq!(fresh.biomass, 0.0);
+    assert_eq!(fresh.alloy, 0.0);
+    assert_eq!(fresh.components, 0.0);
     assert_eq!(fresh.data_rate, 0.25);
     assert_eq!(fresh.biomass_rate, 0.0);
     assert_eq!(fresh.structures, 1);
@@ -92,11 +94,15 @@ fn the_solar_map_reads_live_telemetry_for_colonized_worlds() {
     mercury.resources.minerals = 123.0;
     mercury.resources.data = 23.0;
     mercury.resources.biomass = 7.0;
+    mercury.resources.alloy = 41.0;
+    mercury.resources.components = 13.0;
     mercury.power_balance = -1.0;
     let live = campaign.world_telemetry(0).unwrap();
     assert_eq!(live.minerals, 123.0);
     assert_eq!(live.data, 23.0);
     assert_eq!(live.biomass, 7.0);
+    assert_eq!(live.alloy, 41.0);
+    assert_eq!(live.components, 13.0);
     assert_eq!(live.power_balance, -1.0);
     assert_eq!(live.alerts, 1);
     assert_eq!(live.alert_kind, WorldAlert::Power);

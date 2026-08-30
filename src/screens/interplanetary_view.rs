@@ -3,12 +3,17 @@
 mod mobile;
 mod shipping_panel;
 mod status;
+mod world_dossier;
 
-use crate::state::{ExportOrder, InterplanetaryMobilePanel, Shipment, WorldAlert, WorldTelemetry};
+use crate::state::{ExportOrder, InterplanetaryMobilePanel, Shipment, WorldTelemetry};
 use crate::ui::{color_from_rgba, draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::{draw_ui_text, note_neighbour, touch_area, Pointer, ScrollArea};
 use status::{launch_action, launch_prompt, mass_driver_status_label, seed_ship_status_label};
+use world_dossier::{
+    draw_world_telemetry, hazard_color, hazard_summary, world_alert_code, world_alert_color,
+    world_rule_lines, world_telemetry_height,
+};
 
 /// Actions from the interplanetary view
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -34,20 +39,10 @@ pub enum InterplanetaryAction {
     ToggleMobileShipping,
 }
 
-const WORLD_TELEMETRY_LINE_HEIGHT: f32 = 16.0;
-const WORLD_TELEMETRY_BOTTOM_GAP: f32 = 6.0;
 const PLANET_INFO_WIDTH: f32 = 300.0;
 const PLANET_INFO_MARGIN: f32 = 16.0;
 const SOLAR_MAP_GAP: f32 = 12.0;
 const MIN_SOLAR_MAP_SCALE: f32 = 0.22;
-
-fn world_telemetry_row_y(y: f32, row: usize) -> f32 {
-    y + row as f32 * WORLD_TELEMETRY_LINE_HEIGHT
-}
-
-fn world_telemetry_height() -> f32 {
-    WORLD_TELEMETRY_LINE_HEIGHT * 3.0 + WORLD_TELEMETRY_BOTTOM_GAP
-}
 
 /// Keep the orbit diagram inside the space left between the touch panels.
 /// Wide screens retain the authored orbit scale; narrow windows scale the
@@ -477,7 +472,7 @@ fn draw_planet_info(
     let is_current = index == view.current_planet;
 
     let panel_w = PLANET_INFO_WIDTH;
-    let panel_h = 282.0;
+    let panel_h = 300.0;
     let panel_x = screen_w - panel_w - PLANET_INFO_MARGIN;
     let panel_y = header_height + 12.0;
     draw_panel(panel_x, panel_y, panel_w, panel_h);
@@ -553,7 +548,7 @@ fn draw_planet_info(
         );
     }
 
-    let action_y = panel_y + if telemetry.is_some() { 271.0 } else { 213.0 };
+    let action_y = panel_y + if telemetry.is_some() { 289.0 } else { 213.0 };
     if is_current {
         draw_ui_text(
             "(Current Location)",
@@ -602,164 +597,6 @@ fn draw_planet_info(
     } else {
         None
     }
-}
-
-fn draw_world_telemetry(telemetry: &WorldTelemetry, x: f32, y: f32) {
-    draw_ui_text(
-        &format!(
-            "Live: O +{:.1}/s  A +{:.1}/s  Parts +{:.1}/s",
-            telemetry.ore_rate, telemetry.alloy_rate, telemetry.components_rate
-        ),
-        x,
-        y,
-        9.0,
-        Colors::TEXT,
-    );
-    draw_ui_text(
-        &format!(
-            "Data +{:.2}/s  Biomass +{:.1}/s",
-            telemetry.data_rate, telemetry.biomass_rate
-        ),
-        x,
-        world_telemetry_row_y(y, 1),
-        9.0,
-        Colors::TEXT,
-    );
-    let health = if telemetry.alerts == 0 {
-        (WorldAlert::Nominal.label().to_string(), Colors::SUCCESS)
-    } else {
-        (
-            format!("{} x{}", telemetry.alert_kind.label(), telemetry.alerts),
-            Colors::ERROR,
-        )
-    };
-    draw_ui_text(
-        &format!(
-            "Stock M {:.0}  D {:.0}  B {:.0}  Grid {:+.1}/s  DR {}  S {}  {}",
-            telemetry.minerals,
-            telemetry.data,
-            telemetry.biomass,
-            telemetry.power_balance,
-            telemetry.drones,
-            telemetry.structures,
-            health.0
-        ),
-        x,
-        world_telemetry_row_y(y, 2),
-        9.0,
-        health.1,
-    );
-}
-
-fn world_alert_code(telemetry: Option<WorldTelemetry>) -> String {
-    let Some(telemetry) = telemetry else {
-        return "--".to_string();
-    };
-    let code = match telemetry.alert_kind {
-        WorldAlert::Nominal => "OK",
-        WorldAlert::Collapse => "COLL",
-        WorldAlert::Power => "PWR",
-        WorldAlert::Hibernation => "SLEEP",
-        WorldAlert::Stalled => "STALL",
-        WorldAlert::Starved => "INPUT",
-        WorldAlert::Blocked => "FULL",
-        WorldAlert::Maintenance => "MAINT",
-    };
-    if telemetry.alerts > 1 {
-        format!("{} x{}", code, telemetry.alerts)
-    } else {
-        code.to_string()
-    }
-}
-
-fn world_alert_color(telemetry: Option<WorldTelemetry>) -> Color {
-    if telemetry.is_some_and(|telemetry| telemetry.alerts > 0) {
-        Colors::ERROR
-    } else if telemetry.is_some() {
-        Colors::SUCCESS
-    } else {
-        Colors::TEXT_DIM
-    }
-}
-
-fn hazard_summary(planet: &crate::data::PlanetDef) -> String {
-    let mut hazards = Vec::new();
-    if planet.hazards.acid_rain > 0.0
-        || planet
-            .hazard_fields
-            .iter()
-            .any(|field| field.hazard == "acid")
-    {
-        hazards.push("ACID RAIN");
-    }
-    if planet.hazards.freeze > 0.0
-        || planet
-            .hazard_fields
-            .iter()
-            .any(|field| field.hazard == "cold")
-    {
-        hazards.push("COLD");
-    }
-    if hazards.is_empty() {
-        "NONE".to_string()
-    } else {
-        hazards.join(" / ")
-    }
-}
-
-fn hazard_color(planet: &crate::data::PlanetDef) -> Color {
-    if planet.hazards.any() || !planet.hazard_fields.is_empty() {
-        Colors::WARNING
-    } else {
-        Colors::SUCCESS
-    }
-}
-
-fn world_rule_lines(data: &crate::data::GameData, index: usize) -> Vec<String> {
-    let planet = &data.planets[index];
-    let constraints = &planet.constraints;
-    let mut lines = Vec::new();
-    for id in &planet.banned_buildings {
-        lines.push(format!("Unavailable: {}", building_name(data, id)));
-    }
-    for id in &constraints.required_buildings {
-        lines.push(format!("Needs {}", building_name(data, id)));
-    }
-    for id in &constraints.required_research {
-        let name = data
-            .research
-            .nodes
-            .iter()
-            .find(|node| node.id == *id)
-            .map(|node| node.name.as_str())
-            .unwrap_or(id.as_str());
-        lines.push(format!("Needs research: {}", name));
-    }
-    if constraints.minimum_power_generation > 0.0 {
-        lines.push(format!(
-            "Needs {:.0} power generation",
-            constraints.minimum_power_generation
-        ));
-    }
-    if constraints.minimum_power_balance > 0.0 {
-        lines.push(format!(
-            "Needs {:.0} power surplus",
-            constraints.minimum_power_balance
-        ));
-    }
-    if lines.is_empty() {
-        lines.push("No special build rules".to_string());
-    }
-    lines.truncate(3);
-    lines
-}
-
-fn building_name<'a>(data: &'a crate::data::GameData, id: &'a str) -> &'a str {
-    data.buildings
-        .iter()
-        .find(|building| building.id == id)
-        .map(|building| building.name.as_str())
-        .unwrap_or(id)
 }
 
 fn draw_legend(screen_w: f32, screen_h: f32) {
