@@ -574,8 +574,19 @@ impl Game {
         match self.session.save_campaign() {
             Ok(()) => {
                 self.campaign.current_mut().save_failed = false;
+                if self
+                    .menu_notice
+                    .as_deref()
+                    .is_some_and(|notice| notice.starts_with("Save failed:"))
+                {
+                    self.menu_notice = None;
+                }
             }
-            Err(_) => self.campaign.current_mut().save_failed = true,
+            Err(error) => {
+                eprintln!("Could not save campaign: {error}");
+                self.campaign.current_mut().save_failed = true;
+                self.menu_notice = Some(save_failure_notice());
+            }
         }
     }
 
@@ -621,3 +632,10 @@ impl Game {
         }
     }
 }
+
+fn save_failure_notice() -> String {
+    "Save failed: progress is in memory. Tap SAVE to retry.".to_string()
+}
+
+#[cfg(test)]
+mod tests;

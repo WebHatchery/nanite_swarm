@@ -33,6 +33,14 @@ impl Game {
                 self.menu_notice = None;
                 self.delete_confirmation_slot = None;
             }
+            "save_failed_menu" | "mobile_save_failed_menu" => {
+                self.phase = GamePhase::MainMenu;
+                self.has_save = true;
+                self.menu_notice =
+                    Some("Save failed: progress is in memory. Tap SAVE to retry.".to_string());
+                self.campaign.current_mut().save_failed = true;
+                self.delete_confirmation_slot = None;
+            }
             "mainmenu_confirm_delete" | "mobile_mainmenu_confirm_delete" => {
                 self.phase = GamePhase::MainMenu;
                 self.has_save = true;
