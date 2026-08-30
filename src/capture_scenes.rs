@@ -8,7 +8,7 @@
 mod fixtures;
 
 #[allow(dead_code)]
-pub const REQUIRED_CAPTURE_SCENES: [&str; 12] = [
+pub const REQUIRED_CAPTURE_SCENES: [&str; 14] = [
     "mainmenu",
     "research",
     "logistics",
@@ -21,6 +21,8 @@ pub const REQUIRED_CAPTURE_SCENES: [&str; 12] = [
     "mobile_build",
     "mobile_info",
     "mobile_help",
+    "mobile_launch",
+    "mobile_arrival",
 ];
 
 mod scenes;

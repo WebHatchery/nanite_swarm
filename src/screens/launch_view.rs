@@ -7,6 +7,17 @@ use macroquad::prelude::*;
 use macroquad_toolkit::math::lerp;
 use macroquad_toolkit::ui::{draw_ui_text, Pointer};
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct CaptionGeometry {
+    band_y: f32,
+    band_h: f32,
+    text_size: f32,
+    max_width: f32,
+    title_y: f32,
+    line_start_y: f32,
+    line_gap: f32,
+}
+
 /// What the player did to the launch sequence.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LaunchAction {
@@ -162,25 +173,20 @@ fn draw_caption(
     screen_w: f32,
     screen_h: f32,
 ) {
-    let band_y = screen_h * 0.60;
+    let geometry = caption_geometry(screen_w, screen_h, beat == LaunchBeat::Arrival);
     let fade = if beat == LaunchBeat::Arrival {
         (sequence.beat_fraction() * 3.0).min(1.0)
     } else {
         1.0
     };
-    let band_h = if beat == LaunchBeat::Arrival {
-        96.0
-    } else {
-        62.0
-    };
-    draw_panel(0.0, band_y - 34.0, screen_w, band_h);
+    draw_panel(0.0, geometry.band_y - 34.0, screen_w, geometry.band_h);
 
     if beat == LaunchBeat::Arrival {
         let name = sequence.data().planets[sequence.target()].name.as_str();
         draw_centered(
             name,
             screen_w,
-            band_y,
+            geometry.title_y,
             22.0,
             Color::new(
                 Colors::PRIMARY.r,
@@ -189,21 +195,91 @@ fn draw_caption(
                 fade,
             ),
         );
-        draw_centered(
+        draw_caption_lines(
             &sequence.line(arrival_line),
             screen_w,
-            band_y + 30.0,
-            14.0,
+            geometry,
             Color::new(Colors::TEXT.r, Colors::TEXT.g, Colors::TEXT.b, fade),
         );
     } else {
-        draw_centered(
+        draw_caption_lines(
             &sequence.line(arrival_line),
             screen_w,
-            band_y + 4.0,
-            14.0,
+            geometry,
             Colors::TEXT,
         );
+    }
+}
+
+fn draw_caption_lines(text: &str, screen_w: f32, geometry: CaptionGeometry, color: Color) {
+    for (index, line) in wrap_caption(text, geometry.max_width, geometry.text_size)
+        .into_iter()
+        .enumerate()
+    {
+        draw_centered(
+            &line,
+            screen_w,
+            geometry.line_start_y + index as f32 * geometry.line_gap,
+            geometry.text_size,
+            color,
+        );
+    }
+}
+
+fn wrap_caption(text: &str, max_width: f32, font_size: f32) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut current = String::new();
+    for word in text.split_whitespace() {
+        let candidate = if current.is_empty() {
+            word.to_string()
+        } else {
+            format!("{} {}", current, word)
+        };
+        if current.is_empty()
+            || measure_text(&candidate, None, font_size as u16, 1.0).width <= max_width
+        {
+            current = candidate;
+        } else {
+            lines.push(current);
+            current = word.to_string();
+        }
+    }
+    if !current.is_empty() {
+        lines.push(current);
+    }
+    if lines.is_empty() {
+        lines.push(String::new());
+    }
+    lines
+}
+
+fn caption_geometry(screen_w: f32, screen_h: f32, arrival: bool) -> CaptionGeometry {
+    let mobile = screen_w < 600.0;
+    let band_y = screen_h * 0.60;
+    let band_h = if arrival {
+        if mobile {
+            128.0
+        } else {
+            96.0
+        }
+    } else if mobile {
+        82.0
+    } else {
+        62.0
+    };
+    let text_size = if mobile { 12.0 } else { 14.0 };
+    CaptionGeometry {
+        band_y,
+        band_h,
+        text_size,
+        max_width: (screen_w - 28.0).max(80.0),
+        title_y: band_y - if mobile { 4.0 } else { 0.0 },
+        line_start_y: if arrival {
+            band_y + if mobile { 20.0 } else { 30.0 }
+        } else {
+            band_y + if mobile { -4.0 } else { 4.0 }
+        },
+        line_gap: text_size + 4.0,
     }
 }
 
@@ -291,3 +367,6 @@ fn draw_starfield(screen_w: f32, screen_h: f32) {
         );
     }
 }
+
+#[cfg(test)]
+mod tests;

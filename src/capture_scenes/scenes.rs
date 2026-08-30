@@ -284,11 +284,11 @@ impl Game {
             }
             // The two beats of a launch worth looking at in a still frame: the
             // ship clearing the world it was built on, and the one it reaches.
-            "launch" | "arrival" => {
+            "launch" | "arrival" | "mobile_launch" | "mobile_arrival" => {
                 self.campaign.colonize(1);
                 self.campaign.travel_to(1);
                 let mut sequence = LaunchSequence::new_with_data(self.data.clone(), 0, 1);
-                sequence.advance(if scene == "launch" {
+                sequence.advance(if matches!(scene, "launch" | "mobile_launch") {
                     sequence.beat_start(state::LaunchBeat::Ascent) + 1.2
                 } else {
                     sequence.beat_start(state::LaunchBeat::Arrival) + 1.5
