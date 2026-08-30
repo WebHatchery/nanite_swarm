@@ -166,6 +166,30 @@ fn draw_mobile_planet_info(
                 Colors::WARNING
             },
         );
+        draw_ui_text(
+            &truncate_text_to_width(&format!("Hazard: {}", hazard_summary(planet)), text_w, 8.0),
+            x + 15.0,
+            y + 59.0,
+            8.0,
+            hazard_color(planet),
+        );
+        let rules = world_rule_lines(view.data, index);
+        let rule = rules
+            .first()
+            .map(|rule| format!("Rule: {}", rule))
+            .unwrap_or_else(|| "Rule: no special build rules".to_string());
+        let rule_color = if rules.len() == 1 && rules[0] == "No special build rules" {
+            Colors::SUCCESS
+        } else {
+            Colors::WARNING
+        };
+        draw_ui_text(
+            &truncate_text_to_width(&rule, text_w, 8.0),
+            x + 15.0,
+            y + 73.0,
+            8.0,
+            rule_color,
+        );
         let action = if is_current {
             "Current location"
         } else if is_colonized {
@@ -178,7 +202,7 @@ fn draw_mobile_planet_info(
         draw_ui_text(
             &truncate_text_to_width(action, text_w, 9.0),
             x + 15.0,
-            y + 82.0,
+            y + 89.0,
             9.0,
             if is_current || is_colonized {
                 Colors::PRIMARY
