@@ -259,10 +259,12 @@ fn freight_orders_and_typed_hoppers_survive_a_save_roundtrip() {
     );
     campaign.current_mut().input_buffers.insert(key, 60.0);
     campaign.current_mut().pod_loads.insert(key, 12.0);
+    campaign.current_mut().output_buffers.insert(key, 7.5);
     campaign
         .current_mut()
         .pad_cargo
         .insert((5, 6), ResourceType::Components);
+    campaign.current_mut().output_buffers.insert((5, 6), 23.0);
 
     let json = save_to_json(&mut campaign).unwrap();
     let loaded = load_from_json(&json).unwrap();
@@ -283,10 +285,12 @@ fn freight_orders_and_typed_hoppers_survive_a_save_roundtrip() {
     );
     assert_eq!(loaded.current().input_buffers.get(&key), Some(&60.0));
     assert_eq!(loaded.current().pod_loads.get(&key), Some(&12.0));
+    assert_eq!(loaded.current().output_buffers.get(&key), Some(&7.5));
     assert_eq!(
         loaded.current().pad_cargo.get(&(5, 6)),
         Some(&ResourceType::Components)
     );
+    assert_eq!(loaded.current().output_buffers.get(&(5, 6)), Some(&23.0));
 }
 
 #[test]

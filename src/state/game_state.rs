@@ -367,8 +367,10 @@ pub struct PlanetState {
     pub particle_timer: f32,
     #[serde(skip, default)]
     pub placement_anims: Vec<PlacementAnim>,
-    // Minerals a drill has cut but not yet handed to a drone
-    #[serde(skip)]
+    /// Physical output waiting on a producer's pad, including landed freight.
+    /// It is durable cargo rather than a derived simulation cache: discarding
+    /// it on save would erase resources the player had already produced.
+    #[serde(default, with = "crate::state::coordinate_map")]
     pub output_buffers: std::collections::HashMap<(i32, i32), f32>,
     // Ore delivered to a processing building and not yet consumed
     #[serde(default, with = "crate::state::coordinate_map")]
