@@ -9,7 +9,7 @@ use crate::state::{AchievementRecord, DirectiveRecord};
 use crate::ui::{draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::notifications::{LoggedNotification, NotificationType};
-use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text, ScrollArea};
+use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text, truncate_text_to_width, ScrollArea};
 
 const HEADER_HEIGHT: f32 = 72.0;
 const CARD_H: f32 = 76.0;
@@ -198,8 +198,9 @@ fn draw_log(log: &[LoggedNotification], scroll: &mut ScrollArea, area: Rect) {
         if y < view.y || y > view.y + view.h {
             continue;
         }
+        let message = truncate_text_to_width(&entry.message, view.w.max(40.0), 11.0);
         draw_ui_text(
-            &entry.message,
+            &message,
             view.x,
             y,
             11.0,

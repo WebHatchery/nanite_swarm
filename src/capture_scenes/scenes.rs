@@ -264,7 +264,7 @@ impl Game {
                     planet.update_seed_ship(1.0);
                 }
             }
-            "records" => {
+            "records" | "mobile_records_narrow" => {
                 self.phase = GamePhase::Records;
                 self.seed_logistics_scene();
                 // A world part-way through the set, so the screen shows earned
