@@ -27,6 +27,9 @@ Audit date: 2026-08-20
 - Split the factory and campaign-ending screenshot fixtures into child modules;
   the scene dispatcher fell from 792 to 620 lines before the next capture
   family can make the source-size limit a problem.
+- Split the desktop command-bar graph renderer into `bottom_bar/graph.rs`,
+  reducing the command-bar coordinator from 773 to 555 lines and adding direct
+  coverage for its mode-specific scaling and readouts.
 
 ## Remaining debt
 
