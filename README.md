@@ -68,8 +68,10 @@ panels use short summaries so touch controls remain separated and visible.
 On portrait screens, BUILD and INFO open one full-width drawer at a time;
 MAP returns to the live grid between actions.
 Research uses a separate control row and full-width detail drawer on phones;
-the Seed Ship yard compresses each stage into a readable card and keeps the
-diversion control visible. The portrait Solar System screen separates Worlds
+the Seed Ship yard compresses each stage into a readable card, keeps the
+diversion control visible, and opens the neural network directly when a stage
+needs research. Tap Back there to return to the yard. The portrait Solar System
+screen separates Worlds
 and Shipping into touch-sized tabs, with the freight controls scrollable below.
 The title and Settings screens also switch to single-column phone layouts so
 the command stack, display toggles, audio controls, and pause-key control

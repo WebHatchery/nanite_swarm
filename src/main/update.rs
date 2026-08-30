@@ -131,7 +131,7 @@ impl Game {
         self.remember_preferred_speed();
         match action {
             PlanetaryAction::FastForwardToNextEvent => self.fast_forward_to_next_event(),
-            PlanetaryAction::OpenResearch => self.open_screen(GamePhase::Research),
+            PlanetaryAction::OpenResearch => self.open_research_screen(GamePhase::Playing),
             PlanetaryAction::OpenSeedShip => self.open_screen(GamePhase::SeedShip),
             PlanetaryAction::OpenInterplanetary => self.open_screen(GamePhase::Interplanetary),
             PlanetaryAction::OpenRecords => self.open_screen(GamePhase::Records),
@@ -154,6 +154,11 @@ impl Game {
         self.phase = phase;
     }
 
+    fn open_research_screen(&mut self, return_phase: GamePhase) {
+        self.research_return_phase = return_phase;
+        self.open_screen(GamePhase::Research);
+    }
+
     fn update_research_screen(&mut self) {
         self.advance_simulation();
         let data_context = self.session.data.clone();
@@ -168,7 +173,7 @@ impl Game {
             active_condition: self.campaign.current().active_planet_condition(),
             viewport: &mut self.research_viewport,
         }) {
-            ResearchAction::Close => self.phase = GamePhase::Playing,
+            ResearchAction::Close => self.phase = self.research_return_phase,
             ResearchAction::StartResearch(tech_id) => {
                 let condition = self.campaign.current().active_planet_condition();
                 if self.research_tree.can_select_on(
@@ -198,7 +203,7 @@ impl Game {
         };
         match action {
             SeedShipAction::Close => self.phase = GamePhase::Playing,
-            SeedShipAction::OpenResearch => self.open_screen(GamePhase::Research),
+            SeedShipAction::OpenResearch => self.open_research_screen(GamePhase::SeedShip),
             SeedShipAction::ToggleCommitment => {
                 self.campaign.current_mut().toggle_seed_ship_commitment();
             }
