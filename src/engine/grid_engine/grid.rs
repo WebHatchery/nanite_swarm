@@ -452,13 +452,7 @@ impl Grid {
                 }
                 match tile.building.as_ref() {
                     None => true,
-                    Some(building) => {
-                        endpoint
-                            || matches!(
-                                building.building_type,
-                                BuildingType::Conduit | BuildingType::Bridge
-                            )
-                    }
+                    Some(building) => endpoint || building.carries_traffic(),
                 }
             } else {
                 false
