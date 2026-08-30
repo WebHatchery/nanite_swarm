@@ -40,28 +40,41 @@ pub fn render_main_menu(
 
     // Title
     let strings = crate::data::player_strings();
-    let _title_size = measure_ui_text(&strings.title, None, 48, 1.0);
-    draw_ui_text(&strings.title, 40.0, 80.0 + float_y, 48.0, Colors::PRIMARY);
+    let narrow_mobile = screen_w < 300.0;
+    let title_size: u16 = if narrow_mobile { 32 } else { 48 };
+    let title_width = measure_ui_text(&strings.title, None, title_size, 1.0).width;
+    let title_x = if narrow_mobile {
+        ((screen_w - title_width) * 0.5).max(12.0)
+    } else {
+        40.0
+    };
+    draw_ui_text(
+        &strings.title,
+        title_x,
+        80.0 + float_y,
+        title_size as f32,
+        Colors::PRIMARY,
+    );
+    let intro_x = if narrow_mobile { 12.0 } else { 40.0 };
+    let intro_size = if narrow_mobile {
+        12.0
+    } else {
+        Dimensions::FONT_SIZE_NORMAL
+    };
     draw_ui_text(
         &format!("v{}", crate::release::BUILD_VERSION),
-        42.0,
+        intro_x + 2.0,
         132.0 + float_y * 0.4,
         10.0,
         Colors::TEXT_DIM,
     );
 
     // Subtitle
-    let _sub_size = measure_ui_text(
-        &strings.subtitle,
-        None,
-        Dimensions::FONT_SIZE_NORMAL as u16,
-        1.0,
-    );
     draw_ui_text(
         &strings.subtitle,
-        40.0,
+        intro_x,
         110.0 + float_y * 0.5,
-        Dimensions::FONT_SIZE_NORMAL,
+        intro_size,
         Colors::TEXT_DIM,
     );
 
