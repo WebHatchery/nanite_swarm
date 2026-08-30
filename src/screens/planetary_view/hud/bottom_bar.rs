@@ -117,32 +117,10 @@ pub(super) fn draw(
         },
         warning,
     );
-    let alert_text = if state.save_failed {
-        "SAVE FAILED"
-    } else if state.restored_from_backup {
-        "BACKUP RECOVERED"
-    } else if state.power_collapse_shutdown > 0.0 {
-        "POWER COLLAPSE"
-    } else if state.battery_seconds <= 0.0 {
-        "LOW BATTERY"
-    } else if state.power_balance < 0.0 {
-        "NEGATIVE POWER"
-    } else if stalled > 0 {
-        "ROUTE SEVERED"
-    } else if upkeep > 0 {
-        upkeep_alert_text(state)
-    } else if starved > 0 {
-        "INPUT STARVED"
-    } else if blocked > 0 {
-        "OUTPUT PAD FULL"
-    } else if congested > 0 {
-        "TRAFFIC SATURATED"
-    } else {
-        "SYSTEM NOMINAL"
-    };
+    let alert_message = alert_text(state, stalled, starved, blocked, upkeep, congested);
     let mut clock = ClockAction::None;
     draw_ui_text(
-        alert_text,
+        alert_message,
         106.0,
         bottom_y + 35.0,
         11.0,
@@ -537,6 +515,44 @@ fn alert_button(
         }
     } else {
         None
+    }
+}
+
+/// Name the same recovery the JUMP button will visit first.
+///
+/// Keeping this priority beside the button policy prevents the banner from
+/// promising an upkeep repair while JUMP opens a more urgent production
+/// blocker instead.
+fn alert_text(
+    state: &PlanetState,
+    stalled: usize,
+    starved: usize,
+    blocked: usize,
+    upkeep: usize,
+    congested: usize,
+) -> &'static str {
+    if state.save_failed {
+        "SAVE FAILED"
+    } else if state.restored_from_backup {
+        "BACKUP RECOVERED"
+    } else if state.power_collapse_shutdown > 0.0 {
+        "POWER COLLAPSE"
+    } else if state.battery_seconds <= 0.0 {
+        "LOW BATTERY"
+    } else if state.power_balance < 0.0 {
+        "NEGATIVE POWER"
+    } else if stalled > 0 {
+        "ROUTE SEVERED"
+    } else if starved > 0 {
+        "INPUT STARVED"
+    } else if blocked > 0 {
+        "OUTPUT PAD FULL"
+    } else if upkeep > 0 {
+        upkeep_alert_text(state)
+    } else if congested > 0 {
+        "TRAFFIC SATURATED"
+    } else {
+        "SYSTEM NOMINAL"
     }
 }
 

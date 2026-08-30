@@ -1,6 +1,6 @@
 use super::{
-    alert_button, has_flow_alert, has_pending_interaction, upkeep_alert_text, zoom_button_rects,
-    ClockAction,
+    alert_button, alert_text, has_flow_alert, has_pending_interaction, upkeep_alert_text,
+    zoom_button_rects, ClockAction,
 };
 use crate::data::GameConfig;
 use crate::state::{GraphMode, PlanetState};
@@ -99,6 +99,37 @@ fn upkeep_alert_names_the_wear_requiring_recovery() {
         building.acid_wear = 75.0;
     }
     assert_eq!(upkeep_alert_text(&state), "UPKEEP MIXED");
+}
+
+#[test]
+fn alert_banner_matches_the_first_jump_recovery() {
+    let mut state = PlanetState::new(2, 42, GameConfig::default());
+    let core = state.grid.find_core().expect("generated Core");
+    state
+        .grid
+        .get_mut(core)
+        .expect("core tile")
+        .building
+        .as_mut()
+        .expect("core building")
+        .acid_wear = 75.0;
+
+    assert_eq!(
+        alert_text(&state, 0, 1, 0, 1, 0),
+        "INPUT STARVED",
+        "JUMP visits starved processors before upkeep"
+    );
+    assert_eq!(
+        alert_text(&state, 0, 0, 1, 1, 0),
+        "OUTPUT PAD FULL",
+        "JUMP visits blocked processors before upkeep"
+    );
+    assert_eq!(
+        alert_text(&state, 0, 0, 0, 1, 1),
+        "UPKEEP ACID",
+        "upkeep still names its cause before congestion"
+    );
+    assert_eq!(alert_text(&state, 1, 1, 1, 1, 1), "ROUTE SEVERED");
 }
 
 #[test]
