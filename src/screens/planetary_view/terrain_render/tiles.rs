@@ -369,7 +369,8 @@ pub(crate) fn draw_grid_tiles(
                     // Show placement preview
                     if let Some(building_type) = state.selected_building {
                         let preview_alpha = 0.2 + pulse * 0.15;
-                        if state.grid.can_place_building(pos, building_type) {
+                        let placement_reason = state.placement_block_reason(pos, building_type);
+                        if placement_reason.is_none() {
                             let preview_color = Color::new(0.0, 0.8, 1.0, preview_alpha);
                             draw_rectangle(
                                 px,
@@ -388,7 +389,17 @@ pub(crate) fn draw_grid_tiles(
                                 invalid_color,
                             );
                         }
-                        if building_type == BuildingType::Bridge
+                        if let Some(reason) = placement_reason {
+                            if metrics.tile_size >= 28.0 {
+                                draw_ui_text(
+                                    reason.preview_label(),
+                                    px,
+                                    py - 4.0,
+                                    9.0,
+                                    Colors::ERROR,
+                                );
+                            }
+                        } else if building_type == BuildingType::Bridge
                             && matches!(tile.terrain, TerrainType::Void | TerrainType::Water)
                         {
                             draw_ui_text(

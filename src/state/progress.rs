@@ -189,21 +189,48 @@ impl PlanetState {
     }
 
     pub fn planet_constraint_status(&self) -> (bool, String) {
-        let constraints = &self.data().planet(self.planet_index).constraints;
-        let missing: Vec<_> = constraints
+        let data = self.data();
+        let constraints = &data.planet(self.planet_index).constraints;
+        let missing: Vec<String> = constraints
             .required_buildings
             .iter()
             .filter(|id| {
                 BuildingType::from_id(id)
                     .is_none_or(|kind| self.grid.find_buildings(kind).is_empty())
             })
-            .cloned()
+            .map(|id| {
+                BuildingType::from_id(id)
+                    .map(|kind| kind.name(data).to_string())
+                    .unwrap_or_else(|| id.clone())
+            })
+            .collect();
+        let missing_research: Vec<String> = constraints
+            .required_research
+            .iter()
+            .filter(|required| {
+                !self
+                    .research
+                    .unlocked_techs
+                    .iter()
+                    .any(|known| known == *required)
+            })
+            .map(|id| {
+                data.research
+                    .nodes
+                    .iter()
+                    .find(|node| node.id == *id)
+                    .map(|node| node.name.clone())
+                    .unwrap_or_else(|| id.clone())
+            })
             .collect();
         let generation_ok = self.power_generation() >= constraints.minimum_power_generation;
         let balance_ok = self.power_balance >= constraints.minimum_power_balance;
         let mut reasons = Vec::new();
         if !missing.is_empty() {
             reasons.push(format!("needs {}", missing.join(", ")));
+        }
+        if !missing_research.is_empty() {
+            reasons.push(format!("needs research {}", missing_research.join(", ")));
         }
         if !generation_ok {
             reasons.push(format!(

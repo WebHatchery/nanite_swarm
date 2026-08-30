@@ -5,7 +5,10 @@ use crate::engine::{BuildingType, DroneState, GridPos, TerrainType};
 use super::game_state::PlacementAnim;
 use super::game_state::PlanetState;
 
+mod placement;
 mod processor;
+
+pub use placement::*;
 
 impl PlanetState {
     /// Try to place a building at position

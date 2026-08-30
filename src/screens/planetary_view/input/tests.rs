@@ -1,6 +1,7 @@
 use super::*;
 
 use crate::data::GameConfig;
+use crate::engine::TerrainType;
 
 fn state() -> PlanetState {
     PlanetState::new(2, 42, GameConfig::default())
@@ -12,13 +13,14 @@ fn blocked_placement_names_the_missing_terrain_prerequisite() {
     let core = state.grid.find_core().unwrap();
     let water = GridPos::new(core.x + 1, core.y);
     state.grid.get_mut(water).unwrap().terrain = TerrainType::Water;
+    state.unlock_building(BuildingType::Bridge);
 
     assert_eq!(
-        placement_block_message(&state, water, BuildingType::Drill),
+        placement_block_message(&state, water, BuildingType::Drill).as_deref(),
         Some("That terrain cannot hold this building")
     );
     assert_eq!(
-        placement_block_message(&state, water, BuildingType::Bridge),
+        placement_block_message(&state, water, BuildingType::Bridge).as_deref(),
         None
     );
 }
@@ -30,11 +32,11 @@ fn unrevealed_and_occupied_tiles_explain_why_building_must_wait() {
     let unrevealed = GridPos::new(0, 0);
 
     assert_eq!(
-        placement_block_message(&state, unrevealed, BuildingType::Drill),
+        placement_block_message(&state, unrevealed, BuildingType::Drill).as_deref(),
         Some("Survey this tile before building")
     );
     assert_eq!(
-        placement_block_message(&state, core, BuildingType::Drill),
+        placement_block_message(&state, core, BuildingType::Drill).as_deref(),
         Some("This tile is already occupied")
     );
 }
