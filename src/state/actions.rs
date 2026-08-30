@@ -586,8 +586,9 @@ impl PlanetState {
                 input_priority,
                 standby,
             ) => {
-                self.select_building(kind);
+                self.selected_building = Some(kind);
                 let restored = self.try_place_building(pos);
+                self.cancel_interaction_modes();
                 if restored {
                     if let Some(building) = self
                         .grid
@@ -611,6 +612,7 @@ impl PlanetState {
             self.undo_history.pop();
         }
         if success {
+            self.cancel_interaction_modes();
             self.notifications.info("Last placement action undone");
         }
         success

@@ -352,6 +352,8 @@ fn undoing_a_relocation_restores_the_original_tile_and_cargo() {
     assert!(state.grid.get(destination).unwrap().building.is_none());
     assert_eq!(state.output_buffers.get(&(source.x, source.y)), Some(&9.0));
     assert!(state.grid.get(source).unwrap().building.is_some());
+    assert_eq!(state.selected_building, None);
+    assert_eq!(state.selected_tile, None);
     assert!(state.undo_history.is_empty());
 }
 

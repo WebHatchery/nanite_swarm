@@ -128,4 +128,6 @@ fn restoring_a_standby_action_does_not_reactivate_its_boost() {
     let building = state.grid.get(pos).unwrap().building.as_ref().unwrap();
     assert!(building.standby);
     assert!(!building.overclocked);
+    assert_eq!(state.selected_building, None);
+    assert_eq!(state.selected_tile, None);
 }
