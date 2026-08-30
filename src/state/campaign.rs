@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::data::{GameConfig, GameDataContext};
 use crate::directives::{pick_directive, Directive};
-use crate::engine::{ResearchTree, StatId};
+use crate::engine::{ResearchTree, ResourceType, StatId};
 
 use super::game_state::{PlanetState, ResearchProgress};
 
@@ -76,9 +76,12 @@ pub struct WorldTelemetry {
     pub drones: usize,
     pub alerts: usize,
     pub alert_kind: WorldAlert,
-    /// Whether a stored resource has reached its live ceiling. Energy is
-    /// excluded because a full battery is normal for a healthy remote world.
-    pub storage_full: bool,
+    /// The first stored resource at its live ceiling while that resource has
+    /// a live producer, if any. Energy is excluded because a full battery is
+    /// normal for a healthy remote world, and idle full reserves are not waste.
+    /// The alert count still reports saturation as one distinct condition even
+    /// when more than one stored resource is full.
+    pub storage_full_resource: Option<ResourceType>,
 }
 
 /// Step length for worlds the player is not looking at. Coarse on purpose: a
@@ -382,15 +385,18 @@ impl Campaign {
         let stalled = planet.stalled_drone_count() > 0;
         let starved = !planet.starved_factories().is_empty();
         let blocked = !planet.blocked_factories().is_empty();
-        let storage_full = [
-            crate::engine::ResourceType::Minerals,
-            crate::engine::ResourceType::Data,
-            crate::engine::ResourceType::Biomass,
-            crate::engine::ResourceType::Alloy,
-            crate::engine::ResourceType::Components,
+        let storage_full_resource = [
+            (ResourceType::Minerals, planet.mineral_output_rate()),
+            (ResourceType::Data, planet.data_generation_rate()),
+            (ResourceType::Biomass, planet.biomass_harvest_rate()),
+            (ResourceType::Alloy, planet.alloy_rate()),
+            (ResourceType::Components, planet.components_rate()),
         ]
         .into_iter()
-        .any(|resource| planet.resource_is_full(resource));
+        .find_map(|(resource, rate)| {
+            (rate > 0.0 && planet.resource_is_full(resource)).then_some(resource)
+        });
+        let storage_full = storage_full_resource.is_some();
         let maintenance = !planet.upkeep_alert_positions().is_empty();
         let alerts = usize::from(power_alert)
             + usize::from(hibernating)
@@ -435,7 +441,7 @@ impl Campaign {
             drones: planet.drones.total_count(),
             alerts,
             alert_kind,
-            storage_full,
+            storage_full_resource,
         })
     }
 

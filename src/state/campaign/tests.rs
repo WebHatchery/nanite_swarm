@@ -109,7 +109,7 @@ fn the_solar_map_reads_live_telemetry_for_colonized_worlds() {
     assert_eq!(fresh.drones, 0);
     assert_eq!(fresh.alerts, 0);
     assert_eq!(fresh.alert_kind, WorldAlert::Nominal);
-    assert!(!fresh.storage_full);
+    assert_eq!(fresh.storage_full_resource, None);
 
     let mercury = campaign.planet_mut(0).unwrap();
     mercury.config.resources.base_mineral_cap = 200.0;
@@ -138,9 +138,25 @@ fn the_solar_map_reports_a_remote_world_with_full_storage() {
     world.resources.data = world.resource_capacity(crate::engine::ResourceType::Data);
 
     let telemetry = campaign.world_telemetry(0).unwrap();
-    assert!(telemetry.storage_full);
+    assert_eq!(
+        telemetry.storage_full_resource,
+        Some(crate::engine::ResourceType::Data)
+    );
     assert_eq!(telemetry.alerts, 1);
     assert_eq!(telemetry.alert_kind, WorldAlert::Storage);
+}
+
+#[test]
+fn the_solar_map_does_not_alert_for_a_full_idle_mineral_reserve() {
+    let mut campaign = campaign();
+    assert!(campaign.colonize(0));
+    let world = campaign.planet_mut(0).expect("colonized Mercury");
+    world.config.resources.base_mineral_cap = world.resources.minerals;
+
+    let telemetry = campaign.world_telemetry(0).unwrap();
+    assert_eq!(telemetry.storage_full_resource, None);
+    assert_eq!(telemetry.alerts, 0);
+    assert_eq!(telemetry.alert_kind, WorldAlert::Nominal);
 }
 
 #[test]

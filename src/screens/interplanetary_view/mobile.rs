@@ -1,7 +1,7 @@
 //! Touch-first solar-system sections for portrait screens.
 
 use super::shipping_panel::{route_status_color, route_status_for};
-use super::world_dossier::{compact_shipping_status, shipping_status_line};
+use super::world_dossier::{compact_shipping_status, shipping_status_line, storage_resource_label};
 use super::*;
 use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text, truncate_text_to_width, Pointer};
 
@@ -195,7 +195,9 @@ fn draw_mobile_planet_info(
                         telemetry.minerals,
                         telemetry.data,
                         telemetry.biomass,
-                        if telemetry.storage_full { " FULL" } else { "" }
+                        storage_resource_label(telemetry.storage_full_resource)
+                            .map(|label| format!(" FULL {label}"))
+                            .unwrap_or_default()
                     ),
                     text_w,
                     8.0,
@@ -341,7 +343,9 @@ fn draw_mobile_planet_info(
                     telemetry.minerals,
                     telemetry.data,
                     telemetry.biomass,
-                    if telemetry.storage_full { " FULL" } else { "" },
+                    storage_resource_label(telemetry.storage_full_resource)
+                        .map(|label| format!(" FULL {label}"))
+                        .unwrap_or_default(),
                     telemetry.power_balance
                 ),
                 text_w,

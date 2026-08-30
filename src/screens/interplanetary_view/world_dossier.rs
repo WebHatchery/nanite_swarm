@@ -1,5 +1,6 @@
 //! World dossier details shared by the desktop map and portrait map.
 
+use crate::engine::ResourceType;
 use crate::state::{cargo_name, ExportOrder, WorldAlert, WorldTelemetry};
 use crate::ui::Colors;
 use macroquad::prelude::*;
@@ -40,7 +41,21 @@ pub(super) fn compact_shipping_status(target: &str, status: &str) -> String {
     format!("Route: {target} {status}")
 }
 
+pub(super) fn storage_resource_label(resource: Option<ResourceType>) -> Option<&'static str> {
+    match resource {
+        Some(ResourceType::Minerals) => Some("ORE"),
+        Some(ResourceType::Data) => Some("DATA"),
+        Some(ResourceType::Biomass) => Some("BIO"),
+        Some(ResourceType::Alloy) => Some("ALLOY"),
+        Some(ResourceType::Components) => Some("PARTS"),
+        Some(ResourceType::Energy) | None => None,
+    }
+}
+
 pub(super) fn draw_world_telemetry(telemetry: &WorldTelemetry, x: f32, y: f32) {
+    let storage_suffix = storage_resource_label(telemetry.storage_full_resource)
+        .map(|label| format!("  FULL {label}"))
+        .unwrap_or_default();
     draw_ui_text(
         &format!(
             "Live: O +{:.1}/s  A +{:.1}/s  Parts +{:.1}/s",
@@ -69,7 +84,7 @@ pub(super) fn draw_world_telemetry(telemetry: &WorldTelemetry, x: f32, y: f32) {
             telemetry.biomass,
             telemetry.alloy,
             telemetry.components,
-            if telemetry.storage_full { "  FULL" } else { "" },
+            storage_suffix,
         ),
         x,
         world_telemetry_row_y(y, 2),
