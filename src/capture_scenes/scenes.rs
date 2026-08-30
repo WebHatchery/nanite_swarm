@@ -317,12 +317,13 @@ impl Game {
                     planet.step(state::TICK_SECONDS, false);
                 }
             }
-            "seedship" | "mobile_seedship" => {
+            "seedship" | "desktop_seedship_short" | "mobile_seedship" => {
                 self.phase = GamePhase::SeedShip;
                 self.seed_logistics_scene();
                 self.campaign.current_mut().resources.alloy = 80.0;
                 // Mid-build, with the swarm diverting production into the yard.
                 let planet = self.campaign.current_mut();
+                planet.notifications.clear();
                 planet.config.resources.base_mineral_cap = 100_000.0;
                 planet.resources.minerals = 400.0;
                 planet.resources.data = 120.0;
@@ -330,6 +331,10 @@ impl Game {
                 for _ in 0..20 {
                     planet.update_seed_ship(1.0);
                 }
+                // Settle one-time fixture milestones before the first captured
+                // frame so achievement and Core toasts do not cover the yard.
+                planet.step(0.0, false);
+                planet.notifications.clear();
                 if scene == "mobile_seedship" {
                     planet.seed_ship_scroll.set_offset(90.0);
                 }

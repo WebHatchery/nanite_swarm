@@ -60,6 +60,9 @@ pub fn render_seed_ship_view(
     if screen_w < 600.0 {
         return mobile::draw(state, seed_ship_scroll, pulse, screen_h, action);
     }
+    if screen_h < 600.0 {
+        return mobile::draw_compact_desktop(state, seed_ship_scroll, pulse, screen_h, action);
+    }
 
     let panel_w = (screen_w * 0.56).clamp(420.0, 720.0);
     let panel_x = (screen_w - panel_w) * 0.5;

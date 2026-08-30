@@ -137,8 +137,10 @@ diversion control visible, and opens the neural network directly when a stage
   1000 units; surplus routes will not drain a world down to that floor. The
   setting follows remote standing orders as well as the local route.
   The title and Settings screens also switch to single-column phone layouts so
-the command stack, display toggles, audio controls, and pause-key control
-remain on-screen.
+  the command stack, display toggles, audio controls, and pause-key control
+  remain on-screen.
+  At short desktop heights, the Seed Ship yard scrolls its stages while keeping
+  RESEARCH and DIVERT/HALT controls visible above the footer.
 The Audio tab includes a visible Test signal control for checking the current
 volume mix without entering a campaign.
 Deleting a save slot requires a second tap on its explicitly labelled
