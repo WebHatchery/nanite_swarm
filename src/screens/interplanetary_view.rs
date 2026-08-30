@@ -379,8 +379,8 @@ fn draw_planet_list(
 ) -> (Option<usize>, InterplanetaryAction) {
     draw_panel(x, y, w, h);
     draw_ui_text("Planets", x + 12.0, y + 28.0, 16.0, Colors::PRIMARY);
-    draw_ui_text("health", x + w - 104.0, y + 28.0, 9.0, Colors::TEXT_DIM);
-    draw_ui_text("M", x + w - 28.0, y + 28.0, 10.0, Colors::TEXT_DIM);
+    draw_ui_text("alerts", x + w - 104.0, y + 28.0, 9.0, Colors::TEXT_DIM);
+    draw_ui_text("MIN", x + w - 40.0, y + 28.0, 9.0, Colors::TEXT_DIM);
 
     let mut focused = None;
     let mut action = InterplanetaryAction::None;
