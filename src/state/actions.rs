@@ -561,7 +561,7 @@ impl PlanetState {
 
         self.drone_queues.clear();
         self.route_reservations.clear();
-        self.select_building(building_type);
+        self.cancel_interaction_modes();
         self.grid.reveal_around(destination, 3);
         self.refresh_power_grid();
         self.network_revision = self.network_revision.wrapping_add(1);

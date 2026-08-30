@@ -175,10 +175,13 @@ fn relocating_a_drill_keeps_its_cargo_and_drone_crew_without_a_rebuild_cost() {
     state.select_building(BuildingType::Drill);
     assert!(state.try_place_building(source));
     state.output_buffers.insert((source.x, source.y), 17.5);
+    state.selected_tile = Some(source);
     let minerals = state.resources.minerals;
     let energy = state.resources.energy;
 
     assert!(state.relocate_building(source, destination));
+    assert_eq!(state.selected_building, None);
+    assert_eq!(state.selected_tile, None);
     assert!(state.grid.get(source).unwrap().building.is_none());
     assert_eq!(
         state
