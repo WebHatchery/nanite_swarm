@@ -118,6 +118,7 @@ pub(super) fn draw(
     } else {
         "SYSTEM NOMINAL"
     };
+    let mut clock = ClockAction::None;
     draw_ui_text(
         alert_text,
         106.0,
@@ -125,6 +126,15 @@ pub(super) fn draw(
         11.0,
         if alert_count > 0 { error } else { success },
     );
+    if let Some(flow_label) = alert_flow_label(alert_count, state.flow_overlay) {
+        if draw_hud_button(
+            theme,
+            Rect::new(10.0 + alert_w - 62.0, bottom_y + 10.0, 54.0, 22.0),
+            flow_label,
+        ) {
+            clock = ClockAction::ToggleFlow;
+        }
+    }
 
     let controls_x = 10.0 + alert_w + bottom_gap;
     let status_x = screen_w - status_w - 10.0;
@@ -184,7 +194,6 @@ pub(super) fn draw(
             );
         }
     }
-    let mut clock = ClockAction::None;
     let next_event = state.next_interesting_event();
     let next_label = next_event
         .map(|event| format!("{} {:.0}s", next_event_code(event.label), event.seconds))
@@ -427,6 +436,10 @@ pub(super) fn draw(
     clock
 }
 
+fn alert_flow_label(alert_count: i32, flow_overlay: bool) -> Option<&'static str> {
+    (alert_count > 0).then_some(if flow_overlay { "FLOW ON" } else { "FLOW" })
+}
+
 /// Ore banked at the Core per second, across the whole session.
 ///
 /// This was a sine wave for a long time: an automation game with a decorative
@@ -553,3 +566,6 @@ fn draw_graph_series(state: &PlanetState, area: Rect, peak: f32, theme: &UiTheme
         line,
     );
 }
+
+#[cfg(test)]
+mod tests;
