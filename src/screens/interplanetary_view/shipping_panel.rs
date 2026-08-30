@@ -222,7 +222,23 @@ pub(super) fn draw(
 
     // A route to a world with nothing to catch a pod is not an error, but the
     // pods will circle it until one gets built, so say so where it is set.
+    let mut route_note_y = offset_y + 264.0;
     if let Some(order) = edited_order {
+        if let Some((reserve_text, held)) = source_reserve_text(view, view.editing_world, order) {
+            draw_scrolled_text(
+                &reserve_text,
+                x + 12.0,
+                route_note_y,
+                10.0,
+                if held {
+                    Colors::WARNING
+                } else {
+                    Colors::SUCCESS
+                },
+                content_view,
+            );
+            route_note_y += 16.0;
+        }
         let pads_online = view.pads.get(order.target).copied().unwrap_or(0);
         let pads_built = view.pads_built.get(order.target).copied().unwrap_or(0);
         if pads_online == 0 {
@@ -233,7 +249,7 @@ pub(super) fn draw(
                     view.data.planet(order.target).name.as_str(),
                 ),
                 x + 12.0,
-                offset_y + 264.0,
+                route_note_y,
                 10.0,
                 if pads_built > 0 {
                     Colors::WARNING
@@ -242,23 +258,25 @@ pub(super) fn draw(
                 },
                 content_view,
             );
+            route_note_y += 16.0;
         } else if view.pending_pods.get(order.target).copied().unwrap_or(0)
             >= view.pod_caps.get(order.target).copied().unwrap_or(1)
         {
             draw_scrolled_text(
                 "Destination queue full - pods hold in orbit",
                 x + 12.0,
-                offset_y + 264.0,
+                route_note_y,
                 10.0,
                 Colors::WARNING,
                 content_view,
             );
+            route_note_y += 16.0;
         }
         if view.overflow_pods.get(order.target).copied().unwrap_or(0) > 0 {
             draw_scrolled_text(
                 "OVERFLOW: landing capacity is exhausted",
                 x + 12.0,
-                offset_y + 276.0,
+                route_note_y,
                 10.0,
                 Colors::ERROR,
                 content_view,
@@ -305,6 +323,13 @@ pub(super) fn draw(
                 view.pod_caps.get(order.target).copied().unwrap_or(1),
                 view.overflow_pods.get(order.target).copied().unwrap_or(0),
             );
+            let status = if status == "NOMINAL"
+                && source_reserve_text(view, world, order).is_some_and(|(_, held)| held)
+            {
+                "RESERVE HELD"
+            } else {
+                status
+            };
             draw_scrolled_text(
                 &format!(
                     "{} {:.0}/min | {status}",
@@ -400,8 +425,51 @@ pub(super) fn route_status_label(
 fn route_status_color(status: &str) -> Color {
     match status {
         "NOMINAL" => Colors::SUCCESS,
-        "DRIVER OFFLINE" | "PAD OFFLINE" | "HOLDING" => Colors::WARNING,
+        "DRIVER OFFLINE" | "PAD OFFLINE" | "HOLDING" | "RESERVE HELD" => Colors::WARNING,
         _ => Colors::ERROR,
+    }
+}
+
+/// Read the central stockpile for the cargo a standing order is protecting.
+/// Refined goods live in remote telemetry; minerals have the older stockpile
+/// slice for the map list, so the panel can explain every accepted cargo type.
+fn source_stockpile(view: &MapView, world: usize, cargo: ResourceType) -> Option<f32> {
+    match cargo {
+        ResourceType::Minerals => view.stockpiles.get(world).copied().flatten(),
+        ResourceType::Alloy | ResourceType::Components => view
+            .telemetry
+            .get(world)
+            .copied()
+            .flatten()
+            .map(|telemetry| match cargo {
+                ResourceType::Alloy => telemetry.alloy,
+                ResourceType::Components => telemetry.components,
+                _ => 0.0,
+            }),
+        _ => None,
+    }
+}
+
+fn source_reserve_text(view: &MapView, world: usize, order: ExportOrder) -> Option<(String, bool)> {
+    if !order.surplus_only {
+        return None;
+    }
+    let stockpile = source_stockpile(view, world, order.cargo)?;
+    Some(reserve_status_text(stockpile, order.reserve_source))
+}
+
+pub(super) fn reserve_status_text(stockpile: f32, reserve_source: f32) -> (String, bool) {
+    let reserve = reserve_source.max(0.0);
+    if stockpile <= reserve + 0.001 {
+        (
+            format!("Source reserve held: {:.0}/{:.0}", stockpile, reserve),
+            true,
+        )
+    } else {
+        (
+            format!("Source surplus available: +{:.0}", stockpile - reserve),
+            false,
+        )
     }
 }
 

@@ -1,5 +1,5 @@
 use super::shipping_panel::{
-    route_hit_test, route_segment, route_status_label, shipment_route_label,
+    reserve_status_text, route_hit_test, route_segment, route_status_label, shipment_route_label,
 };
 use super::status::{
     driver_operation_status, landing_pad_operation_status, launch_action, launch_prompt,
@@ -230,6 +230,18 @@ fn remote_route_status_prioritizes_the_next_fixable_blocker() {
     assert_eq!(route_status_label(1, 1, 1, 1, 1, 1, 0), "HOLDING");
     assert_eq!(route_status_label(1, 1, 1, 1, 0, 1, 1), "OVERFLOW");
     assert_eq!(route_status_label(1, 1, 1, 1, 0, 1, 0), "NOMINAL");
+}
+
+#[test]
+fn shipping_reserve_status_explains_when_surplus_is_available() {
+    assert_eq!(
+        reserve_status_text(100.0, 100.0),
+        ("Source reserve held: 100/100".to_string(), true)
+    );
+    assert_eq!(
+        reserve_status_text(145.0, 100.0),
+        ("Source surplus available: +45".to_string(), false)
+    );
 }
 
 #[test]
