@@ -1,5 +1,6 @@
 //! World dossier details shared by the desktop map and portrait map.
 
+use crate::data::GameData;
 use crate::engine::ResourceType;
 use crate::state::{cargo_name, ExportOrder, UpkeepAlertCause, WorldAlert, WorldTelemetry};
 use crate::ui::Colors;
@@ -56,14 +57,24 @@ pub(super) fn maintenance_cause_label(cause: Option<UpkeepAlertCause>) -> Option
     cause.map(UpkeepAlertCause::label)
 }
 
-pub(super) fn core_stage_summary(telemetry: &WorldTelemetry) -> String {
-    format!(
-        "Core {}/{}",
-        telemetry.core_stage, telemetry.core_stage_count
-    )
+pub(super) fn core_stage_summary(data: &GameData, telemetry: &WorldTelemetry) -> String {
+    let next_stage = data
+        .core_stages
+        .get(telemetry.core_stage)
+        .map(|stage| stage.name.split_whitespace().last().unwrap_or(&stage.name));
+    match next_stage {
+        Some(next) => format!(
+            "Core {}/{} > {}",
+            telemetry.core_stage, telemetry.core_stage_count, next
+        ),
+        None => format!(
+            "Core {}/{}",
+            telemetry.core_stage, telemetry.core_stage_count
+        ),
+    }
 }
 
-pub(super) fn draw_world_telemetry(telemetry: &WorldTelemetry, x: f32, y: f32) {
+pub(super) fn draw_world_telemetry(data: &GameData, telemetry: &WorldTelemetry, x: f32, y: f32) {
     let storage_suffix = storage_resource_label(telemetry.storage_full_resource)
         .map(|label| format!("  FULL {label}"))
         .unwrap_or_default();
@@ -125,7 +136,7 @@ pub(super) fn draw_world_telemetry(telemetry: &WorldTelemetry, x: f32, y: f32) {
     draw_ui_text(
         &format!(
             "{}  Grid {:+.1}/s  DR {}  S {}  {}",
-            core_stage_summary(telemetry),
+            core_stage_summary(data, telemetry),
             telemetry.power_balance,
             telemetry.drones,
             telemetry.structures,

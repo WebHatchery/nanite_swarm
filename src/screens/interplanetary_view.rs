@@ -587,7 +587,7 @@ fn draw_planet_info(
 
     let telemetry = view.telemetry.get(index).copied().flatten();
     if let Some(telemetry) = telemetry {
-        draw_world_telemetry(&telemetry, panel_x + 15.0, panel_y + 147.0);
+        draw_world_telemetry(view.data, &telemetry, panel_x + 15.0, panel_y + 147.0);
     }
 
     let info_end = if telemetry.is_some() {

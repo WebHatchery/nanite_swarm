@@ -255,7 +255,7 @@ fn draw_mobile_planet_info(
         } else if let Some(telemetry) = telemetry {
             format!(
                 "{} | M {:.0} D {:.0} B {:.0}",
-                core_stage_summary(&telemetry),
+                core_stage_summary(view.data, &telemetry),
                 telemetry.minerals,
                 telemetry.data,
                 telemetry.biomass
@@ -325,7 +325,7 @@ fn draw_mobile_planet_info(
                 &truncate_text_to_width(
                     &format!(
                         "{} | Stock M {:.0} D {:.0} B {:.0}{}",
-                        core_stage_summary(&telemetry),
+                        core_stage_summary(view.data, &telemetry),
                         telemetry.minerals,
                         telemetry.data,
                         telemetry.biomass,
@@ -453,7 +453,7 @@ fn draw_mobile_planet_info(
     if let Some(telemetry) = telemetry {
         let live = format!(
             "{} | Live O +{:.1}/s  A +{:.1}/s  Parts +{:.1}/s",
-            core_stage_summary(&telemetry),
+            core_stage_summary(view.data, &telemetry),
             telemetry.ore_rate,
             telemetry.alloy_rate,
             telemetry.components_rate

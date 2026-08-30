@@ -199,10 +199,18 @@ fn planet_list_alert_codes_keep_remote_failures_scannable() {
 
 #[test]
 fn remote_dossiers_name_the_worlds_core_stage() {
+    let data = crate::data::test_data();
     assert_eq!(
-        core_stage_summary(&telemetry(0, crate::state::WorldAlert::Nominal)),
-        "Core 1/5"
+        core_stage_summary(
+            data.data(),
+            &telemetry(0, crate::state::WorldAlert::Nominal)
+        ),
+        "Core 1/5 > Foundry"
     );
+
+    let mut finished = telemetry(0, crate::state::WorldAlert::Nominal);
+    finished.core_stage = finished.core_stage_count;
+    assert_eq!(core_stage_summary(data.data(), &finished), "Core 5/5");
 }
 
 #[test]
