@@ -9,7 +9,7 @@ mod fixtures;
 mod research;
 
 #[allow(dead_code)]
-pub const REQUIRED_CAPTURE_SCENES: [&str; 34] = [
+pub const REQUIRED_CAPTURE_SCENES: [&str; 35] = [
     "mainmenu",
     "mobile_mainmenu_narrow",
     "mobile_settings_narrow",
@@ -28,6 +28,7 @@ pub const REQUIRED_CAPTURE_SCENES: [&str; 34] = [
     "mobile_build",
     "mobile_info",
     "mobile_help",
+    "mobile_help_narrow",
     "mobile_narrow",
     "mobile_launch",
     "mobile_arrival",

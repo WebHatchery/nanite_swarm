@@ -73,6 +73,13 @@ fn narrow_mobile_alert_labels_keep_the_recovery_cause_visible() {
 }
 
 #[test]
+fn narrow_mobile_help_lines_get_a_panel_width_budget() {
+    assert_eq!(mobile_help_text_width(240.0), 188.0);
+    assert_eq!(mobile_help_text_width(360.0), 308.0);
+    assert!(mobile_help_text_width(240.0) + 32.0 <= 240.0 - 20.0);
+}
+
+#[test]
 fn mobile_help_stops_above_the_command_bar_on_small_phones() {
     let height = mobile_help_height(480.0, 64.0, 90.0);
 

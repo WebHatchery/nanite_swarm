@@ -23,6 +23,7 @@ fn required_capture_scenes_are_registered() {
             "mobile_build",
             "mobile_info",
             "mobile_help",
+            "mobile_help_narrow",
             "mobile_narrow",
             "mobile_launch",
             "mobile_arrival",

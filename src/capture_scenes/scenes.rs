@@ -100,7 +100,7 @@ impl Game {
                     .find_buildings(engine::BuildingType::Drill)
                     .pop();
             }
-            "mobile_help" => {
+            "mobile_help" | "mobile_help_narrow" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();
                 self.campaign.current_mut().show_help = true;

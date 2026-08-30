@@ -4,7 +4,7 @@ use crate::data::UiTheme;
 use crate::state::{MobilePanel, PlanetState, UpkeepAlertCause};
 use crate::ui::{draw_hud_button, draw_hud_panel};
 use macroquad::prelude::Rect;
-use macroquad_toolkit::ui::draw_ui_text;
+use macroquad_toolkit::ui::{draw_ui_text, truncate_text_to_width};
 
 use super::super::super::metrics::HudMetrics;
 use super::super::PanelColors;
@@ -258,9 +258,11 @@ fn draw_mobile_help(
         "JUMP / RETRY follows the current alert",
         "Top buttons open Research, Ship, Map, Menu",
     ];
+    let text_width = mobile_help_text_width(screen_w);
     for (index, line) in lines.iter().enumerate() {
+        let line = truncate_text_to_width(line, text_width, 11.0);
         draw_ui_text(
-            line,
+            &line,
             x + 16.0,
             y + 54.0 + index as f32 * 24.0,
             11.0,
@@ -268,6 +270,10 @@ fn draw_mobile_help(
         );
     }
     false
+}
+
+fn mobile_help_text_width(screen_w: f32) -> f32 {
+    ((screen_w - 20.0).max(0.0) - 32.0).max(40.0)
 }
 
 fn mobile_help_height(screen_h: f32, bottom_bar_height: f32, top: f32) -> f32 {
