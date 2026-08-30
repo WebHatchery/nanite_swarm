@@ -367,6 +367,16 @@ impl Game {
                 for _ in 0..90 {
                     planet.step(1.0, false);
                 }
+                // Leave one exposed network tile at the alert threshold so
+                // the recovery card names the maintenance cause in the still.
+                let alert_pos = engine::GridPos::new(core.x + 10, core.y);
+                if let Some(building) = planet
+                    .grid
+                    .get_mut(alert_pos)
+                    .and_then(|tile| tile.building.as_mut())
+                {
+                    building.acid_wear = 75.0;
+                }
                 // Leave the shield selected so its coverage is on screen.
                 planet.select_building(engine::BuildingType::ShieldGenerator);
                 planet.selected_tile = Some(shield);

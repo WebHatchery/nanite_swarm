@@ -1,5 +1,6 @@
 use super::{
-    alert_button, has_flow_alert, has_pending_interaction, zoom_button_rects, ClockAction,
+    alert_button, has_flow_alert, has_pending_interaction, upkeep_alert_text, zoom_button_rects,
+    ClockAction,
 };
 use crate::data::GameConfig;
 use crate::state::{GraphMode, PlanetState};
@@ -44,6 +45,60 @@ fn depleted_battery_exposes_the_flow_recovery_surface() {
         alert_button(false, false, true, false, false),
         Some(("FLOW", ClockAction::ToggleFlow))
     );
+}
+
+#[test]
+fn upkeep_alert_names_the_wear_requiring_recovery() {
+    let mut state = PlanetState::new(2, 42, GameConfig::default());
+    let core = state.grid.find_core().expect("generated Core");
+    let threshold = state.resolved_dust_response().efficiency_threshold;
+
+    {
+        let building = state
+            .grid
+            .get_mut(core)
+            .expect("core tile")
+            .building
+            .as_mut()
+            .expect("core building");
+        building.acid_wear = 75.0;
+    }
+    assert_eq!(upkeep_alert_text(&state), "UPKEEP ACID");
+
+    {
+        let building = state
+            .grid
+            .get_mut(core)
+            .expect("core tile")
+            .building
+            .as_mut()
+            .expect("core building");
+        building.acid_wear = 0.0;
+    }
+
+    {
+        let building = state
+            .grid
+            .get_mut(core)
+            .expect("core tile")
+            .building
+            .as_mut()
+            .expect("core building");
+        building.dust = threshold;
+    }
+    assert_eq!(upkeep_alert_text(&state), "UPKEEP DUST");
+
+    {
+        let building = state
+            .grid
+            .get_mut(core)
+            .expect("core tile")
+            .building
+            .as_mut()
+            .expect("core building");
+        building.acid_wear = 75.0;
+    }
+    assert_eq!(upkeep_alert_text(&state), "UPKEEP MIXED");
 }
 
 #[test]

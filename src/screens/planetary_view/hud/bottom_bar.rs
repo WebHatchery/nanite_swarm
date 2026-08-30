@@ -4,7 +4,7 @@ mod graph;
 mod mobile;
 
 use crate::data::UiTheme;
-use crate::state::PlanetState;
+use crate::state::{PlanetState, UpkeepAlertCause};
 use crate::ui::{color_from_rgba, draw_hud_button, draw_hud_panel};
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::draw_ui_text;
@@ -130,7 +130,7 @@ pub(super) fn draw(
     } else if stalled > 0 {
         "ROUTE SEVERED"
     } else if upkeep > 0 {
-        "UPKEEP DEGRADED"
+        upkeep_alert_text(state)
     } else if starved > 0 {
         "INPUT STARVED"
     } else if blocked > 0 {
@@ -537,6 +537,15 @@ fn alert_button(
         }
     } else {
         None
+    }
+}
+
+fn upkeep_alert_text(state: &PlanetState) -> &'static str {
+    match state.upkeep_alert_cause() {
+        Some(UpkeepAlertCause::Dust) => "UPKEEP DUST",
+        Some(UpkeepAlertCause::Acid) => "UPKEEP ACID",
+        Some(UpkeepAlertCause::Mixed) => "UPKEEP MIXED",
+        None => "UPKEEP DEGRADED",
     }
 }
 
