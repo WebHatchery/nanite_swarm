@@ -1,6 +1,6 @@
 //! Player-initiated actions: placing, selling, and harvesting
 
-use crate::engine::{BuildingType, GridPos, TerrainType};
+use crate::engine::{BuildingType, DroneState, GridPos, TerrainType};
 
 use super::game_state::PlacementAnim;
 use super::game_state::PlanetState;
@@ -433,66 +433,123 @@ impl PlanetState {
     }
 
     pub fn relocate_building(&mut self, source: GridPos, destination: GridPos) -> bool {
-        let Some((building_type, overclocked, input_priority, standby)) = self
+        let placed = self.relocate_building_internal(source, destination);
+        if placed {
+            self.undo_history
+                .push(super::game_state::UndoEntry::Relocated(source, destination));
+        }
+        placed
+    }
+
+    fn relocate_building_internal(&mut self, source: GridPos, destination: GridPos) -> bool {
+        let Some(building_type) = self
             .grid
             .get(source)
             .and_then(|tile| tile.building.as_ref())
-            .map(|building| {
-                (
-                    building.building_type,
-                    building.overclocked,
-                    building.input_priority,
-                    building.standby,
-                )
-            })
+            .map(|building| building.building_type)
         else {
             return false;
         };
+        if building_type == BuildingType::Core {
+            return false;
+        }
         if !self.grid.can_place_building(destination, building_type) {
             self.notifications
                 .warning("Relocation destination is invalid");
             return false;
         }
-        if !self.try_sell_building(source) {
+
+        let Some(mut building) = self.grid.remove_building(source) else {
             return false;
+        };
+        building.position = destination;
+        let Some(tile) = self.grid.get_mut(destination) else {
+            if let Some(source_tile) = self.grid.get_mut(source) {
+                source_tile.building = Some(building);
+            }
+            return false;
+        };
+        tile.building = Some(building);
+
+        move_coordinate_entry(
+            &mut self.output_buffers,
+            (source.x, source.y),
+            (destination.x, destination.y),
+        );
+        move_coordinate_entry(
+            &mut self.input_buffers,
+            (source.x, source.y),
+            (destination.x, destination.y),
+        );
+        move_coordinate_entry(
+            &mut self.input_hoppers,
+            (source.x, source.y),
+            (destination.x, destination.y),
+        );
+        move_coordinate_entry(
+            &mut self.pod_loads,
+            (source.x, source.y),
+            (destination.x, destination.y),
+        );
+        move_coordinate_entry(
+            &mut self.pad_cargo,
+            (source.x, source.y),
+            (destination.x, destination.y),
+        );
+
+        for drone in self.drones.drones_mut() {
+            if drone.home != source {
+                continue;
+            }
+            drone.home = destination;
+            match drone.state {
+                DroneState::Idle => {
+                    drone.position = destination;
+                    drone.target = destination;
+                    drone.path.clear();
+                    drone.path_index = 0;
+                    drone.progress = 0.0;
+                }
+                DroneState::MovingToDrill => {
+                    // The old return path ends at the source tile. Let the
+                    // next network pass find a route to the new home.
+                    drone.target = destination;
+                    drone.state = DroneState::Error;
+                    drone.path.clear();
+                    drone.path_index = 0;
+                    drone.progress = 0.0;
+                }
+                DroneState::Error => {
+                    drone.target = destination;
+                    drone.path.clear();
+                    drone.path_index = 0;
+                    drone.progress = 0.0;
+                }
+                DroneState::MovingToCore | DroneState::Delivering => {}
+            }
         }
+
+        self.drone_queues.clear();
+        self.route_reservations.clear();
         self.select_building(building_type);
-        let placed = self.try_place_building(destination);
-        if placed && overclocked {
-            if let Some(building) = self
-                .grid
-                .get_mut(destination)
-                .and_then(|tile| tile.building.as_mut())
-            {
-                building.overclocked = building.supports_overclock();
-            }
-            self.power_balance = self.net_power();
-        }
-        if placed && input_priority {
-            if let Some(building) = self
-                .grid
-                .get_mut(destination)
-                .and_then(|tile| tile.building.as_mut())
-            {
-                building.input_priority = building.supports_overclock();
-            }
-        }
-        if placed && standby {
-            if let Some(building) = self
-                .grid
-                .get_mut(destination)
-                .and_then(|tile| tile.building.as_mut())
-            {
-                building.standby = building.supports_overclock();
-            }
-        }
-        placed
+        self.grid.reveal_around(destination, 3);
+        self.grid.update_power_grid();
+        self.network_revision = self.network_revision.wrapping_add(1);
+        self.power_balance = self.net_power();
+        self.placement_anims.push(PlacementAnim {
+            position: destination,
+            timer: 0.3,
+        });
+        self.spawn_place_burst(destination);
+        self.emit_audio(super::audio::AudioEvent::Placement);
+        true
     }
 
     pub fn undo_last_action(&mut self) -> bool {
         let Some(action) = self.undo_history.pop() else {
             return false;
         };
+        let creates_inverse = !matches!(action, super::game_state::UndoEntry::Relocated(_, _));
         let success = match action {
             super::game_state::UndoEntry::Placed(pos) => self.try_sell_building(pos),
             super::game_state::UndoEntry::Removed(
@@ -534,9 +591,14 @@ impl PlanetState {
                 }
                 restored
             }
+            super::game_state::UndoEntry::Relocated(source, destination) => {
+                self.relocate_building_internal(destination, source)
+            }
         };
-        if success {
+        if success && creates_inverse {
             self.undo_history.pop();
+        }
+        if success {
             self.notifications.info("Last placement action undone");
         }
         success
@@ -597,6 +659,16 @@ impl PlanetState {
             )
         });
         true
+    }
+}
+
+fn move_coordinate_entry<T>(
+    entries: &mut std::collections::HashMap<(i32, i32), T>,
+    source: (i32, i32),
+    destination: (i32, i32),
+) {
+    if let Some(value) = entries.remove(&source) {
+        entries.insert(destination, value);
     }
 }
 

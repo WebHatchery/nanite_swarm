@@ -33,7 +33,8 @@ route or tap individual tiles. Smart Drag also lets you drag from an existing
 building to a destination to extend its conduit route. Drag elsewhere to pan,
 pinch or use the visible zoom
 controls to zoom, and use the bottom command bar for selection, demolition,
-blueprints, relocation, undo, speed, and pause. Tap FOCUS to collapse both
+blueprints, lossless relocation, undo, speed, and pause. RELOCATE moves a
+structure with its staged cargo and drill crew intact. Tap FOCUS to collapse both
 sidebars for route planning, then tap PANELS to restore them. When freight is
 moving, its map key identifies the colour and silhouette of every live cargo.
 The bottom graph records observed ore, alloy, and parts flow; warning triangles

@@ -90,6 +90,7 @@ pub struct BlueprintEntry {
 pub enum UndoEntry {
     Placed(GridPos),
     Removed(BuildingType, GridPos, bool, bool, bool),
+    Relocated(GridPos, GridPos),
 }
 /// Resources held by the player
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
