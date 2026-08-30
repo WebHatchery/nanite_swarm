@@ -126,10 +126,17 @@ pub(super) fn world_alert_code(telemetry: Option<WorldTelemetry>) -> String {
         WorldAlert::Storage => "STORE",
         WorldAlert::Maintenance => "MAINT",
     };
+    let code = if telemetry.alert_kind == WorldAlert::Storage {
+        storage_resource_label(telemetry.storage_full_resource)
+            .map(|label| format!("{code} {label}"))
+            .unwrap_or_else(|| code.to_string())
+    } else {
+        code.to_string()
+    };
     if telemetry.alerts > 1 {
         format!("{} x{}", code, telemetry.alerts)
     } else {
-        code.to_string()
+        code
     }
 }
 

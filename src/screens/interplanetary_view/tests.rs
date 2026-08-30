@@ -155,6 +155,11 @@ fn planet_list_alert_codes_keep_remote_failures_scannable() {
         world_alert_code(Some(telemetry(1, crate::state::WorldAlert::Storage))),
         "STORE"
     );
+    let mut data_storage = telemetry(1, crate::state::WorldAlert::Storage);
+    data_storage.storage_full_resource = Some(crate::engine::ResourceType::Data);
+    assert_eq!(world_alert_code(Some(data_storage)), "STORE DATA");
+    data_storage.alerts = 2;
+    assert_eq!(world_alert_code(Some(data_storage)), "STORE DATA x2");
     assert_eq!(
         storage_resource_label(Some(crate::engine::ResourceType::Data)),
         Some("DATA")

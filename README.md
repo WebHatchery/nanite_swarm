@@ -22,9 +22,9 @@ The swarm is powerful, but every expansion changes the terrain, stresses the gri
   and alert cause from the Solar System dossier before travelling there.
 - The dossier also shows remote Data, biomass, Alloy, and Components stockpiles
   plus their live generation/harvest rates, so a world can be managed without
-  first travelling. Remote storage saturation is marked `STORE` in the world
-  list and named as `FULL ORE`, `FULL DATA`, or another affected pool in the
-  dossier when a live producer has nowhere to put its output.
+  first travelling. Remote storage saturation is marked as `STORE <pool>` in
+  the world list and named as `FULL ORE`, `FULL DATA`, or another affected pool
+  in the dossier when a live producer has nowhere to put its output.
 - The Solar System dossier also previews each world's construction bans and
   infrastructure requirements before the Seed Ship leaves, including the
   authored Geothermal and Fusion power routes for hostile worlds.
