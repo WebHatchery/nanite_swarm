@@ -30,6 +30,7 @@ fn required_capture_scenes_are_registered() {
             "mobile_remote_orders",
             "mobile_interplanetary_rules",
             "mobile_interplanetary_alert",
+            "mobile_upkeep",
             "mobile_shipping_reserve"
         ]
     );

@@ -1,7 +1,7 @@
 //! Portrait command bar: drawer navigation, recovery, and clock controls.
 
 use crate::data::UiTheme;
-use crate::state::{MobilePanel, PlanetState};
+use crate::state::{MobilePanel, PlanetState, UpkeepAlertCause};
 use crate::ui::{draw_hud_button, draw_hud_panel};
 use macroquad::prelude::Rect;
 use macroquad_toolkit::ui::draw_ui_text;
@@ -9,6 +9,18 @@ use macroquad_toolkit::ui::draw_ui_text;
 use super::super::super::metrics::HudMetrics;
 use super::super::PanelColors;
 use super::{alert_button, has_flow_alert, has_pending_interaction, next_event_code, ClockAction};
+
+fn compact_jump_label(state: &PlanetState, other_alert: bool) -> &'static str {
+    if other_alert {
+        return "JUMP";
+    }
+    match state.upkeep_alert_cause() {
+        Some(UpkeepAlertCause::Dust) => "JUMP DUST",
+        Some(UpkeepAlertCause::Acid) => "JUMP ACID",
+        Some(UpkeepAlertCause::Mixed) => "JUMP MIXED",
+        None => "JUMP",
+    }
+}
 
 pub(super) fn draw(
     state: &PlanetState,
@@ -101,10 +113,15 @@ pub(super) fn draw(
         focusable_alert,
     );
     let cancel_available = has_pending_interaction(state) && alert.is_none();
+    let other_alert = stalled > 0 || starved > 0 || blocked > 0 || congested > 0;
     let first_row_label = if cancel_available {
         "CANCEL".to_string()
     } else if let Some((label, _)) = alert {
-        label.to_string()
+        if label == "JUMP" {
+            compact_jump_label(state, other_alert).to_string()
+        } else {
+            label.to_string()
+        }
     } else {
         state
             .next_interesting_event()

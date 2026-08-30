@@ -318,7 +318,7 @@ impl Game {
             }
             "mobile_arrival_notice" => self.stage_arrival_notice_scene(),
             "venus" => self.stage_venus_scene(),
-            "upkeep" => {
+            "upkeep" | "mobile_upkeep" => {
                 self.phase = GamePhase::Playing;
                 self.campaign.colonize(1);
                 self.campaign.travel_to(1);

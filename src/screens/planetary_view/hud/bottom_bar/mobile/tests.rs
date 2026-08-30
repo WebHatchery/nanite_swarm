@@ -1,4 +1,23 @@
-use super::*;
+use super::{compact_jump_label, *};
+use crate::data::GameConfig;
+use crate::state::PlanetState;
+
+#[test]
+fn mobile_jump_names_upkeep_when_it_is_the_active_recovery() {
+    let mut state = PlanetState::new(1, 42, GameConfig::default());
+    let core = state.grid.find_core().expect("generated Core");
+
+    state
+        .grid
+        .get_mut(core)
+        .expect("core tile")
+        .building
+        .as_mut()
+        .expect("core building")
+        .acid_wear = 75.0;
+    assert_eq!(compact_jump_label(&state, false), "JUMP ACID");
+    assert_eq!(compact_jump_label(&state, true), "JUMP");
+}
 
 #[test]
 fn mobile_help_stops_above_the_command_bar_on_small_phones() {
