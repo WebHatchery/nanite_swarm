@@ -389,11 +389,12 @@ impl PlanetState {
                 .warning("Save a blueprint before stamping");
             return 0;
         }
+        self.cancel_interaction_modes();
         let blueprint = self.blueprint.clone();
         let mut placed = 0;
         for entry in blueprint {
             let pos = GridPos::new(anchor.x + entry.offset.0, anchor.y + entry.offset.1);
-            self.select_building(entry.building_type);
+            self.selected_building = Some(entry.building_type);
             if self.try_place_building(pos) {
                 if entry.overclocked {
                     if let Some(building) = self
@@ -425,6 +426,7 @@ impl PlanetState {
                 placed += 1;
             }
         }
+        self.cancel_interaction_modes();
         self.power_balance = self.net_power();
         if placed < self.blueprint.len() {
             self.notifications.warning(format!(
