@@ -42,6 +42,7 @@ pub fn load_from_json(json: &str) -> Result<Campaign, serde_json::Error> {
     let mut campaign = crate::state::migrations::migrate(json)?.campaign;
 
     let now = unix_seconds_now();
+    let mut shipment_elapsed: f32 = 0.0;
     for planet in campaign.planets.iter_mut().flatten() {
         planet
             .achievements
@@ -56,10 +57,19 @@ pub fn load_from_json(json: &str) -> Result<Campaign, serde_json::Error> {
             } else {
                 planet.config.offline.fallback_delta_seconds
             };
+            shipment_elapsed = shipment_elapsed
+                .max(offline_seconds.min(planet.config.offline.max_elapsed_seconds.max(0.0)));
             planet.apply_offline_progress(offline_seconds);
             planet.last_offline_report.tamper_guarded = delta < 0;
         }
         planet.last_saved_unix = now;
+    }
+
+    // A pod already in flight is campaign state, not a foreground-world
+    // cache. Let it cover the elapsed wall-clock interval while the player was
+    // away, then leave it holding if the destination still has no room.
+    if shipment_elapsed > 0.0 {
+        campaign.update_shipments(shipment_elapsed);
     }
 
     // Older saves kept histories beside each world. Fold those into the new

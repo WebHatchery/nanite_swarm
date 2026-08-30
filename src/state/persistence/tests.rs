@@ -1,6 +1,7 @@
 use super::*;
 use crate::data::GameConfig;
 use crate::engine::{BuildingType, GridPos, ResourceType};
+use crate::state::Shipment;
 
 fn campaign() -> Campaign {
     Campaign::new(GameConfig::default(), 7)
@@ -465,6 +466,42 @@ fn load_from_json_applies_offline_progress_for_past_save() {
 
     let loaded = load_from_json(&json).unwrap();
     assert!(loaded.current().last_offline_seconds > 0.0);
+}
+
+#[test]
+fn loading_a_past_save_advances_shipments_already_in_flight() {
+    let mut campaign = campaign();
+    campaign.colonize(1);
+    campaign.current_mut().last_saved_unix = unix_seconds_now() - 30;
+    let origin = campaign.current_index();
+    campaign.current_mut().launched_pods.push(Shipment {
+        from: origin,
+        to: 1,
+        cargo: ResourceType::Minerals,
+        amount: 60.0,
+        remaining: 100.0,
+        transit: 100.0,
+        target_pad: None,
+        overflow: false,
+        priority: 0,
+    });
+
+    let save = SaveGame {
+        version: SAVE_VERSION,
+        campaign: campaign.clone(),
+    };
+    let json = serde_json::to_string(&save).unwrap();
+    let loaded = load_from_json(&json).unwrap();
+
+    assert_eq!(loaded.shipments().len(), 1);
+    assert!(
+        loaded.shipments()[0].remaining < 100.0,
+        "the shipment should move while the campaign is offline"
+    );
+    assert!(
+        loaded.shipments()[0].remaining > 0.0,
+        "without a landing pad, the shipment should remain in orbit"
+    );
 }
 
 #[test]
