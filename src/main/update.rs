@@ -48,11 +48,16 @@ impl Game {
     }
 
     fn update_main_menu(&mut self) {
-        match render_main_menu(
+        let action = render_main_menu(
             self.has_save,
             self.menu_notice.as_deref(),
             slot_name(self.active_slot),
-        ) {
+            self.delete_confirmation_slot == Some(self.active_slot),
+        );
+        if !matches!(action, MenuAction::Delete | MenuAction::None) {
+            self.delete_confirmation_slot = None;
+        }
+        match action {
             MenuAction::NewGame => {
                 self.menu_notice = None;
                 self.session
@@ -74,9 +79,20 @@ impl Game {
                 self.menu_notice = Some(format!("Selected {}", slot_name(self.active_slot)));
             }
             MenuAction::Delete => {
-                if state::delete_save(&save_path(self.active_slot)).is_ok() {
-                    self.has_save = false;
-                    self.menu_notice = Some(format!("Cleared {}", slot_name(self.active_slot)));
+                if self.delete_confirmation_slot == Some(self.active_slot) {
+                    self.delete_confirmation_slot = None;
+                    if state::delete_save(&save_path(self.active_slot)).is_ok() {
+                        self.has_save = false;
+                        self.menu_notice = Some(format!("Cleared {}", slot_name(self.active_slot)));
+                    } else {
+                        self.menu_notice = Some("Could not clear the selected slot.".to_string());
+                    }
+                } else {
+                    self.delete_confirmation_slot = Some(self.active_slot);
+                    self.menu_notice = Some(format!(
+                        "Tap Delete Slot again to permanently clear {}.",
+                        slot_name(self.active_slot)
+                    ));
                 }
             }
             MenuAction::Settings => self.phase = GamePhase::Settings,

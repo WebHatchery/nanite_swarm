@@ -28,6 +28,8 @@ pub struct GameSession {
     /// Which section is open on the portrait solar-system screen.
     pub interplanetary_mobile_panel: InterplanetaryMobilePanel,
     pub active_slot: usize,
+    /// The active slot must be explicitly confirmed before deletion.
+    pub delete_confirmation_slot: Option<usize>,
 }
 
 impl GameSession {
@@ -42,6 +44,7 @@ impl GameSession {
             shipping_scroll: ScrollArea::new(),
             interplanetary_mobile_panel: InterplanetaryMobilePanel::Worlds,
             active_slot: 0,
+            delete_confirmation_slot: None,
         }
     }
 
@@ -62,6 +65,7 @@ impl GameSession {
         self.shipping_edit_world = state::STARTING_PLANET;
         self.shipping_scroll.set_offset(0.0);
         self.interplanetary_mobile_panel = InterplanetaryMobilePanel::Worlds;
+        self.delete_confirmation_slot = None;
     }
 
     pub fn save_campaign(&mut self) -> Result<(), io::Error> {
@@ -80,6 +84,7 @@ impl GameSession {
         self.shipping_edit_world = campaign.current_index();
         self.shipping_scroll.set_offset(0.0);
         self.interplanetary_mobile_panel = InterplanetaryMobilePanel::Worlds;
+        self.delete_confirmation_slot = None;
         self.campaign = campaign;
         self.has_save = true;
         Ok(source)

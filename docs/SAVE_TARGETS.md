@@ -10,3 +10,6 @@ planetary screen, after travel/launch, after every Solar System shipping-order
 edit, and when the campaign ends. The visible slot retains three rotated
 recovery generations. A browser player should use the menu or leave the tab
 after the autosave marker appears rather than rely on the browser closing event.
+Deleting a slot is deliberately a two-tap action: the first tap arms the
+slot-specific confirmation label, and only the second tap removes the primary
+save and its three recovery generations.

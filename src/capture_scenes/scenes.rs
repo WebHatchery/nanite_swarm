@@ -2,7 +2,7 @@
 
 use super::fixtures::seed_capture_launch_rail;
 use crate::state::{Campaign, LaunchSequence};
-use crate::{engine, state, Game, GamePhase};
+use crate::{engine, slot_name, state, Game, GamePhase};
 
 mod interplanetary;
 
@@ -24,7 +24,20 @@ impl Game {
         self.research_state.current_research = None;
         self.research_state.research_progress = 0.0;
         match scene {
-            "mainmenu" => self.phase = GamePhase::MainMenu,
+            "mainmenu" => {
+                self.phase = GamePhase::MainMenu;
+                self.menu_notice = None;
+                self.delete_confirmation_slot = None;
+            }
+            "mainmenu_confirm_delete" | "mobile_mainmenu_confirm_delete" => {
+                self.phase = GamePhase::MainMenu;
+                self.has_save = true;
+                self.delete_confirmation_slot = Some(self.active_slot);
+                self.menu_notice = Some(format!(
+                    "Tap Delete Slot again to permanently clear {}.",
+                    slot_name(self.active_slot)
+                ));
+            }
             "settings" => {
                 self.phase = GamePhase::Settings;
                 self.settings_tab = crate::screens::SettingsTab::Display;

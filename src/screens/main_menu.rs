@@ -24,7 +24,12 @@ pub enum MenuAction {
 }
 
 /// Render the main menu and return any action taken
-pub fn render_main_menu(has_save: bool, notice: Option<&str>, slot: &str) -> MenuAction {
+pub fn render_main_menu(
+    has_save: bool,
+    notice: Option<&str>,
+    slot: &str,
+    delete_armed: bool,
+) -> MenuAction {
     clear_background(Colors::BACKGROUND);
 
     let screen_w = screen_width();
@@ -60,7 +65,15 @@ pub fn render_main_menu(has_save: bool, notice: Option<&str>, slot: &str) -> Men
     );
 
     if screen_w < 600.0 {
-        return mobile::draw(strings, has_save, notice, slot, screen_w, screen_h);
+        return mobile::draw(
+            strings,
+            has_save,
+            notice,
+            slot,
+            delete_armed,
+            screen_w,
+            screen_h,
+        );
     }
 
     // Briefing panel
@@ -134,7 +147,7 @@ pub fn render_main_menu(has_save: bool, notice: Option<&str>, slot: &str) -> Men
     }
     buttons.push((strings.settings.clone(), MenuAction::Settings));
     if has_save {
-        buttons.push((strings.delete_slot.clone(), MenuAction::Delete));
+        buttons.push((delete_slot_label(strings, delete_armed), MenuAction::Delete));
     }
     #[cfg(not(target_arch = "wasm32"))]
     buttons.push((strings.quit.clone(), MenuAction::Quit));
@@ -175,3 +188,14 @@ pub fn render_main_menu(has_save: bool, notice: Option<&str>, slot: &str) -> Men
 
     MenuAction::None
 }
+
+fn delete_slot_label(strings: &crate::data::PlayerStrings, armed: bool) -> String {
+    if armed {
+        format!("{} (tap again)", strings.delete_slot)
+    } else {
+        strings.delete_slot.clone()
+    }
+}
+
+#[cfg(test)]
+mod tests;
