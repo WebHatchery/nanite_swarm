@@ -51,6 +51,12 @@ pub fn toast_width() -> f32 {
     toast_width_for_viewport(screen_width(), screen_height())
 }
 
+/// Menu screens only draw this stack when their content has room to keep
+/// transient cards away from controls and scrollable panels.
+pub fn menu_toasts_fit_viewport(screen_w: f32, screen_h: f32) -> bool {
+    screen_w >= 960.0 && screen_h >= 720.0
+}
+
 fn compact_screen(screen_w: f32, screen_h: f32) -> bool {
     screen_w < 900.0 || screen_h < 650.0
 }

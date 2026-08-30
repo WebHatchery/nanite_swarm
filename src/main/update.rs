@@ -474,10 +474,12 @@ impl Game {
     }
 
     fn draw_toasts(&mut self) {
-        // Portrait campaign screens use nearly every pixel for their touch
+        // Compact campaign screens use nearly every pixel for their touch
         // targets. Keep notifications in the Records log there rather than
         // painting transient cards over buttons and scrollable content.
-        if screen_width() < 600.0 {
+        if screen_width() < 600.0
+            || !screens::menu_toasts_fit_viewport(screen_width(), screen_height())
+        {
             return;
         }
         match self.phase {

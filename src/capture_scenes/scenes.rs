@@ -601,10 +601,6 @@ impl Game {
             "interplanetary" => self.stage_interplanetary_scene(),
             "desktop_interplanetary_short" => {
                 self.stage_interplanetary_scene();
-                // Settle fixture milestones so the compact layout itself is
-                // the thing being inspected in the verification frame.
-                self.campaign.current_mut().step(0.0, false);
-                self.campaign.current_mut().notifications.clear();
             }
             "interplanetary_launch_confirm" => {
                 self.stage_interplanetary_scene();
