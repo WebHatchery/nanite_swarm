@@ -1,4 +1,4 @@
-use super::shipping_panel::{route_segment, route_status_label};
+use super::shipping_panel::{route_segment, route_status_label, shipment_route_label};
 use super::status::{
     driver_operation_status, landing_pad_operation_status, launch_action, launch_prompt,
     mass_driver_status_label, seed_ship_status_label,
@@ -228,4 +228,25 @@ fn remote_route_status_prioritizes_the_next_fixable_blocker() {
     assert_eq!(route_status_label(1, 1, 1, 1, 1, 1, 0), "HOLDING");
     assert_eq!(route_status_label(1, 1, 1, 1, 0, 1, 1), "OVERFLOW");
     assert_eq!(route_status_label(1, 1, 1, 1, 0, 1, 0), "NOMINAL");
+}
+
+#[test]
+fn in_flight_ledger_names_both_ends_of_a_shipment() {
+    let data = crate::data::test_data();
+    let shipment = crate::state::Shipment {
+        from: 2,
+        to: 4,
+        cargo: crate::engine::ResourceType::Components,
+        amount: 60.0,
+        remaining: 10.0,
+        transit: 20.0,
+        target_pad: None,
+        overflow: false,
+        priority: 0,
+    };
+
+    assert_eq!(
+        shipment_route_label(data.data(), &shipment),
+        "60 Components Mars -> Saturn"
+    );
 }

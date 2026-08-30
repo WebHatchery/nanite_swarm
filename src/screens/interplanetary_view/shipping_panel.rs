@@ -427,7 +427,7 @@ fn draw_in_flight_list(
     content_view: Rect,
 ) {
     draw_scrolled_text(
-        "In flight",
+        "In flight | full route",
         x + 12.0,
         y,
         12.0,
@@ -448,13 +448,9 @@ fn draw_in_flight_list(
 
     let mut row_y = y + 20.0;
     for shipment in shipments.iter().take(LISTED_SHIPMENTS) {
+        let label = shipment_route_label(data, shipment);
         draw_scrolled_text(
-            &format!(
-                "{:.0} {} -> {}",
-                shipment.amount,
-                cargo_name(shipment.cargo),
-                data.planet(shipment.to).name
-            ),
+            &truncate_text_to_width(&label, (w - 70.0).max(50.0), 10.0),
             x + 12.0,
             row_y,
             10.0,
@@ -481,6 +477,19 @@ fn draw_in_flight_list(
             content_view,
         );
     }
+}
+
+/// The complete route on a pod label. Once more than one world is exporting,
+/// a destination-only line is not enough to tell which standing order is
+/// currently flying.
+pub(super) fn shipment_route_label(data: &crate::data::GameData, shipment: &Shipment) -> String {
+    format!(
+        "{:.0} {} {} -> {}",
+        shipment.amount,
+        cargo_name(shipment.cargo),
+        data.planet(shipment.from).name,
+        data.planet(shipment.to).name
+    )
 }
 
 /// Every pod that is up, drawn where it actually is between the two worlds.
