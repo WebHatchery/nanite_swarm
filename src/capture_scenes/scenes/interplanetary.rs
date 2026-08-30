@@ -72,4 +72,16 @@ impl Game {
             }
         }
     }
+
+    pub(super) fn stage_interplanetary_remote_orders_scene(&mut self) {
+        self.stage_interplanetary_scene();
+        self.shipping_edit_world = self.campaign.current_index();
+        if let Some(planet) = self.campaign.planet_mut(4) {
+            planet.export = Some(state::ExportOrder {
+                target: 2,
+                cargo: engine::ResourceType::Alloy,
+                ..state::ExportOrder::default()
+            });
+        }
+    }
 }

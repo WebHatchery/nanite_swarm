@@ -75,6 +75,10 @@ The Solar System map recentres and scales its orbit rings on narrow windows;
 the planet list remains a touch-sized travel and launch control.
 Established freight orders stay visible as cargo-coloured lanes with direction
 markers between the worlds, even while every pod is on the ground.
+Remote standing orders show their destination, cargo rate, and the next
+fixable route blocker, so an offline driver or missing landing pad can be found
+without opening each order in turn; the same two-line ledger remains readable
+inside the portrait Shipping drawer.
 Its header distinguishes a Mass Driver that is not built from one that is
 built but offline, and explains when a finished Seed Ship still needs a live
 driver.

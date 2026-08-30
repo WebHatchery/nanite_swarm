@@ -11,6 +11,7 @@ use super::{InterplanetaryAction, MapView};
 
 /// How many in-flight pods the panel lists before it starts counting them.
 const LISTED_SHIPMENTS: usize = 4;
+const REMOTE_ROW_HEIGHT: f32 = 40.0;
 
 /// The standing order for the world under the swarm, and the controls that
 /// change it.
@@ -50,7 +51,7 @@ pub(super) fn draw(
             (world != view.editing_world && order.is_some()).then_some(world)
         })
         .collect();
-    let bar_y = 340.0f32.max(318.0 + remote_worlds.len() as f32 * 26.0 + 8.0);
+    let bar_y = 340.0f32.max(318.0 + remote_worlds.len() as f32 * REMOTE_ROW_HEIGHT + 8.0);
     let listed_flights = view.shipments.len().min(LISTED_SHIPMENTS);
     let extra_flight_line = if view.shipments.len() > LISTED_SHIPMENTS {
         16.0
@@ -275,15 +276,48 @@ pub(super) fn draw(
         );
         let mut row_y = 318.0;
         for world in remote_worlds {
+            let Some(order) = view.orders.get(world).copied().flatten() else {
+                continue;
+            };
             if draw_scrolled_button(
-                Rect::new(x + 12.0, offset_y + row_y - 12.0, button_w, 22.0),
-                view.data.planet(world).name.as_str(),
+                Rect::new(x + 12.0, offset_y + row_y - 14.0, button_w, 24.0),
+                &truncate_text_to_width(
+                    &format!(
+                        "{} -> {}",
+                        view.data.planet(world).name,
+                        view.data.planet(order.target).name
+                    ),
+                    (button_w - 24.0).max(40.0),
+                    10.0,
+                ),
                 content_view,
                 interactive,
             ) {
                 action = InterplanetaryAction::SelectOrderWorld(world);
             }
-            row_y += 26.0;
+            let rate = view.export_rates.get(world).copied().unwrap_or(0.0);
+            let status = route_status_label(
+                view.drivers_built.get(world).copied().unwrap_or(0),
+                view.drivers_online.get(world).copied().unwrap_or(0),
+                view.pads_built.get(order.target).copied().unwrap_or(0),
+                view.pads.get(order.target).copied().unwrap_or(0),
+                view.pending_pods.get(order.target).copied().unwrap_or(0),
+                view.pod_caps.get(order.target).copied().unwrap_or(1),
+                view.overflow_pods.get(order.target).copied().unwrap_or(0),
+            );
+            draw_scrolled_text(
+                &format!(
+                    "{} {:.0}/min | {status}",
+                    cargo_name(order.cargo),
+                    rate.max(0.0)
+                ),
+                x + 20.0,
+                offset_y + row_y + 22.0,
+                9.0,
+                route_status_color(status),
+                content_view,
+            );
+            row_y += REMOTE_ROW_HEIGHT;
         }
     }
     // The pod being loaded, so a route that is set but starved reads as
@@ -332,6 +366,43 @@ pub(super) fn draw(
     scroll.draw_scrollbar(content_view, content_height);
 
     action
+}
+
+/// The most useful reason a remote route is not moving, in the order a player
+/// can fix it. Source infrastructure wins over a destination warning because
+/// a route cannot launch its first pod until its own driver exists and runs.
+pub(super) fn route_status_label(
+    drivers_built: usize,
+    drivers_online: usize,
+    pads_built: usize,
+    pads_online: usize,
+    pending_pods: usize,
+    pod_cap: usize,
+    overflow_pods: usize,
+) -> &'static str {
+    if drivers_built == 0 {
+        "NO DRIVER"
+    } else if drivers_online == 0 {
+        "DRIVER OFFLINE"
+    } else if pads_built == 0 {
+        "NO PAD"
+    } else if pads_online == 0 {
+        "PAD OFFLINE"
+    } else if overflow_pods > 0 {
+        "OVERFLOW"
+    } else if pending_pods >= pod_cap.max(1) {
+        "HOLDING"
+    } else {
+        "NOMINAL"
+    }
+}
+
+fn route_status_color(status: &str) -> Color {
+    match status {
+        "NOMINAL" => Colors::SUCCESS,
+        "DRIVER OFFLINE" | "PAD OFFLINE" | "HOLDING" => Colors::WARNING,
+        _ => Colors::ERROR,
+    }
 }
 
 fn draw_scrolled_button(rect: Rect, text: &str, content_view: Rect, interactive: bool) -> bool {

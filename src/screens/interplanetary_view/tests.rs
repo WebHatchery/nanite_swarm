@@ -1,4 +1,4 @@
-use super::shipping_panel::route_segment;
+use super::shipping_panel::{route_segment, route_status_label};
 use super::status::{
     driver_operation_status, landing_pad_operation_status, launch_action, launch_prompt,
     mass_driver_status_label, seed_ship_status_label,
@@ -217,4 +217,15 @@ fn standing_route_map_skips_self_routes_and_stale_endpoints() {
     );
     assert!(route_segment(0, 0, &positions).is_none());
     assert!(route_segment(0, 2, &positions).is_none());
+}
+
+#[test]
+fn remote_route_status_prioritizes_the_next_fixable_blocker() {
+    assert_eq!(route_status_label(0, 0, 1, 1, 0, 1, 0), "NO DRIVER");
+    assert_eq!(route_status_label(1, 0, 1, 1, 0, 1, 0), "DRIVER OFFLINE");
+    assert_eq!(route_status_label(1, 1, 0, 0, 0, 1, 0), "NO PAD");
+    assert_eq!(route_status_label(1, 1, 1, 0, 0, 1, 0), "PAD OFFLINE");
+    assert_eq!(route_status_label(1, 1, 1, 1, 1, 1, 0), "HOLDING");
+    assert_eq!(route_status_label(1, 1, 1, 1, 0, 1, 1), "OVERFLOW");
+    assert_eq!(route_status_label(1, 1, 1, 1, 0, 1, 0), "NOMINAL");
 }
