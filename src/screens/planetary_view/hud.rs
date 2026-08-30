@@ -149,8 +149,36 @@ pub(super) fn draw_ui_panels(
                 }
             }
         }
+        bottom_bar::ClockAction::ZoomOut => {
+            change_map_zoom(state, theme, metrics, screen_w, screen_h, -1.0);
+        }
+        bottom_bar::ClockAction::ZoomIn => {
+            change_map_zoom(state, theme, metrics, screen_w, screen_h, 1.0);
+        }
         bottom_bar::ClockAction::None => {}
     }
 
     ui_action
+}
+
+fn change_map_zoom(
+    state: &mut PlanetState,
+    theme: &UiTheme,
+    metrics: HudMetrics,
+    screen_w: f32,
+    screen_h: f32,
+    notches: f32,
+) {
+    let viewport = metrics.viewport(screen_w, screen_h);
+    state
+        .camera
+        .zoom_by(notches, (viewport.0 * 0.5, viewport.1 * 0.5));
+    let tile_size = theme.layout.tile_size * state.camera.zoom;
+    state.camera.clamp_to_viewport(
+        viewport,
+        (
+            state.grid.width as f32 * tile_size,
+            state.grid.height as f32 * tile_size,
+        ),
+    );
 }

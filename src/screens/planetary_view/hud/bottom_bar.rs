@@ -24,6 +24,8 @@ pub(super) enum ClockAction {
     ToggleDeck,
     RetrySave,
     FocusAlert,
+    ZoomOut,
+    ZoomIn,
 }
 
 fn next_event_code(label: &str) -> &'static str {
@@ -170,14 +172,14 @@ pub(super) fn draw(
         vec![
             ("SELECT", "Tap grid"),
             ("PAN", "Drag grid"),
-            ("ZOOM", "Pinch grid"),
+            ("ZOOM", "Tap - / +"),
             ("PAUSE", "Tap II"),
         ]
     } else if controls_w < 560.0 {
         vec![
             ("SELECT", "Tap grid"),
             ("PAN", "Drag grid"),
-            ("ZOOM", "Pinch grid"),
+            ("ZOOM", "Tap - / +"),
             ("BUILD", "Tap card"),
             ("PAUSE", "Tap II"),
         ]
@@ -185,7 +187,7 @@ pub(super) fn draw(
         vec![
             ("SELECT", "Tap grid"),
             ("PAN", "Drag grid"),
-            ("ZOOM", "Pinch grid"),
+            ("ZOOM", "Tap - / +"),
             ("BUILD", "Tap card"),
             ("HARVEST", "Tap inspector"),
             ("DEMOLISH", "Tap button"),
@@ -195,9 +197,19 @@ pub(super) fn draw(
     let text_controls_w = (controls_w - 190.0).max(120.0);
     let slot_w = text_controls_w / controls.len() as f32;
     for (index, (label, hint)) in controls.iter().enumerate() {
-        let x = controls_x + index as f32 * slot_w + 12.0;
-        draw_ui_text(label, x, control_y, 10.0, text);
-        draw_ui_text(hint, x, control_y + 18.0, 9.0, dim);
+        let slot_x = controls_x + index as f32 * slot_w;
+        let x = slot_x + 12.0;
+        if *label == "ZOOM" {
+            let label_width = 28.0;
+            let label_x = slot_x + ((slot_w - label_width).max(0.0) * 0.5);
+            draw_ui_text(label, label_x, control_y, 10.0, text);
+            if let Some(action) = draw_zoom_controls(theme, slot_x, control_y + 5.0, slot_w) {
+                clock = action;
+            }
+        } else {
+            draw_ui_text(label, x, control_y, 10.0, text);
+            draw_ui_text(hint, x, control_y + 18.0, 9.0, dim);
+        }
         if index > 0 {
             let divider_x = controls_x + index as f32 * slot_w;
             draw_line(
@@ -413,7 +425,7 @@ pub(super) fn draw(
             text,
         );
         draw_ui_text(
-            "Pinch grid: zoom the map",
+            "Tap - / + or pinch grid: zoom the map",
             help_x + 16.0,
             help_y + 95.0,
             14.0,
@@ -450,6 +462,28 @@ pub(super) fn draw(
     }
 
     clock
+}
+
+fn draw_zoom_controls(theme: &UiTheme, slot_x: f32, y: f32, slot_w: f32) -> Option<ClockAction> {
+    let (zoom_out, zoom_in) = zoom_button_rects(slot_x, y, slot_w);
+    let mut action = None;
+    if draw_hud_button(theme, zoom_out, "-") {
+        action = Some(ClockAction::ZoomOut);
+    }
+    if draw_hud_button(theme, zoom_in, "+") {
+        action = Some(ClockAction::ZoomIn);
+    }
+    action
+}
+
+fn zoom_button_rects(slot_x: f32, y: f32, slot_w: f32) -> (Rect, Rect) {
+    let button_w = ((slot_w - 2.0) * 0.5).clamp(14.0, 24.0);
+    let controls_w = button_w * 2.0 + 2.0;
+    let x = slot_x + ((slot_w - controls_w).max(0.0) * 0.5);
+    (
+        Rect::new(x, y, button_w, 18.0),
+        Rect::new(x + button_w + 2.0, y, button_w, 18.0),
+    )
 }
 
 fn alert_button(
