@@ -26,6 +26,47 @@ fn alert_positions_order_stalled_crews_before_congestion() {
 }
 
 #[test]
+fn alert_positions_add_cut_off_network_tiles_after_the_stalled_crew() {
+    let mut state = state();
+    let core = state.grid.find_core().expect("generated Core");
+    let first_conduit = GridPos::new(core.x + 1, core.y);
+    let cut = GridPos::new(core.x + 2, core.y);
+    let far_conduit = GridPos::new(core.x + 3, core.y);
+    let last_conduit = GridPos::new(core.x + 4, core.y);
+    state.grid.reveal_around(core, 4);
+    state.unlock_building(BuildingType::Conduit);
+
+    for position in [first_conduit, cut, far_conduit, last_conduit] {
+        state.grid.get_mut(position).expect("run tile").terrain = crate::engine::TerrainType::Empty;
+        state.select_building(BuildingType::Conduit);
+        assert!(state.try_place_building(position));
+    }
+    state.grid.remove_building(cut);
+    state.grid.update_power_grid();
+    state.drones.spawn_drone(far_conduit);
+    state.drones.drones_mut()[0].state = DroneState::Error;
+
+    let positions = state.alert_positions();
+    assert_eq!(positions.first(), Some(&far_conduit));
+    assert!(positions.contains(&far_conduit));
+    assert!(positions.contains(&last_conduit));
+}
+
+#[test]
+fn an_unattended_disconnected_build_run_does_not_raise_network_alerts() {
+    let mut state = state();
+    let core = state.grid.find_core().expect("generated Core");
+    let disconnected = GridPos::new(core.x + 2, core.y);
+    state.grid.get_mut(disconnected).expect("run tile").terrain = crate::engine::TerrainType::Empty;
+    state.unlock_building(BuildingType::Conduit);
+    state.select_building(BuildingType::Conduit);
+    assert!(state.try_place_building(disconnected));
+
+    assert!(!state.severed_network().is_empty());
+    assert!(state.alert_positions().is_empty());
+}
+
+#[test]
 fn alert_focus_cycles_and_drops_mutually_exclusive_modes() {
     let mut state = state();
     let core = state.grid.find_core().expect("generated Core");

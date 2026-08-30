@@ -69,6 +69,16 @@ impl PlanetState {
             add(position);
         }
 
+        // A stalled run has a second useful answer besides the stranded
+        // drill: the conduit tiles that are cut off from the Core. Include
+        // them only while a drone is actually stalled, because an unfinished
+        // route is normal during construction and should not raise an alert.
+        if self.stalled_drone_count() > 0 {
+            for position in self.severed_network() {
+                add(position);
+            }
+        }
+
         let capacity = self.config.buildings.conduit_capacity.max(1.0);
         let mut congested: Vec<_> = self
             .traffic
