@@ -180,12 +180,16 @@ impl Game {
                     &tech_id,
                     &self.research_state.unlocked,
                     condition,
+                ) && self.research_state.start_research(
+                    &tech_id,
+                    &self.research_tree,
+                    self.campaign.current().resources.data,
                 ) {
-                    let _ = self.research_state.start_research(
-                        &tech_id,
-                        &self.research_tree,
-                        self.campaign.current().resources.data,
-                    );
+                    // Selection is campaign state even before the first
+                    // Data tick. Persist it immediately so opening the
+                    // menu or closing the tab cannot erase the player's
+                    // chosen research job.
+                    self.sync_research_to_planet();
                 }
             }
             ResearchAction::None => {}

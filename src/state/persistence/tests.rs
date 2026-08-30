@@ -165,6 +165,23 @@ fn json_roundtrip_preserves_grid_and_resources() {
 }
 
 #[test]
+fn parked_research_progress_survives_a_save_roundtrip() {
+    let mut campaign = campaign();
+    campaign
+        .research
+        .parked_progress
+        .insert("adaptive_clocking".to_string(), 42.5);
+
+    let json = save_to_json(&mut campaign).unwrap();
+    let loaded = load_from_json(&json).unwrap();
+
+    assert_eq!(
+        loaded.research.parked_progress.get("adaptive_clocking"),
+        Some(&42.5)
+    );
+}
+
+#[test]
 fn processor_operating_mode_survives_a_save_roundtrip() {
     let mut campaign = campaign();
     let core = campaign.current().grid.find_core().unwrap();
@@ -401,7 +418,7 @@ fn an_unversioned_single_planet_save_still_loads() {
 fn every_supported_save_version_has_a_migration_path() {
     assert_eq!(
         super::super::migrations::SUPPORTED_SAVE_VERSIONS,
-        &[0, 1, 2, 3]
+        &[0, 1, 2, 3, 4]
     );
     let planet = PlanetState::new(2, 3, GameConfig::default());
     let legacy = serde_json::to_string(&planet).unwrap();

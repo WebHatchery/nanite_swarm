@@ -6,6 +6,7 @@
 //! in a state worth photographing; none of it runs in a real session.
 
 mod fixtures;
+mod research;
 
 #[allow(dead_code)]
 pub const REQUIRED_CAPTURE_SCENES: [&str; 17] = [

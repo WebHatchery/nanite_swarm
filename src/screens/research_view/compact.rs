@@ -34,6 +34,26 @@ pub(super) fn active_research_status(
     ))
 }
 
+pub(super) fn parked_research_status(
+    research_state: &ResearchState,
+    node_id: &str,
+    node: &crate::engine::ResearchNode,
+) -> Option<String> {
+    if research_state.current_research.as_deref() == Some(node_id)
+        || research_state.is_unlocked(node_id)
+    {
+        return None;
+    }
+    let progress = research_state.progress_for(node_id);
+    (progress > 0.001).then(|| {
+        format!(
+            "PAUSED {:.0}/{:.0} DATA - TAP TO RESUME",
+            progress.min(node.data_cost),
+            node.data_cost
+        )
+    })
+}
+
 pub(super) fn update_compact_viewport(viewport: &mut ResearchViewport, tree: Rect) {
     let mouse = Vec2::from(mouse_position());
     if is_mouse_button_pressed(MouseButton::Left) && tree.contains(mouse) {
@@ -158,6 +178,16 @@ pub(super) fn draw_compact_node_info(
         draw_ui_text(&status, split_x, detail_y + 2.0, 11.0, Colors::WARNING);
         return;
     }
+    if let Some(status) = parked_research_status(research_state, node_id, node) {
+        draw_ui_text(
+            &truncate_text_to_width(&status, panel_w * 0.46, 11.0),
+            split_x,
+            detail_y + 2.0,
+            11.0,
+            Colors::WARNING,
+        );
+        return;
+    }
     draw_ui_text(
         &format!("Cost {:.0} Data", node.data_cost),
         split_x,
@@ -253,6 +283,11 @@ fn draw_mobile_node_info(
         ("UNLOCKED".to_string(), Colors::SUCCESS)
     } else if let Some(status) = active_research_status(research_state, node_id, node) {
         (status, Colors::WARNING)
+    } else if let Some(status) = parked_research_status(research_state, node_id, node) {
+        (
+            format!("Cost {:.0} Data - {}", node.data_cost, status),
+            Colors::WARNING,
+        )
     } else {
         let status = if node
             .planet_condition

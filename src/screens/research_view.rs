@@ -309,6 +309,7 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
             active_condition,
         );
         let is_current = research_state.current_research.as_ref() == Some(&node.id);
+        let has_parked_progress = !is_current && research_state.progress_for(&node.id) > 0.001;
 
         let target_radius = node_radius.max(22.0);
         let target = Rect::new(
@@ -338,6 +339,8 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
             (Colors::PRIMARY, Colors::PRIMARY)
         } else if is_current {
             (Color::new(0.0, 0.5, 0.7, 1.0), Colors::WARNING)
+        } else if has_parked_progress {
+            (Colors::SURFACE, Colors::WARNING)
         } else if can_research_now {
             (Colors::SURFACE, Colors::SUCCESS)
         } else if can_select {
@@ -368,9 +371,15 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
         draw_circle(node_x, node_y, node_radius, fill_color);
         draw_circle_lines(node_x, node_y, node_radius, 2.0, border_color);
 
-        // Progress ring for current research
-        if is_current && node.data_cost > 0.0 {
-            let pct = (research_state.research_progress / node.data_cost).clamp(0.0, 1.0);
+        // Progress rings show active work and work parked on another node.
+        if (is_current || has_parked_progress) && node.data_cost > 0.0 {
+            let progress = research_state.progress_for(&node.id);
+            let pct = (progress / node.data_cost).clamp(0.0, 1.0);
+            let ring_color = if is_current {
+                Colors::WARNING
+            } else {
+                Colors::PRIMARY_SOFT
+            };
             let segments = 24;
             for i in 0..segments {
                 let t0 = (i as f32 / segments as f32) * std::f32::consts::TAU;
@@ -381,7 +390,7 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
                     let y0 = node_y + t0.sin() * r;
                     let x1 = node_x + t1.cos() * r;
                     let y1 = node_y + t1.sin() * r;
-                    draw_line(x0, y0, x1, y1, 2.0, Colors::WARNING);
+                    draw_line(x0, y0, x1, y1, 2.0, ring_color);
                 }
             }
         }
@@ -494,6 +503,10 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
 
                 if !research_state.is_unlocked(node_id) {
                     if let Some(status) = active_research_status(research_state, node_id, node) {
+                        draw_ui_text(&status, left_panel_x + 12.0, y, 12.0, Colors::WARNING);
+                    } else if let Some(status) =
+                        parked_research_status(research_state, node_id, node)
+                    {
                         draw_ui_text(&status, left_panel_x + 12.0, y, 12.0, Colors::WARNING);
                     } else {
                         let cost_text = format!("Cost {:.0} Data", node.data_cost);

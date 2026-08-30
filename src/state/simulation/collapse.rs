@@ -61,6 +61,9 @@ impl PlanetState {
 
         self.resources.data *= 1.0 - loss;
         self.research.research_progress *= 1.0 - loss;
+        for progress in self.research.parked_progress.values_mut() {
+            *progress *= 1.0 - loss;
+        }
     }
 
     fn record_collapse_source(&mut self) {

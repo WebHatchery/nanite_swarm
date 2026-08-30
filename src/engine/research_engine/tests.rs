@@ -62,6 +62,7 @@ fn start_research_requires_selectable_tech() {
         unlocked: vec![],
         current_research: None,
         research_progress: 5.0,
+        parked_progress: std::collections::HashMap::new(),
     };
 
     assert!(!state.start_research("b", &tree, 100.0)); // prereq missing
@@ -78,6 +79,7 @@ fn complete_research_unlocks_tech_and_clears_progress() {
         unlocked: vec![],
         current_research: Some("a".to_string()),
         research_progress: 10.0,
+        parked_progress: std::collections::HashMap::new(),
     };
 
     let completed = state.complete_research();
@@ -93,6 +95,67 @@ fn complete_research_is_noop_with_nothing_in_progress() {
         unlocked: vec![],
         current_research: None,
         research_progress: 0.0,
+        parked_progress: std::collections::HashMap::new(),
     };
     assert_eq!(state.complete_research(), None);
+}
+
+#[test]
+fn switching_research_parks_and_restores_partial_progress() {
+    let tree = ResearchTree::from_nodes(vec![
+        ResearchNode::new("a", "A", "first", 10.0, vec![], (0.0, 0.0)),
+        ResearchNode::new("b", "B", "second", 20.0, vec![], (1.0, 0.0)),
+    ]);
+    let mut state = ResearchState::default();
+
+    assert!(state.start_research("a", &tree, 0.0));
+    state.research_progress = 4.0;
+    assert!(state.start_research("b", &tree, 0.0));
+    assert_eq!(state.current_research.as_deref(), Some("b"));
+    assert_eq!(state.progress_for("a"), 4.0);
+
+    state.research_progress = 7.0;
+    assert!(state.start_research("a", &tree, 0.0));
+    assert_eq!(state.current_research.as_deref(), Some("a"));
+    assert_eq!(state.research_progress, 4.0);
+    assert_eq!(state.progress_for("b"), 7.0);
+}
+
+#[test]
+fn tapping_the_active_research_node_does_not_reset_progress() {
+    let tree = ResearchTree::from_nodes(vec![ResearchNode::new(
+        "a",
+        "A",
+        "first",
+        10.0,
+        vec![],
+        (0.0, 0.0),
+    )]);
+    let mut state = ResearchState::default();
+    assert!(state.start_research("a", &tree, 0.0));
+    state.research_progress = 6.0;
+
+    assert!(state.start_research("a", &tree, 0.0));
+    assert_eq!(state.research_progress, 6.0);
+}
+
+#[test]
+fn pausing_research_keeps_its_work_available_for_resume() {
+    let tree = ResearchTree::from_nodes(vec![ResearchNode::new(
+        "a",
+        "A",
+        "first",
+        10.0,
+        vec![],
+        (0.0, 0.0),
+    )]);
+    let mut state = ResearchState::default();
+    assert!(state.start_research("a", &tree, 0.0));
+    state.research_progress = 6.0;
+
+    state.pause_research();
+
+    assert!(state.current_research.is_none());
+    assert_eq!(state.research_progress, 0.0);
+    assert_eq!(state.progress_for("a"), 6.0);
 }

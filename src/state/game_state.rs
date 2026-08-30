@@ -12,6 +12,7 @@ use macroquad_toolkit::input::TouchGesture;
 use macroquad_toolkit::notifications::NotificationManager;
 use macroquad_toolkit::ui::ScrollArea;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Real time and world time run at the same rate until the player says
 /// otherwise.
@@ -189,6 +190,9 @@ pub struct ResearchProgress {
     pub unlocked_techs: Vec<String>,
     pub current_research: Option<String>,
     pub research_progress: f32,
+    /// Partial work on nodes not currently selected for research.
+    #[serde(default)]
+    pub parked_progress: HashMap<String, f32>,
 }
 
 impl Default for ResearchProgress {
@@ -197,6 +201,7 @@ impl Default for ResearchProgress {
             unlocked_techs: Vec::new(),
             current_research: None,
             research_progress: 0.0,
+            parked_progress: HashMap::new(),
         }
     }
 }

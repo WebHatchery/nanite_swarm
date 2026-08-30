@@ -10,11 +10,25 @@ impl Game {
             return;
         };
         if self.campaign.current().research_lock_timer > 0.0 {
+            // Collapse mutates the foreground world's persisted progress.
+            // Pull that loss into the runtime mirror before the next research
+            // tick can write the old value back over it.
+            let (current_research, research_progress, parked_progress) = {
+                let planet_research = &self.campaign.current().research;
+                (
+                    planet_research.current_research.clone(),
+                    planet_research.research_progress,
+                    planet_research.parked_progress.clone(),
+                )
+            };
+            self.research_state.current_research = current_research;
+            self.research_state.research_progress = research_progress;
+            self.research_state.parked_progress = parked_progress;
+            self.sync_research_to_planet();
             return;
         }
         let Some(node) = self.research_tree.get_node(&current_id).cloned() else {
-            self.research_state.current_research = None;
-            self.research_state.research_progress = 0.0;
+            self.research_state.pause_research();
             self.sync_research_to_planet();
             return;
         };
@@ -23,8 +37,7 @@ impl Game {
             &self.research_state.unlocked,
             self.campaign.current().active_planet_condition(),
         ) {
-            self.research_state.current_research = None;
-            self.research_state.research_progress = 0.0;
+            self.research_state.pause_research();
             self.campaign
                 .current_mut()
                 .notifications
@@ -80,12 +93,14 @@ impl Game {
         }
         self.research_state.current_research = self.campaign.research.current_research.clone();
         self.research_state.research_progress = self.campaign.research.research_progress;
+        self.research_state.parked_progress = self.campaign.research.parked_progress.clone();
     }
 
     pub(super) fn sync_research_to_planet(&mut self) {
         self.campaign.research.unlocked_techs = self.research_state.unlocked.clone();
         self.campaign.research.current_research = self.research_state.current_research.clone();
         self.campaign.research.research_progress = self.research_state.research_progress;
+        self.campaign.research.parked_progress = self.research_state.parked_progress.clone();
         self.campaign.sync_research();
     }
 

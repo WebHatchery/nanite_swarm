@@ -268,6 +268,10 @@ fn trigger_power_collapse_drops_drone_cargo_and_corrupts_progress() {
     state.drones.drones_mut()[0].carrying = 5.0;
     state.resources.data = 100.0;
     state.research.research_progress = 100.0;
+    state
+        .research
+        .parked_progress
+        .insert("paused_research".to_string(), 100.0);
 
     state.trigger_power_collapse();
 
@@ -284,6 +288,10 @@ fn trigger_power_collapse_drops_drone_cargo_and_corrupts_progress() {
         kept
     );
     assert_eq!(state.research.research_progress, kept);
+    assert_eq!(
+        state.research.parked_progress.get("paused_research"),
+        Some(&kept)
+    );
     assert_eq!(state.power_collapse_cooldown, collapse.cooldown_seconds);
 }
 

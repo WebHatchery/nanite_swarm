@@ -24,6 +24,7 @@ impl Game {
         self.campaign.current_mut().restored_from_backup_generation = 0;
         self.research_state.current_research = None;
         self.research_state.research_progress = 0.0;
+        self.research_state.parked_progress.clear();
         self.launch_confirmation_target = None;
         match scene {
             "mainmenu" => {
@@ -48,32 +49,7 @@ impl Game {
                 self.phase = GamePhase::Settings;
                 self.settings_tab = crate::screens::SettingsTab::Audio;
             }
-            "research" | "mobile_research" => {
-                self.phase = GamePhase::Research;
-                // A node that both moves a stat and opens a building, so the
-                // panel shows everything it can say about one.
-                // Open the path into the new processor branch while keeping
-                // the final capability in progress for the detail panel.
-                self.research_state.unlocked.extend(
-                    [
-                        "power_grid",
-                        "data_processing",
-                        "efficient_drills",
-                        "drone_capacity",
-                        "smelting",
-                        "advanced_research",
-                        "precision_assembly",
-                    ]
-                    .into_iter()
-                    .map(str::to_string),
-                );
-                self.research_state.current_research = Some("adaptive_clocking".to_string());
-                self.sync_research_to_planet();
-                // Meet the standing directive for real, so the toast on this
-                // screen is one the game actually raised.
-                self.campaign.directive.completed = true;
-                self.campaign.update_directive(0.1);
-            }
+            "research" | "mobile_research" => self.stage_research_scene(),
             "mobile_build" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();

@@ -36,6 +36,7 @@ fn active_research_status_reports_progress_instead_of_a_selection_prompt() {
         unlocked: vec![],
         current_research: Some("adaptive_clocking".to_string()),
         research_progress: 42.0,
+        parked_progress: std::collections::HashMap::new(),
     };
 
     assert_eq!(
@@ -43,4 +44,28 @@ fn active_research_status_reports_progress_instead_of_a_selection_prompt() {
         Some("IN PROGRESS 42/115 DATA".to_string())
     );
     assert!(active_research_status(&state, "other", &node).is_none());
+}
+
+#[test]
+fn parked_research_status_invites_the_player_to_resume_work() {
+    let node = crate::engine::ResearchNode::new(
+        "adaptive_clocking",
+        "Adaptive Clocking",
+        "A test node",
+        115.0,
+        vec![],
+        (0.0, 0.0),
+    );
+    let state = crate::engine::ResearchState {
+        unlocked: vec![],
+        current_research: Some("other".to_string()),
+        research_progress: 2.0,
+        parked_progress: std::collections::HashMap::from([("adaptive_clocking".to_string(), 42.0)]),
+    };
+
+    assert_eq!(
+        parked_research_status(&state, "adaptive_clocking", &node),
+        Some("PAUSED 42/115 DATA - TAP TO RESUME".to_string())
+    );
+    assert!(parked_research_status(&state, "other", &node).is_none());
 }

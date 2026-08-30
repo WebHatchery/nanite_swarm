@@ -1,6 +1,7 @@
 //! Neural network and tech progression
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Research node in the neural network
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -148,35 +149,73 @@ impl ResearchTree {
 }
 
 /// Research state for a player
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ResearchState {
     pub unlocked: Vec<String>,
     pub current_research: Option<String>,
     pub research_progress: f32,
+    /// Partial progress parked while another node is active. Research is
+    /// still one job at a time, but changing the job is no longer destructive.
+    #[serde(default)]
+    pub parked_progress: HashMap<String, f32>,
 }
 
 impl ResearchState {
     pub fn from_data(data: &crate::data::GameData) -> Self {
         Self {
             unlocked: data.research.starting_unlocked.clone(),
-            current_research: None,
-            research_progress: 0.0,
+            ..Self::default()
         }
     }
-    /// Start researching a tech
+
+    /// Progress on a node, whether it is active or parked.
+    pub fn progress_for(&self, tech_id: &str) -> f32 {
+        if self.current_research.as_deref() == Some(tech_id) {
+            self.research_progress
+        } else {
+            self.parked_progress.get(tech_id).copied().unwrap_or(0.0)
+        }
+    }
+
+    /// Park the active node without throwing away its partial work.
+    pub fn pause_research(&mut self) {
+        let Some(tech_id) = self.current_research.take() else {
+            self.research_progress = 0.0;
+            return;
+        };
+        if self.research_progress > 0.0 {
+            self.parked_progress.insert(tech_id, self.research_progress);
+        } else {
+            self.parked_progress.remove(&tech_id);
+        }
+        self.research_progress = 0.0;
+    }
+
+    /// Start researching a tech, restoring any work previously parked on it.
     pub fn start_research(
         &mut self,
         tech_id: &str,
         tree: &ResearchTree,
         _available_data: f32,
     ) -> bool {
-        if tree.can_select(tech_id, &self.unlocked) {
-            self.current_research = Some(tech_id.to_string());
-            self.research_progress = 0.0;
-            true
-        } else {
-            false
+        if !tree.can_select(tech_id, &self.unlocked) {
+            return false;
         }
+        // Tapping the glowing active node is inspection, not a reset button.
+        if self.current_research.as_deref() == Some(tech_id) {
+            return true;
+        }
+        if let Some(previous) = self.current_research.take() {
+            if self.research_progress > 0.0 {
+                self.parked_progress
+                    .insert(previous, self.research_progress);
+            } else {
+                self.parked_progress.remove(&previous);
+            }
+        }
+        self.current_research = Some(tech_id.to_string());
+        self.research_progress = self.parked_progress.remove(tech_id).unwrap_or(0.0);
+        true
     }
 
     /// Complete current research
@@ -184,6 +223,7 @@ impl ResearchState {
         if let Some(tech) = self.current_research.take() {
             self.unlocked.push(tech.clone());
             self.research_progress = 0.0;
+            self.parked_progress.remove(&tech);
             Some(tech)
         } else {
             None
