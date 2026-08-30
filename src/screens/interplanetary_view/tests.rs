@@ -128,6 +128,7 @@ fn telemetry(alerts: usize, alert_kind: crate::state::WorldAlert) -> crate::stat
         drones: 0,
         alerts,
         alert_kind,
+        storage_full: false,
     }
 }
 
@@ -149,6 +150,10 @@ fn planet_list_alert_codes_keep_remote_failures_scannable() {
     assert_eq!(
         world_alert_code(Some(telemetry(1, crate::state::WorldAlert::Maintenance))),
         "MAINT"
+    );
+    assert_eq!(
+        world_alert_code(Some(telemetry(1, crate::state::WorldAlert::Storage))),
+        "STORE"
     );
 }
 

@@ -191,8 +191,11 @@ fn draw_mobile_planet_info(
             draw_ui_text(
                 &truncate_text_to_width(
                     &format!(
-                        "Stock M {:.0} D {:.0} B {:.0}",
-                        telemetry.minerals, telemetry.data, telemetry.biomass
+                        "Stock M {:.0} D {:.0} B {:.0}{}",
+                        telemetry.minerals,
+                        telemetry.data,
+                        telemetry.biomass,
+                        if telemetry.storage_full { " FULL" } else { "" }
                     ),
                     text_w,
                     8.0,
@@ -334,8 +337,12 @@ fn draw_mobile_planet_info(
         draw_ui_text(
             &truncate_text_to_width(
                 &format!(
-                    "Stock M {:.0} D {:.0} B {:.0}  Grid {:+.1}/s",
-                    telemetry.minerals, telemetry.data, telemetry.biomass, telemetry.power_balance
+                    "Stock M {:.0} D {:.0} B {:.0}{}  Grid {:+.1}/s",
+                    telemetry.minerals,
+                    telemetry.data,
+                    telemetry.biomass,
+                    if telemetry.storage_full { " FULL" } else { "" },
+                    telemetry.power_balance
                 ),
                 text_w,
                 9.0,

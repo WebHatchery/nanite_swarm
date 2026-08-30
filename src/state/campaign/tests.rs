@@ -109,8 +109,10 @@ fn the_solar_map_reads_live_telemetry_for_colonized_worlds() {
     assert_eq!(fresh.drones, 0);
     assert_eq!(fresh.alerts, 0);
     assert_eq!(fresh.alert_kind, WorldAlert::Nominal);
+    assert!(!fresh.storage_full);
 
     let mercury = campaign.planet_mut(0).unwrap();
+    mercury.config.resources.base_mineral_cap = 200.0;
     mercury.resources.minerals = 123.0;
     mercury.resources.data = 23.0;
     mercury.resources.biomass = 7.0;
@@ -126,6 +128,19 @@ fn the_solar_map_reads_live_telemetry_for_colonized_worlds() {
     assert_eq!(live.power_balance, -1.0);
     assert_eq!(live.alerts, 1);
     assert_eq!(live.alert_kind, WorldAlert::Power);
+}
+
+#[test]
+fn the_solar_map_reports_a_remote_world_with_full_storage() {
+    let mut campaign = campaign();
+    assert!(campaign.colonize(0));
+    let world = campaign.planet_mut(0).expect("colonized Mercury");
+    world.resources.data = world.resource_capacity(crate::engine::ResourceType::Data);
+
+    let telemetry = campaign.world_telemetry(0).unwrap();
+    assert!(telemetry.storage_full);
+    assert_eq!(telemetry.alerts, 1);
+    assert_eq!(telemetry.alert_kind, WorldAlert::Storage);
 }
 
 #[test]

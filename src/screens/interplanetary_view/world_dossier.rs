@@ -63,12 +63,13 @@ pub(super) fn draw_world_telemetry(telemetry: &WorldTelemetry, x: f32, y: f32) {
     );
     draw_ui_text(
         &format!(
-            "Stock M {:.0}  D {:.0}  B {:.0}  A {:.0}  P {:.0}",
+            "Stock M {:.0}  D {:.0}  B {:.0}  A {:.0}  P {:.0}{}",
             telemetry.minerals,
             telemetry.data,
             telemetry.biomass,
             telemetry.alloy,
             telemetry.components,
+            if telemetry.storage_full { "  FULL" } else { "" },
         ),
         x,
         world_telemetry_row_y(y, 2),
@@ -107,6 +108,7 @@ pub(super) fn world_alert_code(telemetry: Option<WorldTelemetry>) -> String {
         WorldAlert::Stalled => "STALL",
         WorldAlert::Starved => "INPUT",
         WorldAlert::Blocked => "FULL",
+        WorldAlert::Storage => "STORE",
         WorldAlert::Maintenance => "MAINT",
     };
     if telemetry.alerts > 1 {

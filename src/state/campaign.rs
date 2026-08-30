@@ -39,6 +39,7 @@ pub enum WorldAlert {
     Stalled,
     Starved,
     Blocked,
+    Storage,
     Maintenance,
 }
 
@@ -52,6 +53,7 @@ impl WorldAlert {
             Self::Stalled => "STALL",
             Self::Starved => "INPUT",
             Self::Blocked => "BLOCKED",
+            Self::Storage => "STORAGE",
             Self::Maintenance => "MAINTENANCE",
         }
     }
@@ -74,6 +76,9 @@ pub struct WorldTelemetry {
     pub drones: usize,
     pub alerts: usize,
     pub alert_kind: WorldAlert,
+    /// Whether a stored resource has reached its live ceiling. Energy is
+    /// excluded because a full battery is normal for a healthy remote world.
+    pub storage_full: bool,
 }
 
 /// Step length for worlds the player is not looking at. Coarse on purpose: a
@@ -377,6 +382,15 @@ impl Campaign {
         let stalled = planet.stalled_drone_count() > 0;
         let starved = !planet.starved_factories().is_empty();
         let blocked = !planet.blocked_factories().is_empty();
+        let storage_full = [
+            crate::engine::ResourceType::Minerals,
+            crate::engine::ResourceType::Data,
+            crate::engine::ResourceType::Biomass,
+            crate::engine::ResourceType::Alloy,
+            crate::engine::ResourceType::Components,
+        ]
+        .into_iter()
+        .any(|resource| planet.resource_is_full(resource));
         let maintenance = !planet.upkeep_alert_positions().is_empty();
         let alerts = usize::from(power_alert)
             + usize::from(hibernating)
@@ -384,6 +398,7 @@ impl Campaign {
             + usize::from(stalled)
             + usize::from(starved)
             + usize::from(blocked)
+            + usize::from(storage_full)
             + usize::from(maintenance);
         let alert_kind = if collapse {
             WorldAlert::Collapse
@@ -397,6 +412,8 @@ impl Campaign {
             WorldAlert::Starved
         } else if blocked {
             WorldAlert::Blocked
+        } else if storage_full {
+            WorldAlert::Storage
         } else if maintenance {
             WorldAlert::Maintenance
         } else {
@@ -418,6 +435,7 @@ impl Campaign {
             drones: planet.drones.total_count(),
             alerts,
             alert_kind,
+            storage_full,
         })
     }
 
