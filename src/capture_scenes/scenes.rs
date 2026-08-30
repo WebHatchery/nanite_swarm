@@ -288,7 +288,7 @@ impl Game {
                     planet.step(state::TICK_SECONDS, false);
                 }
             }
-            "seedship" => {
+            "seedship" | "mobile_seedship" => {
                 self.phase = GamePhase::SeedShip;
                 self.seed_logistics_scene();
                 self.campaign.current_mut().resources.alloy = 80.0;
@@ -300,6 +300,9 @@ impl Game {
                 planet.toggle_seed_ship_commitment();
                 for _ in 0..20 {
                     planet.update_seed_ship(1.0);
+                }
+                if scene == "mobile_seedship" {
+                    planet.seed_ship_scroll.set_offset(90.0);
                 }
             }
             // The two beats of a launch worth looking at in a still frame: the

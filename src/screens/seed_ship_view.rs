@@ -17,6 +17,7 @@ const STAGE_GAP: f32 = 12.0;
 pub enum SeedShipAction {
     None,
     Close,
+    OpenResearch,
     ToggleCommitment,
 }
 
@@ -83,16 +84,44 @@ pub fn render_seed_ship_view(
             Colors::SUCCESS,
         );
     } else {
-        let label = if ship.committed {
+        let blocked = state.seed_ship_blocked_by().is_some();
+        let commitment_label = if ship.committed {
             "HALT DIVERSION"
         } else {
             "DIVERT PRODUCTION TO THE YARD"
         };
-        if draw_button_sized(panel_x, footer_y, panel_w, Dimensions::BUTTON_HEIGHT, label) {
+        if blocked {
+            let gap = 12.0;
+            let button_w = (panel_w - gap) * 0.5;
+            if draw_button_sized(
+                panel_x,
+                footer_y,
+                button_w,
+                Dimensions::BUTTON_HEIGHT,
+                "RESEARCH",
+            ) {
+                action = SeedShipAction::OpenResearch;
+            }
+            if draw_button_sized(
+                panel_x + button_w + gap,
+                footer_y,
+                button_w,
+                Dimensions::BUTTON_HEIGHT,
+                commitment_label,
+            ) {
+                action = SeedShipAction::ToggleCommitment;
+            }
+        } else if draw_button_sized(
+            panel_x,
+            footer_y,
+            panel_w,
+            Dimensions::BUTTON_HEIGHT,
+            commitment_label,
+        ) {
             action = SeedShipAction::ToggleCommitment;
         }
-        let note = if state.seed_ship_blocked_by().is_some() {
-            "The yard is waiting on research before it can go on."
+        let note = if blocked {
+            "Tap RESEARCH to unlock the next stage."
         } else if ship.committed {
             "Harvest is being poured into the hull as it arrives."
         } else {

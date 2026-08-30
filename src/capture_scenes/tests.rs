@@ -8,6 +8,7 @@ fn required_capture_scenes_are_registered() {
             "mainmenu",
             "research",
             "mobile_research",
+            "mobile_seedship",
             "logistics",
             "assembly",
             "focus",

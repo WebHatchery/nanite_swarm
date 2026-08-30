@@ -198,6 +198,7 @@ impl Game {
         };
         match action {
             SeedShipAction::Close => self.phase = GamePhase::Playing,
+            SeedShipAction::OpenResearch => self.open_screen(GamePhase::Research),
             SeedShipAction::ToggleCommitment => {
                 self.campaign.current_mut().toggle_seed_ship_commitment();
             }

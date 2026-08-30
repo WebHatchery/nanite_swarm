@@ -49,20 +49,61 @@ pub(super) fn draw(
             );
         }
     } else {
+        let blocked = state.seed_ship_blocked_by().is_some();
         let label = if state.seed_ship.committed {
             "HALT DIVERSION"
         } else {
             "DIVERT PRODUCTION TO THE YARD"
         };
-        let button = Rect::new(panel_x, footer_y, panel_w, Dimensions::BUTTON_HEIGHT);
-        if is_fully_visible(button, view)
-            && draw_button_sized(button.x, button.y, button.w, button.h, label)
-            && interactive
-        {
-            action = SeedShipAction::ToggleCommitment;
+        if blocked {
+            let gap = 8.0;
+            let button_w = (panel_w - gap) * 0.5;
+            let research_button = Rect::new(panel_x, footer_y, button_w, Dimensions::BUTTON_HEIGHT);
+            if is_fully_visible(research_button, view)
+                && draw_button_sized(
+                    research_button.x,
+                    research_button.y,
+                    research_button.w,
+                    research_button.h,
+                    "RESEARCH",
+                )
+                && interactive
+            {
+                action = SeedShipAction::OpenResearch;
+            }
+            let commitment_button = Rect::new(
+                panel_x + button_w + gap,
+                footer_y,
+                button_w,
+                Dimensions::BUTTON_HEIGHT,
+            );
+            if is_fully_visible(commitment_button, view)
+                && draw_button_sized(
+                    commitment_button.x,
+                    commitment_button.y,
+                    commitment_button.w,
+                    commitment_button.h,
+                    if state.seed_ship.committed {
+                        "HALT"
+                    } else {
+                        "DIVERT"
+                    },
+                )
+                && interactive
+            {
+                action = SeedShipAction::ToggleCommitment;
+            }
+        } else {
+            let button = Rect::new(panel_x, footer_y, panel_w, Dimensions::BUTTON_HEIGHT);
+            if is_fully_visible(button, view)
+                && draw_button_sized(button.x, button.y, button.w, button.h, label)
+                && interactive
+            {
+                action = SeedShipAction::ToggleCommitment;
+            }
         }
-        let note = if state.seed_ship_blocked_by().is_some() {
-            "Waiting on research before the yard can go on."
+        let note = if blocked {
+            "Tap RESEARCH to unlock the next stage."
         } else if state.seed_ship.committed {
             "Harvest is being poured into the hull."
         } else {
