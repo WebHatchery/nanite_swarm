@@ -1,4 +1,7 @@
-use super::{compact_jump_label, mobile_command_aux_rects, *};
+use super::{
+    compact_jump_label, mobile_alert_button_label, mobile_secondary_rects, mobile_top_button_width,
+    *,
+};
 use crate::data::GameConfig;
 use crate::state::PlanetState;
 
@@ -21,7 +24,9 @@ fn mobile_jump_names_upkeep_when_it_is_the_active_recovery() {
 
 #[test]
 fn mobile_command_bar_keeps_core_and_help_touch_targets_inside_portrait_width() {
-    let (core, help) = mobile_command_aux_rects(360.0, 400.0);
+    let rects = mobile_secondary_rects(360.0, 400.0);
+    let core = rects[4];
+    let help = rects[5];
 
     assert_eq!(core.x, 218.0);
     assert_eq!(core.w, 63.0);
@@ -29,6 +34,42 @@ fn mobile_command_bar_keeps_core_and_help_touch_targets_inside_portrait_width() 
     assert_eq!(help.w, 63.0);
     assert_eq!(core.y, help.y);
     assert!(help.x + help.w <= 360.0);
+}
+
+#[test]
+fn narrow_mobile_command_bar_keeps_every_control_inside_the_viewport() {
+    let rects = mobile_secondary_rects(240.0, 400.0);
+
+    assert!(rects.iter().all(|rect| {
+        rect.x >= 0.0 && rect.x + rect.w <= 240.0 && rect.y >= 400.0 && rect.y + rect.h <= 422.0
+    }));
+    assert!(rects
+        .windows(2)
+        .all(|pair| pair[0].x + pair[0].w <= pair[1].x));
+    assert_eq!(mobile_top_button_width(240.0), 52.0);
+    assert!(10.0 + mobile_top_button_width(240.0) * 4.0 + 4.0 * 3.0 <= 240.0);
+}
+
+#[test]
+fn extra_narrow_mobile_command_bar_still_fits_after_scaling() {
+    for screen_w in [180.0, 200.0] {
+        let rects = mobile_secondary_rects(screen_w, 400.0);
+
+        assert!(rects
+            .iter()
+            .all(|rect| rect.x >= 0.0 && rect.x + rect.w <= screen_w));
+        assert!(rects
+            .windows(2)
+            .all(|pair| pair[0].x + pair[0].w <= pair[1].x));
+    }
+}
+
+#[test]
+fn narrow_mobile_alert_labels_keep_the_recovery_cause_visible() {
+    assert_eq!(mobile_alert_button_label("JUMP DUST", 240.0), "DUST");
+    assert_eq!(mobile_alert_button_label("JUMP ACID", 240.0), "ACID");
+    assert_eq!(mobile_alert_button_label("JUMP MIXED", 240.0), "MIXED");
+    assert_eq!(mobile_alert_button_label("JUMP DUST", 360.0), "JUMP DUST");
 }
 
 #[test]

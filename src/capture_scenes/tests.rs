@@ -19,6 +19,7 @@ fn required_capture_scenes_are_registered() {
             "mobile_build",
             "mobile_info",
             "mobile_help",
+            "mobile_narrow",
             "mobile_launch",
             "mobile_arrival",
             "hibernation",

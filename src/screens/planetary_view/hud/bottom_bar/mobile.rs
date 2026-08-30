@@ -22,16 +22,73 @@ fn compact_jump_label(state: &PlanetState, other_alert: bool) -> &'static str {
     }
 }
 
-fn mobile_command_aux_rects(screen_w: f32, row_y: f32) -> (Rect, Rect) {
-    let utility_x = 218.0;
-    let utility_w = (screen_w - 228.0).max(48.0);
-    let gap = 6.0;
-    let core_w = ((utility_w - gap) * 0.5).max(24.0);
-    let help_w = (utility_w - core_w - gap).max(24.0);
-    (
-        Rect::new(utility_x, row_y, core_w, 22.0),
-        Rect::new(utility_x + core_w + gap, row_y, help_w, 22.0),
-    )
+fn mobile_top_button_gap(screen_w: f32) -> f32 {
+    if screen_w < 300.0 {
+        4.0
+    } else {
+        6.0
+    }
+}
+
+fn mobile_top_button_width(screen_w: f32) -> f32 {
+    let gap = mobile_top_button_gap(screen_w);
+    ((screen_w - 20.0 - gap * 3.0) / 4.0).max(40.0)
+}
+
+fn mobile_secondary_rects(screen_w: f32, row_y: f32) -> [Rect; 6] {
+    if screen_w >= 300.0 {
+        let utility_x = 218.0;
+        let utility_w = (screen_w - 228.0).max(48.0);
+        let gap = 6.0;
+        let core_w = ((utility_w - gap) * 0.5).max(24.0);
+        let help_w = (utility_w - core_w - gap).max(24.0);
+        return [
+            Rect::new(10.0, row_y, 80.0, 22.0),
+            Rect::new(96.0, row_y, 32.0, 22.0),
+            Rect::new(134.0, row_y, 32.0, 22.0),
+            Rect::new(172.0, row_y, 40.0, 22.0),
+            Rect::new(utility_x, row_y, core_w, 22.0),
+            Rect::new(utility_x + core_w + gap, row_y, help_w, 22.0),
+        ];
+    }
+
+    let gap = 4.0;
+    let available = (screen_w - 20.0).max(0.0);
+    let base_widths = if screen_w >= 220.0 {
+        [52.0, 24.0, 24.0, 30.0, 30.0, 30.0]
+    } else {
+        [32.0, 24.0, 24.0, 26.0, 26.0, 26.0]
+    };
+    let base_sum = base_widths.iter().sum::<f32>();
+    let base_scale = if base_sum + gap * 5.0 > available {
+        ((available - gap * 5.0).max(0.0) / base_sum).clamp(0.0, 1.0)
+    } else {
+        1.0
+    };
+    let base_total = base_sum * base_scale + gap * 5.0;
+    let extra = (available - base_total).max(0.0) / 6.0;
+    let mut x = 10.0;
+    let mut rects = [Rect::new(0.0, row_y, 0.0, 22.0); 6];
+    for (index, base_width) in base_widths.into_iter().enumerate() {
+        let width = base_width * base_scale + extra;
+        rects[index] = Rect::new(x, row_y, width, 22.0);
+        x += width + gap;
+    }
+    rects
+}
+
+fn mobile_alert_button_label(label: &str, screen_w: f32) -> String {
+    if screen_w >= 300.0 {
+        return label.to_string();
+    }
+    match label {
+        "JUMP DUST" => "DUST".to_string(),
+        "JUMP ACID" => "ACID".to_string(),
+        "JUMP MIXED" => "MIXED".to_string(),
+        "SAVE NOW" => "SAVE".to_string(),
+        "FLOW ON" => "FLOW".to_string(),
+        other => other.to_string(),
+    }
 }
 
 pub(super) fn draw(
@@ -49,8 +106,8 @@ pub(super) fn draw(
         None,
     );
 
-    let gap = 6.0;
-    let top_w = ((screen_w - 20.0 - gap * 3.0) / 4.0).max(48.0);
+    let gap = mobile_top_button_gap(screen_w);
+    let top_w = mobile_top_button_width(screen_w);
     let panel = state.mobile_panel;
     let first_label = if panel == MobilePanel::Map {
         "BUILD"
@@ -116,7 +173,6 @@ pub(super) fn draw(
     let focusable_alert = congested > 0 || starved > 0 || blocked > 0 || stalled > 0 || upkeep > 0;
     let flow_alert = has_flow_alert(state);
     let row_y = bottom_y + 36.0;
-    let alert_width = 80.0_f32.min((screen_w - 20.0).max(48.0));
     let alert = alert_button(
         state.save_failed,
         state.restored_from_backup,
@@ -140,11 +196,9 @@ pub(super) fn draw(
             .map(|event| format!("{} {:.0}s", next_event_code(event.label), event.seconds))
             .unwrap_or_else(|| "NEXT".to_string())
     };
-    if draw_hud_button(
-        theme,
-        Rect::new(10.0, row_y, alert_width, 22.0),
-        &first_row_label,
-    ) {
+    let first_row_label = mobile_alert_button_label(&first_row_label, screen_w);
+    let command_rects = mobile_secondary_rects(screen_w, row_y);
+    if draw_hud_button(theme, command_rects[0], &first_row_label) {
         action = if cancel_available {
             ClockAction::CancelModes
         } else {
@@ -153,24 +207,23 @@ pub(super) fn draw(
                 .unwrap_or(ClockAction::NextEvent)
         };
     }
-    if draw_hud_button(theme, Rect::new(96.0, row_y, 32.0, 22.0), "-") {
+    if draw_hud_button(theme, command_rects[1], "-") {
         action = ClockAction::Slower;
     }
-    if draw_hud_button(theme, Rect::new(134.0, row_y, 32.0, 22.0), "+") {
+    if draw_hud_button(theme, command_rects[2], "+") {
         action = ClockAction::Faster;
     }
     if draw_hud_button(
         theme,
-        Rect::new(172.0, row_y, 40.0, 22.0),
+        command_rects[3],
         if state.paused { ">" } else { "II" },
     ) {
         action = ClockAction::TogglePause;
     }
-    let (core_rect, help_rect) = mobile_command_aux_rects(screen_w, row_y);
-    if draw_hud_button(theme, core_rect, "CORE") {
+    if draw_hud_button(theme, command_rects[4], "CORE") {
         action = ClockAction::CenterCore;
     }
-    if draw_hud_button(theme, help_rect, "HELP") {
+    if draw_hud_button(theme, command_rects[5], "HELP") {
         action = ClockAction::ToggleHelp;
     }
 

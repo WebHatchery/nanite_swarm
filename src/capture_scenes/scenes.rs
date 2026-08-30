@@ -92,6 +92,10 @@ impl Game {
                 self.seed_logistics_scene();
                 self.campaign.current_mut().show_help = true;
             }
+            "mobile_narrow" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+            }
             "logistics" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();
