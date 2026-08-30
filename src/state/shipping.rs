@@ -503,13 +503,13 @@ impl Campaign {
     /// simulated, so a pod does not stall while the player reads the map and
     /// does not sprint while they fast-forward past what it cost to load it.
     pub fn update_shipments(&mut self, delta_time: f32) {
-        let shipments = &mut self.shipments;
         for planet in self.planets.iter_mut().flatten() {
-            shipments.append(&mut planet.launched_pods);
+            self.shipments.append(&mut planet.launched_pods);
         }
+        self.refresh_shipment_pad_targets();
 
         if delta_time > 0.0 {
-            for shipment in shipments.iter_mut() {
+            for shipment in &mut self.shipments {
                 shipment.remaining = (shipment.remaining - delta_time).max(0.0);
             }
         }
@@ -584,6 +584,26 @@ impl Campaign {
 
         for index in caught.into_iter().rev() {
             self.shipments.remove(index);
+        }
+    }
+
+    /// Apply a standing order's new pad choice to pods that are already on
+    /// that route. A pod keeps its destination and cargo, but a pad that was
+    /// demolished or powered down must not become a permanent orbiting grave.
+    fn refresh_shipment_pad_targets(&mut self) {
+        let route_pads: Vec<Option<(usize, Option<GridPos>)>> = self
+            .planets
+            .iter()
+            .map(|planet| planet.as_ref().and_then(|planet| planet.export))
+            .map(|order| order.map(|order| (order.target, order.target_pad)))
+            .collect();
+        for shipment in &mut self.shipments {
+            let Some(Some((target, target_pad))) = route_pads.get(shipment.from) else {
+                continue;
+            };
+            if *target == shipment.to {
+                shipment.target_pad = *target_pad;
+            }
         }
     }
 

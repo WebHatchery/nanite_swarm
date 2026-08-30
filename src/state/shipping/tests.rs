@@ -75,6 +75,22 @@ fn pad_on(campaign: &mut Campaign, index: usize) -> GridPos {
     pos
 }
 
+/// A second powered pad at a different tile, for testing route recovery after
+/// the first pad is no longer eligible.
+fn second_pad_on(campaign: &mut Campaign, index: usize) -> GridPos {
+    let planet = campaign.planet_mut(index).expect("colonized world");
+    let core = planet.grid.find_core().unwrap();
+    let pos = GridPos::new(core.x + 1, core.y);
+    planet.grid.get_mut(pos).unwrap().terrain = TerrainType::Empty;
+    planet.grid.reveal_around(core, 3);
+    planet.unlock_building(BuildingType::LandingPad);
+    planet.select_building(BuildingType::LandingPad);
+    assert!(planet.try_place_building(pos), "second pad beside the Core");
+    planet.grid.update_power_grid();
+    assert_eq!(planet.landing_pads_online(), 2);
+    pos
+}
+
 /// What a world's pad is holding.
 fn held_on(campaign: &Campaign, index: usize, pad: GridPos) -> f32 {
     campaign
@@ -406,6 +422,49 @@ fn a_pod_that_finds_the_pad_full_stays_up_until_it_is_cleared() {
         .insert((pad.x, pad.y), 0.0);
     run(&mut campaign, 1.0);
     assert_eq!(campaign.holding_shipments(), 0);
+}
+
+#[test]
+fn cycling_a_recovered_pad_releases_an_in_flight_pod_from_the_old_coordinate() {
+    let mut campaign = two_world_campaign();
+    let old_pad = pad_on(&mut campaign, VENUS);
+    let driver = driver_on_current(&mut campaign);
+    campaign.current_mut().export = Some(ExportOrder {
+        target: VENUS,
+        target_pad: Some(old_pad),
+        ..ExportOrder::default()
+    });
+    campaign
+        .current_mut()
+        .input_buffers
+        .insert((driver.x, driver.y), 100.0);
+
+    let flight = transit_seconds(MARS, VENUS, &campaign.current().config.mass_driver);
+    run(&mut campaign, 25.0);
+    assert_eq!(campaign.shipments().len(), 1);
+
+    let new_pad = second_pad_on(&mut campaign, VENUS);
+    campaign
+        .planet_mut(VENUS)
+        .unwrap()
+        .grid
+        .get_mut(old_pad)
+        .unwrap()
+        .building
+        .as_mut()
+        .unwrap()
+        .standby = true;
+    campaign.planet_mut(VENUS).unwrap().grid.update_power_grid();
+
+    run(&mut campaign, flight);
+    assert_eq!(campaign.holding_shipments(), 1);
+
+    campaign.cycle_export_pad_for(MARS);
+    assert_eq!(campaign.export_order().unwrap().target_pad, None);
+    run(&mut campaign, 1.0);
+
+    assert_eq!(campaign.holding_shipments(), 0);
+    assert!(held_on(&campaign, VENUS, new_pad) > 0.0);
 }
 
 #[test]
