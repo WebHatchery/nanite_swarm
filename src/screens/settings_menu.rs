@@ -18,6 +18,17 @@ pub enum SettingsTab {
     Audio,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct SettingsLayout {
+    panel_w: f32,
+    panel_h: f32,
+    panel_y: f32,
+    row_h: f32,
+    row_gap: f32,
+    section_gap: f32,
+    compact_mobile: bool,
+}
+
 /// Render the settings menu and return any action taken
 pub fn render_settings_menu(
     settings: &mut GameSettings,
@@ -44,20 +55,12 @@ pub fn render_settings_menu(
     }
 
     let mobile = screen_w < 600.0;
-    let panel_w = if mobile {
-        (screen_w - 24.0).max(240.0)
-    } else {
-        320.0
-    };
-    let panel_h = if mobile { 332.0 } else { 400.0 };
-    let panel_y = if mobile { 84.0 } else { screen_h * 0.3 };
-    let display_x = screen_w * 0.5 - panel_w * 0.5;
-    let row_w = panel_w - 32.0;
-    let row_h = 30.0;
-    let row_gap = if mobile { 12.0 } else { 18.0 };
+    let layout = settings_layout(screen_w, screen_h);
+    let display_x = screen_w * 0.5 - layout.panel_w * 0.5;
+    let row_w = layout.panel_w - 32.0;
 
-    draw_panel(display_x, panel_y, panel_w, panel_h);
-    let tab_y = panel_y + 40.0;
+    draw_panel(display_x, layout.panel_y, layout.panel_w, layout.panel_h);
+    let tab_y = layout.panel_y + 40.0;
     let tab_gap = 8.0;
     let tab_w = (row_w - tab_gap) * 0.5;
     if draw_button_sized(display_x + 16.0, tab_y, tab_w, 26.0, "Display") {
@@ -78,27 +81,42 @@ pub fn render_settings_menu(
             SettingsTab::Audio => "Audio",
         },
         display_x + 16.0,
-        panel_y + 28.0,
+        layout.panel_y + 28.0,
         16.0,
         Colors::PRIMARY,
     );
 
     match *selected_tab {
-        SettingsTab::Display => {
-            draw_display_settings(settings, display_x, panel_y, row_w, row_h, row_gap)
-        }
+        SettingsTab::Display => draw_display_settings(
+            settings,
+            display_x,
+            layout.panel_y,
+            row_w,
+            layout.row_h,
+            layout.row_gap,
+            layout.section_gap,
+        ),
         SettingsTab::Audio => {
-            if draw_audio_settings(settings, display_x, panel_y, row_w, row_h, row_gap) {
+            if draw_audio_settings(
+                settings,
+                display_x,
+                layout.panel_y,
+                row_w,
+                layout.row_h,
+                layout.row_gap,
+            ) {
                 return SettingsAction::PreviewAudio;
             }
         }
     }
 
     if mobile {
+        let footer_offset = if layout.compact_mobile { 42.0 } else { 32.0 };
+        let detail_offset = if layout.compact_mobile { 22.0 } else { 16.0 };
         draw_ui_text(
             "Tap Back to return.",
             20.0,
-            screen_h - 32.0,
+            screen_h - footer_offset,
             11.0,
             Colors::TEXT_DIM,
         );
@@ -114,7 +132,7 @@ pub fn render_settings_menu(
                 10.0,
             ),
             20.0,
-            screen_h - 16.0,
+            screen_h - detail_offset,
             10.0,
             Colors::TEXT_DIM,
         );
@@ -141,6 +159,46 @@ pub fn render_settings_menu(
     SettingsAction::None
 }
 
+fn settings_layout(screen_w: f32, screen_h: f32) -> SettingsLayout {
+    let mobile = screen_w < 600.0;
+    let compact_mobile = mobile && screen_h < 440.0;
+    let panel_w = if mobile {
+        (screen_w - 24.0).max(240.0)
+    } else {
+        320.0
+    };
+    let panel_y = if compact_mobile {
+        76.0
+    } else if mobile {
+        84.0
+    } else {
+        screen_h * 0.3
+    };
+    let panel_h = if compact_mobile {
+        (screen_h - panel_y - 16.0).max(280.0)
+    } else if mobile {
+        332.0
+    } else {
+        400.0
+    };
+
+    SettingsLayout {
+        panel_w,
+        panel_h,
+        panel_y,
+        row_h: 30.0,
+        row_gap: if compact_mobile {
+            6.0
+        } else if mobile {
+            12.0
+        } else {
+            18.0
+        },
+        section_gap: if compact_mobile { 18.0 } else { 30.0 },
+        compact_mobile,
+    }
+}
+
 fn draw_display_settings(
     settings: &mut GameSettings,
     display_x: f32,
@@ -148,6 +206,7 @@ fn draw_display_settings(
     row_w: f32,
     row_h: f32,
     row_gap: f32,
+    section_gap: f32,
 ) {
     let content_y = panel_y + 78.0;
     let scale_row = Rect::new(display_x + 16.0, content_y, row_w, row_h);
@@ -183,7 +242,12 @@ fn draw_display_settings(
         Colors::TEXT_DIM,
     );
 
-    let key_row = Rect::new(display_x + 16.0, motion_row.y + row_h + 30.0, row_w, row_h);
+    let key_row = Rect::new(
+        display_x + 16.0,
+        motion_row.y + row_h + section_gap,
+        row_w,
+        row_h,
+    );
     if draw_button_sized(
         key_row.x,
         key_row.y,
@@ -208,7 +272,12 @@ fn draw_display_settings(
             .insert("pause".to_string(), next.to_string());
     }
 
-    let speed_row = Rect::new(display_x + 16.0, key_row.y + row_h + 30.0, row_w, row_h);
+    let speed_row = Rect::new(
+        display_x + 16.0,
+        key_row.y + row_h + section_gap,
+        row_w,
+        row_h,
+    );
     let scales = ["0.5x", "1x", "2x", "4x", "8x MAX"];
     let speed_index = settings.default_speed.clamp(0, 4) as usize;
     if stepper_row(speed_row, "Initial game speed", scales[speed_index]) != 0 {

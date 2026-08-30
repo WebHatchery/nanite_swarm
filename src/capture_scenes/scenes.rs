@@ -64,9 +64,13 @@ impl Game {
                 self.phase = GamePhase::Settings;
                 self.settings_tab = crate::screens::SettingsTab::Display;
             }
-            "settings_audio" | "mobile_settings_audio" => {
+            "settings_audio" | "mobile_settings_audio" | "mobile_settings_audio_narrow" => {
                 self.phase = GamePhase::Settings;
                 self.settings_tab = crate::screens::SettingsTab::Audio;
+            }
+            "mobile_settings_narrow" => {
+                self.phase = GamePhase::Settings;
+                self.settings_tab = crate::screens::SettingsTab::Display;
             }
             "research" | "mobile_research" | "mobile_research_narrow" => {
                 self.stage_research_scene()
