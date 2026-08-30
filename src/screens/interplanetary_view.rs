@@ -33,6 +33,7 @@ const WORLD_TELEMETRY_BOTTOM_GAP: f32 = 6.0;
 const PLANET_INFO_WIDTH: f32 = 300.0;
 const PLANET_INFO_MARGIN: f32 = 16.0;
 const SOLAR_MAP_GAP: f32 = 12.0;
+const MIN_SOLAR_MAP_SCALE: f32 = 0.22;
 
 fn world_telemetry_row_y(y: f32, row: usize) -> f32 {
     y + row as f32 * WORLD_TELEMETRY_LINE_HEIGHT
@@ -156,23 +157,34 @@ pub fn render_interplanetary_view(
         .fold(1.0, f32::max);
     let (center_x, center_y, orbit_scale) =
         solar_map_layout(screen_w, screen_h, header_height, list_x, list_w, max_orbit);
+    let map_compressed = orbit_scale < MIN_SOLAR_MAP_SCALE;
 
-    // Scale the sun with the rings too: a fixed 40px sun swallows the inner
-    // orbits on a narrow window even after the outer rings have been fitted.
-    let sun_radius = (40.0 * orbit_scale).max(16.0);
-    draw_circle(
-        center_x,
-        center_y,
-        sun_radius * 1.25,
-        Color::new(1.0, 0.8, 0.2, 0.2),
-    );
-    draw_circle(
-        center_x,
-        center_y,
-        sun_radius * 1.125,
-        Color::new(1.0, 0.7, 0.1, 0.3),
-    );
-    draw_circle(center_x, center_y, sun_radius, Colors::WARNING);
+    if map_compressed {
+        draw_ui_text(
+            "MAP",
+            center_x - 12.0,
+            center_y + 4.0,
+            9.0,
+            Colors::TEXT_DIM,
+        );
+    } else {
+        // Scale the sun with the rings too: a fixed 40px sun swallows the
+        // inner orbits on a narrow window even after the outer rings fit.
+        let sun_radius = 40.0 * orbit_scale;
+        draw_circle(
+            center_x,
+            center_y,
+            sun_radius * 1.25,
+            Color::new(1.0, 0.8, 0.2, 0.2),
+        );
+        draw_circle(
+            center_x,
+            center_y,
+            sun_radius * 1.125,
+            Color::new(1.0, 0.7, 0.1, 0.3),
+        );
+        draw_circle(center_x, center_y, sun_radius, Colors::WARNING);
+    }
 
     let (list_focus, list_action) =
         draw_planet_list(view, list_x, list_y, list_w, list_h, can_launch, pointer);
@@ -202,116 +214,125 @@ pub fn render_interplanetary_view(
     // Where each world ended up this frame, so a pod can be drawn between two
     // of them rather than between two orbits.
     let mut positions = Vec::with_capacity(planets.len());
-    for (i, planet) in planets.iter().enumerate() {
-        // Draw orbit
-        let orbit_color = if i == current_planet {
-            Color::new(0.0, 0.85, 1.0, 0.3)
-        } else {
-            Colors::SECONDARY
-        };
-        draw_circle_lines(
-            center_x,
-            center_y,
-            planet.orbit_radius * orbit_scale,
-            1.0,
-            orbit_color,
-        );
-
-        // Calculate planet position
-        let angle = (i as f32) * 1.2 + get_time() as f32 * 0.02 * (1.0 / (i as f32 + 1.0));
-        let px = center_x + planet.orbit_radius * orbit_scale * angle.cos();
-        let py = center_y + planet.orbit_radius * orbit_scale * angle.sin();
-        positions.push((px, py));
-
-        let rendered_size = (planet.size * orbit_scale).max(4.0);
-        let target_radius = (rendered_size + 5.0).max(22.0);
-        let target = Rect::new(
-            px - target_radius,
-            py - target_radius,
-            target_radius * 2.0,
-            target_radius * 2.0,
-        );
-        let is_hovered = pointer.hovering_over(target);
-        let focused = is_hovered || pointer.pressing(target) || pointer.released_on(target);
-        if focused {
-            hovered_planet = Some(i);
-        }
-
-        let planet_size = if i == current_planet {
-            rendered_size * 1.3
-        } else {
-            rendered_size
-        };
-        let is_colonized = view.colonized.get(i).copied().unwrap_or(false);
-
-        // Draw colonization glow
-        if is_colonized {
-            draw_circle(
-                px,
-                py,
-                planet_size + (6.0 * orbit_scale).max(3.0),
-                Color::new(0.0, 1.0, 0.5, 0.2),
-            );
-        }
-
-        // Draw planet
-        draw_circle(px, py, planet_size, color_from_rgba(&planet.color));
-
-        // Hover highlight
-        if is_hovered {
+    // There is not enough horizontal room to make an orbit diagram legible in
+    // compressed mode; the planet list and dossier remain fully functional.
+    if !map_compressed {
+        for (i, planet) in planets.iter().enumerate() {
+            // Draw orbit
+            let orbit_color = if i == current_planet {
+                Color::new(0.0, 0.85, 1.0, 0.3)
+            } else {
+                Colors::SECONDARY
+            };
             draw_circle_lines(
-                px,
-                py,
-                planet_size + (4.0 * orbit_scale).max(3.0),
-                2.0,
-                Colors::PRIMARY,
+                center_x,
+                center_y,
+                planet.orbit_radius * orbit_scale,
+                1.0,
+                orbit_color,
+            );
+
+            // Calculate planet position
+            let angle = (i as f32) * 1.2 + get_time() as f32 * 0.02 * (1.0 / (i as f32 + 1.0));
+            let px = center_x + planet.orbit_radius * orbit_scale * angle.cos();
+            let py = center_y + planet.orbit_radius * orbit_scale * angle.sin();
+            positions.push((px, py));
+
+            let rendered_size = (planet.size * orbit_scale).max(4.0);
+            let target_radius = (rendered_size + 5.0).max(22.0);
+            let target = Rect::new(
+                px - target_radius,
+                py - target_radius,
+                target_radius * 2.0,
+                target_radius * 2.0,
+            );
+            let is_hovered = pointer.hovering_over(target);
+            let focused = is_hovered || pointer.pressing(target) || pointer.released_on(target);
+            if focused {
+                hovered_planet = Some(i);
+            }
+
+            let planet_size = if i == current_planet {
+                rendered_size * 1.3
+            } else {
+                rendered_size
+            };
+            let is_colonized = view.colonized.get(i).copied().unwrap_or(false);
+
+            // Draw colonization glow
+            if is_colonized {
+                draw_circle(
+                    px,
+                    py,
+                    planet_size + (6.0 * orbit_scale).max(3.0),
+                    Color::new(0.0, 1.0, 0.5, 0.2),
+                );
+            }
+
+            // Draw planet
+            draw_circle(px, py, planet_size, color_from_rgba(&planet.color));
+
+            // Hover highlight
+            if is_hovered {
+                draw_circle_lines(
+                    px,
+                    py,
+                    planet_size + (4.0 * orbit_scale).max(3.0),
+                    2.0,
+                    Colors::PRIMARY,
+                );
+            }
+
+            // Current planet indicator
+            if i == current_planet {
+                draw_circle_lines(
+                    px,
+                    py,
+                    planet_size + (8.0 * orbit_scale).max(4.0),
+                    2.0,
+                    Colors::SUCCESS,
+                );
+            }
+
+            // Draw name
+            let name_color = if is_colonized {
+                Colors::SUCCESS
+            } else {
+                Colors::TEXT_DIM
+            };
+            draw_ui_text(
+                &planet.name,
+                px - 20.0,
+                py + planet_size + (15.0 * orbit_scale.max(0.75)),
+                12.0,
+                name_color,
             );
         }
-
-        // Current planet indicator
-        if i == current_planet {
-            draw_circle_lines(
-                px,
-                py,
-                planet_size + (8.0 * orbit_scale).max(4.0),
-                2.0,
-                Colors::SUCCESS,
-            );
-        }
-
-        // Draw name
-        let name_color = if is_colonized {
-            Colors::SUCCESS
-        } else {
-            Colors::TEXT_DIM
-        };
-        draw_ui_text(
-            &planet.name,
-            px - 20.0,
-            py + planet_size + (15.0 * orbit_scale.max(0.75)),
-            12.0,
-            name_color,
-        );
     }
 
     shipping_panel::draw_pods(view.shipments, &positions);
 
     // Info panel for hovered planet
     if let Some(index) = hovered_planet {
-        let target = positions[index];
-        let radius = ((planets[index].size * orbit_scale).max(4.0) + 5.0).max(22.0);
-        let activated = pointer.released_on(Rect::new(
-            target.0 - radius,
-            target.1 - radius,
-            radius * 2.0,
-            radius * 2.0,
-        ));
-        if let Some(clicked) =
-            draw_planet_info(view, index, can_launch, screen_w, header_height, activated)
-        {
-            if action == InterplanetaryAction::None {
-                action = clicked;
+        if let Some(target) = positions.get(index).copied() {
+            let radius = ((planets[index].size * orbit_scale).max(4.0) + 5.0).max(22.0);
+            let activated = pointer.released_on(Rect::new(
+                target.0 - radius,
+                target.1 - radius,
+                radius * 2.0,
+                radius * 2.0,
+            ));
+            if let Some(clicked) =
+                draw_planet_info(view, index, can_launch, screen_w, header_height, activated)
+            {
+                if action == InterplanetaryAction::None {
+                    action = clicked;
+                }
             }
+        } else if index < planets.len() {
+            // On a compressed map the list still changes the dossier, but
+            // only the list owns activation for that selected world.
+            draw_planet_info(view, index, can_launch, screen_w, header_height, false);
         }
     }
 

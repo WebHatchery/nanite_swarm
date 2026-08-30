@@ -1,6 +1,6 @@
 use super::{
     solar_map_layout, world_alert_code, world_rule_lines, world_telemetry_height,
-    world_telemetry_row_y,
+    world_telemetry_row_y, MIN_SOLAR_MAP_SCALE,
 };
 
 #[test]
@@ -17,11 +17,13 @@ fn dossier_telemetry_rows_leave_room_for_the_stock_line() {
 fn solar_map_scales_and_recenters_between_panels_on_narrow_windows() {
     let wide = solar_map_layout(1280.0, 720.0, 72.0, 16.0, 220.0, 310.0);
     let narrow = solar_map_layout(800.0, 600.0, 72.0, 16.0, 220.0, 310.0);
+    let compressed = solar_map_layout(640.0, 480.0, 72.0, 16.0, 220.0, 310.0);
 
     assert!(narrow.2 < wide.2);
     assert!(narrow.2 * 310.0 <= 112.0);
     assert!(narrow.0 > 248.0 && narrow.0 < 472.0);
     assert!(narrow.1 > 72.0 && narrow.1 < 570.0);
+    assert!(compressed.2 < MIN_SOLAR_MAP_SCALE);
 }
 
 fn telemetry(alerts: usize, alert_kind: crate::state::WorldAlert) -> crate::state::WorldTelemetry {
