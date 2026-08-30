@@ -93,6 +93,8 @@ Remote standing orders show their destination, cargo rate, and the next
 fixable route blocker, so an offline driver or missing landing pad can be found
 without opening each order in turn; the same two-line ledger remains readable
 inside the portrait Shipping drawer.
+If a route is pinned to one landing pad and that pad is demolished or loses
+power, the route is marked unavailable until the Landing pad control is cycled.
 Its header distinguishes a Mass Driver that is not built from one that is
 built but offline, and explains when a finished Seed Ship still needs a live
 driver.

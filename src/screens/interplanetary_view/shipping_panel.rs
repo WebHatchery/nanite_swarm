@@ -153,8 +153,15 @@ pub(super) fn draw(
         &format!(
             "Landing pad: {}",
             edited_order
-                .and_then(|order| order.target_pad)
-                .map(|_| "specific")
+                .map(|order| {
+                    if order.target_pad.is_some() && !target_pad_available(view, order) {
+                        "unavailable"
+                    } else if order.target_pad.is_some() {
+                        "specific"
+                    } else {
+                        "any"
+                    }
+                })
                 .unwrap_or("any")
         ),
         content_view,
@@ -246,7 +253,19 @@ pub(super) fn draw(
         }
         let pads_online = view.pads.get(order.target).copied().unwrap_or(0);
         let pads_built = view.pads_built.get(order.target).copied().unwrap_or(0);
-        if pads_online == 0 {
+        let target_pad_unavailable = !target_pad_available(view, order);
+        if target_pad_unavailable {
+            draw_scrolled_text(
+                "Selected landing pad unavailable - cycle Landing pad",
+                x + 12.0,
+                route_note_y,
+                10.0,
+                Colors::WARNING,
+                content_view,
+            );
+            route_note_y += 16.0;
+        }
+        if pads_online == 0 && !target_pad_unavailable {
             draw_scrolled_text(
                 &landing_pad_operation_status(
                     pads_built,
@@ -386,6 +405,7 @@ pub(super) fn draw(
 /// The most useful reason a remote route is not moving, in the order a player
 /// can fix it. Source infrastructure wins over a destination warning because
 /// a route cannot launch its first pod until its own driver exists and runs.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn route_status_label(
     drivers_built: usize,
     drivers_online: usize,
@@ -394,6 +414,7 @@ pub(super) fn route_status_label(
     pending_pods: usize,
     pod_cap: usize,
     overflow_pods: usize,
+    target_pad_available: bool,
 ) -> &'static str {
     if drivers_built == 0 {
         "NO DRIVER"
@@ -401,6 +422,8 @@ pub(super) fn route_status_label(
         "DRIVER OFFLINE"
     } else if pads_built == 0 {
         "NO PAD"
+    } else if !target_pad_available {
+        "PAD TARGET UNAVAILABLE"
     } else if pads_online == 0 {
         "PAD OFFLINE"
     } else if overflow_pods > 0 {
@@ -415,7 +438,11 @@ pub(super) fn route_status_label(
 pub(super) fn route_status_color(status: &str) -> Color {
     match status {
         "NOMINAL" => Colors::SUCCESS,
-        "DRIVER OFFLINE" | "PAD OFFLINE" | "HOLDING" | "RESERVE HELD" => Colors::WARNING,
+        "DRIVER OFFLINE"
+        | "PAD OFFLINE"
+        | "PAD TARGET UNAVAILABLE"
+        | "HOLDING"
+        | "RESERVE HELD" => Colors::WARNING,
         _ => Colors::ERROR,
     }
 }
@@ -429,6 +456,7 @@ pub(super) fn route_status_for(view: &MapView, world: usize, order: ExportOrder)
         view.pending_pods.get(order.target).copied().unwrap_or(0),
         view.pod_caps.get(order.target).copied().unwrap_or(1),
         view.overflow_pods.get(order.target).copied().unwrap_or(0),
+        target_pad_available(view, order),
     );
     if status == "NOMINAL" && source_reserve_text(view, world, order).is_some_and(|(_, held)| held)
     {
@@ -440,8 +468,10 @@ pub(super) fn route_status_for(view: &MapView, world: usize, order: ExportOrder)
 
 fn route_note_count(view: &MapView, world: usize, order: ExportOrder) -> usize {
     let mut count = usize::from(source_reserve_text(view, world, order).is_some());
+    let target_pad_unavailable = !target_pad_available(view, order);
+    count += usize::from(target_pad_unavailable);
     let pads_online = view.pads.get(order.target).copied().unwrap_or(0);
-    if pads_online == 0
+    if (!target_pad_unavailable && pads_online == 0)
         || view.pending_pods.get(order.target).copied().unwrap_or(0)
             >= view.pod_caps.get(order.target).copied().unwrap_or(1)
     {
@@ -451,6 +481,14 @@ fn route_note_count(view: &MapView, world: usize, order: ExportOrder) -> usize {
         count += 1;
     }
     count
+}
+
+pub(super) fn target_pad_available(view: &MapView, order: ExportOrder) -> bool {
+    order.target_pad.is_none_or(|target| {
+        view.pad_positions
+            .get(order.target)
+            .is_some_and(|pads| pads.contains(&target))
+    })
 }
 
 pub(super) fn remote_section_shift(route_note_lines: usize) -> f32 {

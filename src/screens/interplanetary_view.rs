@@ -100,6 +100,9 @@ pub struct MapView<'a> {
     pub pads: &'a [usize],
     /// Landing Pads standing on each world, including offline pads.
     pub pads_built: &'a [usize],
+    /// Powered Landing Pad positions, so a pinned route can detect a pad that
+    /// was demolished or lost power even when another pad is still online.
+    pub pad_positions: &'a [Vec<crate::engine::GridPos>],
     /// The fullest live outbound pod on each world, for remote order edits.
     pub pod_fractions: &'a [f32],
     /// Nominal throughput of each world's standing order, in units per minute.

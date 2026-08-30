@@ -1,6 +1,6 @@
 use super::shipping_panel::{
     remote_section_shift, reserve_status_text, route_hit_test, route_segment, route_status_label,
-    shipment_route_label,
+    shipment_route_label, target_pad_available,
 };
 use super::status::{
     driver_operation_status, landing_pad_operation_status, launch_action, launch_prompt,
@@ -237,13 +237,86 @@ fn standing_route_map_skips_self_routes_and_stale_endpoints() {
 
 #[test]
 fn remote_route_status_prioritizes_the_next_fixable_blocker() {
-    assert_eq!(route_status_label(0, 0, 1, 1, 0, 1, 0), "NO DRIVER");
-    assert_eq!(route_status_label(1, 0, 1, 1, 0, 1, 0), "DRIVER OFFLINE");
-    assert_eq!(route_status_label(1, 1, 0, 0, 0, 1, 0), "NO PAD");
-    assert_eq!(route_status_label(1, 1, 1, 0, 0, 1, 0), "PAD OFFLINE");
-    assert_eq!(route_status_label(1, 1, 1, 1, 1, 1, 0), "HOLDING");
-    assert_eq!(route_status_label(1, 1, 1, 1, 0, 1, 1), "OVERFLOW");
-    assert_eq!(route_status_label(1, 1, 1, 1, 0, 1, 0), "NOMINAL");
+    assert_eq!(route_status_label(0, 0, 1, 1, 0, 1, 0, true), "NO DRIVER");
+    assert_eq!(
+        route_status_label(1, 0, 1, 1, 0, 1, 0, true),
+        "DRIVER OFFLINE"
+    );
+    assert_eq!(route_status_label(1, 1, 0, 0, 0, 1, 0, true), "NO PAD");
+    assert_eq!(route_status_label(1, 1, 1, 0, 0, 1, 0, true), "PAD OFFLINE");
+    assert_eq!(route_status_label(1, 1, 1, 1, 1, 1, 0, true), "HOLDING");
+    assert_eq!(route_status_label(1, 1, 1, 1, 0, 1, 1, true), "OVERFLOW");
+    assert_eq!(route_status_label(1, 1, 1, 1, 0, 1, 0, true), "NOMINAL");
+}
+
+#[test]
+fn remote_route_status_names_a_missing_pinned_landing_pad() {
+    assert_eq!(
+        route_status_label(1, 1, 1, 1, 0, 1, 0, false),
+        "PAD TARGET UNAVAILABLE"
+    );
+}
+
+#[test]
+fn pinned_landing_pad_status_uses_the_live_online_pad_positions() {
+    let data = crate::data::test_data();
+    let live_pad = crate::engine::GridPos::new(4, 7);
+    let pad_positions = vec![vec![live_pad]];
+    let view = super::MapView {
+        data: data.data(),
+        current_planet: 0,
+        mass_driver_researched: true,
+        seed_ship_ready: false,
+        colonized: &[],
+        stockpiles: &[],
+        telemetry: &[],
+        current_drivers_online: 0,
+        current_drivers_built: 0,
+        launch_confirmation_target: None,
+        drivers_online: &[],
+        drivers_built: &[],
+        pads: &[],
+        pads_built: &[],
+        pad_positions: &pad_positions,
+        pod_fractions: &[],
+        export_rates: &[],
+        shipments: &[],
+        orders: &[],
+        pending_pods: &[],
+        pod_caps: &[],
+        overflow_pods: &[],
+        editing_world: 0,
+    };
+    let order = crate::state::ExportOrder {
+        target: 0,
+        target_pad: Some(live_pad),
+        ..crate::state::ExportOrder::default()
+    };
+
+    assert!(target_pad_available(&view, order));
+    assert_eq!(
+        route_status_label(1, 1, 1, 1, 0, 1, 0, target_pad_available(&view, order)),
+        "NOMINAL"
+    );
+
+    let missing_order = crate::state::ExportOrder {
+        target_pad: Some(crate::engine::GridPos::new(5, 7)),
+        ..order
+    };
+    assert!(!target_pad_available(&view, missing_order));
+    assert_eq!(
+        route_status_label(
+            1,
+            1,
+            1,
+            1,
+            0,
+            1,
+            0,
+            target_pad_available(&view, missing_order)
+        ),
+        "PAD TARGET UNAVAILABLE"
+    );
 }
 
 #[test]
