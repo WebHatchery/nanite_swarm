@@ -34,6 +34,32 @@ fn try_place_building_fails_when_unaffordable() {
 }
 
 #[test]
+fn a_conduit_route_lays_every_segment_between_two_tiles() {
+    let mut state = state();
+    let core = state.grid.find_core().unwrap();
+    state.grid.reveal_around(core, 8);
+    state.unlock_building(BuildingType::Conduit);
+    state.select_building(BuildingType::Conduit);
+
+    let end = GridPos::new(core.x + 3, core.y);
+    for x in (core.x + 1)..=end.x {
+        state.grid.get_mut(GridPos::new(x, core.y)).unwrap().terrain = TerrainType::Empty;
+    }
+
+    assert!(state.try_place_conduit_path(core, end));
+    for x in (core.x + 1)..=end.x {
+        assert_eq!(
+            state
+                .grid
+                .get(GridPos::new(x, core.y))
+                .and_then(|tile| tile.building.as_ref())
+                .map(|building| building.building_type),
+            Some(BuildingType::Conduit)
+        );
+    }
+}
+
+#[test]
 fn demolish_mode_and_a_build_cursor_cannot_both_be_armed() {
     let mut state = state();
     state.select_building(BuildingType::Drill);

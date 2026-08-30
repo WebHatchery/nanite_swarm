@@ -271,6 +271,28 @@ fn find_conduit_path_avoids_unbuildable_terrain() {
 }
 
 #[test]
+fn find_conduit_path_accepts_existing_buildings_as_endpoints() {
+    let mut grid = Grid::new(7, 1);
+    let core = GridPos::new(0, 0);
+    let drill = GridPos::new(4, 0);
+    grid.reveal_around(core, 7);
+    grid.place_building(core, BuildingType::Core);
+    grid.place_building(drill, BuildingType::Drill);
+
+    let path = grid.find_conduit_path(core, drill).unwrap();
+
+    assert_eq!(
+        path,
+        vec![
+            GridPos::new(1, 0),
+            GridPos::new(2, 0),
+            GridPos::new(3, 0),
+            drill,
+        ]
+    );
+}
+
+#[test]
 fn find_conduit_path_returns_empty_for_same_position() {
     let grid = Grid::new(4, 4);
     let path = grid.find_conduit_path(GridPos::new(1, 1), GridPos::new(1, 1));

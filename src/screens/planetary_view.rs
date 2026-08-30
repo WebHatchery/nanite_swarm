@@ -65,8 +65,18 @@ pub fn render_planetary_view(
         state.touch_gesture_routed = true;
         state.touch_camera_active =
             !is_cursor_over_ui(touch.center.x, touch.center.y, screen_w, screen_h, layout);
+        state.touch_route_active = state.touch_camera_active
+            && touches().len() == 1
+            && state.selected_building == Some(crate::engine::BuildingType::Conduit)
+            && !state.demolish_mode
+            && !state.factory_deck_open;
     }
-    let touch_camera_active = state.touch_camera_active;
+    let touch_grid_active = state.touch_camera_active;
+    // A selected Conduit turns a one-finger map drag into the same route
+    // gesture the mouse path already supports. The player can still pan with
+    // the middle mouse button, or tap CANCEL before moving the map by touch.
+    let touch_route_active = state.touch_route_active;
+    let touch_camera_active = touch_grid_active && !touch_route_active;
     input::handle_camera(
         state,
         layout,
@@ -86,11 +96,18 @@ pub fn render_planetary_view(
     };
     let touch_tap = touch
         .tap
-        .filter(|_| touch_camera_active && !state.factory_deck_open)
+        .filter(|_| touch_grid_active && !state.factory_deck_open)
+        .and_then(|position| screen_to_grid(position.x, position.y, metrics))
+        .filter(|pos| pos.in_bounds(state.grid.width, state.grid.height));
+    let touch_drag_pos = touch
+        .active
+        .then_some(touch.center)
+        .filter(|_| touch_route_active)
         .and_then(|position| screen_to_grid(position.x, position.y, metrics))
         .filter(|pos| pos.in_bounds(state.grid.width, state.grid.height));
     if !touch.active {
         state.touch_camera_active = false;
+        state.touch_route_active = false;
         state.touch_gesture_routed = false;
     }
 
@@ -136,6 +153,6 @@ pub fn render_planetary_view(
     if ui_action != PlanetaryAction::None {
         ui_action
     } else {
-        input::handle_input(state, hovered_pos, touch_tap)
+        input::handle_input(state, hovered_pos, touch_tap, touch_drag_pos, touch)
     }
 }

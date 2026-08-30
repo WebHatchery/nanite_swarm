@@ -419,7 +419,11 @@ impl Grid {
         }
     }
 
-    /// Find a conduit path that avoids blocked tiles
+    /// Find a conduit path that avoids blocked tiles.
+    ///
+    /// Existing buildings may be the route's endpoints. This lets a player
+    /// drag from the Core to a producer without first placing a sacrificial
+    /// conduit tile on either side.
     pub fn find_conduit_path(&self, from: GridPos, to: GridPos) -> Option<Vec<GridPos>> {
         if from == to {
             return Some(Vec::new());
@@ -434,21 +438,27 @@ impl Grid {
                     return false;
                 }
                 // Void and water are crossable only where a Bridge already
-                // stands; the run is planned through what is there, not
-                // through what could be built there.
+                // stands, except for an existing building used as an endpoint;
+                // the run is planned through what is there, not through what
+                // could be built there.
                 let bridged = tile
                     .building
                     .as_ref()
                     .is_some_and(|building| building.building_type == BuildingType::Bridge);
-                if !tile.terrain.is_buildable(grid.data()) && !bridged {
+                let endpoint = pos == from || pos == to;
+                let anchored_building = endpoint && tile.building.is_some();
+                if !tile.terrain.is_buildable(grid.data()) && !bridged && !anchored_building {
                     return false;
                 }
                 match tile.building.as_ref() {
                     None => true,
-                    Some(building) => matches!(
-                        building.building_type,
-                        BuildingType::Conduit | BuildingType::Bridge
-                    ),
+                    Some(building) => {
+                        endpoint
+                            || matches!(
+                                building.building_type,
+                                BuildingType::Conduit | BuildingType::Bridge
+                            )
+                    }
                 }
             } else {
                 false

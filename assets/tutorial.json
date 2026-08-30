@@ -15,7 +15,7 @@
     {
       "id": "connect",
       "title": "Connect the drill",
-      "instruction": "Tap CONDUIT, then tap grid tiles from the Core to the Drill.",
+      "instruction": "Tap CONDUIT, then drag from the Core to the Drill (or tap each grid tile).",
       "goal": { "kind": "connect", "target": "drill" }
     },
     {

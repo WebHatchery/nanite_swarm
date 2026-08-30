@@ -69,6 +69,8 @@ pub(super) fn handle_input(
     state: &mut PlanetState,
     hovered_pos: Option<GridPos>,
     touch_tap: Option<GridPos>,
+    touch_drag_pos: Option<GridPos>,
+    touch: TouchGestureFrame,
 ) -> PlanetaryAction {
     let mouse_input = touches().is_empty();
     let activated_pos = touch_tap.or(hovered_pos);
@@ -167,6 +169,30 @@ pub(super) fn handle_input(
             return PlanetaryAction::OpenRecords;
         }
         return PlanetaryAction::None;
+    }
+
+    // A one-finger touch drag is a route gesture while Conduit is selected.
+    // Seed the route from the first tile, then let the existing path planner
+    // lay down each newly crossed segment. A short touch that never becomes
+    // claimed falls through to the ordinary tap-to-place path below.
+    if state.selected_building == Some(BuildingType::Conduit) {
+        if let Some(pos) = touch_drag_pos {
+            if state.drag_last_pos.is_none() {
+                state.drag_last_pos = Some(pos);
+            }
+            if touch.claimed {
+                if let Some(start_pos) = state.drag_last_pos {
+                    let _ = state.try_place_building(start_pos);
+                    if start_pos != pos && state.try_place_conduit_path(start_pos, pos) {
+                        state.drag_last_pos = Some(pos);
+                    }
+                }
+            }
+        } else if !touch.active && touch.claimed {
+            // The release frame carries no active touch position, but its
+            // claimed bit tells us this was a route rather than a tap.
+            state.drag_last_pos = None;
+        }
     }
 
     // Place building on click

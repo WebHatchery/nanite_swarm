@@ -321,6 +321,9 @@ pub struct PlanetState {
     /// The current touch began on the map rather than over a HUD panel.
     #[serde(skip, default)]
     pub touch_camera_active: bool,
+    /// The current single-finger map touch is reserved for laying a conduit.
+    #[serde(skip, default)]
+    pub touch_route_active: bool,
     /// Whether the current touch was already assigned to the map or the HUD.
     #[serde(skip, default)]
     pub touch_gesture_routed: bool,
@@ -539,6 +542,7 @@ impl PlanetState {
             camera: Camera::default(),
             touch_gesture: TouchGesture::new(),
             touch_camera_active: false,
+            touch_route_active: false,
             touch_gesture_routed: false,
             camera_drag_anchor: None,
             show_help: false,

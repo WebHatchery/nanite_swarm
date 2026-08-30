@@ -238,7 +238,7 @@ pub(super) fn draw(
         Some("BUILD PALETTE"),
     );
     draw_ui_text(
-        "Tap a building, then tap the grid",
+        "Tap a building, then tap or drag the grid",
         sidebar_x + metrics.panel_padding,
         sidebar_y + 50.0,
         theme.typography.small,
