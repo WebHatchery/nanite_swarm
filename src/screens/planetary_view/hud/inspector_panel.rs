@@ -3,7 +3,7 @@
 use crate::assets::GameTextures;
 use crate::data::UiTheme;
 use crate::engine::{BuildingType, GridPos, ResourceType, TerrainType};
-use crate::state::PlanetState;
+use crate::state::{Milestone, PlanetState};
 use crate::ui::{
     color_from_rgba, draw_hud_button, draw_hud_panel, draw_resource_icon, draw_status_row,
     resource_color,
@@ -641,11 +641,58 @@ fn flow_resource_name(resource: crate::engine::ResourceType) -> &'static str {
 }
 
 fn core_stage_status_text(state: &PlanetState) -> String {
-    format!(
-        "CORE {}/{}",
-        state.core_stage_index() + 1,
-        state.core_stages().len()
-    )
+    let stages = state.core_stages();
+    if stages.is_empty() {
+        return "CORE // NO STAGE DATA".to_string();
+    }
+
+    let current_index = state.core_stage_index();
+    let stage_count = stages.len();
+    let Some(next) = stages.get(current_index + 1) else {
+        return format!("CORE {stage_count}/{stage_count} // FULLY EVOLVED");
+    };
+
+    let requirements = next
+        .requires
+        .iter()
+        .filter_map(|requirement| {
+            let milestone = Milestone::from_id(&requirement.kind)?;
+            let current = state.measure(milestone);
+            if current + 0.001 >= requirement.target {
+                return None;
+            }
+            Some(format!(
+                "{}{}/{}",
+                core_requirement_label(milestone),
+                compact_requirement_amount(current),
+                compact_requirement_amount(requirement.target)
+            ))
+        })
+        .collect::<Vec<_>>()
+        .join("+");
+    if requirements.is_empty() {
+        format!("CORE {}/{stage_count} // READY", current_index + 1)
+    } else {
+        format!("CORE {}/{stage_count} / {requirements}", current_index + 1)
+    }
+}
+
+fn core_requirement_label(milestone: Milestone) -> &'static str {
+    match milestone {
+        Milestone::Structures => "STR",
+        Milestone::NetworkTiles => "NET",
+        Milestone::Technologies => "TECH",
+        Milestone::SeedShipStages => "SHIP",
+        _ => milestone.id(),
+    }
+}
+
+fn compact_requirement_amount(amount: f32) -> String {
+    if amount.fract().abs() > 0.05 {
+        format!("{amount:.1}")
+    } else {
+        format!("{amount:.0}")
+    }
 }
 
 fn core_next_stage_label(state: &PlanetState) -> String {
