@@ -4,7 +4,7 @@ fn data() -> crate::data::GameDataContext {
     crate::data::test_data()
 }
 
-const ALL: [BuildingType; 16] = [
+const ALL: [BuildingType; 18] = [
     BuildingType::Core,
     BuildingType::Drill,
     BuildingType::Conduit,
@@ -21,6 +21,8 @@ const ALL: [BuildingType; 16] = [
     BuildingType::ShieldGenerator,
     BuildingType::MassDriver,
     BuildingType::LandingPad,
+    BuildingType::GeothermalTap,
+    BuildingType::FusionReactor,
 ];
 
 #[test]
@@ -56,4 +58,6 @@ fn power_delta_is_generation_minus_consumption() {
     assert!(BuildingType::WindTurbine.power_delta(data().data()) > 0.0);
     assert!(BuildingType::ServerBank.power_delta(data().data()) < 0.0);
     assert_eq!(BuildingType::Conduit.power_delta(data().data()), 0.0);
+    assert!(BuildingType::GeothermalTap.power_delta(data().data()) > 0.0);
+    assert!(BuildingType::FusionReactor.power_delta(data().data()) > 0.0);
 }

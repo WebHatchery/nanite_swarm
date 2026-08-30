@@ -240,6 +240,20 @@
       ]
     },
     {
+      "id": "geothermal_tapping",
+      "name": "Geothermal Tapping",
+      "description": "The acid sky is a warning. The heat below is an answer.",
+      "data_cost": 45.0,
+      "prerequisites": [
+        "power_grid"
+      ],
+      "position": [
+        3.5,
+        -2.4
+      ],
+      "planet_condition": "acid"
+    },
+    {
       "id": "power_efficiency",
       "name": "Power Efficiency",
       "description": "Most of the draw was heat. Heat is not work.",
@@ -321,6 +335,20 @@
         1.4,
         -3.4
       ]
+    },
+    {
+      "id": "fusion_reactors",
+      "name": "Fusion Reactors",
+      "description": "A controlled star makes the cold stop mattering to the grid.",
+      "data_cost": 90.0,
+      "prerequisites": [
+        "heater_nodes"
+      ],
+      "position": [
+        3.6,
+        -4.2
+      ],
+      "planet_condition": "cold"
     },
     {
       "id": "smelting",

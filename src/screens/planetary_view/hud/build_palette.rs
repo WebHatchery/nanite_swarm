@@ -61,6 +61,7 @@ fn draw_build_row(
     let selected = state.selected_building == Some(building_type);
     let (mineral_cost, energy_cost) = building_type.cost(data);
     let can_afford = state.resources.can_afford(mineral_cost, energy_cost);
+    let researched = state.is_building_researched(building_type);
     let unlocked = state.is_building_unlocked(building_type);
     let text = color_from_rgba(&theme.colors.text);
     let dim = color_from_rgba(&theme.colors.text_dim);
@@ -231,6 +232,11 @@ fn draw_build_row(
                 "UNAVAILABLE ON THIS WORLD",
                 color_from_rgba(&theme.colors.error),
             )
+        } else if researched && !state.building_condition_met(building_type) {
+            (
+                world_condition_label(state, building_type),
+                color_from_rgba(&theme.colors.warning),
+            )
         } else {
             ("LOCKED", color_from_rgba(&theme.colors.warning))
         };
@@ -245,6 +251,14 @@ fn draw_build_row(
     }
 
     height
+}
+
+fn world_condition_label(state: &PlanetState, building_type: BuildingType) -> &'static str {
+    match state.building_planet_condition(building_type) {
+        Some("acid") => "NEEDS ACID WORLD",
+        Some("cold") => "NEEDS COLD WORLD",
+        _ => "REQUIRES A DIFFERENT WORLD",
+    }
 }
 
 pub(super) fn draw(

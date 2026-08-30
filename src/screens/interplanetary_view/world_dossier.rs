@@ -139,8 +139,24 @@ pub(super) fn world_rule_lines(data: &crate::data::GameData, index: usize) -> Ve
     let planet = &data.planets[index];
     let constraints = &planet.constraints;
     let mut lines = Vec::new();
-    for id in &planet.banned_buildings {
-        lines.push(format!("Unavailable: {}", building_name(data, id)));
+    let rule_count_without_bans = constraints.required_buildings.len()
+        + constraints.required_research.len()
+        + usize::from(constraints.minimum_power_generation > 0.0)
+        + usize::from(constraints.minimum_power_balance > 0.0);
+    if planet.banned_buildings.len() > 1
+        && planet.banned_buildings.len() + rule_count_without_bans > 3
+    {
+        let unavailable = planet
+            .banned_buildings
+            .iter()
+            .map(|id| building_name(data, id))
+            .collect::<Vec<_>>()
+            .join(" + ");
+        lines.push(format!("Unavailable: {unavailable}"));
+    } else {
+        for id in &planet.banned_buildings {
+            lines.push(format!("Unavailable: {}", building_name(data, id)));
+        }
     }
     for id in &constraints.required_buildings {
         lines.push(format!("Needs {}", building_name(data, id)));

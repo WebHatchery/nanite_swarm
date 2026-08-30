@@ -14,7 +14,22 @@ impl PlanetState {
     /// Try to place a building at position
     pub fn try_place_building(&mut self, pos: GridPos) -> bool {
         if let Some(building_type) = self.selected_building {
-            if !self.is_building_unlocked(building_type) {
+            if !self.is_building_researched(building_type) || self.is_building_banned(building_type)
+            {
+                return false;
+            }
+            if !self.building_condition_met(building_type) {
+                if let Some(condition) = self.building_planet_condition(building_type) {
+                    let article =
+                        if matches!(condition.chars().next(), Some('a' | 'e' | 'i' | 'o' | 'u')) {
+                            "an"
+                        } else {
+                            "a"
+                        };
+                    self.notifications.warning(format!(
+                        "This building requires {article} {condition} world"
+                    ));
+                }
                 return false;
             }
             if !self.constraints_allow_building(building_type) {

@@ -83,7 +83,7 @@
       "color": [0.9, 0.8, 0.5, 1.0],
       "hazards": { "acid_rain": 0.0, "freeze": 0.6 },
       "terrain": { "mountain": 0.10, "forest": 0.20, "water": 0.15, "void": 0.10 },
-      "banned_buildings": ["wind_turbine"],
+      "banned_buildings": ["wind_turbine", "biomass_harvester"],
       "arrival": "Cold enough that the machinery complains. The complaints are logged and ignored.",
       "pending_pod_cap": 4,
       "features": [{"id":"ring_shadow","name":"Ring Shadow","description":"A long shadow under the orbital debris.","width":0.40,"height":0.08,"seed_offset":43}],

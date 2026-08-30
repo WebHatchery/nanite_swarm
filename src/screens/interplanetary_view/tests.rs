@@ -169,7 +169,9 @@ fn dossier_rules_keep_infrastructure_requirements_with_world_bans() {
     let data = crate::data::test_data();
     let rules = world_rule_lines(data.data(), 4);
 
-    assert!(rules.iter().any(|line| line == "Unavailable: Wind Turbine"));
+    assert!(rules
+        .iter()
+        .any(|line| line == "Unavailable: Wind Turbine + Biomass Harvester"));
     assert!(rules.iter().any(|line| line == "Needs Heater Node"));
     assert!(rules.iter().any(|line| line == "Needs 10 power generation"));
 }

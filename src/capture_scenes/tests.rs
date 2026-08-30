@@ -23,7 +23,9 @@ fn required_capture_scenes_are_registered() {
             "mobile_arrival",
             "hibernation",
             "offline",
-            "mobile_offline"
+            "mobile_offline",
+            "geothermal",
+            "fusion"
         ]
     );
 }

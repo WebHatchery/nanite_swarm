@@ -338,6 +338,48 @@
       "generates_power": false,
       "consumes_power": false,
       "uses_efficiency": false
+    },
+    {
+      "id": "geothermal_tap",
+      "name": "Geothermal Tap",
+      "description": "Draws infinite power from the heat under an acid world.",
+      "cost": { "minerals": 55.0, "energy": 25.0 },
+      "power_generation": 12.0,
+      "power_consumption": 0.0,
+      "hotkey": null,
+      "texture": "assets/tiles/buildings/building_geothermal_tap.png",
+      "icon": "assets/ui/buildings/ui_building_geothermal_tap.png",
+      "build_menu_order": 15,
+      "show_in_build_menu": true,
+      "start_unlocked": false,
+      "unlocked_by": "geothermal_tapping",
+      "planet_condition": "acid",
+      "transmits_power": false,
+      "carries_traffic": false,
+      "generates_power": true,
+      "consumes_power": false,
+      "uses_efficiency": false
+    },
+    {
+      "id": "fusion_reactor",
+      "name": "Fusion Reactor",
+      "description": "A compact star for worlds where the wind has frozen.",
+      "cost": { "minerals": 90.0, "energy": 40.0 },
+      "power_generation": 18.0,
+      "power_consumption": 0.0,
+      "hotkey": null,
+      "texture": "assets/tiles/buildings/building_fusion_reactor.png",
+      "icon": "assets/ui/buildings/ui_building_fusion_reactor.png",
+      "build_menu_order": 16,
+      "show_in_build_menu": true,
+      "start_unlocked": false,
+      "unlocked_by": "fusion_reactors",
+      "planet_condition": "cold",
+      "transmits_power": false,
+      "carries_traffic": false,
+      "generates_power": true,
+      "consumes_power": false,
+      "uses_efficiency": false
     }
   ]
 }

@@ -70,6 +70,10 @@ pub struct BuildingDef {
     pub generates_power: bool,
     pub consumes_power: bool,
     pub uses_efficiency: bool,
+    /// If present, this building can only stand on worlds with the matching
+    /// broad condition, such as `acid` or `cold`.
+    #[serde(default)]
+    pub planet_condition: Option<String>,
     #[serde(default)]
     pub water_cooling: bool,
     /// Present on processing buildings; absent means the building makes

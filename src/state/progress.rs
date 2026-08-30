@@ -143,7 +143,9 @@ impl PlanetState {
     }
 
     pub fn is_building_unlocked(&self, building_type: BuildingType) -> bool {
-        self.is_building_researched(building_type) && !self.is_building_banned(building_type)
+        self.is_building_researched(building_type)
+            && !self.is_building_banned(building_type)
+            && self.building_condition_met(building_type)
     }
 
     /// Research has opened this building up, whether or not this particular
@@ -175,6 +177,19 @@ impl PlanetState {
         } else {
             None
         }
+    }
+
+    /// The broad world condition declared by a building, if it has one.
+    pub fn building_planet_condition(&self, building_type: BuildingType) -> Option<&str> {
+        self.data()
+            .building(building_type.id())
+            .planet_condition
+            .as_deref()
+    }
+
+    pub fn building_condition_met(&self, building_type: BuildingType) -> bool {
+        self.building_planet_condition(building_type)
+            .is_none_or(|required| self.active_planet_condition() == Some(required))
     }
 
     /// Strength of a named spatial field at a tile, including the world's
@@ -261,6 +276,9 @@ impl PlanetState {
     /// the player is satisfying that rule; only the gated Mass Driver checks
     /// the world's prerequisite buildings and power floor.
     pub fn constraints_allow_building(&self, building_type: BuildingType) -> bool {
+        if !self.building_condition_met(building_type) {
+            return false;
+        }
         let constraints = &self.data().planet(self.planet_index).constraints;
         if !constraints.required_research.iter().all(|required| {
             self.research

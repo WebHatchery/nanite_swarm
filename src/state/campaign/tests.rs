@@ -196,6 +196,24 @@ fn a_world_can_refuse_a_building_research_has_already_unlocked() {
     assert_ne!(planet.selected_building, Some(BuildingType::WindTurbine));
 }
 
+#[test]
+fn hostile_worlds_offer_their_own_power_route() {
+    let mut campaign = campaign();
+    campaign.colonize(1);
+    campaign.travel_to(1);
+    let venus = campaign.current_mut();
+    venus.unlock_building(BuildingType::GeothermalTap);
+    assert!(venus.building_condition_met(BuildingType::GeothermalTap));
+    assert!(!venus.building_condition_met(BuildingType::FusionReactor));
+
+    campaign.colonize(4);
+    campaign.travel_to(4);
+    let saturn = campaign.current_mut();
+    saturn.unlock_building(BuildingType::FusionReactor);
+    assert!(saturn.building_condition_met(BuildingType::FusionReactor));
+    assert!(saturn.is_building_banned(BuildingType::BiomassHarvester));
+}
+
 /// The world at `index`, generated and travelled to.
 fn world(index: usize) -> PlanetState {
     let mut campaign = campaign();

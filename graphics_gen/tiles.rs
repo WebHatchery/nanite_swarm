@@ -71,6 +71,8 @@ pub fn generate_tiles() {
     save_building_with_icon("building_bridge", create_bridge());
     save_building_with_icon("building_power_node", create_power_node());
     save_building_with_icon("building_wind_turbine", create_wind_turbine());
+    save_building_with_icon("building_geothermal_tap", create_geothermal_tap());
+    save_building_with_icon("building_fusion_reactor", create_fusion_reactor());
     save_building_with_icon("building_server_bank", create_server_bank());
     save_building_with_icon("building_sweeper", create_sweeper());
     save_building_with_icon("building_storage", create_storage());
@@ -531,6 +533,41 @@ fn create_wind_turbine() -> RgbaImage {
     draw_line(&mut img, 16, 16, 6, 12, Rgba([210, 210, 220, 255]));
     // Base
     draw_rect(&mut img, 14, 22, 4, 6, Rgba([90, 95, 105, 255]));
+    add_edge_darkening(&mut img, 2, 8);
+    img
+}
+
+fn create_geothermal_tap() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([52, 35, 28, 255]));
+    add_noise(&mut img, 6, 2727);
+    // The orange wellhead is sunk into a cracked volcanic plate.
+    draw_line(&mut img, 4, 25, 12, 18, Rgba([150, 70, 38, 255]));
+    draw_line(&mut img, 28, 25, 20, 18, Rgba([150, 70, 38, 255]));
+    draw_line(&mut img, 7, 28, 14, 22, Rgba([205, 92, 36, 220]));
+    draw_line(&mut img, 25, 28, 18, 22, Rgba([205, 92, 36, 220]));
+    draw_rect(&mut img, 9, 18, 14, 8, Rgba([92, 62, 54, 255]));
+    draw_rect(&mut img, 12, 11, 8, 10, Rgba([170, 78, 38, 255]));
+    draw_rect(&mut img, 14, 7, 4, 6, Rgba([225, 125, 55, 255]));
+    draw_circle(&mut img, 16, 12, 3, Rgba([255, 196, 105, 255]));
+    draw_circle(&mut img, 16, 12, 1, Rgba([255, 245, 190, 255]));
+    add_edge_darkening(&mut img, 2, 8);
+    img
+}
+
+fn create_fusion_reactor() -> RgbaImage {
+    let mut img = create_tile_base(Rgba([30, 35, 58, 255]));
+    add_noise(&mut img, 5, 2828);
+    // A cold-world reactor: armored ring, control pylons, and a blue-white core.
+    draw_rect(&mut img, 7, 21, 18, 6, Rgba([72, 79, 105, 255]));
+    draw_circle(&mut img, 16, 15, 10, Rgba([65, 78, 118, 255]));
+    draw_circle(&mut img, 16, 15, 7, Rgba([24, 45, 88, 255]));
+    draw_circle(&mut img, 16, 15, 4, Rgba([65, 180, 235, 255]));
+    draw_circle(&mut img, 16, 15, 2, Rgba([220, 250, 255, 255]));
+    for (x, y) in [(7, 9), (25, 9), (7, 21), (25, 21)] {
+        draw_rect(&mut img, x, y, 3, 5, Rgba([145, 155, 185, 255]));
+    }
+    draw_line(&mut img, 10, 7, 13, 11, Rgba([130, 220, 255, 255]));
+    draw_line(&mut img, 22, 7, 19, 11, Rgba([130, 220, 255, 255]));
     add_edge_darkening(&mut img, 2, 8);
     img
 }

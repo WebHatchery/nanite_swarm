@@ -19,6 +19,14 @@ fn validate_buildings(data: &GameData) -> Result<(), String> {
                 def.id
             ));
         }
+        if let Some(condition) = &def.planet_condition {
+            if !["acid", "cold", "water", "mountain"].contains(&condition.as_str()) {
+                return Err(format!(
+                    "assets/buildings.json building \"{}\" has unknown planet condition \"{}\"",
+                    def.id, condition
+                ));
+            }
+        }
         for (resource, value) in def.recipe.inputs.iter().chain(def.recipe.outputs.iter()) {
             if ResourceType::from_id(resource).is_none() {
                 return Err(format!(

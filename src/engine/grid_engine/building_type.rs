@@ -22,6 +22,8 @@ pub enum BuildingType {
     ShieldGenerator,  // Holds acid off everything nearby
     MassDriver,       // Throws cargo at another world
     LandingPad,       // Catches what another world threw
+    GeothermalTap,    // Draws power from an acidic world's heat
+    FusionReactor,    // High-output power for cold worlds
 }
 
 impl BuildingType {
@@ -43,6 +45,8 @@ impl BuildingType {
             BuildingType::ShieldGenerator => "shield_generator",
             BuildingType::MassDriver => "mass_driver",
             BuildingType::LandingPad => "landing_pad",
+            BuildingType::GeothermalTap => "geothermal_tap",
+            BuildingType::FusionReactor => "fusion_reactor",
         }
     }
 
@@ -64,6 +68,8 @@ impl BuildingType {
             "shield_generator" => Some(BuildingType::ShieldGenerator),
             "mass_driver" => Some(BuildingType::MassDriver),
             "landing_pad" => Some(BuildingType::LandingPad),
+            "geothermal_tap" => Some(BuildingType::GeothermalTap),
+            "fusion_reactor" => Some(BuildingType::FusionReactor),
             _ => None,
         }
     }

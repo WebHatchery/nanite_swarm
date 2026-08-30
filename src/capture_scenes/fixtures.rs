@@ -63,7 +63,7 @@ pub(super) fn seed_capture_launch_rail(planet: &mut state::PlanetState) {
                     "capture fixture could not place a power source"
                 );
             }
-        } else {
+        } else if !planet.is_building_banned(BuildingType::BiomassHarvester) {
             let biomass_tile = GridPos::new(core.x - 1, core.y);
             prepare_capture_tile(planet, biomass_tile, TerrainType::Forest);
             if let Some(tile) = planet.grid.get_mut(biomass_tile) {
@@ -79,6 +79,21 @@ pub(super) fn seed_capture_launch_rail(planet: &mut state::PlanetState) {
             // one real tick before the Mass Driver checks the power floor.
             planet.grid.update_power_grid();
             planet.step(state::TICK_SECONDS, false);
+        } else {
+            let power_source = match planet.active_planet_condition() {
+                Some("acid") => BuildingType::GeothermalTap,
+                Some("cold") => BuildingType::FusionReactor,
+                _ => return,
+            };
+            let source_tile = GridPos::new(core.x - 1, core.y);
+            prepare_capture_tile(planet, source_tile, TerrainType::Empty);
+            planet.unlock_building(power_source);
+            planet.select_building(power_source);
+            assert!(
+                planet.try_place_building(source_tile),
+                "capture fixture could not place {:?} power",
+                power_source
+            );
         }
     }
 

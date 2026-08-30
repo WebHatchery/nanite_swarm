@@ -6,6 +6,7 @@ use crate::{engine, slot_name, state, Game, GamePhase};
 
 mod arrival;
 mod interplanetary;
+mod power;
 
 impl Game {
     /// Seed a specific scene for the screenshot harness.
@@ -298,49 +299,7 @@ impl Game {
                 self.phase = GamePhase::Launch;
             }
             "mobile_arrival_notice" => self.stage_arrival_notice_scene(),
-            "venus" => {
-                self.phase = GamePhase::Playing;
-                self.campaign.colonize(1);
-                self.campaign.travel_to(1);
-                self.research_state
-                    .unlocked
-                    .push("ceramic_plating".to_string());
-                self.research_state
-                    .unlocked
-                    .push("heater_nodes".to_string());
-                let building_types: Vec<_> = self
-                    .data
-                    .data()
-                    .buildings
-                    .iter()
-                    .filter_map(|def| engine::BuildingType::from_id(&def.id))
-                    .collect();
-                let planet = self.campaign.current_mut();
-                // Everything researched, so the palette shows what this world
-                // refuses rather than what the swarm has not reached yet.
-                for building_type in building_types {
-                    planet.unlock_building(building_type);
-                }
-                if let Some(core) = planet.grid.find_core() {
-                    planet.grid.reveal_around(core, 12);
-                    // Venus is the world of gaps, so bridge one: it is the
-                    // only piece of network that can stand on void.
-                    let void: Vec<engine::GridPos> = planet
-                        .grid
-                        .iter_tiles()
-                        .filter(|(_, tile)| tile.terrain == engine::TerrainType::Void)
-                        .map(|(pos, _)| pos)
-                        .filter(|pos| (pos.x - core.x).abs() + (pos.y - core.y).abs() < 6)
-                        .take(3)
-                        .collect();
-                    for pos in void {
-                        planet
-                            .grid
-                            .place_building(pos, engine::BuildingType::Bridge);
-                    }
-                    planet.grid.update_power_grid();
-                }
-            }
+            "venus" => self.stage_venus_scene(),
             "upkeep" => {
                 self.phase = GamePhase::Playing;
                 self.campaign.colonize(1);
@@ -612,6 +571,8 @@ impl Game {
                 };
                 planet.notifications.clear();
             }
+            "geothermal" => self.stage_geothermal_scene(),
+            "fusion" => self.stage_fusion_scene(),
             "demolish" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();

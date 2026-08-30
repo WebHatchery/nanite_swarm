@@ -17,6 +17,7 @@ pub enum PlacementBlockReason {
     Occupied,
     Banned,
     Research,
+    WorldCondition,
     Terrain,
     Constraint,
     Resources,
@@ -32,6 +33,7 @@ impl PlacementBlockReason {
             Self::Occupied => "OCCUPIED",
             Self::Banned => "WORLD BAN",
             Self::Research => "RESEARCH REQUIRED",
+            Self::WorldCondition => "WRONG WORLD",
             Self::Terrain => "WRONG TERRAIN",
             Self::Constraint => "WORLD RULE",
             Self::Resources => "RESOURCES LOW",
@@ -47,6 +49,15 @@ impl PlacementBlockReason {
             Self::Occupied => "This tile is already occupied".to_string(),
             Self::Banned => "This world bans that building".to_string(),
             Self::Research => "Research this building before placing it".to_string(),
+            Self::WorldCondition => state
+                .building_planet_condition(building_type)
+                .map(|condition| {
+                    format!(
+                        "This building requires {} {condition} world",
+                        condition_article(condition)
+                    )
+                })
+                .unwrap_or_else(|| "This building cannot operate on this world".to_string()),
             Self::Terrain => terrain_message(building_type).to_string(),
             Self::Constraint => {
                 let (_, details) = state.planet_constraint_status();
@@ -64,6 +75,14 @@ impl PlacementBlockReason {
                 )
             }
         }
+    }
+}
+
+fn condition_article(condition: &str) -> &'static str {
+    if matches!(condition.chars().next(), Some('a' | 'e' | 'i' | 'o' | 'u')) {
+        "an"
+    } else {
+        "a"
     }
 }
 
@@ -106,6 +125,9 @@ impl PlanetState {
         }
         if !self.is_building_researched(building_type) {
             return Some(PlacementBlockReason::Research);
+        }
+        if !self.building_condition_met(building_type) {
+            return Some(PlacementBlockReason::WorldCondition);
         }
         if !self.grid.can_place_building(pos, building_type) {
             return Some(PlacementBlockReason::Terrain);
