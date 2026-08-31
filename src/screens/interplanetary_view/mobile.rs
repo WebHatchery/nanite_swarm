@@ -280,9 +280,10 @@ fn draw_mobile_planet_info(
             compact_shipping_status(&view.data.planet(order.target).name, status)
         } else if let Some(telemetry) = telemetry {
             format!(
-                "{} | M {:.0} D {:.0} B {:.0}",
+                "{} | M {:.0}/{:.0} D {:.0} B {:.0}",
                 core_stage_summary(view.data, &telemetry),
                 telemetry.minerals,
+                telemetry.mineral_capacity,
                 telemetry.data,
                 telemetry.biomass
             )
@@ -355,9 +356,10 @@ fn draw_mobile_planet_info(
             draw_ui_text(
                 &truncate_text_to_width(
                     &format!(
-                        "{} | Stock M {:.0} D {:.0} B {:.0}{}",
+                        "{} | Stock M {:.0}/{:.0} D {:.0} B {:.0}{}",
                         core_stage_summary(view.data, &telemetry),
                         telemetry.minerals,
+                        telemetry.mineral_capacity,
                         telemetry.data,
                         telemetry.biomass,
                         storage_resource_label(telemetry.storage_full_resource)
@@ -504,8 +506,9 @@ fn draw_mobile_planet_info(
         draw_ui_text(
             &truncate_text_to_width(
                 &format!(
-                    "Stock M {:.0} D {:.0} B {:.0}{}  Grid {:+.1}/s",
+                    "Stock M {:.0}/{:.0} D {:.0} B {:.0}{}  Grid {:+.1}/s",
                     telemetry.minerals,
+                    telemetry.mineral_capacity,
                     telemetry.data,
                     telemetry.biomass,
                     storage_resource_label(telemetry.storage_full_resource)

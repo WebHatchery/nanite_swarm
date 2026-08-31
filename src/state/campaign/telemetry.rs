@@ -41,6 +41,10 @@ impl WorldAlert {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct WorldTelemetry {
     pub minerals: f32,
+    /// The live mineral ceiling, including Storage buildings and research.
+    /// Other pools have a fixed shared ceiling; minerals are the remote pool
+    /// the player can deliberately expand from the Solar System screen.
+    pub mineral_capacity: f32,
     pub data: f32,
     pub biomass: f32,
     pub alloy: f32,
@@ -135,6 +139,7 @@ impl Campaign {
         };
         Some(WorldTelemetry {
             minerals: planet.resources.minerals,
+            mineral_capacity: planet.resource_capacity(ResourceType::Minerals),
             data: planet.resources.data,
             biomass: planet.resources.biomass,
             alloy: planet.resources.alloy,

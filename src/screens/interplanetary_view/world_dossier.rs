@@ -134,8 +134,9 @@ pub(super) fn draw_world_telemetry(data: &GameData, telemetry: &WorldTelemetry, 
     );
     draw_ui_text(
         &format!(
-            "Stock M {:.0}  D {:.0}  B {:.0}  A {:.0}  P {:.0}{}",
+            "Stock M {:.0}/{:.0}  D {:.0}  B {:.0}  A {:.0}  P {:.0}{}",
             telemetry.minerals,
+            telemetry.mineral_capacity,
             telemetry.data,
             telemetry.biomass,
             telemetry.alloy,

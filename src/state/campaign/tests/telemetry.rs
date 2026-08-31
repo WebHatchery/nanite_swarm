@@ -8,6 +8,7 @@ fn the_solar_map_reads_live_telemetry_for_colonized_worlds() {
     assert!(campaign.colonize(0));
     let fresh = campaign.world_telemetry(0).unwrap();
     assert_eq!(fresh.minerals, 50.0);
+    assert_eq!(fresh.mineral_capacity, 100.0);
     assert_eq!(fresh.data, 0.0);
     assert_eq!(fresh.biomass, 0.0);
     assert_eq!(fresh.alloy, 0.0);

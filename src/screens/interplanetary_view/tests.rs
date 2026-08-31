@@ -133,6 +133,7 @@ fn desktop_dossier_follows_the_remote_order_source_until_a_launch_is_confirmed()
 fn telemetry(alerts: usize, alert_kind: crate::state::WorldAlert) -> crate::state::WorldTelemetry {
     crate::state::WorldTelemetry {
         minerals: 0.0,
+        mineral_capacity: 100.0,
         data: 0.0,
         biomass: 0.0,
         alloy: 0.0,
@@ -418,6 +419,7 @@ fn biomass_reserve_uses_the_live_remote_stockpile() {
     let telemetry = [
         Some(crate::state::WorldTelemetry {
             minerals: 0.0,
+            mineral_capacity: 100.0,
             data: 0.0,
             biomass: 100.0,
             alloy: 0.0,
