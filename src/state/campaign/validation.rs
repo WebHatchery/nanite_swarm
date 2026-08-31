@@ -2,6 +2,7 @@
 
 use super::{Campaign, PLANET_COUNT};
 use crate::engine::{BuildingType, GridPos, ResourceType};
+use std::collections::HashSet;
 
 impl Campaign {
     /// Reject references that a hand-edited or partially written save could
@@ -431,7 +432,19 @@ impl Campaign {
     ) -> Result<(), String> {
         let width = planet.grid.width;
         let height = planet.grid.height;
+        let mut ids = HashSet::new();
         for (index, drone) in planet.drones.drones().iter().enumerate() {
+            if !ids.insert(drone.id) {
+                return Err(format!(
+                    "save world slot {source} has duplicate drone id {}",
+                    drone.id
+                ));
+            }
+            if !drone.resource_type.is_physical() {
+                return Err(format!(
+                    "save world slot {source} drone {index} carries a non-physical resource"
+                ));
+            }
             for (label, position) in [
                 ("position", drone.position),
                 ("target", drone.target),
@@ -460,11 +473,12 @@ impl Campaign {
             if !drone.carrying.is_finite()
                 || drone.carrying < 0.0
                 || !drone.capacity.is_finite()
-                || drone.capacity < 0.0
+                || drone.capacity <= 0.0
                 || !drone.speed.is_finite()
-                || drone.speed < 0.0
+                || drone.speed <= 0.0
                 || !drone.progress.is_finite()
                 || !(0.0..1.0).contains(&drone.progress)
+                || drone.carrying > drone.capacity
             {
                 return Err(format!(
                     "save world slot {source} drone {index} has invalid flight data"

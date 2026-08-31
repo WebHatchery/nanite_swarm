@@ -93,3 +93,18 @@ fn loading_rebuilds_stale_building_unlocks_from_campaign_research() {
         .current()
         .is_building_researched(BuildingType::FusionReactor));
 }
+
+#[test]
+fn a_save_with_duplicate_drone_ids_is_rejected() {
+    let mut campaign = campaign();
+    let core = campaign.current().grid.find_core().unwrap();
+    let planet = campaign.current_mut();
+    planet.drones.spawn_drone(core);
+    planet.drones.spawn_drone(core);
+    let first_id = planet.drones.drones()[0].id;
+    planet.drones.drones_mut()[1].id = first_id;
+
+    let json = save_to_json(&mut campaign).unwrap();
+
+    assert!(load_from_json(&json).is_err());
+}
