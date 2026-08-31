@@ -43,6 +43,9 @@ Audit date: 2026-08-20
   and research progress from `src/state/game_state.rs` into
   `game_state/records.rs` and `game_state/research.rs`, leaving the state
   aggregate focused on world fields and lifecycle construction.
+- Split PlanetState world generation and data reattachment from
+  `state/game_state.rs` into `game_state/construction.rs`, leaving the state
+  aggregate focused on its serialized fields and runtime stat refresh.
 - Split the loaded balance contract validation from `src/data/game_config.rs`
   into `game_config/validation.rs`, leaving the configuration module focused on
   schema types and defaults while preserving `GameConfig::validate()`.
