@@ -5,17 +5,15 @@ use crate::state::StatReading;
 use crate::ui::{draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::math::pulse01;
-use macroquad_toolkit::ui::{
-    draw_ui_text, measure_ui_text, truncate_text_to_width, wrap_text, Pointer,
-};
+use macroquad_toolkit::ui::{draw_ui_text, Pointer};
 
 mod compact;
+mod desktop;
 mod effects;
 mod layout;
 mod nodes;
 mod sheet;
 use compact::*;
-use effects::node_effects;
 use layout::{compact_info_offset, ResearchLayout, TreeLayout};
 use sheet::draw_swarm_sheet;
 
@@ -294,7 +292,7 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
     // being researched, so the panel is worth having between hovers.
     let inspected = hovered_node.or(research_state.current_research.as_deref());
     if let Some(node_id) = inspected {
-        if let Some(node) = research_tree.get_node(node_id) {
+        if research_tree.get_node(node_id).is_some() {
             let heading = if hovered_node.is_some() {
                 "Hovered Node"
             } else {
@@ -314,100 +312,17 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
                     active_condition,
                 );
             } else {
-                draw_ui_text(
+                desktop::draw(desktop::DesktopNodeInfoInput {
+                    data,
+                    research_state,
+                    research_tree,
+                    node_id,
                     heading,
-                    left_panel_x + 12.0,
-                    left_text_y,
-                    12.0,
-                    Colors::TEXT_DIM,
-                );
-                draw_ui_text(
-                    &node.name,
-                    left_panel_x + 12.0,
-                    left_text_y + 18.0,
-                    14.0,
-                    Colors::TEXT,
-                );
-                draw_ui_text(
-                    &node.description,
-                    left_panel_x + 12.0,
-                    left_text_y + 36.0,
-                    12.0,
-                    Colors::TEXT_DIM,
-                );
-
-                // What it actually does, under what it says it does.
-                let mut y = left_text_y + 58.0;
-                for (text, color) in node_effects(data, node_id) {
-                    draw_ui_text(&text, left_panel_x + 12.0, y, 12.0, color);
-                    y += 16.0;
-                }
-                y += 4.0;
-
-                if !research_state.is_unlocked(node_id) {
-                    if let Some(status) = active_research_status(research_state, node_id, node) {
-                        draw_ui_text(&status, left_panel_x + 12.0, y, 12.0, Colors::WARNING);
-                    } else if let Some(status) =
-                        parked_research_status(research_state, node_id, node)
-                    {
-                        draw_ui_text(&status, left_panel_x + 12.0, y, 12.0, Colors::WARNING);
-                    } else {
-                        let cost_text = format!("Cost {:.0} Data", node.data_cost);
-                        draw_ui_text(&cost_text, left_panel_x + 12.0, y, 12.0, Colors::ACCENT);
-                        y += 18.0;
-
-                        if research_tree.can_select_on(
-                            node_id,
-                            &research_state.unlocked,
-                            active_condition,
-                        ) {
-                            if research_tree.can_research_on(
-                                node_id,
-                                &research_state.unlocked,
-                                data_available,
-                                active_condition,
-                            ) {
-                                draw_ui_text(
-                                    "Tap node to research",
-                                    left_panel_x + 12.0,
-                                    y,
-                                    12.0,
-                                    Colors::SUCCESS,
-                                );
-                            } else {
-                                draw_ui_text(
-                                    "Tap node to select (insufficient Data)",
-                                    left_panel_x + 12.0,
-                                    y,
-                                    11.0,
-                                    Colors::WARNING,
-                                );
-                            }
-                        } else if !node
-                            .prerequisites
-                            .iter()
-                            .all(|p| research_state.is_unlocked(p))
-                        {
-                            draw_ui_text(
-                                "Prerequisites not met",
-                                left_panel_x + 12.0,
-                                y,
-                                12.0,
-                                Colors::ERROR,
-                            );
-                        } else {
-                            draw_ui_text(
-                                "Not enough Data",
-                                left_panel_x + 12.0,
-                                y,
-                                12.0,
-                                Colors::WARNING,
-                            );
-                        }
-                    }
-                } else {
-                    draw_ui_text("UNLOCKED", left_panel_x + 12.0, y, 12.0, Colors::SUCCESS);
-                }
+                    panel_x: left_panel_x,
+                    y: left_text_y,
+                    data_available,
+                    active_condition,
+                });
             }
         }
     } else {

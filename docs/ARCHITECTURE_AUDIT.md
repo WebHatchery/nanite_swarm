@@ -177,6 +177,9 @@ Audit date: 2026-08-20
 - Split Core stage and milestone readouts from `hud/inspector_panel.rs` into
   `inspector_panel/core_status.rs`, leaving the structure inspector focused on
   building and terrain presentation.
+- Split desktop research-node details from `research_view.rs` into
+  `research_view/desktop.rs`, leaving the coordinator focused on shared layout,
+  viewport interaction, and screen actions.
 
 ## Remaining debt
 

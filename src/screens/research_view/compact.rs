@@ -1,6 +1,10 @@
 //! Compact research-tree viewport controls and detail panel.
 
+use super::effects::node_effects;
 use super::*;
+use macroquad_toolkit::ui::{
+    draw_ui_text, measure_ui_text, truncate_text_to_width, wrap_text, Pointer,
+};
 
 const SHORT_PHONE_TREE_HEIGHT: f32 = 120.0;
 const MOBILE_DESCRIPTION_LINE_HEIGHT: f32 = 13.0;
