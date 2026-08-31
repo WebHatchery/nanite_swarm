@@ -31,6 +31,14 @@ fn try_place_selected_building(
     state.try_place_building(pos)
 }
 
+fn handle_existing_building_primary(state: &mut PlanetState, pos: GridPos, arm_smart_drag: bool) {
+    state.selected_tile = Some(pos);
+    if arm_smart_drag {
+        state.smart_drag_source = Some(pos);
+        state.drag_last_pos = Some(pos);
+    }
+}
+
 /// Drag the map with the middle mouse button, zoom with the wheel.
 ///
 /// Runs before anything else reads the grid, so drawing and hit-testing both
@@ -258,9 +266,10 @@ pub(super) fn handle_input(
                 .and_then(|tile| tile.building.as_ref())
                 .is_some();
             if starts_smart_drag {
-                state.smart_drag_source = Some(pos);
-                state.drag_last_pos = Some(pos);
-                state.selected_tile = Some(pos);
+                // A touch tap is an inspection/select action. Smart Drag only
+                // arms for a mouse press or an already-claimed gesture; a
+                // short touch must not leave a route source behind.
+                handle_existing_building_primary(state, pos, mouse_input || touch.claimed);
             } else if let Some(building_type) = state.selected_building {
                 placed = try_place_selected_building(state, pos, building_type);
             }

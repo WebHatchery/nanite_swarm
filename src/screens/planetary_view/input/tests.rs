@@ -62,3 +62,27 @@ fn unaffordable_primary_placement_explains_the_resource_shortfall() {
         .iter()
         .any(|notification| notification.message.contains("Need M 20")));
 }
+
+#[test]
+fn touch_tap_on_existing_building_selects_without_arming_smart_drag() {
+    let mut state = state();
+    let core = state.grid.find_core().unwrap();
+
+    handle_existing_building_primary(&mut state, core, false);
+
+    assert_eq!(state.selected_tile, Some(core));
+    assert_eq!(state.smart_drag_source, None);
+    assert_eq!(state.drag_last_pos, None);
+}
+
+#[test]
+fn pointer_press_on_existing_building_keeps_smart_drag_available() {
+    let mut state = state();
+    let core = state.grid.find_core().unwrap();
+
+    handle_existing_building_primary(&mut state, core, true);
+
+    assert_eq!(state.selected_tile, Some(core));
+    assert_eq!(state.smart_drag_source, Some(core));
+    assert_eq!(state.drag_last_pos, Some(core));
+}
