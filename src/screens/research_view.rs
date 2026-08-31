@@ -13,9 +13,9 @@ mod effects;
 mod layout;
 mod nodes;
 mod sheet;
+mod sidebar;
 use compact::*;
 use layout::{compact_info_offset, ResearchLayout, TreeLayout};
-use sheet::draw_swarm_sheet;
 
 const HEADER_HEIGHT: f32 = 72.0;
 const DEFAULT_RESEARCH_ZOOM: f32 = 1.45;
@@ -149,16 +149,7 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
     let right_panel_w = view.legend.w;
     let right_panel_x = view.legend.x;
     let right_panel_y = view.legend.y;
-    if !view.compact {
-        draw_panel(right_panel_x, right_panel_y, right_panel_w, view.legend.h);
-        draw_ui_text(
-            "Legend",
-            right_panel_x + 12.0,
-            right_panel_y + 28.0,
-            16.0,
-            Colors::PRIMARY,
-        );
-    } else {
+    if view.compact {
         if screen_w < 600.0 {
             draw_compact_legend(18.0, HEADER_HEIGHT + 70.0, screen_w);
             draw_ui_text(
@@ -204,62 +195,13 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
         }
     }
     if !view.compact {
-        if let Some(current) = &research_state.current_research {
-            if let Some(node) = research_tree.get_node(current) {
-                let progress = research_state.research_progress.min(node.data_cost);
-                let pct = if node.data_cost > 0.0 {
-                    progress / node.data_cost
-                } else {
-                    1.0
-                };
-                draw_ui_text(
-                    "Active Research",
-                    left_panel_x + 12.0,
-                    left_text_y,
-                    12.0,
-                    Colors::TEXT_DIM,
-                );
-                draw_ui_text(
-                    &node.name,
-                    left_panel_x + 12.0,
-                    left_text_y + 18.0,
-                    14.0,
-                    Colors::TEXT,
-                );
-                draw_rectangle(
-                    left_panel_x + 12.0,
-                    left_text_y + 32.0,
-                    left_panel_w - 24.0,
-                    10.0,
-                    Colors::SURFACE_DARK,
-                );
-                draw_rectangle(
-                    left_panel_x + 12.0,
-                    left_text_y + 32.0,
-                    (left_panel_w - 24.0) * pct,
-                    10.0,
-                    Colors::PRIMARY,
-                );
-                draw_rectangle_lines(
-                    left_panel_x + 12.0,
-                    left_text_y + 32.0,
-                    left_panel_w - 24.0,
-                    10.0,
-                    1.0,
-                    Colors::PANEL_BORDER,
-                );
-                left_text_y += 60.0;
-            }
-        } else {
-            draw_ui_text(
-                "No research selected.",
-                left_panel_x + 12.0,
-                left_text_y,
-                12.0,
-                Colors::TEXT_DIM,
-            );
-            left_text_y += 24.0;
-        }
+        left_text_y = sidebar::draw_active_research(
+            research_state,
+            research_tree,
+            left_panel_x,
+            left_panel_w,
+            left_text_y,
+        );
     }
 
     let (zoom, pan) = if view.compact {
@@ -339,65 +281,13 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
     // legend is above the full-width tree, while the lower drawer is reserved
     // for the active/inspected node and remains a large touch target.
     if !view.compact {
-        draw_ui_text(
-            "Unlocked",
-            right_panel_x + 12.0,
-            right_panel_y + 56.0,
-            12.0,
-            Colors::TEXT_DIM,
-        );
-        draw_circle(
-            right_panel_x + 18.0,
-            right_panel_y + 74.0,
-            6.0,
-            Colors::PRIMARY,
-        );
-        draw_ui_text(
-            "In Progress",
-            right_panel_x + 12.0,
-            right_panel_y + 98.0,
-            12.0,
-            Colors::TEXT_DIM,
-        );
-        draw_circle(
-            right_panel_x + 18.0,
-            right_panel_y + 116.0,
-            6.0,
-            Colors::WARNING,
-        );
-        draw_ui_text(
-            "Available",
-            right_panel_x + 12.0,
-            right_panel_y + 140.0,
-            12.0,
-            Colors::TEXT_DIM,
-        );
-        draw_circle(
-            right_panel_x + 18.0,
-            right_panel_y + 158.0,
-            6.0,
-            Colors::SUCCESS,
-        );
-        draw_ui_text(
-            "Locked",
-            right_panel_x + 12.0,
-            right_panel_y + 182.0,
-            12.0,
-            Colors::TEXT_DIM,
-        );
-        draw_circle(
-            right_panel_x + 18.0,
-            right_panel_y + 200.0,
-            6.0,
-            Colors::SECONDARY,
-        );
-
-        draw_swarm_sheet(
+        sidebar::draw_desktop_legend(
             data,
             sheet,
             right_panel_x,
-            right_panel_y + 232.0,
+            right_panel_y,
             right_panel_w,
+            view.legend.h,
         );
     }
 

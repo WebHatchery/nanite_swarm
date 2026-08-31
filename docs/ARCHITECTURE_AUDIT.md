@@ -58,6 +58,9 @@ Audit date: 2026-08-31
 - Split desktop resource-card assembly from `hud/top_bar.rs` into
   `top_bar/resource_cards.rs`, leaving the top-bar coordinator focused on
   branding, navigation, status, and responsive dispatch.
+- Split active-research progress and desktop legend/stat-sheet rendering from
+  `research_view.rs` into `research_view/sidebar.rs`, leaving tree interaction
+  and compact/desktop node inspection in their existing view modules.
 - Split save rotation, corruption recovery, and slot-isolation coverage from
   `state/persistence/tests.rs` into `persistence/tests/recovery.rs`, leaving
   the parent suite focused on migration and round-trip contracts.
