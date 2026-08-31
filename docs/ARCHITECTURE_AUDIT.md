@@ -189,6 +189,9 @@ Audit date: 2026-08-20
 - Split factory focus status, Core progression, and resource-chip readouts from
   `factory_deck.rs` into `factory_deck/readouts.rs`, leaving the deck renderer
   focused on control-room geometry and interaction.
+- Split shared tick advancement, event fast-forwarding, campaign systems, and
+  completion/autosave checks from `main/update.rs` into `main/update/simulation.rs`,
+  leaving the frame coordinator focused on screen-phase dispatch.
 
 ## Remaining debt
 
