@@ -91,6 +91,9 @@ Audit date: 2026-08-20
 - Split relocation, cargo-preservation, and undo coverage from
   `state/actions/tests.rs` into `actions/tests/relocation.rs`, keeping action
   mutation cases separate from the movement contract they verify.
+- Split terrain harvest rewards, harvesting, and forest-filter conversion from
+  `state/actions.rs` into `actions/harvest.rs`, leaving construction and
+  processor control actions in the coordinator.
 - Split standing-order cycling and reserve-policy coverage into
   `state/shipping/tests/orders.rs`, keeping the freight test coordinator below
   the hard source-size limit as remote-route behavior continues to grow.
