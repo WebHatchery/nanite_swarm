@@ -55,6 +55,9 @@ Audit date: 2026-08-31
 - Split resource icons, metric cards, and status-row formatting from
   `ui/components.rs` into `ui/metrics.rs`, leaving common panels and controls
   separate from the data-display widget family.
+- Split desktop resource-card assembly from `hud/top_bar.rs` into
+  `top_bar/resource_cards.rs`, leaving the top-bar coordinator focused on
+  branding, navigation, status, and responsive dispatch.
 - Split save rotation, corruption recovery, and slot-isolation coverage from
   `state/persistence/tests.rs` into `persistence/tests/recovery.rs`, leaving
   the parent suite focused on migration and round-trip contracts.
