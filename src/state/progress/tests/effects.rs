@@ -222,6 +222,14 @@ fn biomass_harvester_power_rate_reads_live_fuel_output() {
     state.select_building(BuildingType::BiomassHarvester);
     assert!(state.try_place_building(forest));
 
+    let dust_response = state.resolved_dust_response();
+    let expected_generation = state.grid.total_power_generation_with(&dust_response)
+        + state.config.resources.biomass_power_output;
+    assert!(approx_eq(
+        state.power_generation(),
+        expected_generation,
+        1e-4
+    ));
     assert!(approx_eq(
         state.building_power_delta(forest).unwrap(),
         state.config.resources.biomass_power_output,

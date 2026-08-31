@@ -66,5 +66,6 @@ impl PlanetState {
     pub(crate) fn refresh_power_grid(&mut self) {
         let dust_response = self.resolved_dust_response();
         self.grid.update_power_grid_with(&dust_response);
+        self.refresh_biomass_power_bonus();
     }
 }
