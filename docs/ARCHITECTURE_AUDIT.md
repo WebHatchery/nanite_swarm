@@ -56,6 +56,9 @@ Audit date: 2026-08-20
 - Split factory, freight, upkeep, smelting, and congestion capture staging from
   `capture_scenes/scenes.rs` into `scenes/industrial.rs`, leaving the dispatcher
   focused on reset state and the remaining scene families.
+- Split individual building-card rendering from
+  `screens/planetary_view/hud/build_palette.rs` into `build_palette/rows.rs`,
+  leaving palette layout and quick-action state changes in the coordinator.
 - Split procedural terrain and building tile generation from
   `graphics_gen/tiles.rs` into `tiles/terrain.rs` and `tiles/buildings.rs`,
   leaving the generator coordinator focused on output helpers and dispatch.
