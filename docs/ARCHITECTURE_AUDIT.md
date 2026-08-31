@@ -288,6 +288,9 @@ Audit date: 2026-08-31
   planetary construction rules into `world_dossier/shipping.rs`,
   `world_dossier/telemetry.rs`, and `world_dossier/rules.rs`, leaving the
   dossier parent as the stable shared read-model surface.
+- Split Records achievement cards and the durable event log into
+  `records_view/cards.rs` and `records_view/log.rs`, leaving the parent focused
+  on responsive layout, scrolling orchestration, and screen actions.
 
 ## Remaining debt
 
