@@ -86,6 +86,16 @@ fn focus_status_marks_an_unbuilt_deck_as_idle() {
 }
 
 #[test]
+fn compact_deck_legend_keeps_the_frame_states_and_close_action_visible() {
+    let legend = "FRAME: LIVE / WAIT / FULL / OFFLINE  //  TAP DECK CLOSE";
+    assert!(legend.contains("LIVE"));
+    assert!(legend.contains("WAIT"));
+    assert!(legend.contains("FULL"));
+    assert!(legend.contains("OFFLINE"));
+    assert!(legend.contains("TAP DECK CLOSE"));
+}
+
+#[test]
 fn balanced_focus_does_not_claim_any_map_targets() {
     let state = PlanetState::new(2, 42, crate::data::GameConfig::default());
     assert!(focus_target_positions(&state).is_empty());

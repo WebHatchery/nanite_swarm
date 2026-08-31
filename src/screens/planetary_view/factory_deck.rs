@@ -239,15 +239,15 @@ pub(super) fn draw_factory_depth_overlay(
     );
     if compact {
         draw_ui_text(
-            "Tap DECK to close",
+            "FRAME: LIVE / WAIT / FULL / OFFLINE  //  TAP DECK CLOSE",
             panel.x + 22.0,
             panel.y + 260.0,
-            9.0,
+            if narrow { 8.0 } else { 9.0 },
             dim,
         );
     } else {
         draw_ui_text(
-            "Focus changes production rates and power draw; it never rewires the map.",
+            "FRAME: LIVE / WAIT / FULL / OFFLINE  //  focus changes rates, never map wiring.",
             panel.x + 22.0,
             panel.y + 260.0,
             9.0,
