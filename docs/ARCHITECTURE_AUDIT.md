@@ -183,6 +183,9 @@ Audit date: 2026-08-20
 - Split JSON round-trip persistence coverage from `state/persistence/tests.rs`
   into `tests/roundtrip.rs`, leaving the parent focused on migrations, offline
   progress, and malformed-save behavior.
+- Split placement, conduit-route, and demolition coverage from
+  `state/actions/tests.rs` into `actions/tests/construction.rs`, leaving the
+  parent focused on processor action checks and shared fixture setup.
 
 ## Remaining debt
 
