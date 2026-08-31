@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+mod defaults;
 mod validation;
 
 /// Core game configuration loaded from JSON
@@ -195,77 +196,6 @@ fn default_repeater_range() -> u32 {
     6
 }
 
-impl Default for GameConfig {
-    fn default() -> Self {
-        Self {
-            grid: GridConfig {
-                initial_width: 16,
-                initial_height: 16,
-                tile_size: 32.0,
-                max_width: 64,
-                max_height: 64,
-                min_start_region: default_min_start_region(),
-            },
-            resources: ResourceConfig {
-                starting_energy: 50.0,
-                starting_minerals: 50.0,
-                drone_carry_capacity: 10.0,
-                drones_per_drill: 1.0,
-                // Tiles per second. Keep in step with assets/game_config.json.
-                drone_speed: 8.0,
-                max_energy: 50.0,
-                base_mineral_cap: 100.0,
-                storage_bonus: 100.0,
-                core_data_rate: 0.25,
-                server_data_rate: 1.0,
-                research_rate: 5.0,
-                forest_biomass: 60.0,
-                biomass_power_output: 8.0,
-                biomass_consumption_rate: 1.0,
-            },
-            buildings: BuildingConfig {
-                // Minerals cut per second by one drill.
-                drill_output_rate: 5.0,
-                repeater_range: default_repeater_range(),
-                conduit_capacity: 2.0,
-                congestion_route_penalty: 1.5,
-                partial_load_min_route: 6.0,
-                partial_load_min_share: 0.5,
-                server_bank_heat_per_second: 0.8,
-                server_bank_heat_capacity: 100.0,
-                water_cooling_rate: 2.0,
-                overheat_penalty: 0.5,
-            },
-            collapse: CollapseConfig::default(),
-            ore: OreConfig::default(),
-            mass_driver: MassDriverConfig::default(),
-            upkeep: UpkeepConfig::default(),
-            logistics: LogisticsConfig::default(),
-            offline: OfflineConfig::default(),
-        }
-    }
-}
-
-impl Default for UpkeepConfig {
-    fn default() -> Self {
-        Self {
-            dust_rate: 0.12,
-            sweeper_rate: 0.6,
-            sweeper_radius: 3,
-            filter_radius: 3,
-            filter_multiplier: 0.6,
-            forest_buffer_radius: 3,
-            forest_buffer_multiplier: 0.75,
-            pollution_radius: 3,
-            pollution_multiplier: 1.3,
-            acid_multiplier: 4.0,
-            hazard_counter_radius: 4,
-            hazard_counter_strength: 0.9,
-            dust_response: DustResponseConfig::default(),
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DustResponseConfig {
     pub efficiency_threshold: f32,
@@ -275,20 +205,6 @@ pub struct DustResponseConfig {
     pub leak_threshold: f32,
     pub leak: f32,
     pub stall_threshold: f32,
-}
-
-impl Default for DustResponseConfig {
-    fn default() -> Self {
-        Self {
-            efficiency_threshold: 25.0,
-            efficiency: 0.9,
-            speed_threshold: 50.0,
-            speed_multiplier: 0.7,
-            leak_threshold: 75.0,
-            leak: 0.5,
-            stall_threshold: 100.0,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -301,83 +217,12 @@ pub struct LogisticsConfig {
     pub path_validation_budget_ms: f32,
 }
 
-impl Default for LogisticsConfig {
-    fn default() -> Self {
-        Self {
-            pad_depth: 30.0,
-            hopper_depth: 30.0,
-            reservation_seconds: 1.5,
-            dispatch_lookahead: 3.0,
-            max_queue_depth: 64,
-            path_validation_budget_ms: 4.0,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OfflineConfig {
     pub max_elapsed_seconds: f32,
     pub max_resource_gain: f32,
     pub clock_tamper_tolerance_seconds: f32,
     pub fallback_delta_seconds: f32,
-}
-
-impl Default for OfflineConfig {
-    fn default() -> Self {
-        Self {
-            max_elapsed_seconds: 86_400.0,
-            max_resource_gain: 10_000.0,
-            clock_tamper_tolerance_seconds: 300.0,
-            fallback_delta_seconds: 60.0,
-        }
-    }
-}
-
-impl Default for MassDriverConfig {
-    fn default() -> Self {
-        Self {
-            load_rate: 3.0,
-            pod_capacity: 60.0,
-            seconds_per_orbit_unit: 0.6,
-            min_transit_seconds: 20.0,
-            pad_capacity: 120.0,
-            cargo: vec![
-                "minerals".to_string(),
-                "alloy".to_string(),
-                "components".to_string(),
-            ],
-        }
-    }
-}
-
-impl Default for OreConfig {
-    fn default() -> Self {
-        Self {
-            rich_chance: 0.18,
-            rich_min: 1.4,
-            rich_max: 2.2,
-            lean_chance: 0.22,
-            lean_min: 0.5,
-            lean_max: 0.8,
-            depletion_per_unit: 0.0004,
-        }
-    }
-}
-
-impl Default for CollapseConfig {
-    fn default() -> Self {
-        Self {
-            negative_power_seconds: 60.0,
-            cooldown_seconds: 120.0,
-            full_scale_structures: 60.0,
-            min_shutdown_seconds: 6.0,
-            max_shutdown_seconds: 45.0,
-            research_lock_ratio: 1.5,
-            min_data_loss: 0.1,
-            max_data_loss: 0.35,
-            notice_seconds: 10.0,
-        }
-    }
 }
 
 #[cfg(test)]

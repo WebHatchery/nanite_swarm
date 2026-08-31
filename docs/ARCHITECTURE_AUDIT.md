@@ -49,6 +49,9 @@ Audit date: 2026-08-31
 - Split the loaded balance contract validation from `src/data/game_config.rs`
   into `game_config/validation.rs`, leaving the configuration module focused on
   schema types and defaults while preserving `GameConfig::validate()`.
+- Split fallback balance defaults from `data/game_config.rs` into
+  `game_config/defaults.rs`, leaving the configuration module focused on the
+  deserialized schema and serde fallback helpers.
 - Split save rotation, corruption recovery, and slot-isolation coverage from
   `state/persistence/tests.rs` into `persistence/tests/recovery.rs`, leaving
   the parent suite focused on migration and round-trip contracts.
