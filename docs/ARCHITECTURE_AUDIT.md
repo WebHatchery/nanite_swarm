@@ -64,6 +64,9 @@ Audit date: 2026-08-31
 - Split desktop mission-time, speed-control, and telemetry-graph rendering
   from `hud/bottom_bar/desktop.rs` into `desktop/status.rs`, leaving the
   command bar coordinator focused on alerts, map controls, and mode actions.
+- Split persisted planet scalar, resource, tile, and buffer checks from
+  `campaign/validation/planet.rs` into `validation/planet/contents.rs`,
+  leaving research, drone, and grid-shape invariants in the planet validator.
 - Split save rotation, corruption recovery, and slot-isolation coverage from
   `state/persistence/tests.rs` into `persistence/tests/recovery.rs`, leaving
   the parent suite focused on migration and round-trip contracts.
