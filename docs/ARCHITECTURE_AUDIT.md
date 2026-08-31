@@ -242,6 +242,9 @@ Audit date: 2026-08-20
 - Split compact Seed Ship stage-card rendering from
   `seed_ship_view/mobile.rs` into `mobile/stage.rs`, leaving the mobile parent
   focused on scrolling, responsive geometry, and footer controls.
+- Split selected-building inspection rendering from
+  `hud/inspector_panel.rs` into `inspector_panel/building.rs`, leaving the
+  parent focused on the shared tile snapshot and terrain fallback.
 
 ## Remaining debt
 
