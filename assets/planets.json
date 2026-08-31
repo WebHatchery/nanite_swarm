@@ -68,7 +68,7 @@
       "banned_buildings": [],
       "arrival": "A moon, strictly. The distinction matters to astronomers and to nobody here.",
       "pending_pod_cap": 5,
-      "features": [{"id":"ice_rift","name":"Ice Rift","description":"A cold seam where water tiles cluster.","width":0.24,"height":0.12,"seed_offset":37}],
+      "features": [{"id":"ice_rift","name":"Ice Rift","description":"A cold seam where water tiles cluster.","width":0.24,"height":0.12,"seed_offset":37,"cooling_multiplier":1.5}],
       "hazard_fields": [{"id":"polar_cold","name":"Polar Cold","hazard":"cold","center":[0.30,0.72],"radius":0.28,"strength":0.7}]
     },
     {

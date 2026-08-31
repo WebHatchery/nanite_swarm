@@ -55,6 +55,47 @@ fn dust_accumulates_on_powered_buildings_over_time() {
     assert!(dust > 0.0);
 }
 
+fn server_bank_heat_on_ice_rift(on_rift: bool) -> f32 {
+    let mut state = PlanetState::new(3, 42, GameConfig::default());
+    let core = state.grid.find_core().unwrap();
+    let pos = GridPos::new(core.x + 1, core.y);
+    let water = GridPos::new(core.x + 2, core.y);
+    state.grid.reveal_around(pos, 2);
+    state.grid.get_mut(pos).unwrap().terrain = TerrainType::Empty;
+    state.grid.get_mut(water).unwrap().terrain = TerrainType::Water;
+    state.features[0].bounds = if on_rift {
+        (0.45, 0.45, 0.20, 0.20)
+    } else {
+        (0.0, 0.0, 0.05, 0.05)
+    };
+    state.resources.minerals = 1_000.0;
+    state.resources.energy = 1_000.0;
+    state.config.buildings.server_bank_heat_per_second = 4.0;
+    state.config.buildings.water_cooling_rate = 2.0;
+    state.unlock_building(BuildingType::ServerBank);
+    state.select_building(BuildingType::ServerBank);
+    assert!(state.try_place_building(pos));
+    state.grid.update_power_grid();
+
+    state.update_heat(1.0);
+    state
+        .grid
+        .get(pos)
+        .and_then(|tile| tile.building.as_ref())
+        .map(|building| building.heat)
+        .unwrap_or(0.0)
+}
+
+#[test]
+fn ice_rift_amplifies_water_cooling_for_server_banks() {
+    let ordinary = server_bank_heat_on_ice_rift(false);
+    let rift = server_bank_heat_on_ice_rift(true);
+
+    assert!((ordinary - 2.0).abs() < 0.001);
+    assert!((rift - 1.0).abs() < 0.001);
+    assert!(rift < ordinary);
+}
+
 fn conduit_wear_on_feature(on_feature: bool) -> (f32, f32) {
     let mut state = PlanetState::new(1, 42, GameConfig::default());
     let core = state.grid.find_core().unwrap();

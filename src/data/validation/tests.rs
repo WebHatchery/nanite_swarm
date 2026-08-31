@@ -131,3 +131,16 @@ fn invalid_feature_freeze_bonus_is_rejected_before_simulation() {
         "assets/planets.json planet \"saturn\" feature \"ring_shadow\" has invalid freeze multiplier"
     );
 }
+
+#[test]
+fn invalid_feature_cooling_bonus_is_rejected_before_simulation() {
+    let mut data = sample_data();
+    data.planets[3].features[0].cooling_multiplier = Some(0.5);
+
+    let error = validate_game_data(&data).unwrap_err();
+
+    assert_eq!(
+        error,
+        "assets/planets.json planet \"jupiter\" feature \"ice_rift\" has invalid cooling multiplier"
+    );
+}

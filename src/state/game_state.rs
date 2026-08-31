@@ -7,6 +7,7 @@ use super::seed_ship::SeedShip;
 mod features;
 use crate::data::{GameConfig, GameData, GameDataContext, PlanetHazards};
 use crate::engine::{BuildingType, DroneManager, Grid, GridPos, ResourceType, Stats};
+pub(crate) use features::feature_cooling_multiplier;
 pub(crate) use features::feature_hazard_multiplier;
 pub use features::PlanetFeature;
 use macroquad::miniquad;

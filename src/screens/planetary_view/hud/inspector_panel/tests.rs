@@ -49,19 +49,23 @@ fn feature_detail_uses_only_the_space_the_inspector_can_hold() {
 #[test]
 fn feature_label_surfaces_local_feature_effects() {
     assert_eq!(
-        feature_label("Iron Belt", Some(1.5), None, None),
+        feature_label("Iron Belt", Some(1.5), None, None, None),
         "Feature: Iron Belt  +50% ORE"
     );
     assert_eq!(
-        feature_label("Acid Sea", None, Some(1.8), None),
+        feature_label("Acid Sea", None, Some(1.8), None, None),
         "Feature: Acid Sea  +80% ACID"
     );
     assert_eq!(
-        feature_label("Ring Shadow", None, None, Some(1.4)),
+        feature_label("Ring Shadow", None, None, Some(1.4), None),
         "Feature: Ring Shadow  +40% COLD"
     );
     assert_eq!(
-        feature_label("Landing Crater", None, None, None),
+        feature_label("Ice Rift", None, None, None, Some(1.5)),
+        "Feature: Ice Rift  +50% COOLING"
+    );
+    assert_eq!(
+        feature_label("Landing Crater", None, None, None, None),
         "Feature: Landing Crater"
     );
 }

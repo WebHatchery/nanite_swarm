@@ -54,6 +54,10 @@ impl PlanetState {
             .filter(|def| def.water_cooling)
             .filter_map(|def| BuildingType::from_id(&def.id))
             .collect();
+        let feature_definitions = self.data().planet(self.planet_index).features.clone();
+        let features = &self.features;
+        let grid_width = self.grid.width;
+        let grid_height = self.grid.height;
         for (pos, tile) in self.grid.iter_tiles_mut() {
             let Some(building) = tile.building.as_mut() else {
                 continue;
@@ -74,6 +78,13 @@ impl PlanetState {
                     .any(|water| pos.distance(*water) as i32 <= 1)
             {
                 cooling
+                    * super::super::game_state::feature_cooling_multiplier(
+                        features,
+                        &feature_definitions,
+                        pos,
+                        grid_width,
+                        grid_height,
+                    )
             } else {
                 0.0
             };

@@ -87,6 +87,19 @@ impl PlanetState {
             .and_then(|definition| definition.freeze_multiplier)
             .filter(|multiplier| multiplier.is_finite() && *multiplier > 1.0)
     }
+
+    /// The authored water-cooling multiplier for a revealed feature tile, if
+    /// it has one.
+    pub fn feature_cooling_multiplier_at(&self, pos: GridPos) -> Option<f32> {
+        let feature = self.feature_at(pos)?;
+        self.data()
+            .planet(self.planet_index)
+            .features
+            .iter()
+            .find(|definition| definition.id == feature.id)
+            .and_then(|definition| definition.cooling_multiplier)
+            .filter(|multiplier| multiplier.is_finite() && *multiplier > 1.0)
+    }
 }
 
 pub(super) fn generated_features(def: &PlanetDef, seed: u64) -> Vec<PlanetFeature> {
@@ -128,6 +141,7 @@ pub(super) fn anchor_effect_features(features: &mut [PlanetFeature], def: &Plane
                     .into_iter()
                     .flatten()
                     .chain(definition.freeze_multiplier)
+                    .chain(definition.cooling_multiplier)
                     .any(|multiplier| multiplier > 1.0)
             });
         if !has_effect {
@@ -202,6 +216,33 @@ pub(crate) fn feature_hazard_multiplier(
             "cold" => definition.freeze_multiplier,
             _ => None,
         })
+        .unwrap_or(1.0);
+    if multiplier.is_finite() {
+        multiplier.max(1.0)
+    } else {
+        1.0
+    }
+}
+
+/// Resolve a local water-cooling multiplier without requiring a mutable world
+/// borrow while the heat loop owns the grid iterator.
+pub(crate) fn feature_cooling_multiplier(
+    features: &[PlanetFeature],
+    definitions: &[crate::data::PlanetFeatureDef],
+    pos: GridPos,
+    grid_width: u32,
+    grid_height: u32,
+) -> f32 {
+    let Some(feature) = features
+        .iter()
+        .find(|feature| feature.contains_tile(pos, grid_width, grid_height))
+    else {
+        return 1.0;
+    };
+    let multiplier = definitions
+        .iter()
+        .find(|definition| definition.id == feature.id)
+        .and_then(|definition| definition.cooling_multiplier)
         .unwrap_or(1.0);
     if multiplier.is_finite() {
         multiplier.max(1.0)

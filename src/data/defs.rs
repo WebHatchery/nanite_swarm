@@ -294,6 +294,9 @@ pub struct PlanetFeatureDef {
     /// Multiplies local cold exposure for drones crossing this feature.
     #[serde(default)]
     pub freeze_multiplier: Option<f32>,
+    /// Multiplies water cooling for water-cooled machinery on this feature.
+    #[serde(default)]
+    pub cooling_multiplier: Option<f32>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

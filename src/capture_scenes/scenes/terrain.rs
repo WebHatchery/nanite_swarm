@@ -39,6 +39,16 @@ impl Game {
         self.campaign.travel_to(4);
         prepare_feature_inspection(self.campaign.current_mut());
     }
+
+    pub(super) fn stage_ice_rift_inspection_scene(&mut self) {
+        self.phase = GamePhase::Playing;
+        // Keep the capture on Jupiter so the feature's local cooling effect
+        // can be read beside the authored Polar Cold field.
+        self.seed_logistics_scene();
+        self.campaign.colonize(3);
+        self.campaign.travel_to(3);
+        prepare_feature_inspection(self.campaign.current_mut());
+    }
 }
 
 fn prepare_feature_inspection(planet: &mut state::PlanetState) {
@@ -62,7 +72,7 @@ fn prepare_feature_inspection(planet: &mut state::PlanetState) {
                     tile.building.is_none()
                         && ((!matches!(
                             feature.id.as_str(),
-                            "iron_belt" | "acid_sea" | "ring_shadow"
+                            "iron_belt" | "acid_sea" | "ring_shadow" | "ice_rift"
                         )) || tile.terrain.is_buildable(planet.data()))
                 })
         })

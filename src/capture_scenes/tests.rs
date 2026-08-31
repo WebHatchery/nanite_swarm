@@ -58,7 +58,8 @@ fn required_capture_scenes_are_registered() {
             "mobile_feature_inspection",
             "iron_belt_inspection",
             "acid_sea_inspection",
-            "ring_shadow_inspection"
+            "ring_shadow_inspection",
+            "ice_rift_inspection"
         ]
     );
 }
