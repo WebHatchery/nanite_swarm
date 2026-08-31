@@ -7,6 +7,7 @@ use crate::ui::{color_from_rgba, draw_hud_button, draw_hud_panel, draw_resource_
 use macroquad::prelude::*;
 use macroquad_toolkit::colors::with_alpha;
 use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text, truncate_text_to_width};
+use std::collections::HashSet;
 
 use super::metrics::HudMetrics;
 
@@ -503,9 +504,18 @@ fn draw_focus_targets(state: &PlanetState, metrics: HudMetrics, theme: &UiTheme,
         return;
     }
 
-    let color = color_from_rgba(&theme.colors.primary);
+    let starved: HashSet<_> = state.starved_factories().into_iter().collect();
+    let blocked: HashSet<_> = state.blocked_factories().into_iter().collect();
     let pulse = 0.35 + (time * 2.6).sin().abs() * 0.18;
     for position in focus_target_positions(state) {
+        let Some(building) = state
+            .grid
+            .get(position)
+            .and_then(|tile| tile.building.as_ref())
+        else {
+            continue;
+        };
+        let color = focus_target_color(state, position, building, &starved, &blocked, theme);
         let (x, y) = super::metrics::grid_to_screen(position, metrics);
         let inset = (metrics.tile_size * 0.1).clamp(2.0, 4.0);
         let size = metrics.tile_size - inset * 2.0;
@@ -519,6 +529,27 @@ fn draw_focus_targets(state: &PlanetState, metrics: HudMetrics, theme: &UiTheme,
         );
         let beacon = 2.0 + (time * 3.0 + position.x as f32 * 0.17).sin().abs();
         draw_circle(x + metrics.tile_size * 0.5, y + inset, beacon, color);
+    }
+}
+
+fn focus_target_color(
+    state: &PlanetState,
+    position: GridPos,
+    building: &crate::engine::Building,
+    starved: &HashSet<GridPos>,
+    blocked: &HashSet<GridPos>,
+    theme: &UiTheme,
+) -> Color {
+    if !building.powered {
+        color_from_rgba(&theme.colors.text_dim)
+    } else if building.standby || building.is_dust_stalled_with(&state.resolved_dust_response()) {
+        color_from_rgba(&theme.colors.warning)
+    } else if blocked.contains(&position) {
+        color_from_rgba(&theme.colors.error)
+    } else if starved.contains(&position) {
+        color_from_rgba(&theme.colors.warning)
+    } else {
+        color_from_rgba(&theme.colors.primary)
     }
 }
 

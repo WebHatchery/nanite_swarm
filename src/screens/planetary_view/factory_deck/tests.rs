@@ -110,3 +110,17 @@ fn assembly_focus_marks_both_machine_types_in_its_deck() {
     let targets = focus_target_positions(&state);
     assert_eq!(targets, vec![server, assembler]);
 }
+
+#[test]
+fn focus_marker_palette_prioritizes_local_machine_failures() {
+    let state = PlanetState::new(2, 42, crate::data::GameConfig::default());
+    let theme = UiTheme::default();
+    let position = crate::engine::GridPos::new(1, 1);
+    let building = crate::engine::Building::new(crate::engine::BuildingType::Assembler, position);
+    let empty = std::collections::HashSet::new();
+
+    assert_eq!(
+        focus_target_color(&state, position, &building, &empty, &empty, &theme),
+        color_from_rgba(&theme.colors.text_dim)
+    );
+}
