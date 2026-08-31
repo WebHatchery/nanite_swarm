@@ -1,7 +1,7 @@
 //! Offline simulation and storage-cap safety coverage.
 
 use super::{approx_eq, state};
-use crate::engine::{BuildingType, GridPos, ResourceType, TerrainType};
+use crate::engine::{Building, BuildingType, GridPos, ResourceType, TerrainType};
 use crate::state::PlanetState;
 
 #[test]
@@ -155,4 +155,44 @@ fn offline_catch_up_advances_dust_and_server_heat() {
     let building = state.grid.get(server).unwrap().building.as_ref().unwrap();
     assert!(approx_eq(building.dust, 10.0, 0.001));
     assert!(approx_eq(building.heat, 10.0, 0.001));
+}
+
+#[test]
+fn offline_catch_up_honors_adaptive_clocking_for_a_fed_processor() {
+    let mut state = PlanetState::new(2, 42, crate::data::GameConfig::default());
+    state
+        .research
+        .unlocked_techs
+        .push("adaptive_clocking".to_string());
+    state.auto_clocking = true;
+    let core = state.grid.find_core().unwrap();
+    let processor = GridPos::new(core.x + 1, core.y);
+    let turbine = GridPos::new(core.x - 1, core.y);
+    for pos in [processor, turbine] {
+        state.grid.get_mut(pos).unwrap().terrain = TerrainType::Empty;
+        state.grid.reveal_around(pos, 1);
+    }
+    state.grid.get_mut(processor).unwrap().building =
+        Some(Building::new(BuildingType::Smelter, processor));
+    state.grid.get_mut(turbine).unwrap().building =
+        Some(Building::new(BuildingType::WindTurbine, turbine));
+    state.grid.update_power_grid();
+    state.input_hoppers.insert(
+        (processor.x, processor.y),
+        [(ResourceType::Minerals, 20.0)].into_iter().collect(),
+    );
+
+    state.apply_offline_progress(1.0);
+
+    assert!(
+        state
+            .grid
+            .get(processor)
+            .unwrap()
+            .building
+            .as_ref()
+            .unwrap()
+            .overclocked
+    );
+    assert!(approx_eq(state.resources.alloy, 1.5, 0.001));
 }

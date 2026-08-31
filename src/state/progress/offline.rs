@@ -27,6 +27,11 @@ impl PlanetState {
         self.update_heat(simulated);
         self.refresh_power_grid();
         self.refresh_biomass_power_bonus();
+        // Adaptive Clocking is a live policy, but its decision still matters
+        // for the aggregate production credited while the player is away.
+        // Run one bounded pulse against the return-state snapshot so a
+        // healthy, fed line does not silently lose its enabled automation.
+        self.update_auto_clocking(simulated);
         let biomass_before = self.resources.biomass;
         self.update_biomass_harvesters(simulated);
         let biomass = (self.resources.biomass - biomass_before).max(0.0);
