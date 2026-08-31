@@ -46,6 +46,14 @@ pub(crate) fn offline_work_label(report: OfflineReport) -> Option<String> {
             report.freight_pods_launched
         ));
     }
+    if report.directives_completed > 0 {
+        let suffix = if report.directives_completed == 1 {
+            "directive"
+        } else {
+            "directives"
+        };
+        work.push(format!("{suffix} +{}", report.directives_completed));
+    }
     (!work.is_empty()).then(|| work.join(" | "))
 }
 
@@ -56,6 +64,8 @@ pub(crate) fn mobile_offline_work_label(report: OfflineReport) -> &'static str {
         "SHIP ADVANCED"
     } else if report.research_data_spent > 0.001 {
         "RESEARCHING"
+    } else if report.directives_completed > 0 {
+        "DIRECTIVE DONE"
     } else if report.freight_pods_launched > 0 {
         "FREIGHT AWAY"
     } else {

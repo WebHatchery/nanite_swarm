@@ -44,3 +44,23 @@ fn a_directive_that_runs_out_of_time_is_reported_as_a_loss() {
     assert!(announced[0].message.contains("lapsed"));
     assert!(announced[0].message.contains(&goal));
 }
+
+#[test]
+fn offline_time_completes_and_pays_a_standing_directive() {
+    let mut campaign = campaign();
+    campaign.directive.kind = crate::directives::DirectiveKind::PowerSurplus;
+    campaign.directive.target = 1;
+    campaign.directive.hold_seconds = 2.0;
+    campaign.directive.duration = 10.0;
+    campaign.directive.reward_data = 25.0;
+    campaign.directive.description = "Hold the line".to_string();
+    campaign.current_mut().power_balance = 1.0;
+    let before_data = campaign.current().resources.data;
+
+    let completed = campaign.apply_offline_directive_progress(3.0);
+
+    assert_eq!(completed, 1);
+    assert_eq!(campaign.current().resources.data, before_data + 25.0);
+    assert_eq!(campaign.directive_tier, 1);
+    assert!(campaign.directive_history.last().unwrap().completed);
+}

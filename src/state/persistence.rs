@@ -93,10 +93,12 @@ pub fn load_from_json(json: &str) -> Result<Campaign, serde_json::Error> {
         let stages_completed = campaign
             .current_mut()
             .apply_offline_seed_ship_progress(foreground_simulated);
+        let directives_completed = campaign.apply_offline_directive_progress(foreground_simulated);
         let report = &mut campaign.current_mut().last_offline_report;
         report.research_data_spent = research_spent;
         report.research_completed = research_completed;
         report.seed_ship_stages_completed = stages_completed;
+        report.directives_completed = directives_completed;
 
         // Research and Seed Ship stages are campaign-side offline work, so
         // refresh the foreground world's records after both have been applied.

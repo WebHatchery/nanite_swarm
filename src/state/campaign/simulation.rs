@@ -1,6 +1,6 @@
 //! Coarse background worlds and the campaign-wide directive clock.
 
-use crate::directives::pick_directive;
+use crate::directives::{pick_directive, rotation_seconds};
 
 use super::super::audio::AudioEvent;
 use super::Campaign;
@@ -13,6 +13,55 @@ const BACKGROUND_TICK_SECONDS: f32 = 1.0;
 const MAX_BACKGROUND_TICKS: u32 = 4;
 
 impl Campaign {
+    /// Continue the active standing directive across a save gap.
+    ///
+    /// Directive time is campaign-owned, so it cannot be handled by the
+    /// foreground world's offline production pass. Consume the gap in bounded
+    /// directive-sized segments, settling each completion or lapse before the
+    /// next one starts. This keeps rewards and the durable history aligned
+    /// with the live update path even when several rotations fit in the gap.
+    pub fn apply_offline_directive_progress(&mut self, simulated_seconds: f32) -> u32 {
+        if simulated_seconds <= 0.0 || !simulated_seconds.is_finite() {
+            return 0;
+        }
+
+        let rotation = rotation_seconds(self.data.data());
+        let mut remaining = simulated_seconds;
+        let mut completed = 0;
+        while remaining > 0.0001 {
+            if self.directive.completed
+                || self.directive.duration <= 0.0
+                || self.directive_timer >= rotation
+            {
+                let was_completed = self.directive.completed;
+                let before_tier = self.directive_tier;
+                self.update_directive(0.0);
+                if was_completed && self.directive_tier > before_tier {
+                    completed += 1;
+                }
+                continue;
+            }
+
+            let until_rotation = (rotation - self.directive_timer).max(0.0);
+            let step = remaining.min(self.directive.duration).min(until_rotation);
+            if step <= 0.0 {
+                continue;
+            }
+            self.update_directive(step);
+            remaining -= step;
+        }
+
+        if self.directive.completed || self.directive.duration <= 0.0 {
+            let was_completed = self.directive.completed;
+            let before_tier = self.directive_tier;
+            self.update_directive(0.0);
+            if was_completed && self.directive_tier > before_tier {
+                completed += 1;
+            }
+        }
+        completed
+    }
+
     /// Run every world the player is *not* standing on.
     ///
     /// The GDD's meta-layer promise is that Planet 1 does not disappear, and a

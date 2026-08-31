@@ -187,6 +187,8 @@ return, including milestones completed by the foreground research and Seed
 Ship passes.
 Standing freight orders also load full pods from that window's production,
 respecting source reserves before the pods join the campaign flight queue.
+The active campaign directive also ages during that interval, paying completed
+standing objectives into the same directive history used by live play.
 Dust, acid wear, and server heat also advance during the simulated interval,
 so a long absence can leave the return world needing the same maintenance as
 an unattended live shift.

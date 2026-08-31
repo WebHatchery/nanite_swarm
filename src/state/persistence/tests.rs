@@ -281,6 +281,28 @@ fn load_from_json_records_achievements_after_offline_research_completes() {
 }
 
 #[test]
+fn load_from_json_advances_the_active_directive() {
+    let mut campaign = campaign();
+    campaign.directive.kind = crate::directives::DirectiveKind::MineralStock;
+    campaign.directive.target = 1;
+    campaign.directive.duration = 10.0;
+    campaign.directive.reward_data = 12.0;
+    campaign.current_mut().resources.minerals = 100.0;
+    campaign.current_mut().last_saved_unix = unix_seconds_now() - 5;
+    let save = SaveGame {
+        version: SAVE_VERSION,
+        campaign,
+    };
+    let json = serde_json::to_string(&save).unwrap();
+
+    let loaded = load_from_json(&json).unwrap();
+
+    assert_eq!(loaded.current().last_offline_report.directives_completed, 1);
+    assert_eq!(loaded.directive_history.len(), 1);
+    assert!(loaded.directive_history[0].completed);
+}
+
+#[test]
 fn loading_a_past_save_advances_shipments_already_in_flight() {
     let mut campaign = campaign();
     campaign.colonize(1);

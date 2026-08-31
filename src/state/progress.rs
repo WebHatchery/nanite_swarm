@@ -36,6 +36,9 @@ pub struct OfflineReport {
     /// Full Mass Driver pods launched from offline production.
     #[serde(default)]
     pub freight_pods_launched: u32,
+    /// Campaign directives completed while the player was away.
+    #[serde(default)]
+    pub directives_completed: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
