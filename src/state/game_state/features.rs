@@ -13,6 +13,19 @@ pub struct PlanetFeature {
     pub bounds: (f32, f32, f32, f32),
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct FeatureEffects {
+    pub(crate) ore_multiplier: Option<f32>,
+    pub(crate) acid_multiplier: Option<f32>,
+    pub(crate) freeze_multiplier: Option<f32>,
+    pub(crate) cooling_multiplier: Option<f32>,
+    pub(crate) harvest_multiplier: Option<f32>,
+}
+
+fn valid_multiplier(multiplier: Option<f32>) -> Option<f32> {
+    multiplier.filter(|value| value.is_finite() && *value > 1.0)
+}
+
 impl PlanetFeature {
     /// Whether a grid tile touches this feature's normalized map rectangle.
     ///
@@ -48,71 +61,54 @@ impl PlanetState {
             })
     }
 
+    pub(crate) fn feature_effects_at(&self, pos: GridPos) -> Option<FeatureEffects> {
+        let feature = self.feature_at(pos)?;
+        let definition = self
+            .data()
+            .planet(self.planet_index)
+            .features
+            .iter()
+            .find(|definition| definition.id == feature.id);
+        Some(
+            definition.map_or_else(FeatureEffects::default, |definition| FeatureEffects {
+                ore_multiplier: valid_multiplier(definition.ore_multiplier),
+                acid_multiplier: valid_multiplier(definition.acid_multiplier),
+                freeze_multiplier: valid_multiplier(definition.freeze_multiplier),
+                cooling_multiplier: valid_multiplier(definition.cooling_multiplier),
+                harvest_multiplier: valid_multiplier(definition.harvest_multiplier),
+            }),
+        )
+    }
+
     /// The authored ore bonus for a revealed feature tile, if it has one.
     ///
     /// The saved feature keeps only its stable identity and generated bounds;
     /// looking the multiplier up in the current data keeps older saves small
     /// and lets balance changes remain data-driven.
     pub fn feature_ore_multiplier_at(&self, pos: GridPos) -> Option<f32> {
-        let feature = self.feature_at(pos)?;
-        self.data()
-            .planet(self.planet_index)
-            .features
-            .iter()
-            .find(|definition| definition.id == feature.id)
-            .and_then(|definition| definition.ore_multiplier)
-            .filter(|multiplier| multiplier.is_finite() && *multiplier > 1.0)
+        self.feature_effects_at(pos)?.ore_multiplier
     }
 
     /// The authored acid exposure for a revealed feature tile, if it has one.
     pub fn feature_acid_multiplier_at(&self, pos: GridPos) -> Option<f32> {
-        let feature = self.feature_at(pos)?;
-        self.data()
-            .planet(self.planet_index)
-            .features
-            .iter()
-            .find(|definition| definition.id == feature.id)
-            .and_then(|definition| definition.acid_multiplier)
-            .filter(|multiplier| multiplier.is_finite() && *multiplier > 1.0)
+        self.feature_effects_at(pos)?.acid_multiplier
     }
 
     /// The authored cold exposure for a revealed feature tile, if it has one.
     pub fn feature_freeze_multiplier_at(&self, pos: GridPos) -> Option<f32> {
-        let feature = self.feature_at(pos)?;
-        self.data()
-            .planet(self.planet_index)
-            .features
-            .iter()
-            .find(|definition| definition.id == feature.id)
-            .and_then(|definition| definition.freeze_multiplier)
-            .filter(|multiplier| multiplier.is_finite() && *multiplier > 1.0)
+        self.feature_effects_at(pos)?.freeze_multiplier
     }
 
     /// The authored water-cooling multiplier for a revealed feature tile, if
     /// it has one.
     pub fn feature_cooling_multiplier_at(&self, pos: GridPos) -> Option<f32> {
-        let feature = self.feature_at(pos)?;
-        self.data()
-            .planet(self.planet_index)
-            .features
-            .iter()
-            .find(|definition| definition.id == feature.id)
-            .and_then(|definition| definition.cooling_multiplier)
-            .filter(|multiplier| multiplier.is_finite() && *multiplier > 1.0)
+        self.feature_effects_at(pos)?.cooling_multiplier
     }
 
     /// The authored harvest multiplier for a revealed feature tile, if it has
     /// one.
     pub fn feature_harvest_multiplier_at(&self, pos: GridPos) -> Option<f32> {
-        self.feature_at(pos)?;
-        let multiplier = feature_harvest_multiplier(
-            &self.features,
-            &self.data().planet(self.planet_index).features,
-            pos,
-            self.grid.width,
-            self.grid.height,
-        );
-        (multiplier > 1.0).then_some(multiplier)
+        self.feature_effects_at(pos)?.harvest_multiplier
     }
 }
 
@@ -275,33 +271,6 @@ pub(crate) fn feature_cooling_multiplier(
         .iter()
         .find(|definition| definition.id == feature.id)
         .and_then(|definition| definition.cooling_multiplier)
-        .unwrap_or(1.0);
-    if multiplier.is_finite() {
-        multiplier.max(1.0)
-    } else {
-        1.0
-    }
-}
-
-/// Resolve a local harvest multiplier without requiring a mutable world borrow
-/// while an action is preparing its reward.
-pub(crate) fn feature_harvest_multiplier(
-    features: &[PlanetFeature],
-    definitions: &[crate::data::PlanetFeatureDef],
-    pos: GridPos,
-    grid_width: u32,
-    grid_height: u32,
-) -> f32 {
-    let Some(feature) = features
-        .iter()
-        .find(|feature| feature.contains_tile(pos, grid_width, grid_height))
-    else {
-        return 1.0;
-    };
-    let multiplier = definitions
-        .iter()
-        .find(|definition| definition.id == feature.id)
-        .and_then(|definition| definition.harvest_multiplier)
         .unwrap_or(1.0);
     if multiplier.is_finite() {
         multiplier.max(1.0)

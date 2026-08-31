@@ -1,3 +1,4 @@
+use super::terrain_layout::feature_label;
 use super::*;
 use crate::data::GameConfig;
 

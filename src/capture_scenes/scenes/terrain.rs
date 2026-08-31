@@ -20,6 +20,28 @@ impl Game {
         prepare_feature_inspection(self.campaign.current_mut());
     }
 
+    pub(super) fn stage_iron_belt_drill_inspection_scene(&mut self) {
+        self.phase = GamePhase::Playing;
+        self.seed_logistics_scene();
+        self.campaign.colonize(0);
+        self.campaign.travel_to(0);
+        let planet = self.campaign.current_mut();
+        prepare_feature_inspection(planet);
+        let Some(pos) = planet.selected_tile else {
+            return;
+        };
+        planet.resources.minerals = 500.0;
+        planet.resources.energy = 500.0;
+        planet.config.resources.max_energy = 500.0;
+        planet.unlock_building(engine::BuildingType::Drill);
+        planet.select_building(engine::BuildingType::Drill);
+        assert!(planet.try_place_building(pos));
+        planet.selected_building = None;
+        planet.selected_tile = Some(pos);
+        planet.notifications.clear();
+        planet.grid.update_power_grid();
+    }
+
     pub(super) fn stage_acid_sea_inspection_scene(&mut self) {
         self.phase = GamePhase::Playing;
         // Keep the capture on Venus so the feature's local corrosion effect

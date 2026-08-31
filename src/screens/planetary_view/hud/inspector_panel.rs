@@ -15,7 +15,9 @@ use super::super::format::{dust_status, fit_text_to_width, format_power_delta};
 use super::{PanelColors, RightStackLayout};
 
 mod terrain_layout;
-use terrain_layout::{feature_label, terrain_detail_offsets, terrain_feature_lines};
+use terrain_layout::{
+    draw_local_feature_label, feature_label_for, terrain_detail_offsets, terrain_feature_lines,
+};
 
 fn processor_action_label(
     output_full: bool,
@@ -107,14 +109,8 @@ pub(super) fn draw(
         }
     }
     let tile_feature = display_pos.and_then(|pos| state.feature_at(pos)).cloned();
-    let feature_ore_multiplier = display_pos.and_then(|pos| state.feature_ore_multiplier_at(pos));
-    let feature_acid_multiplier = display_pos.and_then(|pos| state.feature_acid_multiplier_at(pos));
-    let feature_freeze_multiplier =
-        display_pos.and_then(|pos| state.feature_freeze_multiplier_at(pos));
-    let feature_cooling_multiplier =
-        display_pos.and_then(|pos| state.feature_cooling_multiplier_at(pos));
-    let feature_harvest_multiplier =
-        display_pos.and_then(|pos| state.feature_harvest_multiplier_at(pos));
+    let feature_effects = display_pos.and_then(|pos| state.feature_effects_at(pos));
+    let local_feature_label = feature_label_for(tile_feature.as_ref(), feature_effects);
 
     let inspected_building = tile_building.or(state.selected_building);
     if let Some(building_type) = inspected_building {
@@ -186,6 +182,15 @@ pub(super) fn draw(
                 },
             if row_layout.show_icon { 10.0 } else { 9.0 },
             dim,
+        );
+        draw_local_feature_label(
+            row_layout.show_icon,
+            row_layout.row_base,
+            header_y,
+            local_feature_label.as_deref(),
+            info_x,
+            right_x + right_w - info_x - 14.0,
+            colors.primary,
         );
         let output = tile_pos_with_building
             .and_then(|pos| state.building_power_delta(pos))
@@ -386,16 +391,9 @@ pub(super) fn draw(
         );
         if let Some(feature) = tile_feature.as_ref() {
             if feature_lines > 0 {
-                let feature_name = feature_label(
-                    &feature.name,
-                    feature_ore_multiplier,
-                    feature_acid_multiplier,
-                    feature_freeze_multiplier,
-                    feature_cooling_multiplier,
-                    feature_harvest_multiplier,
-                );
+                let feature_name = local_feature_label.as_deref().unwrap_or("Feature");
                 draw_ui_text(
-                    &fit_text_to_width(&feature_name, right_w - 32.0, 10.0),
+                    &fit_text_to_width(feature_name, right_w - 32.0, 10.0),
                     right_x + 16.0,
                     inspector_y + terrain_y - 14.0,
                     10.0,

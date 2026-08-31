@@ -1,5 +1,51 @@
 //! Text and vertical layout helpers for terrain inspection.
 
+use crate::screens::planetary_view::format::fit_text_to_width;
+use crate::state::{FeatureEffects, PlanetFeature};
+use macroquad::prelude::Color;
+use macroquad_toolkit::ui::draw_ui_text;
+
+pub(super) fn draw_local_feature_label(
+    show_icon: bool,
+    row_base: f32,
+    header_y: f32,
+    label: Option<&str>,
+    x: f32,
+    width: f32,
+    color: Color,
+) {
+    if !show_icon || row_base <= header_y + 70.0 {
+        return;
+    }
+    let Some(label) = label else {
+        return;
+    };
+    draw_ui_text(
+        &fit_text_to_width(label, width, 9.0),
+        x,
+        header_y + 58.0,
+        9.0,
+        color,
+    );
+}
+
+pub(super) fn feature_label_for(
+    feature: Option<&PlanetFeature>,
+    effects: Option<FeatureEffects>,
+) -> Option<String> {
+    let effects = effects.unwrap_or_default();
+    feature.map(|feature| {
+        feature_label(
+            &feature.name,
+            effects.ore_multiplier,
+            effects.acid_multiplier,
+            effects.freeze_multiplier,
+            effects.cooling_multiplier,
+            effects.harvest_multiplier,
+        )
+    })
+}
+
 pub(super) fn feature_label(
     name: &str,
     ore_multiplier: Option<f32>,
