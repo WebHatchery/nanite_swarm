@@ -1,4 +1,4 @@
-use super::terrain_layout::feature_label;
+use super::terrain_layout::{feature_label, terrain_effect_label};
 use super::*;
 use crate::data::GameConfig;
 
@@ -72,6 +72,26 @@ fn feature_label_surfaces_local_feature_effects() {
     assert_eq!(
         feature_label("Landing Crater", None, None, None, None, None),
         "Feature: Landing Crater"
+    );
+}
+
+#[test]
+fn mountain_turbine_keeps_its_terrain_payoff_in_the_inspector() {
+    assert_eq!(
+        terrain_effect_label(
+            Some(TerrainType::Mountain),
+            BuildingType::WindTurbine,
+            Some("+100% Wind Turbine efficiency"),
+        ),
+        Some("Terrain: Mountain  +100% Wind Turbine efficiency".to_string())
+    );
+    assert_eq!(
+        terrain_effect_label(
+            Some(TerrainType::Mountain),
+            BuildingType::Drill,
+            Some("+100% Wind Turbine efficiency"),
+        ),
+        None
     );
 }
 

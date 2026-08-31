@@ -9,7 +9,7 @@ mod fixtures;
 mod research;
 
 #[allow(dead_code)]
-pub const REQUIRED_CAPTURE_SCENES: [&str; 57] = [
+pub const REQUIRED_CAPTURE_SCENES: [&str; 58] = [
     "mainmenu",
     "desktop_mainmenu_short",
     "desktop_settings_short",
@@ -63,6 +63,7 @@ pub const REQUIRED_CAPTURE_SCENES: [&str; 57] = [
     "mobile_feature_inspection",
     "iron_belt_inspection",
     "iron_belt_drill_inspection",
+    "mountain_wind_inspection",
     "acid_sea_inspection",
     "ring_shadow_inspection",
     "ice_rift_inspection",

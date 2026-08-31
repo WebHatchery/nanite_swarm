@@ -96,6 +96,7 @@ information hidden. The feature header names any local production or hazard
 effect before machinery is placed. Harvest previews include active research
 and local feature bonuses, so the reward shown beside HARVEST matches the tap.
 Placed structures keep their local feature effect in the inspector header.
+Mountain Wind Turbines keep their `+100%` efficiency payoff there as well.
 If a dragged conduit route spends its last resources, the route pauses and
 reports the exact mineral and energy cost of the next segment once per gesture.
 The bottom graph records observed ore, alloy, and parts flow; tap its visible

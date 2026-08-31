@@ -16,7 +16,8 @@ use super::{PanelColors, RightStackLayout};
 
 mod terrain_layout;
 use terrain_layout::{
-    draw_local_feature_label, feature_label_for, terrain_detail_offsets, terrain_feature_lines,
+    draw_local_effect_labels, feature_label_for, terrain_detail_offsets, terrain_effect_label,
+    terrain_feature_lines,
 };
 
 fn processor_action_label(
@@ -116,6 +117,7 @@ pub(super) fn draw(
     if let Some(building_type) = inspected_building {
         let header_y = inspector_y + if tight { 36.0 } else { 44.0 };
         let row_layout = inspector_row_layout(inspector_y, inspector_h);
+        let local_terrain_label = terrain_effect_label(tile_terrain, building_type, tile_bonus);
         let icon_size = if inspector_h < 204.0 { 54.0 } else { 72.0 };
         let icon_rect = Rect::new(right_x + 16.0, header_y, icon_size, icon_size);
         if row_layout.show_icon {
@@ -183,11 +185,14 @@ pub(super) fn draw(
             if row_layout.show_icon { 10.0 } else { 9.0 },
             dim,
         );
-        draw_local_feature_label(
+        draw_local_effect_labels(
             row_layout.show_icon,
             row_layout.row_base,
             header_y,
-            local_feature_label.as_deref(),
+            &[
+                local_feature_label.as_deref(),
+                local_terrain_label.as_deref(),
+            ],
             info_x,
             right_x + right_w - info_x - 14.0,
             colors.primary,

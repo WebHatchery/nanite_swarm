@@ -1,15 +1,16 @@
 //! Text and vertical layout helpers for terrain inspection.
 
+use crate::engine::{BuildingType, TerrainType};
 use crate::screens::planetary_view::format::fit_text_to_width;
 use crate::state::{FeatureEffects, PlanetFeature};
 use macroquad::prelude::Color;
 use macroquad_toolkit::ui::draw_ui_text;
 
-pub(super) fn draw_local_feature_label(
+pub(super) fn draw_local_effect_labels(
     show_icon: bool,
     row_base: f32,
     header_y: f32,
-    label: Option<&str>,
+    labels: &[Option<&str>],
     x: f32,
     width: f32,
     color: Color,
@@ -17,16 +18,23 @@ pub(super) fn draw_local_feature_label(
     if !show_icon || row_base <= header_y + 70.0 {
         return;
     }
-    let Some(label) = label else {
-        return;
-    };
-    draw_ui_text(
-        &fit_text_to_width(label, width, 9.0),
-        x,
-        header_y + 58.0,
-        9.0,
-        color,
-    );
+    let mut y = header_y + 58.0;
+    for label in labels.iter().flatten() {
+        draw_ui_text(&fit_text_to_width(label, width, 9.0), x, y, 9.0, color);
+        y += 12.0;
+    }
+}
+
+pub(super) fn terrain_effect_label(
+    terrain: Option<TerrainType>,
+    building_type: BuildingType,
+    terrain_bonus: Option<&str>,
+) -> Option<String> {
+    if terrain == Some(TerrainType::Mountain) && building_type == BuildingType::WindTurbine {
+        Some(format!("Terrain: Mountain  {}", terrain_bonus?))
+    } else {
+        None
+    }
 }
 
 pub(super) fn feature_label_for(
