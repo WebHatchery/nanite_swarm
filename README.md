@@ -182,6 +182,9 @@ live play; the return banner reports the biomass and Data changes plus any
 completed ship stages.
 An enabled Adaptive Clock policy also rebalances healthy fed processors before
 that offline production is credited.
+World achievements and Core stages reached during catch-up are announced on
+return, including milestones completed by the foreground research and Seed
+Ship passes.
 Dust, acid wear, and server heat also advance during the simulated interval,
 so a long absence can leave the return world needing the same maintenance as
 an unattended live shift.

@@ -63,6 +63,11 @@ impl PlanetState {
         self.power_balance = self.net_power();
         self.time_played += simulated as f64;
         self.battery_seconds = (self.battery_seconds - capped).max(0.0);
+        // Catch-up can cross a milestone without a live tick to announce it.
+        // Keep these world-owned records in step with the resources and
+        // structures just credited, including for background planets.
+        self.update_achievements();
+        self.update_core_stage();
         self.last_offline_report = OfflineReport {
             elapsed_seconds: offline_seconds,
             capped_seconds: capped,

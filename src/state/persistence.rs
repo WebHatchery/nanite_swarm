@@ -95,6 +95,14 @@ pub fn load_from_json(json: &str) -> Result<Campaign, serde_json::Error> {
         report.research_data_spent = research_spent;
         report.research_completed = research_completed;
         report.seed_ship_stages_completed = stages_completed;
+
+        // Research and Seed Ship stages are campaign-side offline work, so
+        // refresh the foreground world's records after both have been applied.
+        // This catches Core stages and achievements whose final requirement
+        // was completed by the post-world catch-up passes above.
+        let planet = campaign.current_mut();
+        planet.update_achievements();
+        planet.update_core_stage();
     }
 
     // A pod already in flight is campaign state, not a foreground-world

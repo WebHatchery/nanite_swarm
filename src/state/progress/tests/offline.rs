@@ -196,3 +196,35 @@ fn offline_catch_up_honors_adaptive_clocking_for_a_fed_processor() {
     );
     assert!(approx_eq(state.resources.alloy, 1.5, 0.001));
 }
+
+#[test]
+fn offline_catch_up_records_milestones_reached_while_away() {
+    let mut state = state();
+    state.config.resources.base_mineral_cap = 1_000.0;
+    state.resources.minerals = 500.0;
+
+    state.apply_offline_progress(1.0);
+
+    assert!(state.achievements.is_unlocked("stockpile"));
+}
+
+#[test]
+fn offline_catch_up_advances_the_core_after_network_milestones_are_met() {
+    let mut state = state();
+    let core = state.grid.find_core().unwrap();
+    state.grid.reveal_around(core, 32);
+    for step in 1..=9 {
+        let pos = GridPos::new(core.x + step, core.y + 1);
+        state.grid.get_mut(pos).unwrap().terrain = TerrainType::Empty;
+        assert!(state.grid.place_building(pos, BuildingType::Conduit));
+    }
+
+    state.apply_offline_progress(1.0);
+
+    assert_eq!(state.core_stage, 1);
+    assert!(state
+        .notifications
+        .history()
+        .iter()
+        .any(|entry| entry.message.contains("Core: Foundry")));
+}

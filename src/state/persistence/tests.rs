@@ -246,6 +246,41 @@ fn load_from_json_advances_the_active_research_job() {
 }
 
 #[test]
+fn load_from_json_records_achievements_after_offline_research_completes() {
+    let mut campaign = campaign();
+    campaign.research.unlocked_techs.extend(
+        [
+            "power_grid",
+            "efficient_drills",
+            "drone_capacity",
+            "swarm_dispatch",
+            "wind_power",
+            "geothermal_tapping",
+            "power_efficiency",
+        ]
+        .into_iter()
+        .map(str::to_string),
+    );
+    campaign.research.current_research = Some("data_processing".to_string());
+    campaign.current_mut().resources.data = 100.0;
+    campaign.current_mut().last_saved_unix = unix_seconds_now() - 120;
+    campaign.sync_research();
+    let save = SaveGame {
+        version: SAVE_VERSION,
+        campaign,
+    };
+    let json = serde_json::to_string(&save).unwrap();
+
+    let loaded = load_from_json(&json).unwrap();
+
+    assert!(loaded
+        .research
+        .unlocked_techs
+        .contains(&"data_processing".to_string()));
+    assert!(loaded.current().achievements.is_unlocked("well_read"));
+}
+
+#[test]
 fn loading_a_past_save_advances_shipments_already_in_flight() {
     let mut campaign = campaign();
     campaign.colonize(1);
