@@ -84,3 +84,29 @@ fn focus_status_marks_an_unbuilt_deck_as_idle() {
     assert_eq!(status, "FOCUS IDLE // no target machines");
     assert!(warning);
 }
+
+#[test]
+fn balanced_focus_does_not_claim_any_map_targets() {
+    let state = PlanetState::new(2, 42, crate::data::GameConfig::default());
+    assert!(focus_target_positions(&state).is_empty());
+}
+
+#[test]
+fn assembly_focus_marks_both_machine_types_in_its_deck() {
+    let mut state = PlanetState::new(2, 42, crate::data::GameConfig::default());
+    let core = state.grid.find_core().unwrap();
+    let server = crate::engine::GridPos::new(core.x + 1, core.y);
+    let assembler = crate::engine::GridPos::new(core.x + 2, core.y);
+    state.grid.get_mut(server).unwrap().building = Some(crate::engine::Building::new(
+        crate::engine::BuildingType::ServerBank,
+        server,
+    ));
+    state.grid.get_mut(assembler).unwrap().building = Some(crate::engine::Building::new(
+        crate::engine::BuildingType::Assembler,
+        assembler,
+    ));
+    state.factory_focus = FactoryFocus::Assembly;
+
+    let targets = focus_target_positions(&state);
+    assert_eq!(targets, vec![server, assembler]);
+}

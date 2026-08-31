@@ -106,6 +106,9 @@ build previews continue to show nominal power.
 The Factory Deck control room reports whether the selected focus is live,
 limited, waiting on feed or dispatch space, paused by standby or dust, offline,
 or aimed at a deck with no machines yet.
+When the deck is open, its focused machines carry a pulsing map frame so the
+scope of the production trade is visible even when the control-room panel is
+covering the center of the world.
 When the bottom alert card reports a logistics problem, tap its JUMP button to
 cycle through the affected structures or network tiles; power-only problems
 keep the FLOW button for the network diagnosis overlay.

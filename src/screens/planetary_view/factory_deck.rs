@@ -1,6 +1,7 @@
 //! The compact control-room overlay for the factory's deeper decks.
 
 use crate::data::UiTheme;
+use crate::engine::GridPos;
 use crate::state::{FactoryFocus, FactoryFocusReadout, Milestone, PlanetState};
 use crate::ui::{color_from_rgba, draw_hud_button, draw_hud_panel, draw_resource_icon};
 use macroquad::prelude::*;
@@ -33,6 +34,9 @@ pub(super) fn draw_factory_depth_art(
     time: f32,
 ) {
     draw_depth_markers(state, metrics, theme, time);
+    if state.factory_deck_open {
+        draw_focus_targets(state, metrics, theme, time);
+    }
 }
 
 pub(super) fn draw_factory_depth_overlay(
@@ -492,6 +496,46 @@ fn draw_depth_markers(state: &PlanetState, metrics: HudMetrics, theme: &UiTheme,
             with_alpha(color, 0.13),
         );
     }
+}
+
+fn draw_focus_targets(state: &PlanetState, metrics: HudMetrics, theme: &UiTheme, time: f32) {
+    if state.factory_focus == FactoryFocus::Balanced {
+        return;
+    }
+
+    let color = color_from_rgba(&theme.colors.primary);
+    let pulse = 0.35 + (time * 2.6).sin().abs() * 0.18;
+    for position in focus_target_positions(state) {
+        let (x, y) = super::metrics::grid_to_screen(position, metrics);
+        let inset = (metrics.tile_size * 0.1).clamp(2.0, 4.0);
+        let size = metrics.tile_size - inset * 2.0;
+        draw_rectangle_lines(
+            x + inset,
+            y + inset,
+            size,
+            size,
+            1.2,
+            with_alpha(color, pulse),
+        );
+        let beacon = 2.0 + (time * 3.0 + position.x as f32 * 0.17).sin().abs();
+        draw_circle(x + metrics.tile_size * 0.5, y + inset, beacon, color);
+    }
+}
+
+fn focus_target_positions(state: &PlanetState) -> Vec<GridPos> {
+    if state.factory_focus == FactoryFocus::Balanced {
+        return Vec::new();
+    }
+    state
+        .grid
+        .iter_tiles()
+        .filter_map(|(position, tile)| {
+            tile.building
+                .as_ref()
+                .filter(|building| state.factory_focus.affects(building.building_type))
+                .map(|_| position)
+        })
+        .collect()
 }
 
 fn resource_chip_color(resource: crate::engine::ResourceType, theme: &UiTheme) -> Color {
