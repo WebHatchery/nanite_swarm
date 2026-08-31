@@ -36,7 +36,7 @@ fn regular_inspector_keeps_the_building_art_and_four_rows() {
 
 #[test]
 fn compact_terrain_bonus_clears_the_two_button_action_row() {
-    let (_, _, bonus_y) = terrain_detail_offsets(148.0);
+    let (_, _, bonus_y) = super::terrain_layout::terrain_detail_offsets(148.0);
     let button_top = 148.0 - 38.0;
 
     assert!(bonus_y + 10.0 <= button_top);
@@ -44,10 +44,13 @@ fn compact_terrain_bonus_clears_the_two_button_action_row() {
 
 #[test]
 fn feature_detail_uses_only_the_space_the_inspector_can_hold() {
-    assert_eq!(terrain_feature_lines(160.0, true), 0);
-    assert_eq!(terrain_feature_lines(180.0, true), 1);
-    assert_eq!(terrain_feature_lines(210.0, true), 2);
-    assert_eq!(terrain_feature_lines(240.0, false), 0);
+    assert_eq!(super::terrain_layout::terrain_feature_lines(160.0, true), 0);
+    assert_eq!(super::terrain_layout::terrain_feature_lines(180.0, true), 1);
+    assert_eq!(super::terrain_layout::terrain_feature_lines(210.0, true), 2);
+    assert_eq!(
+        super::terrain_layout::terrain_feature_lines(240.0, false),
+        0
+    );
 }
 
 #[test]
