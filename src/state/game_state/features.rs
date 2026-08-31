@@ -74,7 +74,8 @@ impl PlanetState {
                 ore_multiplier: valid_multiplier(definition.ore_multiplier),
                 acid_multiplier: valid_multiplier(definition.acid_multiplier),
                 freeze_multiplier: valid_multiplier(definition.freeze_multiplier),
-                cooling_multiplier: valid_multiplier(definition.cooling_multiplier),
+                cooling_multiplier: valid_multiplier(definition.cooling_multiplier)
+                    .filter(|_| self.has_adjacent_water(pos)),
                 harvest_multiplier: valid_multiplier(definition.harvest_multiplier),
             }),
         )
@@ -99,8 +100,8 @@ impl PlanetState {
         self.feature_effects_at(pos)?.freeze_multiplier
     }
 
-    /// The authored water-cooling multiplier for a revealed feature tile, if
-    /// it has one.
+    /// The authored water-cooling multiplier for a revealed feature tile beside
+    /// water, if it has one.
     pub fn feature_cooling_multiplier_at(&self, pos: GridPos) -> Option<f32> {
         self.feature_effects_at(pos)?.cooling_multiplier
     }
@@ -109,6 +110,14 @@ impl PlanetState {
     /// one.
     pub fn feature_harvest_multiplier_at(&self, pos: GridPos) -> Option<f32> {
         self.feature_effects_at(pos)?.harvest_multiplier
+    }
+
+    fn has_adjacent_water(&self, pos: GridPos) -> bool {
+        pos.neighbors().iter().any(|neighbor| {
+            self.grid
+                .get(*neighbor)
+                .is_some_and(|tile| tile.terrain == crate::engine::TerrainType::Water)
+        })
     }
 }
 

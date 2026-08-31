@@ -94,14 +94,44 @@ fn ice_rift_exposes_its_cooling_bonus_only_after_survey() {
     let feature = state.features.first().cloned().expect("Jupiter feature");
     let pos = (0..state.grid.height)
         .flat_map(|y| (0..state.grid.width).map(move |x| GridPos::new(x as i32, y as i32)))
-        .find(|pos| feature.contains_tile(*pos, state.grid.width, state.grid.height))
-        .expect("feature overlaps the Jupiter grid");
+        .find(|pos| {
+            feature.contains_tile(*pos, state.grid.width, state.grid.height)
+                && pos.neighbors().iter().any(|neighbor| {
+                    state
+                        .grid
+                        .get(*neighbor)
+                        .is_some_and(|tile| tile.terrain == TerrainType::Water)
+                })
+        })
+        .expect("feature overlaps a water-cooled Jupiter tile");
 
     state.grid.get_mut(pos).unwrap().revealed = false;
     assert_eq!(state.feature_cooling_multiplier_at(pos), None);
 
     state.grid.get_mut(pos).unwrap().revealed = true;
     assert_eq!(state.feature_cooling_multiplier_at(pos), Some(1.5));
+}
+
+#[test]
+fn ice_rift_withholds_cooling_bonus_away_from_water() {
+    let mut state = PlanetState::new(3, 42, GameConfig::default());
+    let core = state.grid.find_core().expect("Jupiter Core");
+    let pos = GridPos::new(core.x + 3, core.y);
+    state.features[0].bounds = (
+        pos.x as f32 / state.grid.width as f32,
+        pos.y as f32 / state.grid.height as f32,
+        1.0 / state.grid.width as f32,
+        1.0 / state.grid.height as f32,
+    );
+    state.grid.get_mut(pos).unwrap().terrain = TerrainType::Empty;
+    state.grid.get_mut(pos).unwrap().revealed = true;
+    for neighbor in pos.neighbors() {
+        if let Some(tile) = state.grid.get_mut(neighbor) {
+            tile.terrain = TerrainType::Empty;
+        }
+    }
+
+    assert_eq!(state.feature_cooling_multiplier_at(pos), None);
 }
 
 #[test]
