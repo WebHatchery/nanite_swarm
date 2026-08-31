@@ -112,6 +112,9 @@ Audit date: 2026-08-20
 - Split severed-route, rerouting, repair, collapse recovery, and route-length
   coverage from `state/logistics/tests/network.rs` into `network/recovery.rs`,
   leaving throughput and congestion contracts in the parent suite.
+- Split battery timing, event fast-forward, research threshold, and
+  achievement/toast lifecycle coverage from `state/progress/tests.rs` into
+  `progress/tests/timing.rs`, leaving economy and rate contracts in the parent.
 - Split planet-state invariants and shipment invariants from
   `state/campaign/validation.rs` into `validation/planet.rs` and
   `validation/shipment.rs`, leaving load orchestration and directive checks in
