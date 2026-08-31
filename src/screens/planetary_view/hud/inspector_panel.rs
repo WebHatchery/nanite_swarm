@@ -3,7 +3,7 @@
 use crate::assets::GameTextures;
 use crate::data::UiTheme;
 use crate::engine::{BuildingType, GridPos, TerrainType};
-use crate::state::{Milestone, PlanetState};
+use crate::state::PlanetState;
 use crate::ui::{color_from_rgba, draw_hud_button, draw_hud_panel, draw_status_row};
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::draw_ui_text;
@@ -11,9 +11,11 @@ use macroquad_toolkit::ui::draw_ui_text;
 use super::super::format::{dust_status, fit_text_to_width, format_power_delta};
 use super::{PanelColors, RightStackLayout};
 
+mod core_status;
 mod recipe_flow;
 mod terrain;
 mod terrain_layout;
+use core_status::{core_next_stage_label, core_stage_status_text};
 use recipe_flow::{draw_recipe_flow_row, recipe_flow_data, recipe_status};
 use terrain_layout::{
     draw_local_effect_labels, feature_label_for, feature_survey_label, terrain_effect_label,
@@ -424,64 +426,6 @@ pub(super) fn draw(
             tight,
         );
     }
-}
-
-fn core_stage_status_text(state: &PlanetState) -> String {
-    let stages = state.core_stages();
-    if stages.is_empty() {
-        return "CORE // NO STAGE DATA".to_string();
-    }
-
-    let current_index = state.core_stage_index();
-    let stage_count = stages.len();
-    if stages.get(current_index + 1).is_none() {
-        return format!("CORE {stage_count}/{stage_count} // FULLY EVOLVED");
-    }
-
-    let requirements = state
-        .core_requirement_progress()
-        .iter()
-        .map(|progress| {
-            format!(
-                "{}{}/{}",
-                core_requirement_label(progress.milestone),
-                compact_requirement_amount(progress.current),
-                compact_requirement_amount(progress.target)
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("+");
-    if requirements.is_empty() {
-        format!("CORE {}/{stage_count} // READY", current_index + 1)
-    } else {
-        format!("CORE {}/{stage_count} / {requirements}", current_index + 1)
-    }
-}
-
-fn core_requirement_label(milestone: Milestone) -> &'static str {
-    match milestone {
-        Milestone::Structures => "STR",
-        Milestone::NetworkTiles => "NET",
-        Milestone::Technologies => "TECH",
-        Milestone::SeedShipStages => "SHIP",
-        _ => milestone.id(),
-    }
-}
-
-fn compact_requirement_amount(amount: f32) -> String {
-    if amount.fract().abs() > 0.05 {
-        format!("{amount:.1}")
-    } else {
-        format!("{amount:.0}")
-    }
-}
-
-fn core_next_stage_label(state: &PlanetState) -> String {
-    state
-        .core_stages()
-        .get(state.core_stage_index() + 1)
-        .map(|stage| stage.name.clone())
-        .unwrap_or_else(|| "FULLY EVOLVED".to_string())
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

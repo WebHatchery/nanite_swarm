@@ -174,6 +174,9 @@ Audit date: 2026-08-20
 - Split orbit positions, planet marks, hover targets, and telemetry markers
   from `interplanetary_view.rs` into `interplanetary_view/solar_map.rs`,
   leaving the screen coordinator focused on panels, routes, and dossiers.
+- Split Core stage and milestone readouts from `hud/inspector_panel.rs` into
+  `inspector_panel/core_status.rs`, leaving the structure inspector focused on
+  building and terrain presentation.
 
 ## Remaining debt
 
