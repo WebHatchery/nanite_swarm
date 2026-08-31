@@ -239,6 +239,9 @@ Audit date: 2026-08-20
 - Split the build palette's quick-action rows from `hud/build_palette.rs` into
   `build_palette/quick_actions.rs`, leaving the parent focused on card
   discovery, scrolling, and palette geometry.
+- Split compact Seed Ship stage-card rendering from
+  `seed_ship_view/mobile.rs` into `mobile/stage.rs`, leaving the mobile parent
+  focused on scrolling, responsive geometry, and footer controls.
 
 ## Remaining debt
 
