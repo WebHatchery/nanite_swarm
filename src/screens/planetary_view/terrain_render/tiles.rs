@@ -1,6 +1,7 @@
 //! Terrain tiles, structures, and motion rendering.
 
 use super::*;
+use crate::screens::planetary_view::format::hash01;
 
 mod building;
 mod motion;

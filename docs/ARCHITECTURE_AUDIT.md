@@ -79,6 +79,9 @@ Audit date: 2026-08-31
 - Split the Settings Display and Audio tab renderers from `settings_menu.rs`
   into `settings_menu/display.rs` and `settings_menu/audio.rs`, leaving the
   parent focused on tab navigation, layout, and footer guidance.
+- Split planetary backdrop stars, atmosphere, collapse framing, and late-Core
+  ambience from `terrain_render.rs` into `terrain_render/background.rs`,
+  leaving feature overlays and tile/building rendering in the terrain parent.
 - Split save rotation, corruption recovery, and slot-isolation coverage from
   `state/persistence/tests.rs` into `persistence/tests/recovery.rs`, leaving
   the parent suite focused on migration and round-trip contracts.
