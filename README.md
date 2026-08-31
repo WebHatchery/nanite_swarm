@@ -29,6 +29,8 @@ The swarm is powerful, but every expansion changes the terrain, stresses the gri
 - Preserve forests to buffer nearby pollution, harvest them for biomass, or
   convert them into stronger dust filters. Select an intact forest to see its
   green buffer radius on the map.
+- Surveyed planetary features such as landing craters, metal belts, and ice
+  rifts can be selected on their revealed tiles to read their local dossier.
 - Research upgrades and prepare for interplanetary expansion.
 - Manage dust, power failures, and resource bottlenecks.
 - Dust-response research changes the live production, drone, routing, and
@@ -84,6 +86,9 @@ Tap CANCEL to abandon a build, relocation, box-selection, or pending purge
 confirmation before the next map tap.
 Tap the Core to inspect its current evolution stage, the next stage, and the
 remaining milestone requirements holding that evolution back.
+Select a revealed tile inside a named planetary feature to read its feature
+description alongside the terrain details; unrevealed tiles keep that
+information hidden.
 If a dragged conduit route spends its last resources, the route pauses and
 reports the exact mineral and energy cost of the next segment once per gesture.
 The bottom graph records observed ore, alloy, and parts flow; tap its visible

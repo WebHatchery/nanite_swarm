@@ -39,6 +39,14 @@ fn compact_terrain_bonus_clears_the_two_button_action_row() {
 }
 
 #[test]
+fn feature_detail_uses_only_the_space_the_inspector_can_hold() {
+    assert_eq!(terrain_feature_lines(160.0, true), 0);
+    assert_eq!(terrain_feature_lines(180.0, true), 1);
+    assert_eq!(terrain_feature_lines(210.0, true), 2);
+    assert_eq!(terrain_feature_lines(240.0, false), 0);
+}
+
+#[test]
 fn multi_input_flow_is_structured_and_names_the_missing_feed() {
     let mut state = PlanetState::new(2, 42, GameConfig::default());
     let pos = state.grid.find_core().unwrap();

@@ -52,6 +52,26 @@ pub struct PlanetFeature {
     pub bounds: (f32, f32, f32, f32),
 }
 
+impl PlanetFeature {
+    /// Whether a grid tile touches this feature's normalized map rectangle.
+    ///
+    /// Features are authored in the same normalized space as their map
+    /// overlay, so selection remains stable when worlds have different
+    /// dimensions. Testing tile overlap rather than only its center keeps a
+    /// narrow feature selectable even when it falls between tile centers.
+    pub fn contains_tile(&self, pos: GridPos, grid_width: u32, grid_height: u32) -> bool {
+        if pos.x < 0 || pos.y < 0 || grid_width == 0 || grid_height == 0 {
+            return false;
+        }
+        let (x, y, width, height) = self.bounds;
+        let tile_left = pos.x as f32 / grid_width as f32;
+        let tile_top = pos.y as f32 / grid_height as f32;
+        let tile_right = (pos.x + 1) as f32 / grid_width as f32;
+        let tile_bottom = (pos.y + 1) as f32 / grid_height as f32;
+        tile_left < x + width && tile_right > x && tile_top < y + height && tile_bottom > y
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CollapseRecord {
     pub source: String,
@@ -425,6 +445,20 @@ pub struct PlanetState {
 }
 
 impl PlanetState {
+    /// Return the named feature under a revealed tile, if there is one.
+    /// Unrevealed tiles deliberately return nothing so the feature overlay
+    /// cannot turn the inspector into a fog-of-war leak.
+    pub fn feature_at(&self, pos: GridPos) -> Option<&PlanetFeature> {
+        self.grid
+            .get(pos)
+            .filter(|tile| tile.revealed)
+            .and_then(|_| {
+                self.features
+                    .iter()
+                    .find(|feature| feature.contains_tile(pos, self.grid.width, self.grid.height))
+            })
+    }
+
     /// Build the world at campaign slot `planet_index`, from its entry in
     /// `assets/planets.json`.
     pub fn new(planet_index: usize, seed: u64, config: GameConfig) -> Self {
@@ -723,3 +757,6 @@ pub(crate) fn achievement_definitions(data: &GameData) -> Vec<Achievement> {
         .map(|def| Achievement::new(&def.id, &def.name, &def.description))
         .collect()
 }
+
+#[cfg(test)]
+mod tests;

@@ -2,7 +2,7 @@
 
 use crate::assets::GameTextures;
 use crate::engine::{BuildingType, GridPos, TerrainType};
-use crate::state::PlanetState;
+use crate::state::{PlanetFeature, PlanetState};
 use crate::ui::Colors;
 use macroquad::prelude::*;
 use macroquad_toolkit::colors::with_alpha;
@@ -137,6 +137,9 @@ pub(super) fn draw_collapse_shake(state: &PlanetState, screen_w: f32, screen_h: 
 
 pub(super) fn draw_planet_features(state: &PlanetState, metrics: HudMetrics) {
     for feature in &state.features {
+        if !feature_is_surveyed(state, feature) {
+            continue;
+        }
         let (x, y, w, h) = feature.bounds;
         let origin = GridPos::new(
             (x * state.grid.width as f32) as i32,
@@ -158,6 +161,20 @@ pub(super) fn draw_planet_features(state: &PlanetState, metrics: HudMetrics) {
         );
         draw_ui_text(&feature.name, sx + 4.0, sy + 14.0, 9.0, Colors::ACCENT);
     }
+}
+
+fn feature_is_surveyed(state: &PlanetState, feature: &PlanetFeature) -> bool {
+    let mut has_tiles = false;
+    for (pos, tile) in state.grid.iter_tiles() {
+        if !feature.contains_tile(pos, state.grid.width, state.grid.height) {
+            continue;
+        }
+        has_tiles = true;
+        if !tile.revealed {
+            return false;
+        }
+    }
+    has_tiles
 }
 
 pub(super) fn draw_tutorial_route_hint(state: &PlanetState, metrics: HudMetrics, time: f32) {
@@ -231,3 +248,6 @@ pub(super) fn draw_tutorial_route_hint(state: &PlanetState, metrics: HudMetrics,
 /// Get color for terrain type with subtle variation
 mod tiles;
 pub(super) use tiles::draw_grid_tiles;
+
+#[cfg(test)]
+mod tests;

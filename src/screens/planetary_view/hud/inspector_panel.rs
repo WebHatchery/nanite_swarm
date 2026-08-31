@@ -103,6 +103,7 @@ pub(super) fn draw(
             }
         }
     }
+    let tile_feature = display_pos.and_then(|pos| state.feature_at(pos)).cloned();
 
     let inspected_building = tile_building.or(state.selected_building);
     if let Some(building_type) = inspected_building {
@@ -362,6 +363,8 @@ pub(super) fn draw(
             }
         }
     } else {
+        let feature_lines = terrain_feature_lines(inspector_h, tile_feature.is_some());
+        let feature_shift = feature_lines as f32 * 16.0;
         let (terrain_y, reward_y, bonus_y) = terrain_detail_offsets(inspector_h);
         draw_ui_text(
             "NO STRUCTURE",
@@ -370,11 +373,32 @@ pub(super) fn draw(
             13.0,
             text,
         );
+        if let Some(feature) = tile_feature.as_ref() {
+            if feature_lines > 0 {
+                let feature_name = format!("Feature: {}", feature.name);
+                draw_ui_text(
+                    &fit_text_to_width(&feature_name, right_w - 32.0, 10.0),
+                    right_x + 16.0,
+                    inspector_y + terrain_y - 14.0,
+                    10.0,
+                    colors.primary,
+                );
+                if feature_lines > 1 {
+                    draw_ui_text(
+                        &fit_text_to_width(&feature.description, right_w - 32.0, 9.0),
+                        right_x + 16.0,
+                        inspector_y + terrain_y + 1.0,
+                        9.0,
+                        dim,
+                    );
+                }
+            }
+        }
         if let Some(terrain) = tile_terrain {
             draw_ui_text(
                 &format!("Terrain: {}", terrain.name(data)),
                 right_x + 16.0,
-                inspector_y + terrain_y,
+                inspector_y + terrain_y + feature_shift,
                 11.0,
                 dim,
             );
@@ -388,7 +412,7 @@ pub(super) fn draw(
                 draw_ui_text(
                     &reward_text,
                     right_x + 16.0,
-                    inspector_y + reward_y,
+                    inspector_y + reward_y + feature_shift,
                     11.0,
                     warning,
                 );
@@ -398,7 +422,7 @@ pub(super) fn draw(
                         draw_ui_text(
                             &bonus_text,
                             right_x + 16.0,
-                            inspector_y + bonus_y,
+                            inspector_y + bonus_y + feature_shift,
                             10.0,
                             success,
                         );
@@ -439,6 +463,16 @@ pub(super) fn draw(
                 dim,
             );
         }
+    }
+}
+
+fn terrain_feature_lines(inspector_h: f32, has_feature: bool) -> usize {
+    if !has_feature || inspector_h < 164.0 {
+        0
+    } else if inspector_h >= 206.0 {
+        2
+    } else {
+        1
     }
 }
 

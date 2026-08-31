@@ -8,6 +8,7 @@ mod ending;
 mod factory;
 mod interplanetary;
 mod power;
+mod terrain;
 
 impl Game {
     /// Seed a specific scene for the screenshot harness.
@@ -207,6 +208,9 @@ impl Game {
                 planet.selected_building = None;
                 planet.selected_tile = Some(forest);
                 planet.notifications.clear();
+            }
+            "feature_inspection" | "mobile_feature_inspection" => {
+                self.stage_feature_inspection_scene()
             }
             // A Core that has grown past its landing pod.
             "core_stage" => {
