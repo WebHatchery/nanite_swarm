@@ -201,6 +201,9 @@ Audit date: 2026-08-20
 - Split simulation runtime coverage into focused `runtime/clock.rs`,
   `runtime/collapse.rs`, `runtime/tutorial.rs`, and `runtime/upkeep.rs` suites,
   leaving `simulation/tests/runtime.rs` as the shared fixture boundary.
+- Split progression-state coverage into `progress/tests/offline.rs`,
+  `progress/tests/effects.rs`, and `progress/tests/capacity.rs`, leaving the
+  parent suite focused on shared fixtures and smaller interaction families.
 
 ## Remaining debt
 
