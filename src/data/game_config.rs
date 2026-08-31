@@ -2,6 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::engine::ResourceType;
+
 /// Core game configuration loaded from JSON
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameConfig {
@@ -188,6 +190,18 @@ impl GameConfig {
         require_positive(self.mass_driver.pad_capacity, "mass_driver.pad_capacity")?;
         if self.mass_driver.cargo.is_empty() {
             return Err("mass_driver.cargo must contain at least one resource".to_string());
+        }
+        for resource in &self.mass_driver.cargo {
+            let Some(resource_type) = ResourceType::from_id(resource) else {
+                return Err(format!(
+                    "mass_driver.cargo contains unknown resource \"{resource}\""
+                ));
+            };
+            if !resource_type.is_physical() {
+                return Err(format!(
+                    "mass_driver.cargo resource \"{resource}\" is not physical"
+                ));
+            }
         }
 
         for (field, value) in [

@@ -45,6 +45,29 @@ fn a_missing_mass_driver_resource_is_rejected_before_shipping() {
 }
 
 #[test]
+fn an_unknown_mass_driver_resource_is_rejected_before_shipping() {
+    let mut config = GameConfig::default();
+    config.mass_driver.cargo = vec!["crystals".to_string()];
+
+    let error = config.validate().unwrap_err();
+
+    assert_eq!(
+        error,
+        "mass_driver.cargo contains unknown resource \"crystals\""
+    );
+}
+
+#[test]
+fn a_nonphysical_mass_driver_resource_is_rejected_before_shipping() {
+    let mut config = GameConfig::default();
+    config.mass_driver.cargo = vec!["data".to_string()];
+
+    let error = config.validate().unwrap_err();
+
+    assert_eq!(error, "mass_driver.cargo resource \"data\" is not physical");
+}
+
+#[test]
 fn a_nonfinite_collapse_loss_is_rejected_before_a_failure() {
     let mut config = GameConfig::default();
     config.collapse.max_data_loss = f32::NAN;
