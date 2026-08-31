@@ -55,6 +55,9 @@ Audit date: 2026-08-20
 - Split network routing, drone recovery, and congestion accounting into
   `state/logistics/routes.rs`, leaving the logistics coordinator focused on
   producer dispatch before the next network feature expands it.
+- Split Solar System telemetry types and world snapshots into
+  `state/campaign/telemetry.rs`, leaving campaign progression and travel
+  orchestration below the source-size restructure signal.
 
 ## Remaining debt
 
