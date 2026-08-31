@@ -163,6 +163,15 @@ fn prepare_feature_inspection(planet: &mut state::PlanetState) {
                             "landing_crater" => tile.terrain.is_harvestable(planet.data()),
                             "iron_belt" | "acid_sea" | "ring_shadow" | "ice_rift" => {
                                 tile.terrain.is_buildable(planet.data())
+                                    && if feature.id == "ice_rift" {
+                                        pos.neighbors().iter().any(|neighbor| {
+                                            planet.grid.get(*neighbor).is_some_and(|adjacent| {
+                                                adjacent.terrain == engine::TerrainType::Water
+                                            })
+                                        })
+                                    } else {
+                                        true
+                                    }
                             }
                             _ => true,
                         }

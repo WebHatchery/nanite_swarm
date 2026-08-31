@@ -167,11 +167,7 @@ pub(super) fn anchor_effect_features(features: &mut [PlanetFeature], def: &Plane
         let has_target_tile = grid.iter_tiles().any(|(pos, tile)| {
             tile.building.is_none()
                 && feature.contains_tile(pos, grid.width, grid.height)
-                && if harvest_effect {
-                    tile.terrain.is_harvestable(grid.data())
-                } else {
-                    tile.terrain.is_buildable(grid.data())
-                }
+                && feature_target_is_usable(pos, tile, definition, harvest_effect, grid)
         });
         if has_target_tile {
             continue;
@@ -186,13 +182,9 @@ pub(super) fn anchor_effect_features(features: &mut [PlanetFeature], def: &Plane
         let center = (x + width * 0.5, y + height * 0.5);
         let nearest = grid
             .iter_tiles()
-            .filter(|(_, tile)| {
+            .filter(|(pos, tile)| {
                 tile.building.is_none()
-                    && if harvest_effect {
-                        tile.terrain.is_harvestable(grid.data())
-                    } else {
-                        tile.terrain.is_buildable(grid.data())
-                    }
+                    && feature_target_is_usable(*pos, tile, definition, harvest_effect, grid)
             })
             .min_by(|(left, _), (right, _)| {
                 let left_distance = normalized_tile_distance(*left, center, grid);
@@ -209,6 +201,29 @@ pub(super) fn anchor_effect_features(features: &mut [PlanetFeature], def: &Plane
             height,
         );
     }
+}
+
+fn feature_target_is_usable(
+    pos: GridPos,
+    tile: &crate::engine::Tile,
+    definition: &crate::data::PlanetFeatureDef,
+    harvest_effect: bool,
+    grid: &Grid,
+) -> bool {
+    if harvest_effect {
+        return tile.terrain.is_harvestable(grid.data());
+    }
+    if !tile.terrain.is_buildable(grid.data()) {
+        return false;
+    }
+    let cooling_effect = definition
+        .cooling_multiplier
+        .is_some_and(|multiplier| multiplier > 1.0);
+    !cooling_effect
+        || pos.neighbors().iter().any(|neighbor| {
+            grid.get(*neighbor)
+                .is_some_and(|adjacent| adjacent.terrain == crate::engine::TerrainType::Water)
+        })
 }
 
 fn normalized_tile_distance(pos: GridPos, center: (f32, f32), grid: &Grid) -> f32 {

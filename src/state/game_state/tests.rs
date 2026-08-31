@@ -105,6 +105,29 @@ fn ice_rift_exposes_its_cooling_bonus_only_after_survey() {
 }
 
 #[test]
+fn ice_rift_generation_keeps_a_water_cooled_tile_inside_the_feature() {
+    for seed in [0, 1, 7, 42, 999] {
+        let state = PlanetState::new(3, seed, GameConfig::default());
+        let feature = state.features.first().expect("Jupiter feature");
+
+        assert!(
+            state.grid.iter_tiles().any(|(pos, tile)| {
+                tile.building.is_none()
+                    && feature.contains_tile(pos, state.grid.width, state.grid.height)
+                    && tile.terrain.is_buildable(state.data())
+                    && pos.neighbors().iter().any(|neighbor| {
+                        state
+                            .grid
+                            .get(*neighbor)
+                            .is_some_and(|adjacent| adjacent.terrain == TerrainType::Water)
+                    })
+            }),
+            "seed {seed} has no water-cooled Ice Rift tile"
+        );
+    }
+}
+
+#[test]
 fn landing_crater_generation_keeps_a_harvestable_tile_inside_the_feature() {
     for seed in [0, 1, 7, 42, 999] {
         let state = PlanetState::new(2, seed, GameConfig::default());
