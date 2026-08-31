@@ -120,3 +120,13 @@ fn a_save_with_a_stale_drone_allocator_is_rejected() {
 
     assert!(load_from_json(&serde_json::to_string(&malformed).unwrap()).is_err());
 }
+
+#[test]
+fn a_save_with_an_invalid_camera_zoom_is_rejected() {
+    let mut campaign = campaign();
+    campaign.current_mut().camera.zoom = 0.0;
+
+    let json = save_to_json(&mut campaign).unwrap();
+
+    assert!(load_from_json(&json).is_err());
+}

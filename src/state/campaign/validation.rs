@@ -1,5 +1,6 @@
 //! Save-state invariants that must hold before the campaign is simulated.
 
+use super::super::camera::{MAX_ZOOM, MIN_ZOOM};
 use super::{Campaign, PLANET_COUNT};
 use crate::engine::{BuildingType, GridPos, ResourceType};
 use std::collections::HashSet;
@@ -135,6 +136,13 @@ impl Campaign {
             return Err(format!(
                 "save world slot {source} has an invalid save timestamp"
             ));
+        }
+        if !planet.camera.pan_x.is_finite()
+            || !planet.camera.pan_y.is_finite()
+            || !planet.camera.zoom.is_finite()
+            || !(MIN_ZOOM..=MAX_ZOOM).contains(&planet.camera.zoom)
+        {
+            return Err(format!("save world slot {source} has invalid camera state"));
         }
         if planet.core_stages().is_empty()
             || planet.core_stage as usize >= planet.core_stages().len()
