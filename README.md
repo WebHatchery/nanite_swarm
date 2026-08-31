@@ -132,6 +132,9 @@ Persisted drones with broken routes or invalid flight values are rejected
 before their first movement update as well.
 Each saved world must retain exactly one Core, the anchor used to rebuild its
 power and logistics state.
+World configuration, resource pools, machine wear, ground values, research
+progress, and staged cargo are checked before simulation too; derived building
+unlocks are rebuilt from the campaign research mirror when the save loads.
 When it reports LOW BATTERY, tap FLOW to inspect the power network before the
 swarm continues in hibernation.
 While away, the foreground world continues its selected research job and a

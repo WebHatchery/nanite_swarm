@@ -48,6 +48,11 @@ pub fn load_from_json(json: &str) -> Result<Campaign, serde_json::Error> {
     // Older saves kept research only on each world. Restore that campaign
     // mirror before offline work is assigned to the active job.
     campaign.adopt_planet_research();
+    // The build catalog is derived from the campaign research and each
+    // world's bans. Rebuild it even when a current-format save already has a
+    // non-empty campaign mirror, so stale or hand-edited unlock lists cannot
+    // survive loading.
+    campaign.sync_research();
     let now = unix_seconds_now();
     let mut shipment_elapsed: f32 = 0.0;
     let current_index = campaign.current_index();

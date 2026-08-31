@@ -75,3 +75,21 @@ fn a_save_with_a_seed_ship_past_its_plan_is_rejected() {
 
     assert!(load_from_json(&serde_json::to_string(&malformed).unwrap()).is_err());
 }
+
+#[test]
+fn loading_rebuilds_stale_building_unlocks_from_campaign_research() {
+    let mut campaign = campaign();
+    campaign
+        .current_mut()
+        .unlock_building(BuildingType::FusionReactor);
+    assert!(campaign
+        .current()
+        .is_building_researched(BuildingType::FusionReactor));
+
+    let json = save_to_json(&mut campaign).unwrap();
+    let loaded = load_from_json(&json).unwrap();
+
+    assert!(!loaded
+        .current()
+        .is_building_researched(BuildingType::FusionReactor));
+}
