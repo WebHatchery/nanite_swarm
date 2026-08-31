@@ -103,6 +103,9 @@ Audit date: 2026-08-20
 - Split campaign-wide research synchronization, offline research spending,
   and legacy research adoption from `campaign.rs` into `campaign/research.rs`,
   leaving travel, autosave, and directive orchestration in the campaign shell.
+- Split shared mobile status and compact resource-readout helpers from
+  `top_bar.rs` into `top_bar/readouts.rs`, leaving desktop card drawing and
+  navigation controls in the top-bar coordinator.
 - Split the Seed Ship's drill-to-Smelter production-chain tests from
   `state/seed_ship/tests.rs` into `seed_ship/tests/production.rs`, leaving
   stage payment, research gates, launch, and achievement contracts together.
