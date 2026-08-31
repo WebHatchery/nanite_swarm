@@ -33,18 +33,29 @@ pub(super) fn draw(campaign: &Campaign, pulse: f32) -> CampaignCompleteAction {
         21.0,
         Colors::PRIMARY,
     );
-    for (index, line) in [
-        "Every world in reach has been processed.",
-        "The ship on the pad has nowhere to be sent.",
-        "The swarm notes this without concern.",
-    ]
-    .into_iter()
-    .enumerate()
-    {
+    let compact = panel_h < 500.0;
+    let ultra_compact = panel_h < 390.0;
+    let description = if ultra_compact {
+        [
+            "Every world in reach has been processed.",
+            "The ship has nowhere to be sent.",
+        ]
+        .as_slice()
+    } else {
+        [
+            "Every world in reach has been processed.",
+            "The ship on the pad has nowhere to be sent.",
+            "The swarm notes this without concern.",
+        ]
+        .as_slice()
+    };
+    for (index, line) in description.iter().enumerate() {
         draw_ui_text(
             &truncate_text_to_width(line, panel_w - 32.0, 11.0),
             PANEL_X + 16.0,
-            panel_y + 70.0 + index as f32 * 18.0,
+            panel_y
+                + if ultra_compact { 62.0 } else { 70.0 }
+                + index as f32 * if ultra_compact { 16.0 } else { 18.0 },
             11.0,
             if index == 2 {
                 Colors::TEXT_DIM
@@ -66,7 +77,9 @@ pub(super) fn draw(campaign: &Campaign, pulse: f32) -> CampaignCompleteAction {
         ("Time elapsed", format!("{}h {}m", hours, minutes)),
     ];
     for (index, (label, value)) in rows.iter().enumerate() {
-        let y = panel_y + 156.0 + index as f32 * 25.0;
+        let y = panel_y
+            + if ultra_compact { 94.0 } else { 156.0 }
+            + index as f32 * if ultra_compact { 15.0 } else { 25.0 };
         draw_ui_text(label, PANEL_X + 16.0, y, 11.0, Colors::TEXT_DIM);
         let value_w = measure_ui_text(value, None, 11, 1.0).width;
         draw_ui_text(
@@ -78,9 +91,29 @@ pub(super) fn draw(campaign: &Campaign, pulse: f32) -> CampaignCompleteAction {
         );
     }
 
-    let compact = panel_h < 500.0;
     let world_rows = completion_world_rows(campaign);
-    let world_header_y = if compact {
+    let button_y = panel_y + panel_h - 58.0;
+    let world_header_y = if ultra_compact {
+        // Keep the report balanced when a slightly taller short viewport has
+        // spare space, while still following the buttons on genuinely tiny
+        // screens.
+        let world_header_y = (button_y - 28.0).min(panel_y + 222.0);
+        draw_ui_text(
+            "LIFETIME CONSUMPTION",
+            PANEL_X + 16.0,
+            world_header_y - 32.0,
+            9.0,
+            Colors::TEXT_DIM,
+        );
+        draw_ui_text(
+            &truncate_text_to_width(&compact_consumption_line(campaign), panel_w - 32.0, 7.0),
+            PANEL_X + 16.0,
+            world_header_y - 15.0,
+            7.0,
+            Colors::SUCCESS,
+        );
+        world_header_y
+    } else if compact {
         draw_ui_text(
             "LIFETIME CONSUMPTION",
             PANEL_X + 16.0,
@@ -143,7 +176,6 @@ pub(super) fn draw(campaign: &Campaign, pulse: f32) -> CampaignCompleteAction {
     );
 
     let button_w = ((panel_w - 44.0) * 0.5).max(50.0);
-    let button_y = panel_y + panel_h - 58.0;
     let keep_label = if panel_w < 300.0 {
         "KEEP GOING"
     } else {
@@ -174,7 +206,7 @@ pub(super) fn draw(campaign: &Campaign, pulse: f32) -> CampaignCompleteAction {
 fn mobile_panel_geometry(screen_h: f32) -> (f32, f32) {
     let panel_y = if screen_h < 560.0 { 36.0 } else { PANEL_Y };
     let panel_h = if screen_h < 560.0 {
-        (screen_h - panel_y - 16.0).max(360.0)
+        (screen_h - panel_y - 16.0).max(0.0)
     } else {
         PANEL_H
     };

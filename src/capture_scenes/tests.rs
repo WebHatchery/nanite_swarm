@@ -40,6 +40,7 @@ fn required_capture_scenes_are_registered() {
             "geothermal",
             "fusion",
             "ending",
+            "mobile_ending_very_short",
             "desktop_ending",
             "interplanetary_remote_orders",
             "interplanetary_core_stages",

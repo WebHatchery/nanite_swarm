@@ -582,7 +582,7 @@ impl Game {
                     .warning("Seed Ship: Ion Spine under way");
                 planet.notifications.success("Next: tap SHIP, then MAP.");
             }
-            "ending" => self.stage_ending_scene(),
+            "ending" | "mobile_ending_very_short" => self.stage_ending_scene(),
             "desktop_ending" => self.stage_ending_scene(),
             // The banner reports a shutdown that scales with the base, so it
             // has to be looked at on a base that has some size to it.

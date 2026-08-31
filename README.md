@@ -216,6 +216,8 @@ Deleting a save slot requires a second tap on its explicitly labelled
 confirmation state.
 The mobile FLOW ledger and Factory Deck use exclusive, full-width overlays;
 HELP reserves the command bar so diagnostics and recovery controls stay clear.
+The ending report compresses to two short lines and keeps both choices inside
+very short phone viewports.
 
 Factory controls:
 
