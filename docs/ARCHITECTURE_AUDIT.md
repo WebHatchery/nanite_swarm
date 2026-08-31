@@ -216,6 +216,9 @@ Audit date: 2026-08-20
 - Split drill buffering, producer discovery, partial-load policy, and drone
   dispatch from `state/logistics.rs` into `state/logistics/producers.rs`,
   leaving route selection and network recovery in the parent.
+- Split pause/speed/next-event controls and offline catch-up from
+  `state/progress.rs` into `progress/clock.rs` and `progress/offline.rs`,
+  leaving live rates, hazards, and presentation readouts in the parent.
 - Split the desktop help overlay from `hud/bottom_bar.rs` into
   `bottom_bar/help.rs`, leaving the command bar focused on controls, clock
   actions, and the live status panels.

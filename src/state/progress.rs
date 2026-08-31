@@ -4,8 +4,10 @@ use crate::engine::{BuildingType, GridPos, ResourceType, StatId};
 use super::game_state::PlanetState;
 
 mod arrival;
+mod clock;
 mod constraints;
 mod interaction;
+mod offline;
 
 pub(crate) use constraints::hazard_field_strength;
 
@@ -252,55 +254,6 @@ impl PlanetState {
             .sum()
     }
 
-    /// Stop and start the world.
-    pub fn toggle_pause(&mut self) {
-        self.paused = !self.paused;
-        // Drop the part-finished step: resuming should not owe time.
-        self.sim_accumulator = 0.0;
-    }
-
-    /// Step to the next speed up or down the ladder, clamped at both ends.
-    pub fn change_speed(&mut self, faster: bool) {
-        let scales = crate::state::TIME_SCALES;
-        let current = scales
-            .iter()
-            .position(|scale| (*scale - self.time_scale).abs() < 1e-3)
-            .unwrap_or(1);
-        let next = if faster {
-            (current + 1).min(scales.len() - 1)
-        } else {
-            current.saturating_sub(1)
-        };
-        self.time_scale = scales[next];
-    }
-
-    pub fn next_interesting_event(&self) -> Option<NextEvent> {
-        [
-            (self.power_collapse_shutdown, "Power recovery"),
-            (self.power_collapse_cooldown, "Collapse recovery"),
-            (self.research_lock_timer, "Research unlock"),
-            (self.export_cooldown, "Mass Driver ready"),
-        ]
-        .into_iter()
-        .filter(|(seconds, _)| *seconds > 0.01 && seconds.is_finite())
-        .min_by(|left, right| left.0.total_cmp(&right.0))
-        .map(|(seconds, label)| NextEvent { label, seconds })
-    }
-
-    pub fn fast_forward_to_next_event(&mut self) -> bool {
-        let Some(event) = self.next_interesting_event() else {
-            return false;
-        };
-        let mut remaining = event.seconds;
-        while remaining > 0.0001 {
-            let delta = remaining.min(crate::state::TICK_SECONDS);
-            self.step(delta, false);
-            remaining -= delta;
-        }
-        self.sim_accumulator = 0.0;
-        true
-    }
-
     /// A short label for whatever this world is doing to the machinery, for
     /// the HUD. Empty when the world is merely somewhere to build.
     pub fn hazard_label(&self) -> String {
@@ -317,67 +270,6 @@ impl PlanetState {
     /// What this world has to say for itself, shown on arrival.
     pub fn arrival_line(&self) -> &str {
         self.data().planet(self.planet_index).arrival.as_str()
-    }
-
-    pub fn battery_time_left(&self) -> (i32, i32) {
-        let total = self.battery_seconds.max(0.0) as i32;
-        let hours = total / 3600;
-        let minutes = (total % 3600) / 60;
-        (hours, minutes)
-    }
-
-    pub fn apply_offline_progress(&mut self, offline_seconds: f32) {
-        if offline_seconds <= 0.0 {
-            self.last_offline_seconds = 0.0;
-            self.last_offline_simulated = 0.0;
-            return;
-        }
-
-        let capped = offline_seconds.min(self.config.offline.max_elapsed_seconds.max(0.0));
-        let active_seconds = capped.min(self.battery_seconds.max(0.0));
-        let hibernation_seconds = (capped - active_seconds).max(0.0) * 0.1;
-        let simulated = active_seconds + hibernation_seconds;
-        let mineral_rate = self.mineral_output_rate();
-        let alloy_rate = self.alloy_rate();
-        let components_rate = self.components_rate();
-        let data_rate = self.data_generation_rate();
-        let power_rate = self.net_power();
-        let cap = self.config.offline.max_resource_gain.max(0.0);
-        let minerals = (mineral_rate * simulated).clamp(-cap, cap);
-        let alloy = (alloy_rate * simulated).clamp(0.0, cap);
-        let components = (components_rate * simulated).clamp(0.0, cap);
-        let data = (data_rate * simulated).clamp(0.0, cap);
-        let power = (power_rate * simulated).clamp(-cap, cap);
-        self.resources.consumed.record(
-            ResourceType::Energy,
-            self.power_consumption().max(0.0) * simulated,
-        );
-        self.resources.minerals = (self.resources.minerals + minerals)
-            .min(self.resource_capacity(ResourceType::Minerals));
-        self.resources.alloy =
-            (self.resources.alloy + alloy).min(self.resource_capacity(ResourceType::Alloy));
-        self.resources.components = (self.resources.components + components)
-            .min(self.resource_capacity(ResourceType::Components));
-        self.resources.data =
-            (self.resources.data + data).min(self.resource_capacity(ResourceType::Data));
-        self.resources.energy = (self.resources.energy + power)
-            .clamp(0.0, self.resource_capacity(ResourceType::Energy));
-        self.time_played += simulated as f64;
-        self.battery_seconds = (self.battery_seconds - capped).max(0.0);
-        self.last_offline_report = OfflineReport {
-            elapsed_seconds: offline_seconds,
-            capped_seconds: capped,
-            tamper_guarded: false,
-            minerals_gained: minerals,
-            alloy_gained: alloy,
-            components_gained: components,
-            data_gained: data,
-            power_gained: power,
-            ..OfflineReport::default()
-        };
-        self.last_offline_seconds = offline_seconds;
-        self.last_offline_simulated = simulated;
-        self.offline_notice_timer = 8.0;
     }
 
     pub fn achievements_progress(&self) -> (usize, usize) {
