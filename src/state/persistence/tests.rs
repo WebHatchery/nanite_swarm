@@ -5,6 +5,7 @@ use crate::state::Shipment;
 
 mod recovery;
 mod roundtrip;
+mod schema;
 mod validation;
 
 fn campaign() -> Campaign {

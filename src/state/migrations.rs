@@ -20,7 +20,9 @@ pub fn migrate(json: &str) -> Result<SaveGame, serde_json::Error> {
     let Some(version) = object.get("version").and_then(Value::as_u64) else {
         return migrate_v0(value);
     };
-    let migrated = match version as u32 {
+    // Keep the parsed value wide until matching. Casting a future or corrupt
+    // u64 version to u32 could wrap it back onto a supported schema number.
+    let migrated = match version {
         1 => migrate_v1(value),
         2 => migrate_v2(value),
         3 => migrate_v3(value),
