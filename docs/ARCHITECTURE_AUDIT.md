@@ -67,6 +67,9 @@ Audit date: 2026-08-31
 - Split persisted planet scalar, resource, tile, and buffer checks from
   `campaign/validation/planet.rs` into `validation/planet/contents.rs`,
   leaving research, drone, and grid-shape invariants in the planet validator.
+- Split deterministic launch starfield, world, ship, exhaust, trail, and base
+  primitives from `launch_view.rs` into `launch_view/art.rs`, leaving beat
+  timing, captions, and skip input in the launch coordinator.
 - Split save rotation, corruption recovery, and slot-isolation coverage from
   `state/persistence/tests.rs` into `persistence/tests/recovery.rs`, leaving
   the parent suite focused on migration and round-trip contracts.

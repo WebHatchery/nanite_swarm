@@ -1,0 +1,122 @@
+//! Deterministic visual primitives for the launch sequence.
+
+use crate::state::PlanetState;
+use crate::ui::Colors;
+use macroquad::prelude::*;
+
+pub(super) fn draw_departure_base(origin: Vec2, radius: f32, state: &PlanetState, fraction: f32) {
+    let base_y = origin.y - radius * 0.94;
+    let count = state.grid.total_buildings().min(28);
+    for index in 0..count {
+        let x = origin.x - radius * 0.42 + index as f32 * 9.0;
+        let height = 8.0 + ((index * 17) % 24) as f32;
+        let fade = if fraction < 0.5 {
+            0.8
+        } else {
+            (1.0 - (fraction - 0.5) * 1.5).max(0.2)
+        };
+        draw_rectangle(
+            x,
+            base_y - height,
+            6.0,
+            height,
+            Color::new(0.2, 0.55, 0.65, fade),
+        );
+        draw_rectangle_lines(
+            x,
+            base_y - height,
+            6.0,
+            height,
+            1.0,
+            Color::new(0.65, 0.9, 1.0, fade),
+        );
+    }
+    draw_line(
+        origin.x - radius * 0.55,
+        base_y,
+        origin.x + radius * 0.55,
+        base_y,
+        2.0,
+        Colors::PRIMARY_SOFT,
+    );
+}
+
+/// A world as a lit disc with a thin limb, seen from close enough that most of
+/// it is off screen.
+pub(super) fn draw_world(centre: Vec2, radius: f32, color: Color) {
+    draw_circle(
+        centre.x,
+        centre.y,
+        radius,
+        Color::new(color.r * 0.35, color.g * 0.35, color.b * 0.4, 1.0),
+    );
+    draw_circle_lines(centre.x, centre.y, radius, 2.0, color);
+    draw_circle_lines(
+        centre.x,
+        centre.y,
+        radius * 1.06,
+        1.0,
+        Color::new(color.r, color.g, color.b, 0.25),
+    );
+}
+
+/// The ship: a wedge, pointing along `angle` (zero is straight up).
+pub(super) fn draw_ship(position: Vec2, angle: f32) {
+    let (sin, cos) = angle.sin_cos();
+    let rotate = |offset: Vec2| {
+        vec2(
+            position.x + offset.x * cos - offset.y * sin,
+            position.y + offset.x * sin + offset.y * cos,
+        )
+    };
+    let nose = rotate(vec2(0.0, -24.0));
+    let left = rotate(vec2(-12.0, 15.0));
+    let right = rotate(vec2(12.0, 15.0));
+    draw_triangle(nose, left, right, Colors::PRIMARY);
+    draw_triangle_lines(nose, left, right, 1.5, Color::new(0.8, 0.95, 1.0, 1.0));
+}
+
+/// Everything the ship is throwing away to leave, drawn as a widening plume
+/// back to the ground it left.
+pub(super) fn draw_exhaust(ship: Vec2, pad: Vec2, world_color: Color) {
+    let span = (pad.y - ship.y).max(1.0);
+    for step in 0..18 {
+        let t = step as f32 / 17.0;
+        let y = ship.y + span * t;
+        let width = 5.0 + t * 26.0;
+        let alpha = (1.0 - t) * 0.5;
+        draw_rectangle(
+            ship.x - width * 0.5,
+            y,
+            width,
+            span / 18.0 + 1.0,
+            Color::new(1.0, 0.6 + world_color.r * 0.2, 0.3, alpha),
+        );
+    }
+}
+
+/// The line the ship has already covered between worlds.
+pub(super) fn draw_trail(from: Vec2, to: Vec2) {
+    draw_line(
+        from.x,
+        from.y,
+        to.x,
+        to.y,
+        1.5,
+        Color::new(0.4, 0.8, 1.0, 0.28),
+    );
+}
+
+/// The same deterministic scatter every frame, so the sky does not boil.
+pub(super) fn draw_starfield(screen_w: f32, screen_h: f32) {
+    for i in 0..180u32 {
+        let x = (i as f32 * 71.3).sin().abs() * screen_w;
+        let y = (i as f32 * 41.9).cos().abs() * screen_h;
+        draw_circle(
+            x,
+            y,
+            0.6 + (i % 3) as f32 * 0.4,
+            Color::new(0.7, 0.85, 1.0, 0.10 + (i % 5) as f32 * 0.03),
+        );
+    }
+}
