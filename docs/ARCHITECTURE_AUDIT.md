@@ -109,6 +109,9 @@ Audit date: 2026-08-20
 - Split standing-route, reserve, shipment-label, and freight hit-test coverage
   from `interplanetary_view/tests.rs` into `tests/shipping.rs`, leaving map,
   dossier, and remote-alert contracts in the parent suite.
+- Split severed-route, rerouting, repair, collapse recovery, and route-length
+  coverage from `state/logistics/tests/network.rs` into `network/recovery.rs`,
+  leaving throughput and congestion contracts in the parent suite.
 - Split planet-state invariants and shipment invariants from
   `state/campaign/validation.rs` into `validation/planet.rs` and
   `validation/shipment.rs`, leaving load orchestration and directive checks in
