@@ -3,7 +3,13 @@
 use crate::ui::{draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::settings::GameSettings;
-use macroquad_toolkit::ui::{draw_ui_text, stepper_row, toggle_row, truncate_text_to_width};
+use macroquad_toolkit::ui::{draw_ui_text, truncate_text_to_width};
+
+mod audio;
+mod display;
+
+#[cfg(test)]
+use audio::step_volume;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum SettingsAction {
@@ -88,7 +94,7 @@ pub fn render_settings_menu(
     );
 
     match *selected_tab {
-        SettingsTab::Display => draw_display_settings(
+        SettingsTab::Display => display::draw(
             settings,
             display_x,
             layout.panel_y,
@@ -98,7 +104,7 @@ pub fn render_settings_menu(
             layout.section_gap,
         ),
         SettingsTab::Audio => {
-            if draw_audio_settings(
+            if audio::draw(
                 settings,
                 display_x,
                 layout.panel_y,
@@ -208,149 +214,6 @@ fn settings_layout(screen_w: f32, screen_h: f32) -> SettingsLayout {
         compact_mobile,
         compact_desktop,
     }
-}
-
-fn draw_display_settings(
-    settings: &mut GameSettings,
-    display_x: f32,
-    panel_y: f32,
-    row_w: f32,
-    row_h: f32,
-    row_gap: f32,
-    section_gap: f32,
-) {
-    let content_y = panel_y + 78.0;
-    let scale_row = Rect::new(display_x + 16.0, content_y, row_w, row_h);
-    let scale_step = stepper_row(
-        scale_row,
-        "UI Scale",
-        &format!("{:.2}x", settings.ui_text_scale),
-    );
-    if scale_step != 0 {
-        settings.ui_text_scale =
-            (settings.ui_text_scale + scale_step as f32 * 0.05).clamp(0.75, 1.5);
-    }
-
-    let fps_row = Rect::new(display_x + 16.0, content_y + row_h + row_gap, row_w, row_h);
-    toggle_row(fps_row, "Show FPS", &mut settings.show_fps);
-
-    let motion_row = Rect::new(
-        display_x + 16.0,
-        content_y + (row_h + row_gap) * 2.0,
-        row_w,
-        row_h,
-    );
-    toggle_row(motion_row, "Reduced motion", &mut settings.reduced_motion);
-    draw_ui_text(
-        &truncate_text_to_width(
-            "Stops pulses and impact particles; rules still run.",
-            row_w,
-            10.0,
-        ),
-        display_x + 16.0,
-        motion_row.y + row_h + 12.0,
-        10.0,
-        Colors::TEXT_DIM,
-    );
-
-    let key_row = Rect::new(
-        display_x + 16.0,
-        motion_row.y + row_h + section_gap,
-        row_w,
-        row_h,
-    );
-    if draw_button_sized(
-        key_row.x,
-        key_row.y,
-        key_row.w,
-        key_row.h,
-        &format!(
-            "Pause key: {} (tap to cycle)",
-            settings
-                .key_bindings
-                .get("pause")
-                .map(String::as_str)
-                .unwrap_or("Unassigned")
-        ),
-    ) {
-        let next = match settings.key_bindings.get("pause").map(String::as_str) {
-            Some("Space") => "P",
-            Some("P") => "Enter",
-            _ => "Space",
-        };
-        settings
-            .key_bindings
-            .insert("pause".to_string(), next.to_string());
-    }
-
-    let speed_row = Rect::new(
-        display_x + 16.0,
-        key_row.y + row_h + section_gap,
-        row_w,
-        row_h,
-    );
-    let scales = ["0.5x", "1x", "2x", "4x", "8x MAX"];
-    let speed_index = settings.default_speed.clamp(0, 4) as usize;
-    if stepper_row(speed_row, "Initial game speed", scales[speed_index]) != 0 {
-        settings.default_speed = if settings.default_speed >= 4 {
-            0
-        } else {
-            settings.default_speed + 1
-        };
-    }
-}
-
-fn draw_audio_settings(
-    settings: &mut GameSettings,
-    display_x: f32,
-    panel_y: f32,
-    row_w: f32,
-    row_h: f32,
-    row_gap: f32,
-) -> bool {
-    draw_ui_text(
-        "Tap +/- to adjust. Changes apply immediately.",
-        display_x + 16.0,
-        panel_y + 78.0,
-        10.0,
-        Colors::TEXT_DIM,
-    );
-    let content_y = panel_y + 90.0;
-    adjust_volume_row(
-        Rect::new(display_x + 16.0, content_y, row_w, row_h),
-        "Master volume",
-        &mut settings.master_volume,
-    );
-    adjust_volume_row(
-        Rect::new(display_x + 16.0, content_y + row_h + row_gap, row_w, row_h),
-        "Sound effects",
-        &mut settings.sfx_volume,
-    );
-    adjust_volume_row(
-        Rect::new(
-            display_x + 16.0,
-            content_y + (row_h + row_gap) * 2.0,
-            row_w,
-            row_h,
-        ),
-        "Music",
-        &mut settings.music_volume,
-    );
-
-    let test_y = content_y + (row_h + row_gap) * 3.0;
-    draw_button_sized(display_x + 16.0, test_y, row_w, row_h, "Test signal")
-}
-
-fn adjust_volume_row(rect: Rect, label: &str, volume: &mut f32) {
-    let direction = stepper_row(rect, label, &format!("{:.0}%", *volume * 100.0));
-    if direction != 0 {
-        *volume = step_volume(*volume, direction);
-    }
-}
-
-fn step_volume(volume: f32, direction: i32) -> f32 {
-    let current = (volume * 10.0).round() as i32;
-    ((current + direction).clamp(0, 10) as f32) / 10.0
 }
 
 #[cfg(test)]

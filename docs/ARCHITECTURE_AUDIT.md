@@ -76,6 +76,9 @@ Audit date: 2026-08-31
 - Split PlanetState research adoption, building unlock refresh, and stat-sheet
   rebuilding from `state/game_state.rs` into `game_state/research.rs`, keeping
   research-owned synchronization beside the persisted research record.
+- Split the Settings Display and Audio tab renderers from `settings_menu.rs`
+  into `settings_menu/display.rs` and `settings_menu/audio.rs`, leaving the
+  parent focused on tab navigation, layout, and footer guidance.
 - Split save rotation, corruption recovery, and slot-isolation coverage from
   `state/persistence/tests.rs` into `persistence/tests/recovery.rs`, leaving
   the parent suite focused on migration and round-trip contracts.
