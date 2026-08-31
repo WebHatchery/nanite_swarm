@@ -64,6 +64,9 @@ Audit date: 2026-08-20
 - Split Solar System snapshot assembly and freight-map action handling into
   `src/main/update/interplanetary.rs`, leaving the frame coordinator focused on
   phase dispatch, local screens, and shared simulation timing.
+- Split the touch-sized Solar System world dossier from `interplanetary_view/mobile.rs`
+  into `interplanetary_view/mobile/world_info.rs`, leaving portrait navigation,
+  tabs, and list layout independent from the growing dossier variants.
 
 ## Remaining debt
 
