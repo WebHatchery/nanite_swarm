@@ -255,6 +255,11 @@ fn offline_production_loads_a_standing_order_into_a_full_pod() {
 
     campaign.update_shipments(0.0);
     assert_eq!(campaign.shipments().len(), 1);
+    assert_eq!(
+        campaign.shipments()[0].remaining,
+        campaign.shipments()[0].transit,
+        "a newly queued offline pod must start its transit clock on return"
+    );
 }
 
 #[test]

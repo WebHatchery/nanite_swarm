@@ -55,6 +55,7 @@ pub fn load_from_json(json: &str) -> Result<Campaign, serde_json::Error> {
     campaign.sync_research();
     let now = unix_seconds_now();
     let mut shipment_elapsed: f32 = 0.0;
+    let mut offline_worlds = Vec::new();
     let current_index = campaign.current_index();
     let mut foreground_simulated = 0.0;
     for (index, slot) in campaign.planets.iter_mut().enumerate() {
@@ -77,15 +78,29 @@ pub fn load_from_json(json: &str) -> Result<Campaign, serde_json::Error> {
             shipment_elapsed = shipment_elapsed
                 .max(offline_seconds.min(planet.config.offline.max_elapsed_seconds.max(0.0)));
             planet.apply_offline_progress(offline_seconds);
-            let freight_pods = planet.apply_offline_export_progress();
-            planet.last_offline_report.freight_pods_launched = freight_pods;
             planet.last_offline_report.tamper_guarded = delta < 0;
+            offline_worlds.push(index);
             if index == current_index {
                 foreground_simulated = planet.last_offline_simulated;
             }
         }
         planet.last_saved_unix = now;
     }
+
+    // Move pods that were already queued or in flight when the save was
+    // written. Offline exports are enqueued in the next pass so a pod made at
+    // the end of this gap does not spend the whole gap travelling.
+    if shipment_elapsed > 0.0 {
+        campaign.update_shipments(shipment_elapsed);
+    }
+    for index in offline_worlds {
+        let Some(planet) = campaign.planet_mut(index) else {
+            continue;
+        };
+        let freight_pods = planet.apply_offline_export_progress();
+        planet.last_offline_report.freight_pods_launched = freight_pods;
+    }
+    campaign.update_shipments(0.0);
 
     if foreground_simulated > 0.0 {
         let (research_spent, research_completed) =
@@ -107,13 +122,6 @@ pub fn load_from_json(json: &str) -> Result<Campaign, serde_json::Error> {
         let planet = campaign.current_mut();
         planet.update_achievements();
         planet.update_core_stage();
-    }
-
-    // A pod already in flight is campaign state, not a foreground-world
-    // cache. Let it cover the elapsed wall-clock interval while the player was
-    // away, then leave it holding if the destination still has no room.
-    if shipment_elapsed > 0.0 {
-        campaign.update_shipments(shipment_elapsed);
     }
 
     // Older saves kept histories beside each world. Fold those into the new

@@ -339,6 +339,56 @@ fn loading_a_past_save_advances_shipments_already_in_flight() {
 }
 
 #[test]
+fn loading_a_past_save_does_not_age_pods_created_by_offline_exports() {
+    let mut config = GameConfig::default();
+    config.resources.base_mineral_cap = 100_000.0;
+    config.mass_driver.pod_capacity = 1.0;
+    config.mass_driver.load_rate = 100.0;
+    let mut campaign = Campaign::new(config, 7);
+    campaign.colonize(1);
+
+    let origin = campaign.current_index();
+    let planet = campaign.current_mut();
+    planet.resources.minerals = 10_000.0;
+    planet.resources.energy = 10_000.0;
+    planet.config.resources.max_energy = 10_000.0;
+    let core = planet.grid.find_core().unwrap();
+    let driver = GridPos::new(core.x - 1, core.y);
+    let drill = GridPos::new(core.x + 1, core.y);
+    for pos in [driver, drill] {
+        let tile = planet.grid.get_mut(pos).unwrap();
+        tile.terrain = crate::engine::TerrainType::Empty;
+        tile.ore_richness = 1.0;
+    }
+    planet.grid.reveal_around(core, 3);
+    assert!(planet.grid.place_building(driver, BuildingType::MassDriver));
+    assert!(planet.grid.place_building(drill, BuildingType::Drill));
+    planet.grid.update_power_grid();
+    planet.export = Some(crate::state::ExportOrder {
+        target: 1,
+        cargo: ResourceType::Minerals,
+        ..crate::state::ExportOrder::default()
+    });
+    planet.last_saved_unix = unix_seconds_now() - 30;
+
+    let json = serde_json::to_string(&SaveGame {
+        version: SAVE_VERSION,
+        campaign,
+    })
+    .unwrap();
+    let loaded = load_from_json(&json).unwrap();
+
+    assert!(
+        loaded.current().last_offline_report.freight_pods_launched > 0,
+        "the fixture should create at least one pod during offline catch-up"
+    );
+    assert!(loaded
+        .shipments()
+        .iter()
+        .all(|shipment| { (shipment.remaining - shipment.transit).abs() < f32::EPSILON }));
+}
+
+#[test]
 fn load_from_json_skips_offline_progress_for_fresh_save() {
     let mut campaign = campaign();
     let json = save_to_json(&mut campaign).unwrap();
