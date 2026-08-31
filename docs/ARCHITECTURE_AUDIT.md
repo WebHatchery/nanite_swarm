@@ -213,6 +213,9 @@ Audit date: 2026-08-20
 - Split building texture, topology, glow, motion, and power-state drawing from
   `terrain_render/tiles.rs` into `tiles/building.rs`, leaving the tile loop
   focused on terrain, feature marks, and hover/placement overlays.
+- Split drill buffering, producer discovery, partial-load policy, and drone
+  dispatch from `state/logistics.rs` into `state/logistics/producers.rs`,
+  leaving route selection and network recovery in the parent.
 - Split the desktop help overlay from `hud/bottom_bar.rs` into
   `bottom_bar/help.rs`, leaving the command bar focused on controls, clock
   actions, and the live status panels.
