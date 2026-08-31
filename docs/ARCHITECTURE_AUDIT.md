@@ -46,6 +46,9 @@ Audit date: 2026-08-20
   shipment labels from `shipping_panel.rs` into
   `interplanetary_view/shipping_panel/routes.rs`, leaving the panel focused on
   standing-order controls and blocker copy.
+- Split the terrain harvest and forest-filter action tests into
+  `state/actions/tests/terrain.rs`, keeping the parent action suite below the
+  hard source-size limit as terrain tradeoffs continue to grow.
 
 ## Remaining debt
 
