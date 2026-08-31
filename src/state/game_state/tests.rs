@@ -1,4 +1,5 @@
 use super::*;
+use crate::engine::TerrainType;
 
 #[test]
 fn feature_overlap_keeps_narrow_rectangles_selectable() {
@@ -118,6 +119,23 @@ fn landing_crater_generation_keeps_a_harvestable_tile_inside_the_feature() {
             "seed {seed} has no harvestable Landing Crater tile"
         );
     }
+}
+
+#[test]
+fn harvest_preview_includes_research_and_local_feature_bonuses() {
+    let mut state = PlanetState::new(2, 42, GameConfig::default());
+    let core = state.grid.find_core().expect("Mars Core");
+    let pos = GridPos::new(core.x + 5, core.y);
+    state.grid.get_mut(pos).unwrap().terrain = TerrainType::Mountain;
+    state.grid.get_mut(pos).unwrap().revealed = true;
+    state.features[0].bounds = (0.65, 0.40, 0.30, 0.30);
+    state
+        .research
+        .unlocked_techs
+        .push("excavation_charges".to_string());
+    state.refresh_stats();
+
+    assert_eq!(state.harvest_rewards_at(pos), Some((100.0, 0.0)));
 }
 
 #[test]

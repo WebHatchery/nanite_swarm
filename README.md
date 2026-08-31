@@ -93,7 +93,8 @@ remaining milestone requirements holding that evolution back.
 Select a revealed tile inside a named planetary feature to read its feature
 description alongside the terrain details; unrevealed tiles keep that
 information hidden. The feature header names any local production or hazard
-effect before machinery is placed.
+effect before machinery is placed. Harvest previews include active research
+and local feature bonuses, so the reward shown beside HARVEST matches the tap.
 If a dragged conduit route spends its last resources, the route pauses and
 reports the exact mineral and energy cost of the next segment once per gesture.
 The bottom graph records observed ore, alloy, and parts flow; tap its visible

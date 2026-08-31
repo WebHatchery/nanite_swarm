@@ -85,7 +85,7 @@ pub(super) fn draw(
     if let Some(tile_pos) = display_pos {
         if let Some(tile) = state.grid.get(tile_pos) {
             tile_terrain = Some(tile.terrain);
-            tile_harvest = Some(tile.terrain.harvest_rewards(data));
+            tile_harvest = state.harvest_rewards_at(tile_pos);
             tile_bonus = tile.terrain.preservation_bonus(data);
             if let Some(building) = &tile.building {
                 tile_building = Some(building.building_type);
