@@ -235,6 +235,66 @@ fn export_rate_is_zero_without_a_route_or_online_driver() {
 }
 
 #[test]
+fn offline_production_loads_a_standing_order_into_a_full_pod() {
+    let mut campaign = two_world_campaign();
+    driver_on_current(&mut campaign);
+    set_route(&mut campaign, VENUS, ResourceType::Minerals);
+    let launched = {
+        let planet = campaign.current_mut();
+        planet.last_offline_simulated = 20.0;
+        planet.last_offline_report.minerals_gained = 60.0;
+        planet.resources.minerals = 60.0;
+
+        planet.apply_offline_export_progress()
+    };
+
+    assert_eq!(launched, 1);
+    assert_eq!(campaign.current().launched_pods.len(), 1);
+    assert_eq!(campaign.current().launched_pods[0].amount, 60.0);
+    assert_eq!(campaign.current().resources.minerals, 0.0);
+
+    campaign.update_shipments(0.0);
+    assert_eq!(campaign.shipments().len(), 1);
+}
+
+#[test]
+fn offline_export_keeps_the_source_reserve_intact() {
+    let mut campaign = two_world_campaign();
+    driver_on_current(&mut campaign);
+    set_route(&mut campaign, VENUS, ResourceType::Minerals);
+    let planet = campaign.current_mut();
+    planet.export.as_mut().unwrap().surplus_only = true;
+    planet.export.as_mut().unwrap().reserve_source = 50.0;
+    planet.last_offline_simulated = 20.0;
+    planet.last_offline_report.minerals_gained = 60.0;
+    planet.resources.minerals = 80.0;
+
+    let launched = planet.apply_offline_export_progress();
+
+    assert_eq!(launched, 0);
+    assert!((planet.resources.minerals - 50.0).abs() < 0.001);
+    assert!((planet.pod_fraction() - 0.5).abs() < 0.001);
+}
+
+#[test]
+fn offline_export_applies_a_schedule_after_a_full_pod() {
+    let mut campaign = two_world_campaign();
+    let driver = driver_on_current(&mut campaign);
+    set_route(&mut campaign, VENUS, ResourceType::Minerals);
+    let planet = campaign.current_mut();
+    planet.export.as_mut().unwrap().schedule_seconds = 10.0;
+    planet.last_offline_simulated = 31.0;
+    planet.last_offline_report.minerals_gained = 63.0;
+    planet.resources.minerals = 63.0;
+
+    let launched = planet.apply_offline_export_progress();
+
+    assert_eq!(launched, 1);
+    assert_eq!(planet.pod_loads.get(&(driver.x, driver.y)), Some(&3.0));
+    assert!((planet.export_cooldown - 10.0).abs() < 0.001);
+}
+
+#[test]
 fn changing_a_route_does_not_relabel_typed_cargo_in_the_hopper() {
     let mut campaign = two_world_campaign();
     let driver = driver_on_current(&mut campaign);

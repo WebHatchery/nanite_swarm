@@ -143,6 +143,128 @@ impl PlanetState {
         )
     }
 
+    /// Load cargo credited by offline catch-up into the standing order.
+    ///
+    /// Offline production is intentionally aggregated rather than replaying
+    /// every drone trip. Only the resources produced by that catch-up window
+    /// are eligible here, so an order does not silently drain an old
+    /// stockpile just because the player was away. The source reserve still
+    /// applies, and full pods enter the same campaign shipment queue as live
+    /// launches.
+    pub(in crate::state) fn apply_offline_export_progress(&mut self) -> u32 {
+        let Some(order) = self.export else {
+            return 0;
+        };
+        if order.target == self.planet_index
+            || self.last_offline_simulated <= 0.0
+            || !self.last_offline_simulated.is_finite()
+        {
+            return 0;
+        }
+
+        let elapsed = self.last_offline_simulated;
+        let effective_elapsed = if self.export_cooldown > 0.0 {
+            if elapsed <= self.export_cooldown {
+                self.export_cooldown -= elapsed;
+                return 0;
+            }
+            let effective = elapsed - self.export_cooldown;
+            self.export_cooldown = 0.0;
+            effective
+        } else {
+            elapsed
+        };
+
+        let drivers = self.powered_positions(BuildingType::MassDriver);
+        let load_rate = self.config.mass_driver.load_rate;
+        let capacity = self.config.mass_driver.pod_capacity;
+        if drivers.is_empty()
+            || !load_rate.is_finite()
+            || !capacity.is_finite()
+            || load_rate <= 0.0
+            || capacity <= 0.0
+        {
+            return 0;
+        }
+
+        let cargo_gained = self.offline_cargo_gained(order.cargo);
+        if cargo_gained <= 0.0 || !cargo_gained.is_finite() {
+            return 0;
+        }
+
+        let schedule = order.schedule_seconds.max(0.0);
+        let possible: Vec<(GridPos, f32)> = drivers
+            .iter()
+            .map(|pos| {
+                let loaded = self.pod_loads.get(&(pos.x, pos.y)).copied().unwrap_or(0.0);
+                (
+                    *pos,
+                    offline_driver_load(effective_elapsed, loaded, capacity, load_rate, schedule),
+                )
+            })
+            .collect();
+        let possible_total: f32 = possible.iter().map(|(_, amount)| *amount).sum();
+        let reserve = if order.surplus_only {
+            order.reserve_source.max(0.0)
+        } else {
+            0.0
+        };
+        let available = (self.resources.get(order.cargo) - reserve).max(0.0);
+        let mut remaining = cargo_gained.min(available).min(possible_total);
+        if remaining <= 0.0 || !remaining.is_finite() {
+            return 0;
+        }
+
+        let transit = transit_seconds(
+            self.data(),
+            self.planet_index,
+            order.target,
+            &self.config.mass_driver,
+        );
+        let mut launched = 0;
+        for (pos, limit) in possible {
+            let amount = remaining.min(limit);
+            remaining -= amount;
+            let key = (pos.x, pos.y);
+            let mut loaded = self.pod_loads.get(&key).copied().unwrap_or(0.0) + amount;
+            while loaded + 0.001 >= capacity {
+                loaded = (loaded - capacity).max(0.0);
+                self.launched_pods.push(Shipment {
+                    from: self.planet_index,
+                    to: order.target,
+                    cargo: order.cargo,
+                    amount: capacity,
+                    remaining: transit,
+                    transit,
+                    target_pad: order.target_pad,
+                    overflow: false,
+                    priority: order.priority,
+                });
+                launched += 1;
+            }
+            self.pod_loads.insert(key, loaded);
+            if remaining <= 0.001 {
+                break;
+            }
+        }
+
+        let loaded = cargo_gained.min(available).min(possible_total) - remaining;
+        self.resources.add(order.cargo, -loaded.max(0.0));
+        if launched > 0 {
+            self.export_cooldown = schedule;
+        }
+        launched
+    }
+
+    fn offline_cargo_gained(&self, cargo: ResourceType) -> f32 {
+        match cargo {
+            ResourceType::Minerals => self.last_offline_report.minerals_gained,
+            ResourceType::Alloy => self.last_offline_report.alloy_gained,
+            ResourceType::Components => self.last_offline_report.components_gained,
+            _ => 0.0,
+        }
+    }
+
     /// Pull what has been carried to each driver into its pod, and throw the
     /// pods that filled up this step.
     pub(in crate::state) fn update_exports(&mut self, delta_time: f32) {
@@ -209,4 +331,37 @@ impl PlanetState {
             }
         }
     }
+}
+
+fn offline_driver_load(
+    elapsed: f32,
+    loaded: f32,
+    capacity: f32,
+    load_rate: f32,
+    schedule: f32,
+) -> f32 {
+    let loaded = loaded.clamp(0.0, capacity);
+    let fill_seconds = capacity / load_rate;
+    let first_fill = (capacity - loaded) / load_rate;
+    if elapsed <= first_fill {
+        return (elapsed * load_rate).max(0.0);
+    }
+
+    let mut possible = capacity - loaded;
+    let remaining = elapsed - first_fill;
+    let cycle = fill_seconds + schedule;
+    if cycle <= 0.0 || !cycle.is_finite() {
+        return possible.max(0.0);
+    }
+
+    // The first full pod has already been accounted for above. Every later
+    // cycle is a pause followed by a fill, so subtract the pause once before
+    // counting complete cycles. This also handles a zero-second schedule
+    // without losing the partial fill after the first pod.
+    let after_pause = (remaining - schedule).max(0.0);
+    let full_cycles = (after_pause / cycle).floor();
+    possible += full_cycles * capacity;
+    let remainder = after_pause - full_cycles * cycle;
+    possible += remainder.min(fill_seconds) * load_rate;
+    possible.max(0.0)
 }

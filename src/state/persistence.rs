@@ -77,6 +77,8 @@ pub fn load_from_json(json: &str) -> Result<Campaign, serde_json::Error> {
             shipment_elapsed = shipment_elapsed
                 .max(offline_seconds.min(planet.config.offline.max_elapsed_seconds.max(0.0)));
             planet.apply_offline_progress(offline_seconds);
+            let freight_pods = planet.apply_offline_export_progress();
+            planet.last_offline_report.freight_pods_launched = freight_pods;
             planet.last_offline_report.tamper_guarded = delta < 0;
             if index == current_index {
                 foreground_simulated = planet.last_offline_simulated;

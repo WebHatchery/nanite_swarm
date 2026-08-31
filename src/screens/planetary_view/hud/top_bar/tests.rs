@@ -53,6 +53,14 @@ fn offline_work_status_is_short_enough_for_the_mobile_header() {
         .as_deref(),
         Some("Seed Ship +2 stages")
     );
+    assert_eq!(
+        offline_work_label(OfflineReport {
+            freight_pods_launched: 2,
+            ..OfflineReport::default()
+        })
+        .as_deref(),
+        Some("freight +2 pods")
+    );
 }
 
 #[test]

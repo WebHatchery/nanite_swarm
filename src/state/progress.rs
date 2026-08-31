@@ -33,6 +33,9 @@ pub struct OfflineReport {
     /// Seed Ship stages paid for while the player was away.
     #[serde(default)]
     pub seed_ship_stages_completed: u32,
+    /// Full Mass Driver pods launched from offline production.
+    #[serde(default)]
+    pub freight_pods_launched: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

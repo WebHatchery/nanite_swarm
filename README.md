@@ -185,6 +185,8 @@ that offline production is credited.
 World achievements and Core stages reached during catch-up are announced on
 return, including milestones completed by the foreground research and Seed
 Ship passes.
+Standing freight orders also load full pods from that window's production,
+respecting source reserves before the pods join the campaign flight queue.
 Dust, acid wear, and server heat also advance during the simulated interval,
 so a long absence can leave the return world needing the same maintenance as
 an unattended live shift.
