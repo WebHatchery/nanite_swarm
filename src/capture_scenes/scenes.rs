@@ -1,12 +1,13 @@
 //! Screenshot scene staging implementation.
 
 use crate::state::LaunchSequence;
-use crate::{engine, slot_name, state, Game, GamePhase};
+use crate::{engine, state, Game, GamePhase};
 
 mod arrival;
 mod ending;
 mod factory;
 mod interplanetary;
+mod menu;
 mod power;
 mod terrain;
 
@@ -41,64 +42,10 @@ impl Game {
         self.research_state.research_progress = 0.0;
         self.research_state.parked_progress.clear();
         self.launch_confirmation_target = None;
+        if self.stage_menu_capture_scene(scene) {
+            return;
+        }
         match scene {
-            "mainmenu" => {
-                self.phase = GamePhase::MainMenu;
-                self.menu_notice = None;
-                self.delete_confirmation_slot = None;
-            }
-            "desktop_mainmenu_short" => {
-                self.phase = GamePhase::MainMenu;
-                self.has_save = true;
-                self.has_active_campaign = true;
-                self.menu_notice = None;
-                self.delete_confirmation_slot = None;
-            }
-            "mobile_mainmenu_narrow" => {
-                self.phase = GamePhase::MainMenu;
-                self.has_save = true;
-                self.has_active_campaign = true;
-                self.menu_notice = None;
-                self.delete_confirmation_slot = None;
-            }
-            "save_failed_menu" | "mobile_save_failed_menu" => {
-                self.phase = GamePhase::MainMenu;
-                self.has_save = true;
-                self.has_active_campaign = true;
-                self.menu_notice =
-                    Some("Save failed: progress is in memory. Tap SAVE to retry.".to_string());
-                self.campaign.current_mut().save_failed = true;
-                self.delete_confirmation_slot = None;
-            }
-            "mainmenu_confirm_delete" | "mobile_mainmenu_confirm_delete" => {
-                self.phase = GamePhase::MainMenu;
-                self.has_save = true;
-                self.delete_confirmation_slot = Some(self.active_slot);
-                self.menu_notice = Some(format!(
-                    "Tap Delete Slot again to permanently clear {}.",
-                    slot_name(self.active_slot)
-                ));
-            }
-            "settings" => {
-                self.phase = GamePhase::Settings;
-                self.settings_tab = crate::screens::SettingsTab::Display;
-            }
-            "desktop_settings_short" => {
-                self.phase = GamePhase::Settings;
-                self.settings_tab = crate::screens::SettingsTab::Display;
-            }
-            "settings_audio" | "mobile_settings_audio" | "mobile_settings_audio_narrow" => {
-                self.phase = GamePhase::Settings;
-                self.settings_tab = crate::screens::SettingsTab::Audio;
-            }
-            "desktop_settings_audio_short" => {
-                self.phase = GamePhase::Settings;
-                self.settings_tab = crate::screens::SettingsTab::Audio;
-            }
-            "mobile_settings_narrow" => {
-                self.phase = GamePhase::Settings;
-                self.settings_tab = crate::screens::SettingsTab::Display;
-            }
             "research" | "mobile_research" | "mobile_research_narrow" => {
                 self.stage_research_scene()
             }
