@@ -70,6 +70,38 @@ fn a_drill_on_a_deposit_cuts_more_than_one_on_ordinary_ground() {
 }
 
 #[test]
+fn an_iron_belt_drill_cuts_the_authored_local_bonus() {
+    fn cut_on_belt(on_belt: bool) -> f32 {
+        let mut state = PlanetState::new(0, 42, GameConfig::default());
+        let core = state.grid.find_core().expect("Mercury Core");
+        let drill = GridPos::new(core.x + 1, core.y);
+        if let Some(tile) = state.grid.get_mut(drill) {
+            tile.terrain = crate::engine::TerrainType::Empty;
+            tile.ore_richness = 1.0;
+            tile.revealed = true;
+        }
+        state.features[0].bounds = if on_belt {
+            (0.45, 0.45, 0.20, 0.20)
+        } else {
+            (0.0, 0.0, 0.05, 0.05)
+        };
+        state.select_building(BuildingType::Drill);
+        assert!(state.try_place_building(drill));
+        state.grid.update_power_grid();
+        state.update_drills(1.0);
+        state
+            .output_buffers
+            .get(&(drill.x, drill.y))
+            .copied()
+            .unwrap_or(0.0)
+    }
+
+    let ordinary = cut_on_belt(false);
+    let belt = cut_on_belt(true);
+    assert!((belt - ordinary * 1.5).abs() < 0.001);
+}
+
+#[test]
 fn a_deposit_is_cut_down_towards_ordinary_ground_and_stops_there() {
     let (mut state, _core, drill) = state_with_run(0);
     state.grid.get_mut(drill).unwrap().ore_richness = 2.0;

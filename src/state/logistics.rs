@@ -474,6 +474,7 @@ impl PlanetState {
         let depletion = self.config.ore.depletion_per_unit.max(0.0);
 
         for drill_pos in self.grid.find_buildings(BuildingType::Drill) {
+            let feature_multiplier = self.feature_ore_multiplier_at(drill_pos).unwrap_or(1.0);
             let Some(tile) = self.grid.get(drill_pos) else {
                 continue;
             };
@@ -487,7 +488,7 @@ impl PlanetState {
             // is a spatial decision, not only a question of run length.
             let richness = tile.ore_richness;
             let efficiency = building.dust_efficiency_with(&dust_response);
-            let cut = rate * richness * efficiency * delta_time;
+            let cut = rate * richness * feature_multiplier * efficiency * delta_time;
 
             let buffer = self
                 .output_buffers

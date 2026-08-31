@@ -15,7 +15,7 @@
       "banned_buildings": ["biomass_harvester"],
       "arrival": "No water, no growth, no argument. The crust is ore that has not been collected yet.",
       "pending_pod_cap": 4,
-      "features": [{"id":"iron_belt","name":"Iron Belt","description":"A deterministic seam of dense metal.","width":0.28,"height":0.08,"seed_offset":11}],
+      "features": [{"id":"iron_belt","name":"Iron Belt","description":"A deterministic seam of dense metal.","width":0.28,"height":0.08,"seed_offset":11,"ore_multiplier":1.5}],
       "constraints": {"required_buildings": ["mass_driver"], "minimum_power_generation": 8.0}
     },
     {

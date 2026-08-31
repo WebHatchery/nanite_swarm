@@ -285,6 +285,9 @@ pub struct PlanetFeatureDef {
     pub height: f32,
     #[serde(default)]
     pub seed_offset: u64,
+    /// Multiplies ore cut by a drill placed on this feature's revealed tiles.
+    #[serde(default)]
+    pub ore_multiplier: Option<f32>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

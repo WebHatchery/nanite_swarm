@@ -104,6 +104,7 @@ pub(super) fn draw(
         }
     }
     let tile_feature = display_pos.and_then(|pos| state.feature_at(pos)).cloned();
+    let feature_ore_multiplier = display_pos.and_then(|pos| state.feature_ore_multiplier_at(pos));
 
     let inspected_building = tile_building.or(state.selected_building);
     if let Some(building_type) = inspected_building {
@@ -375,7 +376,7 @@ pub(super) fn draw(
         );
         if let Some(feature) = tile_feature.as_ref() {
             if feature_lines > 0 {
-                let feature_name = format!("Feature: {}", feature.name);
+                let feature_name = feature_label(&feature.name, feature_ore_multiplier);
                 draw_ui_text(
                     &fit_text_to_width(&feature_name, right_w - 32.0, 10.0),
                     right_x + 16.0,
@@ -463,6 +464,16 @@ pub(super) fn draw(
                 dim,
             );
         }
+    }
+}
+
+fn feature_label(name: &str, ore_multiplier: Option<f32>) -> String {
+    match ore_multiplier {
+        Some(multiplier) => {
+            let bonus = ((multiplier - 1.0) * 100.0).round() as i32;
+            format!("Feature: {name}  +{bonus}% ORE")
+        }
+        None => format!("Feature: {name}"),
     }
 }
 

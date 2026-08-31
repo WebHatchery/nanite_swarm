@@ -212,6 +212,7 @@ impl Game {
             "feature_inspection" | "mobile_feature_inspection" => {
                 self.stage_feature_inspection_scene()
             }
+            "iron_belt_inspection" => self.stage_iron_belt_inspection_scene(),
             // A Core that has grown past its landing pod.
             "core_stage" => {
                 self.phase = GamePhase::Playing;

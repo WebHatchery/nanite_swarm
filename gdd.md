@@ -99,6 +99,15 @@ progress. This way a mature base keeps every drill it built working at the rate
 it was always going to settle at, and the reward for prospecting is *earlier*
 output rather than permanently better output.
 
+### Named planetary features
+
+Each authored world may carry a deterministic landmark over its terrain. A
+landmark stays hidden until its tiles are surveyed, then becomes both a local
+dossier and a strategic placement cue. The Mercury Iron Belt is the first
+mechanical landmark: a drill placed on its surveyed tiles cuts 50% more ore.
+The bonus is local to the feature and does not change the ordinary deposit
+depletion rule.
+
 ### The Synapse (Research)
 
 Research is not a list; it is a visual representation of the AI's growing intelligence.

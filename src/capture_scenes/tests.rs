@@ -55,7 +55,8 @@ fn required_capture_scenes_are_registered() {
             "mobile_upkeep",
             "mobile_shipping_reserve",
             "feature_inspection",
-            "mobile_feature_inspection"
+            "mobile_feature_inspection",
+            "iron_belt_inspection"
         ]
     );
 }

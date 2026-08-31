@@ -47,6 +47,18 @@ fn feature_detail_uses_only_the_space_the_inspector_can_hold() {
 }
 
 #[test]
+fn feature_label_surfaces_a_local_ore_multiplier() {
+    assert_eq!(
+        feature_label("Iron Belt", Some(1.5)),
+        "Feature: Iron Belt  +50% ORE"
+    );
+    assert_eq!(
+        feature_label("Landing Crater", None),
+        "Feature: Landing Crater"
+    );
+}
+
+#[test]
 fn multi_input_flow_is_structured_and_names_the_missing_feed() {
     let mut state = PlanetState::new(2, 42, GameConfig::default());
     let pos = state.grid.find_core().unwrap();

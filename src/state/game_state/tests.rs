@@ -36,3 +36,38 @@ fn feature_at_requires_a_revealed_tile() {
         Some("landing_crater")
     );
 }
+
+#[test]
+fn iron_belt_exposes_its_ore_bonus_only_after_survey() {
+    let mut state = PlanetState::new(0, 42, GameConfig::default());
+    let feature = state.features.first().cloned().expect("Mercury feature");
+    let pos = (0..state.grid.height)
+        .flat_map(|y| (0..state.grid.width).map(move |x| GridPos::new(x as i32, y as i32)))
+        .find(|pos| feature.contains_tile(*pos, state.grid.width, state.grid.height))
+        .expect("feature overlaps the Mercury grid");
+
+    if let Some(tile) = state.grid.get_mut(pos) {
+        tile.revealed = false;
+    }
+    assert_eq!(state.feature_ore_multiplier_at(pos), None);
+
+    state.grid.get_mut(pos).unwrap().revealed = true;
+    assert_eq!(state.feature_ore_multiplier_at(pos), Some(1.5));
+}
+
+#[test]
+fn iron_belt_generation_keeps_a_drillable_tile_inside_the_feature() {
+    for seed in [0, 1, 7, 42, 999] {
+        let state = PlanetState::new(0, seed, GameConfig::default());
+        let feature = state.features.first().expect("Mercury feature");
+
+        assert!(
+            state.grid.iter_tiles().any(|(pos, tile)| {
+                tile.building.is_none()
+                    && feature.contains_tile(pos, state.grid.width, state.grid.height)
+                    && tile.terrain.is_buildable(state.data())
+            }),
+            "seed {seed} has no drillable Iron Belt tile"
+        );
+    }
+}

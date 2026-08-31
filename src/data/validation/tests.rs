@@ -92,3 +92,16 @@ fn nonfinite_feature_bounds_are_rejected_before_rendering() {
         "assets/planets.json planet \"mars\" feature \"landing_crater\" has invalid bounds"
     );
 }
+
+#[test]
+fn invalid_feature_ore_bonus_is_rejected_before_simulation() {
+    let mut data = sample_data();
+    data.planets[0].features[0].ore_multiplier = Some(0.5);
+
+    let error = validate_game_data(&data).unwrap_err();
+
+    assert_eq!(
+        error,
+        "assets/planets.json planet \"mercury\" feature \"iron_belt\" has invalid ore multiplier"
+    );
+}

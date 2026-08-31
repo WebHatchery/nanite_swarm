@@ -4,8 +4,10 @@ use super::camera::Camera;
 pub use super::consumption::{ConsumptionTotals, Resources};
 use super::factory::FactoryFocus;
 use super::seed_ship::SeedShip;
+mod features;
 use crate::data::{GameConfig, GameData, GameDataContext, PlanetHazards};
 use crate::engine::{BuildingType, DroneManager, Grid, GridPos, ResourceType, Stats};
+pub use features::PlanetFeature;
 use macroquad::miniquad;
 use macroquad_toolkit::achievements::{Achievement, Achievements};
 use macroquad_toolkit::fx::ParticleSystem;
@@ -42,34 +44,6 @@ fn unix_seconds_now() -> i64 {
 pub struct PlacementAnim {
     pub position: GridPos,
     pub timer: f32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PlanetFeature {
-    pub id: String,
-    pub name: String,
-    pub description: String,
-    pub bounds: (f32, f32, f32, f32),
-}
-
-impl PlanetFeature {
-    /// Whether a grid tile touches this feature's normalized map rectangle.
-    ///
-    /// Features are authored in the same normalized space as their map
-    /// overlay, so selection remains stable when worlds have different
-    /// dimensions. Testing tile overlap rather than only its center keeps a
-    /// narrow feature selectable even when it falls between tile centers.
-    pub fn contains_tile(&self, pos: GridPos, grid_width: u32, grid_height: u32) -> bool {
-        if pos.x < 0 || pos.y < 0 || grid_width == 0 || grid_height == 0 {
-            return false;
-        }
-        let (x, y, width, height) = self.bounds;
-        let tile_left = pos.x as f32 / grid_width as f32;
-        let tile_top = pos.y as f32 / grid_height as f32;
-        let tile_right = (pos.x + 1) as f32 / grid_width as f32;
-        let tile_bottom = (pos.y + 1) as f32 / grid_height as f32;
-        tile_left < x + width && tile_right > x && tile_top < y + height && tile_bottom > y
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -445,20 +419,6 @@ pub struct PlanetState {
 }
 
 impl PlanetState {
-    /// Return the named feature under a revealed tile, if there is one.
-    /// Unrevealed tiles deliberately return nothing so the feature overlay
-    /// cannot turn the inspector into a fog-of-war leak.
-    pub fn feature_at(&self, pos: GridPos) -> Option<&PlanetFeature> {
-        self.grid
-            .get(pos)
-            .filter(|tile| tile.revealed)
-            .and_then(|_| {
-                self.features
-                    .iter()
-                    .find(|feature| feature.contains_tile(pos, self.grid.width, self.grid.height))
-            })
-    }
-
     /// Build the world at campaign slot `planet_index`, from its entry in
     /// `assets/planets.json`.
     pub fn new(planet_index: usize, seed: u64, config: GameConfig) -> Self {
@@ -483,6 +443,8 @@ impl PlanetState {
         );
         grid.attach_data(data.clone());
         grid.initialize_forest_biomass(config.resources.forest_biomass);
+        let mut features = features::generated_features(def, seed);
+        features::anchor_ore_features(&mut features, def, &grid);
 
         // Place Core at center
         let center = GridPos::new(width as i32 / 2, height as i32 / 2);
@@ -562,7 +524,7 @@ impl PlanetState {
                 .filter_map(|id| BuildingType::from_id(id))
                 .collect(),
             hazards: def.hazards,
-            features: generated_features(def, seed),
+            features,
             seed_ship: SeedShip::with_data(data.clone()),
             export: None,
             export_cooldown: 0.0,
@@ -636,27 +598,6 @@ impl PlanetState {
         self.seed_ship.attach_data(data.clone());
         self.data = data;
     }
-}
-
-fn generated_features(def: &crate::data::PlanetDef, seed: u64) -> Vec<PlanetFeature> {
-    def.features
-        .iter()
-        .map(|feature| {
-            let x = macroquad_toolkit::noise::seeded_value(seed ^ feature.seed_offset, 3, 7, 5.0);
-            let y = macroquad_toolkit::noise::seeded_value(seed ^ feature.seed_offset, 11, 13, 5.0);
-            PlanetFeature {
-                id: feature.id.clone(),
-                name: feature.name.clone(),
-                description: feature.description.clone(),
-                bounds: (
-                    (x * (1.0 - feature.width)).clamp(0.0, 1.0 - feature.width),
-                    (y * (1.0 - feature.height)).clamp(0.0, 1.0 - feature.height),
-                    feature.width,
-                    feature.height,
-                ),
-            }
-        })
-        .collect()
 }
 
 impl PlanetState {
