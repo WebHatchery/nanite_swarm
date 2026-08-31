@@ -46,6 +46,9 @@ Audit date: 2026-08-20
 - Split the loaded balance contract validation from `src/data/game_config.rs`
   into `game_config/validation.rs`, leaving the configuration module focused on
   schema types and defaults while preserving `GameConfig::validate()`.
+- Split save rotation, corruption recovery, and slot-isolation coverage from
+  `state/persistence/tests.rs` into `persistence/tests/recovery.rs`, leaving
+  the parent suite focused on migration and round-trip contracts.
 - Split procedural terrain and building tile generation from
   `graphics_gen/tiles.rs` into `tiles/terrain.rs` and `tiles/buildings.rs`,
   leaving the generator coordinator focused on output helpers and dispatch.
