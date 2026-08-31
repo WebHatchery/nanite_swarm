@@ -96,6 +96,49 @@ impl PlanetState {
         }
     }
 
+    /// Apply the finite deposit rule while offline catch-up uses direct
+    /// resource credit instead of replaying the physical drone graph.
+    pub(crate) fn offline_mineral_output(&mut self, delta_time: f32, max_output: f32) -> f32 {
+        let rate = self.drill_output_rate();
+        let dust_response = self.resolved_dust_response();
+        let depletion = self.config.ore.depletion_per_unit.max(0.0);
+        let max_output = max_output.max(0.0);
+        let mut output = 0.0;
+
+        if delta_time <= 0.0 || max_output <= 0.0 {
+            return output;
+        }
+
+        for drill_pos in self.grid.find_buildings(BuildingType::Drill) {
+            let feature_multiplier = self.feature_ore_multiplier_at(drill_pos).unwrap_or(1.0);
+            let Some(tile) = self.grid.get(drill_pos) else {
+                continue;
+            };
+            let Some(building) = tile.building.as_ref() else {
+                continue;
+            };
+            if !building.powered || building.is_dust_stalled_with(&dust_response) {
+                continue;
+            }
+            let richness = tile.ore_richness;
+            let cut = rate
+                * richness
+                * feature_multiplier
+                * building.dust_efficiency_with(&dust_response)
+                * delta_time;
+            let cut = cut.min((max_output - output).max(0.0));
+            output += cut;
+
+            if richness > 1.0 && depletion > 0.0 {
+                if let Some(tile) = self.grid.get_mut(drill_pos) {
+                    tile.ore_richness = (richness - cut * depletion).max(1.0);
+                }
+            }
+        }
+
+        output
+    }
+
     /// Give every producer a crew, and send a drone whenever a full load is
     /// waiting on its pad.
     ///

@@ -86,7 +86,7 @@ impl PlanetState {
     }
 
     /// The current mineral capacity of every powered drill, including the
-    /// ground under each drill and its live dust response.
+    /// ground, local feature bonus, and live dust response under each drill.
     pub fn mineral_output_rate(&self) -> f32 {
         let dust_response = self.resolved_dust_response();
         let rate = self.drill_output_rate();
@@ -96,8 +96,11 @@ impl PlanetState {
             .filter_map(|pos| {
                 let tile = self.grid.get(pos)?;
                 let building = tile.building.as_ref()?;
+                let feature_multiplier = self.feature_ore_multiplier_at(pos).unwrap_or(1.0);
                 (building.powered && !building.is_dust_stalled_with(&dust_response)).then_some(
-                    rate * tile.ore_richness * building.dust_efficiency_with(&dust_response),
+                    rate * tile.ore_richness
+                        * feature_multiplier
+                        * building.dust_efficiency_with(&dust_response),
                 )
             })
             .sum()

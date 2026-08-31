@@ -251,6 +251,23 @@ fn biomass_harvester_power_rate_reads_live_fuel_output() {
 }
 
 #[test]
+fn iron_belt_drill_rate_includes_the_local_output_bonus() {
+    let mut state = PlanetState::new(0, 42, crate::data::GameConfig::default());
+    let core = state.grid.find_core().unwrap();
+    let drill = GridPos::new(core.x + 1, core.y);
+    let tile = state.grid.get_mut(drill).unwrap();
+    tile.terrain = TerrainType::Empty;
+    tile.ore_richness = 1.0;
+    tile.revealed = true;
+    state.features[0].bounds = (0.45, 0.45, 0.20, 0.20);
+    state.select_building(BuildingType::Drill);
+    assert!(state.try_place_building(drill));
+
+    assert_eq!(state.feature_ore_multiplier_at(drill), Some(1.5));
+    assert!(approx_eq(state.mineral_output_rate(), 7.5, 1e-4));
+}
+
+#[test]
 fn researching_drone_capacity_grows_existing_drones_too() {
     let mut state = PlanetState::default();
     let core = state.grid.find_core().unwrap();

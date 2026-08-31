@@ -26,13 +26,12 @@ impl PlanetState {
         let biomass_before = self.resources.biomass;
         self.update_biomass_harvesters(simulated);
         let biomass = (self.resources.biomass - biomass_before).max(0.0);
-        let mineral_rate = self.mineral_output_rate();
         let alloy_rate = self.alloy_rate();
         let components_rate = self.components_rate();
         let data_rate = self.data_generation_rate();
         let power_rate = self.net_power();
         let cap = self.config.offline.max_resource_gain.max(0.0);
-        let minerals = (mineral_rate * simulated).clamp(-cap, cap);
+        let minerals = self.offline_mineral_output(simulated, cap);
         let alloy = (alloy_rate * simulated).clamp(0.0, cap);
         let components = (components_rate * simulated).clamp(0.0, cap);
         let data = (data_rate * simulated).clamp(0.0, cap);

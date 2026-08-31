@@ -100,3 +100,38 @@ fn offline_biomass_harvester_consumes_only_available_forest_and_reports_yield() 
     assert!(approx_eq(state.biomass_harvest_rate(), 0.0, 0.001));
     assert!(approx_eq(state.power_balance, state.net_power(), 0.001));
 }
+
+#[test]
+fn offline_drills_apply_feature_bonus_and_deplete_richness_bonus() {
+    let mut state = PlanetState::new(0, 42, crate::data::GameConfig::default());
+    let core = state.grid.find_core().unwrap();
+    let drill = GridPos::new(core.x + 1, core.y);
+    let tile = state.grid.get_mut(drill).unwrap();
+    tile.terrain = TerrainType::Empty;
+    tile.ore_richness = 2.0;
+    tile.revealed = true;
+    state.features[0].bounds = (0.45, 0.45, 0.20, 0.20);
+    state.config.resources.base_mineral_cap = 1_000.0;
+    state.config.ore.depletion_per_unit = 0.01;
+    state.select_building(BuildingType::Drill);
+    assert!(state.try_place_building(drill));
+    let minerals_before = state.resources.minerals;
+
+    state.apply_offline_progress(10.0);
+
+    assert!(approx_eq(
+        state.last_offline_report.minerals_gained,
+        150.0,
+        0.001
+    ));
+    assert!(approx_eq(
+        state.resources.minerals - minerals_before,
+        150.0,
+        0.001
+    ));
+    assert!(approx_eq(
+        state.grid.get(drill).unwrap().ore_richness,
+        1.0,
+        0.001
+    ));
+}
