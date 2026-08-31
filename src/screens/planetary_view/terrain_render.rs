@@ -1,6 +1,7 @@
 //! Background, terrain, conduit, and building rendering for the grid
 
 use crate::assets::GameTextures;
+use crate::data::PlanetFeatureDef;
 use crate::engine::{BuildingType, GridPos, TerrainType};
 use crate::state::{PlanetFeature, PlanetState};
 use crate::ui::Colors;
@@ -140,6 +141,13 @@ pub(super) fn draw_planet_features(state: &PlanetState, metrics: HudMetrics) {
         if !feature_is_surveyed(state, feature) {
             continue;
         }
+        let definition = state
+            .data()
+            .planet(state.planet_index)
+            .features
+            .iter()
+            .find(|definition| definition.id == feature.id);
+        let target_kind = definition.and_then(feature_target_kind);
         let (x, y, w, h) = feature.bounds;
         let origin = GridPos::new(
             (x * state.grid.width as f32) as i32,
@@ -159,7 +167,114 @@ pub(super) fn draw_planet_features(state: &PlanetState, metrics: HudMetrics) {
             1.0,
             with_alpha(Colors::ACCENT, 0.55),
         );
-        draw_ui_text(&feature.name, sx + 4.0, sy + 14.0, 9.0, Colors::ACCENT);
+        let label = target_kind
+            .map(|kind| format!("{} // {}", feature.name, kind.label()))
+            .unwrap_or_else(|| feature.name.clone());
+        draw_ui_text(&label, sx + 4.0, sy + 14.0, 9.0, Colors::ACCENT);
+        if let Some(kind) = target_kind {
+            draw_feature_target_markers(state, feature, kind, metrics);
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FeatureTargetKind {
+    Drill,
+    Harvest,
+    Cooling,
+}
+
+impl FeatureTargetKind {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Drill => "DRILL ZONE",
+            Self::Harvest => "HARVEST ZONE",
+            Self::Cooling => "COOLING EDGE",
+        }
+    }
+
+    fn color(self) -> Color {
+        match self {
+            Self::Drill => Colors::ACCENT,
+            Self::Harvest => Colors::SUCCESS,
+            Self::Cooling => Colors::PRIMARY,
+        }
+    }
+}
+
+fn feature_target_kind(definition: &PlanetFeatureDef) -> Option<FeatureTargetKind> {
+    if definition
+        .ore_multiplier
+        .is_some_and(|multiplier| multiplier > 1.0)
+    {
+        Some(FeatureTargetKind::Drill)
+    } else if definition
+        .harvest_multiplier
+        .is_some_and(|multiplier| multiplier > 1.0)
+    {
+        Some(FeatureTargetKind::Harvest)
+    } else if definition
+        .cooling_multiplier
+        .is_some_and(|multiplier| multiplier > 1.0)
+    {
+        Some(FeatureTargetKind::Cooling)
+    } else {
+        None
+    }
+}
+
+fn draw_feature_target_markers(
+    state: &PlanetState,
+    feature: &PlanetFeature,
+    kind: FeatureTargetKind,
+    metrics: HudMetrics,
+) {
+    let color = kind.color();
+    for (pos, tile) in state.grid.iter_tiles() {
+        if !feature.contains_tile(pos, state.grid.width, state.grid.height)
+            || !feature_target_is_available(state, pos, tile, kind)
+        {
+            continue;
+        }
+        let (x, y) = grid_to_screen(pos, metrics);
+        let inset = (metrics.tile_size * 0.14).max(2.0);
+        let size = (metrics.tile_size - inset * 2.0).max(1.0);
+        draw_rectangle_lines(
+            x + inset,
+            y + inset,
+            size,
+            size,
+            1.5,
+            with_alpha(color, 0.85),
+        );
+        draw_circle(
+            x + metrics.tile_size * 0.5,
+            y + metrics.tile_size * 0.5,
+            (metrics.tile_size * 0.08).max(1.0),
+            with_alpha(color, 0.9),
+        );
+    }
+}
+
+fn feature_target_is_available(
+    state: &PlanetState,
+    pos: GridPos,
+    tile: &crate::engine::Tile,
+    kind: FeatureTargetKind,
+) -> bool {
+    if !tile.revealed || tile.building.is_some() {
+        return false;
+    }
+    match kind {
+        FeatureTargetKind::Drill => {
+            tile.terrain.is_buildable(state.data())
+                && state.feature_ore_multiplier_at(pos).is_some()
+        }
+        FeatureTargetKind::Harvest => state.harvest_rewards_at(pos).is_some(),
+        FeatureTargetKind::Cooling => {
+            tile.terrain.is_buildable(state.data())
+                && state.feature_cooling_multiplier_at(pos).is_some()
+        }
     }
 }
 

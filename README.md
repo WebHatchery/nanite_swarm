@@ -95,6 +95,9 @@ description alongside the terrain details; unrevealed tiles keep that
 information hidden. The feature header names any local production or hazard
 effect before machinery is placed. Harvest previews include active research
 and local feature bonuses, so the reward shown beside HARVEST matches the tap.
+Once a feature is fully surveyed, its map label names the action it rewards and
+small target markers identify the revealed tiles where that action is currently
+possible; Ice Rift markers only appear on buildable tiles beside water.
 Placed structures keep their local feature effect in the inspector header.
 Mountain Wind Turbines keep their `+100%` efficiency payoff there as well.
 Forest Biomass Harvesters keep the living forest buffer and remaining fuel
