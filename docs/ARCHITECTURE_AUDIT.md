@@ -1,6 +1,6 @@
 # Architecture audit
 
-Audit date: 2026-08-20
+Audit date: 2026-08-31
 
 ## Changes made
 
@@ -245,6 +245,9 @@ Audit date: 2026-08-20
 - Split selected-building inspection rendering from
   `hud/inspector_panel.rs` into `inspector_panel/building.rs`, leaving the
   parent focused on the shared tile snapshot and terrain fallback.
+- Split planet geometry, hazards, features, and restrictions from
+  `data/validation.rs` into `data/validation/planets.rs`, leaving the data
+  validator focused on package orchestration and the remaining definitions.
 
 ## Remaining debt
 
