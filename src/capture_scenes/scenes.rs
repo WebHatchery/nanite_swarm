@@ -13,9 +13,20 @@ mod terrain;
 impl Game {
     /// Seed a specific scene for the screenshot harness.
     pub fn begin_capture_scene(&mut self, scene: &str) {
+        // A manifest is captured in one process, so start every image from the
+        // same pristine campaign. Scene staging is allowed to build on that
+        // campaign, but travel, research, and launch state must not cross the
+        // boundary into the next image.
+        let capture_config = self.config.clone();
+        self.new_campaign(capture_config, 42);
+        self.refresh_save_presence();
+        self.menu_notice = None;
+        self.launch = None;
+        self.research_state = engine::ResearchState::from_data(self.data.data());
+        self.settings_tab = crate::screens::SettingsTab::Display;
+        self.research_return_phase = GamePhase::Playing;
         self.capture_still = true;
-        // Batched captures reuse one game process; view-only state from one
-        // scene must not leak into the next image.
+        // Scene-specific view state starts from the same quiet map as well.
         self.campaign.current_mut().focus_mode = false;
         self.campaign.current_mut().mobile_panel = state::MobilePanel::Map;
         self.campaign.current_mut().flow_overlay = false;
