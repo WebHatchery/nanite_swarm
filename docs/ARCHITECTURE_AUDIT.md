@@ -198,6 +198,9 @@ Audit date: 2026-08-20
 - Split flow route and processor-node drawing from `flow_render/model.rs` into
   `flow_render/model/drawing.rs`, leaving the flow model focused on live
   logistics calculations and ledger inputs.
+- Split simulation runtime coverage into focused `runtime/clock.rs`,
+  `runtime/collapse.rs`, `runtime/tutorial.rs`, and `runtime/upkeep.rs` suites,
+  leaving `simulation/tests/runtime.rs` as the shared fixture boundary.
 
 ## Remaining debt
 
