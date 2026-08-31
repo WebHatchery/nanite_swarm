@@ -195,6 +195,9 @@ Audit date: 2026-08-20
 - Split the shared capture-session reset from `capture_scenes/scenes.rs` into
   `capture_scenes/scenes/reset.rs`, leaving the scene coordinator focused on
   dispatching each named screenshot fixture.
+- Split general mobile, Core, Seed Ship, recovery, and camera capture staging
+  from `capture_scenes/scenes.rs` into `capture_scenes/scenes/world.rs`, leaving
+  the coordinator focused on routing the remaining scene families.
 - Split flow route and processor-node drawing from `flow_render/model.rs` into
   `flow_render/model/drawing.rs`, leaving the flow model focused on live
   logistics calculations and ledger inputs.
