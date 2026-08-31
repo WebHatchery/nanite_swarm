@@ -12,6 +12,7 @@ use macroquad_toolkit::ui::{
 mod compact;
 mod effects;
 mod layout;
+mod nodes;
 mod sheet;
 use compact::*;
 use effects::node_effects;
@@ -274,226 +275,20 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
         TreeLayout::fit(&research_tree.nodes, view.tree)
     }
     .with_view(zoom, pan);
-    let node_radius = layout.node_radius();
-
-    let pointer = Pointer::read(|position| position);
-    let mut hovered_node: Option<&str> = None;
-    let mut hovered_distance = f32::MAX;
-    let mut activated_node: Option<&str> = None;
-    let mut activated_distance = f32::MAX;
-
-    // Draw connections first (behind nodes)
-    for (from, to) in research_tree.get_connections() {
-        let from_unlocked = research_state.is_unlocked(&from.id);
-        let to_unlocked = research_state.is_unlocked(&to.id);
-
-        let (from_x, from_y) = layout.to_screen(from.position);
-        let (to_x, to_y) = layout.to_screen(to.position);
-        let Some((from_point, to_point)) =
-            clip_line(view.tree, vec2(from_x, from_y), vec2(to_x, to_y))
-        else {
-            continue;
-        };
-
-        let line_color = if from_unlocked && to_unlocked {
-            Colors::PRIMARY
-        } else if from_unlocked {
-            Color::new(0.0, 0.6, 0.8, 0.7)
-        } else {
-            Color::new(0.25, 0.25, 0.3, 0.7)
-        };
-
-        draw_line(
-            from_point.x,
-            from_point.y,
-            to_point.x,
-            to_point.y,
-            2.0,
-            line_color,
-        );
-        draw_line(
-            from_point.x,
-            from_point.y,
-            to_point.x,
-            to_point.y,
-            1.0,
-            Color::new(0.6, 0.8, 1.0, 0.15),
-        );
-    }
-
-    // Draw nodes
-    for node in &research_tree.nodes {
-        let (node_x, node_y) = layout.to_screen(node.position);
-        let safe_tree = Rect::new(
-            view.tree.x + 28.0,
-            view.tree.y + 28.0,
-            view.tree.w - 56.0,
-            view.tree.h - 56.0,
-        );
-        if !safe_tree.contains(vec2(node_x, node_y)) {
-            continue;
-        }
-
-        let is_unlocked = research_state.is_unlocked(&node.id);
-        let can_select =
-            research_tree.can_select_on(&node.id, &research_state.unlocked, active_condition);
-        let can_research_now = research_tree.can_research_on(
-            &node.id,
-            &research_state.unlocked,
-            data_available,
-            active_condition,
-        );
-        let is_current = research_state.current_research.as_ref() == Some(&node.id);
-        let has_parked_progress = !is_current && research_state.progress_for(&node.id) > 0.001;
-        let is_tutorial_target = tutorial_target == Some(node.id.as_str()) && !is_unlocked;
-
-        let target_radius = node_radius.max(22.0);
-        let target = Rect::new(
-            node_x - target_radius,
-            node_y - target_radius,
-            target_radius * 2.0,
-            target_radius * 2.0,
-        );
-        let is_hovered = pointer.hovering_over(target);
-        let pointer_distance = pointer.position.distance(vec2(node_x, node_y));
-        if (is_hovered || pointer.pressing(target) || pointer.released_on(target))
-            && pointer_distance < hovered_distance
-        {
-            hovered_node = Some(&node.id);
-            hovered_distance = pointer_distance;
-        }
-        if pointer.released_on(target)
-            && viewport.drag_distance < 6.0
-            && pointer_distance < activated_distance
-        {
-            activated_node = Some(&node.id);
-            activated_distance = pointer_distance;
-        }
-
-        // Node colors
-        let (fill_color, border_color) = if is_unlocked {
-            (Colors::PRIMARY, Colors::PRIMARY)
-        } else if is_current {
-            (Color::new(0.0, 0.5, 0.7, 1.0), Colors::WARNING)
-        } else if has_parked_progress {
-            (Colors::SURFACE, Colors::WARNING)
-        } else if can_research_now {
-            (Colors::SURFACE, Colors::SUCCESS)
-        } else if can_select {
-            (Colors::SURFACE, Colors::PRIMARY_SOFT)
-        } else {
-            (Colors::SURFACE, Colors::SECONDARY)
-        };
-
-        // Draw glow for unlocked nodes
-        if is_unlocked {
-            let glow_outer = node_radius + 6.0 + pulse * 3.0;
-            let glow_inner = node_radius + 3.0 + pulse * 1.5;
-            draw_circle(
-                node_x,
-                node_y,
-                glow_outer,
-                Color::new(0.0, 0.85, 1.0, 0.18 + pulse * 0.08),
-            );
-            draw_circle(
-                node_x,
-                node_y,
-                glow_inner,
-                Color::new(0.0, 0.85, 1.0, 0.25 + pulse * 0.1),
-            );
-        }
-
-        if is_tutorial_target {
-            let target_radius = node_radius + 11.0 + pulse * 3.0;
-            draw_circle_lines(node_x, node_y, target_radius, 3.0, Colors::ACCENT);
-            draw_circle_lines(
-                node_x,
-                node_y,
-                target_radius + 5.0,
-                1.0,
-                Color::new(1.0, 0.7, 0.2, 0.55),
-            );
-        }
-
-        // Draw node
-        draw_circle(node_x, node_y, node_radius, fill_color);
-        draw_circle_lines(node_x, node_y, node_radius, 2.0, border_color);
-
-        // Progress rings show active work and work parked on another node.
-        if (is_current || has_parked_progress) && node.data_cost > 0.0 {
-            let progress = research_state.progress_for(&node.id);
-            let pct = (progress / node.data_cost).clamp(0.0, 1.0);
-            let ring_color = if is_current {
-                Colors::WARNING
-            } else {
-                Colors::PRIMARY_SOFT
-            };
-            let segments = 24;
-            for i in 0..segments {
-                let t0 = (i as f32 / segments as f32) * std::f32::consts::TAU;
-                let t1 = ((i + 1) as f32 / segments as f32) * std::f32::consts::TAU;
-                if (i as f32 / segments as f32) <= pct {
-                    let r = node_radius + 6.0;
-                    let x0 = node_x + t0.cos() * r;
-                    let y0 = node_y + t0.sin() * r;
-                    let x1 = node_x + t1.cos() * r;
-                    let y1 = node_y + t1.sin() * r;
-                    draw_line(x0, y0, x1, y1, 2.0, ring_color);
-                }
-            }
-        }
-
-        // Hover effect
-        if is_hovered {
-            draw_circle_lines(
-                node_x,
-                node_y,
-                node_radius + 5.0 + pulse * 2.0,
-                2.0,
-                Colors::PRIMARY,
-            );
-            draw_ui_text(
-                &node.name,
-                node_x - 22.0,
-                node_y - node_radius - 12.0,
-                12.0,
-                Colors::TEXT,
-            );
-        }
-
-        // Draw abbreviated name
-        let abbrev = &node.name[..node.name.len().min(7)];
-        let text_size = measure_ui_text(abbrev, None, 12, 1.0);
-        let text_color = if is_unlocked {
-            Colors::BACKGROUND
-        } else {
-            Colors::TEXT
-        };
-        draw_ui_text(
-            abbrev,
-            node_x - text_size.width / 2.0,
-            node_y + 4.0,
-            12.0,
-            text_color,
-        );
-
-        // Draw cost below if not unlocked
-        if !is_unlocked && node.data_cost > 0.0 {
-            let cost_str = format!("{:.0}", node.data_cost);
-            let cost_color = if can_research_now {
-                Colors::SUCCESS
-            } else {
-                Colors::TEXT_DIM
-            };
-            draw_ui_text(
-                &cost_str,
-                node_x - 10.0,
-                node_y + node_radius + 15.0,
-                12.0,
-                cost_color,
-            );
-        }
-    }
+    let interaction = nodes::draw_research_nodes(
+        research_tree,
+        research_state,
+        data_available,
+        active_condition,
+        tutorial_target,
+        view.tree,
+        &layout,
+        Pointer::read(|position| position),
+        viewport.drag_distance,
+        pulse,
+    );
+    let hovered_node = interaction.hovered_node.as_deref();
+    let activated_node = interaction.activated_node.as_deref();
 
     // Info panel. With nothing under the cursor it falls back to whatever is
     // being researched, so the panel is worth having between hovers.

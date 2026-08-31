@@ -67,6 +67,9 @@ Audit date: 2026-08-20
 - Split the touch-sized Solar System world dossier from `interplanetary_view/mobile.rs`
   into `interplanetary_view/mobile/world_info.rs`, leaving portrait navigation,
   tabs, and list layout independent from the growing dossier variants.
+- Split Neural Network connections, node visuals, progress rings, and pointer
+  selection from `research_view.rs` into `research_view/nodes.rs`, leaving the
+  research coordinator focused on layout, info panels, and screen actions.
 
 ## Remaining debt
 
