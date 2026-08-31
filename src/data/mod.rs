@@ -63,12 +63,19 @@ pub async fn load_ui_theme() -> UiTheme {
 }
 
 fn load_game_config_source() -> GameConfig {
-    macroquad_toolkit::data_loader::load_json_with_fallback_sync(
+    let config = macroquad_toolkit::data_loader::load_json_with_fallback_sync(
         "assets/game_config.json",
         &[PathBuf::from("assets/game_config.json")],
         macroquad_toolkit::include_json_str!("../../assets/game_config.json"),
     )
-    .unwrap_or_else(|_| GameConfig::default())
+    .unwrap_or_else(|_| GameConfig::default());
+    match config.validate() {
+        Ok(()) => config,
+        Err(error) => {
+            eprintln!("game config validation failed: {error}; using defaults");
+            GameConfig::default()
+        }
+    }
 }
 
 fn load_ui_theme_source() -> UiTheme {
