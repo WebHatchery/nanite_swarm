@@ -52,6 +52,9 @@ Audit date: 2026-08-31
 - Split fallback balance defaults from `data/game_config.rs` into
   `game_config/defaults.rs`, leaving the configuration module focused on the
   deserialized schema and serde fallback helpers.
+- Split resource icons, metric cards, and status-row formatting from
+  `ui/components.rs` into `ui/metrics.rs`, leaving common panels and controls
+  separate from the data-display widget family.
 - Split save rotation, corruption recovery, and slot-isolation coverage from
   `state/persistence/tests.rs` into `persistence/tests/recovery.rs`, leaving
   the parent suite focused on migration and round-trip contracts.

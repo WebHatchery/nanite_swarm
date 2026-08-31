@@ -4,6 +4,8 @@
 
 mod components;
 mod core;
+mod metrics;
 
 pub use components::*;
 pub use core::*;
+pub use metrics::*;
