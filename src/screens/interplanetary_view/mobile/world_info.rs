@@ -1,19 +1,137 @@
 //! Touch-sized dossier details for one world in the Solar System list.
 
-use crate::state::WorldTelemetry;
-use crate::ui::{color_from_rgba, draw_panel, Colors};
+use crate::data::PlanetDef;
+use crate::state::{ExportOrder, WorldTelemetry};
+use crate::ui::Colors;
 use macroquad::prelude::*;
-use macroquad_toolkit::ui::{draw_ui_text, truncate_text_to_width};
 
-use super::super::shipping_panel::{route_status_color, route_status_for};
+use super::super::shipping_panel::route_status_for;
 use super::super::status::launch_prompt;
-use super::super::world_dossier::{
-    compact_shipping_status, core_stage_summary, hazard_color, hazard_summary,
-    shipping_status_line, shipping_summary, storage_resource_label, world_alert_code,
-    world_rule_lines,
-};
+use super::super::world_dossier::{shipping_summary, world_alert_code};
 use super::super::MapView;
 use super::{mobile_status_text, SHORT_MOBILE_HEIGHT};
+
+mod compact;
+mod medium;
+mod tall;
+
+struct MobileWorldInfo<'view, 'data> {
+    view: &'view MapView<'data>,
+    index: usize,
+    can_launch: bool,
+    x: f32,
+    y: f32,
+    width: f32,
+    planet: &'view PlanetDef,
+    is_colonized: bool,
+    is_current: bool,
+    telemetry: Option<WorldTelemetry>,
+    order: Option<ExportOrder>,
+    route_status: Option<&'static str>,
+    shipping: Option<String>,
+    status_line: String,
+    status_color: Color,
+    panel_h: f32,
+    text_w: f32,
+}
+
+impl<'view, 'data> MobileWorldInfo<'view, 'data> {
+    fn new(
+        view: &'view MapView<'data>,
+        index: usize,
+        can_launch: bool,
+        x: f32,
+        y: f32,
+        width: f32,
+        screen_h: f32,
+    ) -> Self {
+        let planet = &view.data.planets[index];
+        let is_colonized = view.colonized.get(index).copied().unwrap_or(false);
+        let is_current = index == view.current_planet;
+        let telemetry = view.telemetry.get(index).copied().flatten();
+        let alert_code = telemetry
+            .filter(|telemetry| telemetry.alerts > 0)
+            .map(|telemetry| world_alert_code(Some(telemetry)));
+        let status_line = mobile_status_text(is_colonized, alert_code.as_deref());
+        let status_color = if alert_code.is_some() {
+            Colors::ERROR
+        } else if is_colonized {
+            Colors::SUCCESS
+        } else {
+            Colors::WARNING
+        };
+        let order = view.orders.get(index).copied().flatten();
+        let shipping = shipping_summary(
+            view.data,
+            order,
+            view.export_rates.get(index).copied().unwrap_or(0.0),
+        );
+        let route_status = order.map(|order| route_status_for(view, index, order));
+        let panel_h = mobile_info_height(screen_h, telemetry.is_some(), shipping.is_some());
+        Self {
+            view,
+            index,
+            can_launch,
+            x,
+            y,
+            width,
+            planet,
+            is_colonized,
+            is_current,
+            telemetry,
+            order,
+            route_status,
+            shipping,
+            status_line,
+            status_color,
+            panel_h,
+            text_w: (width - 30.0).max(40.0),
+        }
+    }
+
+    fn target_name(&self) -> Option<&str> {
+        self.order
+            .map(|order| self.view.data.planet(order.target).name.as_str())
+    }
+
+    fn target_is_current(&self) -> bool {
+        self.order
+            .is_some_and(|order| order.target == self.view.current_planet)
+    }
+
+    fn action(&self, detailed: bool) -> String {
+        if let Some(action) = mobile_route_action(
+            &self.planet.name,
+            self.target_name(),
+            self.route_status,
+            self.is_current,
+            self.target_is_current(),
+            self.is_colonized,
+        ) {
+            action
+        } else if self.can_launch {
+            launch_prompt(self.view.launch_confirmation_target == Some(self.index)).to_string()
+        } else if detailed && !self.view.mass_driver_researched {
+            "Requires Mass Driver research".to_string()
+        } else if detailed && self.view.current_drivers_online == 0 {
+            "Requires a powered Mass Driver".to_string()
+        } else if detailed {
+            "Requires a finished Seed Ship".to_string()
+        } else {
+            "World not ready to launch".to_string()
+        }
+    }
+
+    fn action_color(&self) -> Color {
+        if self.is_current || self.is_colonized {
+            Colors::PRIMARY
+        } else if self.can_launch {
+            Colors::SUCCESS
+        } else {
+            Colors::ERROR
+        }
+    }
+}
 
 pub(super) fn draw_mobile_planet_info(
     view: &MapView,
@@ -24,388 +142,15 @@ pub(super) fn draw_mobile_planet_info(
     width: f32,
     screen_h: f32,
 ) {
-    let planet = &view.data.planets[index];
-    let is_colonized = view.colonized.get(index).copied().unwrap_or(false);
-    let is_current = index == view.current_planet;
-    let telemetry = view.telemetry.get(index).copied().flatten();
-    let alert_code = telemetry
-        .filter(|telemetry| telemetry.alerts > 0)
-        .map(|telemetry| world_alert_code(Some(telemetry)));
-    let status_line = mobile_status_text(is_colonized, alert_code.as_deref());
-    let status_color = if alert_code.is_some() {
-        Colors::ERROR
-    } else if is_colonized {
-        Colors::SUCCESS
-    } else {
-        Colors::WARNING
-    };
-    let order = view.orders.get(index).copied().flatten();
-    let shipping = shipping_summary(
-        view.data,
-        order,
-        view.export_rates.get(index).copied().unwrap_or(0.0),
-    );
-    let route_status = order.map(|order| route_status_for(view, index, order));
-    let panel_h = mobile_info_height(screen_h, telemetry.is_some(), shipping.is_some());
-    let text_w = (width - 30.0).max(40.0);
-    draw_panel(x, y, width, panel_h);
+    let info = MobileWorldInfo::new(view, index, can_launch, x, y, width, screen_h);
+    crate::ui::draw_panel(info.x, info.y, info.width, info.panel_h);
     if screen_h < SHORT_MOBILE_HEIGHT {
-        draw_ui_text(
-            &truncate_text_to_width(&planet.name, text_w, 14.0),
-            x + 12.0,
-            y + 18.0,
-            14.0,
-            color_from_rgba(&planet.color),
-        );
-        draw_ui_text(
-            &truncate_text_to_width(&status_line, text_w, 8.0),
-            x + 12.0,
-            y + 34.0,
-            8.0,
-            status_color,
-        );
-        draw_ui_text(
-            &truncate_text_to_width(&format!("Hazard: {}", hazard_summary(planet)), text_w, 7.0),
-            x + 12.0,
-            y + 47.0,
-            7.0,
-            hazard_color(planet),
-        );
-        let compact_detail = if let Some(telemetry) = telemetry {
-            let stock = compact_stockpile_summary(&telemetry);
-            if let (Some(order), Some(status)) = (order, route_status) {
-                format!(
-                    "{stock} | {}",
-                    compact_shipping_status(&view.data.planet(order.target).name, status)
-                )
-            } else {
-                format!("{} | {stock}", core_stage_summary(view.data, &telemetry))
-            }
-        } else if let (Some(order), Some(status)) = (order, route_status) {
-            compact_shipping_status(&view.data.planet(order.target).name, status)
-        } else {
-            world_rule_lines(view.data, index)
-                .first()
-                .map(|rule| format!("Rule: {rule}"))
-                .unwrap_or_else(|| "Rule: no special build rules".to_string())
-        };
-        draw_ui_text(
-            &truncate_text_to_width(&compact_detail, text_w, 7.0),
-            x + 12.0,
-            y + 59.0,
-            7.0,
-            Colors::TEXT_DIM,
-        );
-        let action = if let Some(action) = mobile_route_action(
-            &planet.name,
-            order.map(|order| view.data.planet(order.target).name.as_str()),
-            route_status,
-            is_current,
-            order.is_some_and(|order| order.target == view.current_planet),
-            is_colonized,
-        ) {
-            action
-        } else if can_launch {
-            launch_prompt(view.launch_confirmation_target == Some(index)).to_string()
-        } else {
-            "World not ready to launch".to_string()
-        };
-        let action_color = if is_current || is_colonized {
-            Colors::PRIMARY
-        } else if can_launch {
-            Colors::SUCCESS
-        } else {
-            Colors::ERROR
-        };
-        draw_ui_text(
-            &truncate_text_to_width(&action, text_w, 8.0),
-            x + 12.0,
-            y + panel_h - 8.0,
-            8.0,
-            action_color,
-        );
-        return;
-    }
-    if screen_h < 560.0 {
-        draw_ui_text(
-            &truncate_text_to_width(&planet.name, text_w, 16.0),
-            x + 15.0,
-            y + 25.0,
-            16.0,
-            color_from_rgba(&planet.color),
-        );
-        draw_ui_text(
-            &truncate_text_to_width(&status_line, text_w, 10.0),
-            x + 15.0,
-            y + 44.0,
-            10.0,
-            status_color,
-        );
-        draw_ui_text(
-            &truncate_text_to_width(&format!("Hazard: {}", hazard_summary(planet)), text_w, 8.0),
-            x + 15.0,
-            y + 59.0,
-            8.0,
-            hazard_color(planet),
-        );
-        if let Some(telemetry) = telemetry {
-            draw_ui_text(
-                &truncate_text_to_width(
-                    &format!(
-                        "{} | Stock M {:.0}/{:.0} D {:.0} B {:.0}{}",
-                        core_stage_summary(view.data, &telemetry),
-                        telemetry.minerals,
-                        telemetry.mineral_capacity,
-                        telemetry.data,
-                        telemetry.biomass,
-                        storage_resource_label(telemetry.storage_full_resource)
-                            .map(|label| format!(" FULL {label}"))
-                            .unwrap_or_default()
-                    ),
-                    text_w,
-                    8.0,
-                ),
-                x + 15.0,
-                y + 73.0,
-                8.0,
-                Colors::TEXT,
-            );
-            draw_ui_text(
-                &truncate_text_to_width(
-                    &format!(
-                        "Refined A {:.0}  Parts {:.0}",
-                        telemetry.alloy, telemetry.components
-                    ),
-                    text_w,
-                    8.0,
-                ),
-                x + 15.0,
-                y + 86.0,
-                8.0,
-                Colors::TEXT,
-            );
-        }
-        let compact_line_y = y + if telemetry.is_some() { 99.0 } else { 73.0 };
-        if let (Some(order), Some(status)) = (order, route_status) {
-            let route_line = compact_shipping_status(&view.data.planet(order.target).name, status);
-            draw_ui_text(
-                &truncate_text_to_width(&route_line, text_w, 8.0),
-                x + 15.0,
-                compact_line_y,
-                8.0,
-                route_status_color(status),
-            );
-        } else {
-            let rules = world_rule_lines(view.data, index);
-            let rule = rules
-                .first()
-                .map(|rule| format!("Rule: {}", rule))
-                .unwrap_or_else(|| "Rule: no special build rules".to_string());
-            let rule_color = if rules.len() == 1 && rules[0] == "No special build rules" {
-                Colors::SUCCESS
-            } else {
-                Colors::WARNING
-            };
-            draw_ui_text(
-                &truncate_text_to_width(&rule, text_w, 8.0),
-                x + 15.0,
-                compact_line_y,
-                8.0,
-                rule_color,
-            );
-        }
-        let action = if let Some(action) = mobile_route_action(
-            &planet.name,
-            order.map(|order| view.data.planet(order.target).name.as_str()),
-            route_status,
-            is_current,
-            order.is_some_and(|order| order.target == view.current_planet),
-            is_colonized,
-        ) {
-            action
-        } else if can_launch {
-            launch_prompt(view.launch_confirmation_target == Some(index)).to_string()
-        } else {
-            "World not ready to launch".to_string()
-        };
-        draw_ui_text(
-            &truncate_text_to_width(&action, text_w, 9.0),
-            x + 15.0,
-            y + if telemetry.is_some() { 115.0 } else { 89.0 },
-            9.0,
-            if is_current || is_colonized {
-                Colors::PRIMARY
-            } else if can_launch {
-                Colors::SUCCESS
-            } else {
-                Colors::ERROR
-            },
-        );
-        return;
-    }
-    draw_ui_text(
-        &truncate_text_to_width(&planet.name, text_w, 18.0),
-        x + 15.0,
-        y + 28.0,
-        18.0,
-        color_from_rgba(&planet.color),
-    );
-    draw_ui_text(
-        &truncate_text_to_width(&planet.description, text_w, 10.0),
-        x + 15.0,
-        y + 48.0,
-        10.0,
-        Colors::TEXT,
-    );
-    draw_ui_text(
-        &truncate_text_to_width(&planet.difficulty, text_w, 10.0),
-        x + 15.0,
-        y + 64.0,
-        10.0,
-        Colors::TEXT_DIM,
-    );
-    draw_ui_text(
-        &truncate_text_to_width(&status_line, text_w, 11.0),
-        x + 15.0,
-        y + 86.0,
-        11.0,
-        status_color,
-    );
-    draw_ui_text(
-        &truncate_text_to_width(
-            &format!("Hazards: {}", hazard_summary(planet)),
-            text_w,
-            10.0,
-        ),
-        x + 15.0,
-        y + 104.0,
-        10.0,
-        hazard_color(planet),
-    );
-
-    let mut next_y = y + 124.0;
-    if let Some(telemetry) = telemetry {
-        let live = format!(
-            "{} | Live O +{:.1}/s  A +{:.1}/s  Parts +{:.1}/s",
-            core_stage_summary(view.data, &telemetry),
-            telemetry.ore_rate,
-            telemetry.alloy_rate,
-            telemetry.components_rate
-        );
-        draw_ui_text(
-            &truncate_text_to_width(&live, text_w, 9.0),
-            x + 15.0,
-            next_y,
-            9.0,
-            Colors::TEXT,
-        );
-        draw_ui_text(
-            &truncate_text_to_width(
-                &format!(
-                    "Stock M {:.0}/{:.0} D {:.0} B {:.0}{}  Grid {:+.1}/s",
-                    telemetry.minerals,
-                    telemetry.mineral_capacity,
-                    telemetry.data,
-                    telemetry.biomass,
-                    storage_resource_label(telemetry.storage_full_resource)
-                        .map(|label| format!(" FULL {label}"))
-                        .unwrap_or_default(),
-                    telemetry.power_balance
-                ),
-                text_w,
-                9.0,
-            ),
-            x + 15.0,
-            next_y + 14.0,
-            9.0,
-            if telemetry.alerts == 0 {
-                Colors::SUCCESS
-            } else {
-                Colors::ERROR
-            },
-        );
-        draw_ui_text(
-            &truncate_text_to_width(
-                &format!(
-                    "Refined A {:.0}  Parts {:.0}",
-                    telemetry.alloy, telemetry.components
-                ),
-                text_w,
-                9.0,
-            ),
-            x + 15.0,
-            next_y + 28.0,
-            9.0,
-            Colors::TEXT,
-        );
-        next_y += 46.0;
-    }
-    if let Some(shipping) = shipping.as_deref() {
-        draw_ui_text(
-            &truncate_text_to_width(shipping, text_w, 9.0),
-            x + 15.0,
-            next_y,
-            9.0,
-            Colors::PRIMARY,
-        );
-        if let Some(status) = route_status {
-            draw_ui_text(
-                &truncate_text_to_width(&shipping_status_line(status), text_w, 9.0),
-                x + 15.0,
-                next_y + 14.0,
-                9.0,
-                route_status_color(status),
-            );
-        }
-        next_y += 32.0;
-    }
-    draw_ui_text("World rules:", x + 15.0, next_y, 10.0, Colors::TEXT_DIM);
-    let rules = world_rule_lines(view.data, index);
-    for (rule_index, rule) in rules.iter().take(3).enumerate() {
-        draw_ui_text(
-            &truncate_text_to_width(rule, text_w, 9.0),
-            x + 15.0,
-            next_y + 14.0 + rule_index as f32 * 13.0,
-            9.0,
-            if rule == "No special build rules" {
-                Colors::SUCCESS
-            } else {
-                Colors::WARNING
-            },
-        );
-    }
-    let action_y = y + panel_h - 14.0;
-    let action = if let Some(action) = mobile_route_action(
-        &planet.name,
-        order.map(|order| view.data.planet(order.target).name.as_str()),
-        route_status,
-        is_current,
-        order.is_some_and(|order| order.target == view.current_planet),
-        is_colonized,
-    ) {
-        action
-    } else if can_launch {
-        launch_prompt(view.launch_confirmation_target == Some(index)).to_string()
-    } else if !view.mass_driver_researched {
-        "Requires Mass Driver research".to_string()
-    } else if view.current_drivers_online == 0 {
-        "Requires a powered Mass Driver".to_string()
+        compact::draw(&info);
+    } else if screen_h < 560.0 {
+        medium::draw(&info);
     } else {
-        "Requires a finished Seed Ship".to_string()
-    };
-    draw_ui_text(
-        &truncate_text_to_width(&action, text_w, 10.0),
-        x + 15.0,
-        action_y,
-        10.0,
-        if is_current || is_colonized {
-            Colors::PRIMARY
-        } else if can_launch {
-            Colors::SUCCESS
-        } else {
-            Colors::ERROR
-        },
-    );
+        tall::draw(&info);
+    }
 }
 
 pub(crate) fn compact_stockpile_summary(telemetry: &WorldTelemetry) -> String {

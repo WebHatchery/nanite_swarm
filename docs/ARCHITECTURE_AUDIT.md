@@ -219,6 +219,10 @@ Audit date: 2026-08-20
 - Split pause/speed/next-event controls and offline catch-up from
   `state/progress.rs` into `progress/clock.rs` and `progress/offline.rs`,
   leaving live rates, hazards, and presentation readouts in the parent.
+- Split short-phone, regular-phone, and full-height world dossier rendering
+  from `interplanetary_view/mobile/world_info.rs` into `world_info/compact.rs`,
+  `world_info/medium.rs`, and `world_info/tall.rs`, leaving the parent as the
+  prepared context and viewport dispatcher.
 - Split the desktop help overlay from `hud/bottom_bar.rs` into
   `bottom_bar/help.rs`, leaving the command bar focused on controls, clock
   actions, and the live status panels.
