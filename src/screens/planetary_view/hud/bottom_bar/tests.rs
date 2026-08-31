@@ -1,7 +1,5 @@
-use super::{
-    alert_button, alert_text, has_flow_alert, has_pending_interaction, zoom_button_rects,
-    ClockAction,
-};
+use super::alerts::{alert_button, alert_text, has_flow_alert, has_pending_interaction};
+use super::{zoom_button_rects, ClockAction};
 use crate::data::GameConfig;
 use crate::state::{GraphMode, PlanetState};
 

@@ -226,6 +226,9 @@ Audit date: 2026-08-20
 - Split the desktop help overlay from `hud/bottom_bar.rs` into
   `bottom_bar/help.rs`, leaving the command bar focused on controls, clock
   actions, and the live status panels.
+- Split the desktop command-bar renderer from `hud/bottom_bar.rs` into
+  `bottom_bar/desktop.rs`, leaving the parent focused on action vocabulary and
+  responsive path dispatch while the desktop module owns its layout.
 
 ## Remaining debt
 

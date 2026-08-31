@@ -8,7 +8,8 @@ use macroquad_toolkit::ui::{draw_ui_text, truncate_text_to_width};
 
 use super::super::super::metrics::HudMetrics;
 use super::super::PanelColors;
-use super::{alert_button, has_flow_alert, has_pending_interaction, next_event_code, ClockAction};
+use super::alerts::{alert_button, has_flow_alert, has_pending_interaction, next_event_code};
+use super::ClockAction;
 
 fn compact_jump_label(state: &PlanetState, other_alert: bool) -> &'static str {
     if other_alert {
