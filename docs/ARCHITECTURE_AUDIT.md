@@ -85,6 +85,9 @@ Audit date: 2026-08-20
   shipment labels from `shipping_panel.rs` into
   `interplanetary_view/shipping_panel/routes.rs`, leaving the panel focused on
   standing-order controls and blocker copy.
+- Split shared route readiness, landing-pad targeting, and reserve status copy
+  from `shipping_panel.rs` into `shipping_panel/route_status.rs`, preserving
+  the screen-level helpers used by planet rows and the mobile dossier.
 - Split the terrain harvest and forest-filter action tests into
   `state/actions/tests/terrain.rs`, keeping the parent action suite below the
   hard source-size limit as terrain tradeoffs continue to grow.
