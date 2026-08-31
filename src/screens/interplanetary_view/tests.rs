@@ -1,6 +1,6 @@
 use super::shipping_panel::{
-    remote_section_shift, reserve_status_text, route_hit_test, route_segment, route_status_label,
-    shipment_route_label, target_pad_available,
+    remote_section_shift, reserve_status_text, route_hit_test, route_segment, route_status_for,
+    route_status_label, shipment_route_label, target_pad_available,
 };
 use super::status::{
     driver_operation_status, landing_pad_operation_status, launch_action, launch_prompt,
@@ -410,6 +410,75 @@ fn shipping_reserve_status_explains_when_surplus_is_available() {
         reserve_status_text(145.0, 100.0),
         ("Source surplus available: +45".to_string(), false)
     );
+}
+
+#[test]
+fn biomass_reserve_uses_the_live_remote_stockpile() {
+    let data = crate::data::test_data();
+    let telemetry = [
+        Some(crate::state::WorldTelemetry {
+            minerals: 0.0,
+            data: 0.0,
+            biomass: 100.0,
+            alloy: 0.0,
+            components: 0.0,
+            ore_rate: 0.0,
+            data_rate: 0.0,
+            biomass_rate: 0.0,
+            alloy_rate: 0.0,
+            components_rate: 0.0,
+            power_balance: 0.0,
+            structures: 0,
+            drones: 0,
+            alerts: 0,
+            alert_kind: crate::state::WorldAlert::Nominal,
+            storage_full_resource: None,
+            maintenance_cause: None,
+            core_stage: 0,
+            core_stage_count: 1,
+            core_next_requirement: None,
+        }),
+        None,
+    ];
+    let pads = [1, 1];
+    let pads_built = [1, 1];
+    let drivers = [1, 1];
+    let colonized = [true, true];
+    let pad_positions = [vec![], vec![]];
+    let view = super::MapView {
+        data: data.data(),
+        current_planet: 0,
+        mass_driver_researched: true,
+        seed_ship_ready: false,
+        colonized: &colonized,
+        stockpiles: &[],
+        telemetry: &telemetry,
+        current_drivers_online: 1,
+        current_drivers_built: 1,
+        drivers_online: &drivers,
+        drivers_built: &drivers,
+        pads: &pads,
+        pads_built: &pads_built,
+        pad_positions: &pad_positions,
+        pod_fractions: &[],
+        export_rates: &[],
+        shipments: &[],
+        orders: &[],
+        pending_pods: &[],
+        pod_caps: &[],
+        overflow_pods: &[],
+        editing_world: 0,
+        launch_confirmation_target: None,
+    };
+    let order = crate::state::ExportOrder {
+        target: 1,
+        cargo: crate::engine::ResourceType::Biomass,
+        reserve_source: 100.0,
+        surplus_only: true,
+        ..crate::state::ExportOrder::default()
+    };
+
+    assert_eq!(route_status_for(&view, 0, order), "RESERVE HELD");
 }
 
 #[test]

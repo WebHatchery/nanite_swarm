@@ -165,17 +165,20 @@ fn a_save_with_an_out_of_range_freight_priority_is_rejected() {
 fn a_save_with_an_invalid_queued_freight_pod_is_rejected() {
     let mut campaign = campaign();
     campaign.colonize(1);
-    campaign.current_mut().launched_pods.push(crate::state::Shipment {
-        from: 2,
-        to: 1,
-        cargo: ResourceType::Data,
-        amount: 20.0,
-        remaining: 10.0,
-        transit: 20.0,
-        target_pad: None,
-        overflow: false,
-        priority: 4,
-    });
+    campaign
+        .current_mut()
+        .launched_pods
+        .push(crate::state::Shipment {
+            from: 2,
+            to: 1,
+            cargo: ResourceType::Data,
+            amount: 20.0,
+            remaining: 10.0,
+            transit: 20.0,
+            target_pad: None,
+            overflow: false,
+            priority: 4,
+        });
 
     let json = save_to_json(&mut campaign).unwrap();
 

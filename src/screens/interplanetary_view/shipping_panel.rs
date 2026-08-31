@@ -508,12 +508,13 @@ pub(super) fn remote_section_shift(route_note_lines: usize) -> f32 {
 fn source_stockpile(view: &MapView, world: usize, cargo: ResourceType) -> Option<f32> {
     match cargo {
         ResourceType::Minerals => view.stockpiles.get(world).copied().flatten(),
-        ResourceType::Alloy | ResourceType::Components => view
+        ResourceType::Biomass | ResourceType::Alloy | ResourceType::Components => view
             .telemetry
             .get(world)
             .copied()
             .flatten()
             .map(|telemetry| match cargo {
+                ResourceType::Biomass => telemetry.biomass,
                 ResourceType::Alloy => telemetry.alloy,
                 ResourceType::Components => telemetry.components,
                 _ => 0.0,
