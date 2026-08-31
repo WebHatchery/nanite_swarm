@@ -127,13 +127,22 @@ pub(super) fn validate_planets(
                 || field.radius <= 0.0
                 || !field.strength.is_finite()
                 || field.strength < 0.0
-                || field.center.iter().any(|value| !value.is_finite())
+                || field
+                    .center
+                    .iter()
+                    .any(|value| !value.is_finite() || !(0.0..=1.0).contains(value))
             {
                 return Err(format!(
                     "assets/planets.json planet \"{}\" field \"{}\" has invalid hazard definition",
                     planet.id, field.id
                 ));
             }
+        }
+        if let Some(error) = super::duplicate_id(
+            &format!("assets/planets.json planet \"{}\" hazard fields", planet.id),
+            planet.hazard_fields.iter().map(|field| field.id.as_str()),
+        ) {
+            return Err(error);
         }
     }
     Ok(())

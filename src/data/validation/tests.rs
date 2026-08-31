@@ -157,3 +157,30 @@ fn invalid_feature_harvest_bonus_is_rejected_before_simulation() {
         "assets/planets.json planet \"mars\" feature \"landing_crater\" has invalid harvest multiplier"
     );
 }
+
+#[test]
+fn hazard_field_centers_must_stay_inside_normalized_map_bounds() {
+    let mut data = sample_data();
+    data.planets[1].hazard_fields[0].center[0] = 1.1;
+
+    let error = validate_game_data(&data).unwrap_err();
+
+    assert_eq!(
+        error,
+        "assets/planets.json planet \"venus\" field \"storm_front\" has invalid hazard definition"
+    );
+}
+
+#[test]
+fn duplicate_hazard_field_ids_are_rejected_before_runtime_use() {
+    let mut data = sample_data();
+    let field = data.planets[1].hazard_fields[0].clone();
+    data.planets[1].hazard_fields.push(field);
+
+    let error = validate_game_data(&data).unwrap_err();
+
+    assert_eq!(
+        error,
+        "assets/planets.json planet \"venus\" hazard fields contains duplicate identifier \"storm_front\""
+    );
+}
