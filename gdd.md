@@ -72,7 +72,7 @@ The map is composed of tiles with distinct properties. The player must choose be
 #### Mountains
 
 - **Option A (Harvest):** Strip-mine the mountain for a massive one-time Iron bonus. Consequence: The tile becomes "Rough Ground" (difficult to build on).
-- **Option B (Utilize):** Leave the mountain alone. Place a Wind Turbine on it for +200% Energy efficiency.
+- **Option B (Utilize):** Leave the mountain alone. Place a Wind Turbine on it for +100% Energy efficiency.
 
 #### Forests
 
