@@ -162,6 +162,21 @@ fn a_save_with_an_out_of_range_freight_priority_is_rejected() {
 }
 
 #[test]
+fn a_save_with_an_out_of_bounds_freight_landing_pad_is_rejected() {
+    let mut campaign = campaign();
+    campaign.colonize(1);
+    campaign.current_mut().export = Some(crate::state::ExportOrder {
+        target: 1,
+        target_pad: Some(GridPos::new(-1, 0)),
+        ..crate::state::ExportOrder::default()
+    });
+
+    let json = save_to_json(&mut campaign).unwrap();
+
+    assert!(load_from_json(&json).is_err());
+}
+
+#[test]
 fn a_save_with_an_invalid_queued_freight_pod_is_rejected() {
     let mut campaign = campaign();
     campaign.colonize(1);

@@ -96,6 +96,14 @@ impl Campaign {
                     "save freight order from world {source} has an invalid reserve"
                 ));
             }
+            if let Some(target_pad) = order.target_pad {
+                let destination = self.planets[order.target].as_ref().expect("checked above");
+                if !target_pad.in_bounds(destination.grid.width, destination.grid.height) {
+                    return Err(format!(
+                        "save freight order from world {source} points at an out-of-bounds landing pad"
+                    ));
+                }
+            }
         }
 
         for (index, shipment) in self.shipments.iter().enumerate() {
