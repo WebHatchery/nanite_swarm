@@ -58,6 +58,9 @@ Audit date: 2026-08-20
 - Split Solar System telemetry types and world snapshots into
   `state/campaign/telemetry.rs`, leaving campaign progression and travel
   orchestration below the source-size restructure signal.
+- Split Solar System telemetry and remote-world alert coverage into
+  `state/campaign/tests/telemetry.rs`, keeping the campaign test coordinator
+  below the source-size restructure signal as map snapshots grow.
 
 ## Remaining debt
 
