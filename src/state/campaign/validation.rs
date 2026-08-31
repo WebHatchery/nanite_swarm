@@ -76,6 +76,16 @@ impl Campaign {
                     order.target
                 ));
             }
+            if !order.cargo.is_physical() {
+                return Err(format!(
+                    "save freight order from world {source} carries non-physical cargo"
+                ));
+            }
+            if order.priority >= 4 {
+                return Err(format!(
+                    "save freight order from world {source} has an invalid priority"
+                ));
+            }
             if !order.schedule_seconds.is_finite() || order.schedule_seconds < 0.0 {
                 return Err(format!(
                     "save freight order from world {source} has an invalid cooldown"
@@ -542,6 +552,12 @@ impl Campaign {
         }
         if self.planets[shipment.from].is_none() || self.planets[shipment.to].is_none() {
             return Err(format!("save {label} references an untouched world"));
+        }
+        if !shipment.cargo.is_physical() {
+            return Err(format!("save {label} carries non-physical cargo"));
+        }
+        if shipment.priority >= 4 {
+            return Err(format!("save {label} has an invalid priority"));
         }
         if !shipment.amount.is_finite()
             || shipment.amount < 0.0
