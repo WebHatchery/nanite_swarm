@@ -210,6 +210,9 @@ Audit date: 2026-08-20
 - Split traffic-pressure and shared-trunk coverage from
   `logistics/tests/network.rs` into `network/congestion.rs`, leaving the
   parent focused on route integrity, dispatch, and hazard behavior.
+- Split building texture, topology, glow, motion, and power-state drawing from
+  `terrain_render/tiles.rs` into `tiles/building.rs`, leaving the tile loop
+  focused on terrain, feature marks, and hover/placement overlays.
 
 ## Remaining debt
 

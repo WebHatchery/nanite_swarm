@@ -3,7 +3,7 @@ use crate::ui::Colors;
 use macroquad::prelude::*;
 use macroquad_toolkit::colors::with_alpha;
 
-pub(super) fn draw_building_motion(
+pub(crate) fn draw_building_motion(
     building_type: BuildingType,
     center_x: f32,
     center_y: f32,
