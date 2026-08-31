@@ -53,6 +53,9 @@ Audit date: 2026-08-20
   `state/progress/tests.rs` into `progress/tests/guidance.rs` and
   `progress/tests/interaction.rs`, leaving rate, capacity, and timer coverage
   together in the parent suite.
+- Split factory, freight, upkeep, smelting, and congestion capture staging from
+  `capture_scenes/scenes.rs` into `scenes/industrial.rs`, leaving the dispatcher
+  focused on reset state and the remaining scene families.
 - Split procedural terrain and building tile generation from
   `graphics_gen/tiles.rs` into `tiles/terrain.rs` and `tiles/buildings.rs`,
   leaving the generator coordinator focused on output helpers and dispatch.
