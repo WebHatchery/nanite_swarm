@@ -192,6 +192,9 @@ Audit date: 2026-08-20
 - Split shared tick advancement, event fast-forwarding, campaign systems, and
   completion/autosave checks from `main/update.rs` into `main/update/simulation.rs`,
   leaving the frame coordinator focused on screen-phase dispatch.
+- Split the shared capture-session reset from `capture_scenes/scenes.rs` into
+  `capture_scenes/scenes/reset.rs`, leaving the scene coordinator focused on
+  dispatching each named screenshot fixture.
 
 ## Remaining debt
 
