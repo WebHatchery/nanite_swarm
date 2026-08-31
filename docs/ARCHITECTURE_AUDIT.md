@@ -43,6 +43,9 @@ Audit date: 2026-08-20
   and research progress from `src/state/game_state.rs` into
   `game_state/records.rs` and `game_state/research.rs`, leaving the state
   aggregate focused on world fields and lifecycle construction.
+- Split the loaded balance contract validation from `src/data/game_config.rs`
+  into `game_config/validation.rs`, leaving the configuration module focused on
+  schema types and defaults while preserving `GameConfig::validate()`.
 - Split the touch-sized top-bar renderer from `top_bar.rs` into
   `top_bar/mobile.rs`, leaving desktop metrics and notice layout independent
   from future mobile navigation changes.
