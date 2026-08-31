@@ -204,6 +204,9 @@ Audit date: 2026-08-20
 - Split progression-state coverage into `progress/tests/offline.rs`,
   `progress/tests/effects.rs`, and `progress/tests/capacity.rs`, leaving the
   parent suite focused on shared fixtures and smaller interaction families.
+- Split traffic-pressure and shared-trunk coverage from
+  `logistics/tests/network.rs` into `network/congestion.rs`, leaving the
+  parent focused on route integrity, dispatch, and hazard behavior.
 
 ## Remaining debt
 
