@@ -90,6 +90,25 @@ fn acid_arrival_guidance_continues_to_the_corrosion_countermeasure() {
 }
 
 #[test]
+fn acid_arrival_guidance_names_the_shield_after_plating_is_researched() {
+    let mut state = PlanetState::new(1, 7, GameConfig::default());
+    for tech in ["power_grid", "geothermal_tapping", "ceramic_plating"] {
+        state.research.unlocked_techs.push(tech.to_string());
+    }
+    let core = state.grid.find_core().unwrap();
+    let geothermal = GridPos::new(core.x + 1, core.y);
+    state.grid.get_mut(geothermal).unwrap().terrain = crate::engine::TerrainType::Empty;
+    state
+        .grid
+        .place_building(geothermal, BuildingType::GeothermalTap);
+
+    assert_eq!(
+        state.arrival_guidance().as_deref(),
+        Some("Next: tap BUILD, then place Shield Generator.")
+    );
+}
+
+#[test]
 fn a_cold_world_keeps_heater_placement_visible_after_fusion_is_ready() {
     let mut state = PlanetState::new(3, 7, GameConfig::default());
     for tech in ["power_grid", "heater_nodes", "fusion_reactors"] {

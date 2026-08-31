@@ -93,16 +93,22 @@ impl PlanetState {
     fn hazard_countermeasure_guidance(&self, condition: &str) -> Option<String> {
         match condition {
             "acid" => {
-                let next_id = self.first_missing_research("ceramic_plating")?;
-                let name = self
-                    .data()
-                    .research
-                    .nodes
-                    .iter()
-                    .find(|node| node.id == next_id)
-                    .map(|node| node.name.as_str())
-                    .unwrap_or(next_id.as_str());
-                Some(format!("Next: tap RESEARCH for {name}."))
+                if let Some(next_id) = self.first_missing_research("ceramic_plating") {
+                    let name = self
+                        .data()
+                        .research
+                        .nodes
+                        .iter()
+                        .find(|node| node.id == next_id)
+                        .map(|node| node.name.as_str())
+                        .unwrap_or(next_id.as_str());
+                    return Some(format!("Next: tap RESEARCH for {name}."));
+                }
+                let shield = BuildingType::ShieldGenerator;
+                self.grid
+                    .find_buildings(shield)
+                    .is_empty()
+                    .then(|| "Next: tap BUILD, then place Shield Generator.".to_string())
             }
             "cold" => {
                 let heater = BuildingType::HeaterNode;
