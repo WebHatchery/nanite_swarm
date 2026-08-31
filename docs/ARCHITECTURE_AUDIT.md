@@ -88,6 +88,9 @@ Audit date: 2026-08-20
 - Split shared route readiness, landing-pad targeting, and reserve status copy
   from `shipping_panel.rs` into `shipping_panel/route_status.rs`, preserving
   the screen-level helpers used by planet rows and the mobile dossier.
+- Split animated factory depth markers and focus-target overlays from
+  `factory_deck.rs` into `factory_deck/art.rs`, leaving the control-room
+  coordinator focused on layout, progress, and touch actions.
 - Split planet-state invariants and shipment invariants from
   `state/campaign/validation.rs` into `validation/planet.rs` and
   `validation/shipment.rs`, leaving load orchestration and directive checks in

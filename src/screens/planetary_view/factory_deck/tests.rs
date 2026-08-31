@@ -130,7 +130,7 @@ fn focus_marker_palette_prioritizes_local_machine_failures() {
     let empty = std::collections::HashSet::new();
 
     assert_eq!(
-        focus_target_color(&state, position, &building, &empty, &empty, &theme),
+        super::art::focus_target_color(&state, position, &building, &empty, &empty, &theme),
         color_from_rgba(&theme.colors.text_dim)
     );
 }
