@@ -297,6 +297,9 @@ pub struct PlanetFeatureDef {
     /// Multiplies water cooling for water-cooled machinery on this feature.
     #[serde(default)]
     pub cooling_multiplier: Option<f32>,
+    /// Multiplies terrain harvest rewards on this feature.
+    #[serde(default)]
+    pub harvest_multiplier: Option<f32>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

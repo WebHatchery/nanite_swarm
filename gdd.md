@@ -106,11 +106,12 @@ landmark stays hidden until its tiles are surveyed, then becomes both a local
 dossier and a strategic placement cue. The Mercury Iron Belt raises drill
 output by 50% on its surveyed tiles, Venus's Acid Sea raises corrosion on local
 power-transmitting machinery by 80%, Saturn's Ring Shadow makes cold bite 40%
-harder along local drone routes, and Jupiter's Ice Rift improves water cooling
-by 50% for nearby water-cooled machinery. These effects are local to their
-features: the Iron Belt does not change ordinary deposit depletion, while the
-hazard features stack with their world's ordinary atmosphere or cold-field
-exposure.
+harder along local drone routes, Jupiter's Ice Rift improves water cooling by
+50% for nearby water-cooled machinery, and Mars's Landing Crater returns 25%
+more terrain harvest from its tiles. These effects are local to their features:
+the Iron Belt does not change ordinary deposit depletion, the Landing Crater
+does not change ordinary terrain conversion, and the hazard features stack with
+their world's ordinary atmosphere or cold-field exposure.
 
 ### The Synapse (Research)
 

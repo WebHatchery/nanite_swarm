@@ -104,6 +104,23 @@ fn ice_rift_exposes_its_cooling_bonus_only_after_survey() {
 }
 
 #[test]
+fn landing_crater_generation_keeps_a_harvestable_tile_inside_the_feature() {
+    for seed in [0, 1, 7, 42, 999] {
+        let state = PlanetState::new(2, seed, GameConfig::default());
+        let feature = state.features.first().expect("Mars feature");
+
+        assert!(
+            state.grid.iter_tiles().any(|(pos, tile)| {
+                tile.building.is_none()
+                    && feature.contains_tile(pos, state.grid.width, state.grid.height)
+                    && tile.terrain.is_harvestable(state.data())
+            }),
+            "seed {seed} has no harvestable Landing Crater tile"
+        );
+    }
+}
+
+#[test]
 fn iron_belt_generation_keeps_a_drillable_tile_inside_the_feature() {
     for seed in [0, 1, 7, 42, 999] {
         let state = PlanetState::new(0, seed, GameConfig::default());

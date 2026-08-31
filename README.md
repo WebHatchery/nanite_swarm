@@ -32,8 +32,9 @@ The swarm is powerful, but every expansion changes the terrain, stresses the gri
 - Surveyed planetary features such as landing craters, metal belts, and ice
   rifts can be selected on their revealed tiles to read their local dossier;
   the Iron Belt grants +50% drill output, the Acid Sea raises local machinery
-  corrosion by 80%, the Ring Shadow deepens local cold by 40%, and the Ice Rift
-  improves nearby water cooling by 50% on its tiles.
+  corrosion by 80%, the Ring Shadow deepens local cold by 40%, the Ice Rift
+  improves nearby water cooling by 50%, and the Landing Crater returns 25% more
+  terrain harvest on its tiles.
 - Research upgrades and prepare for interplanetary expansion.
 - Manage dust, power failures, and resource bottlenecks.
 - Dust-response research changes the live production, drone, routing, and

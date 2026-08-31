@@ -49,6 +49,14 @@ impl Game {
         self.campaign.travel_to(3);
         prepare_feature_inspection(self.campaign.current_mut());
     }
+
+    pub(super) fn stage_landing_crater_inspection_scene(&mut self) {
+        self.phase = GamePhase::Playing;
+        // Keep the capture on Mars so the first foothold feature remains tied
+        // to the starting world and its terrain harvest.
+        self.seed_logistics_scene();
+        prepare_feature_inspection(self.campaign.current_mut());
+    }
 }
 
 fn prepare_feature_inspection(planet: &mut state::PlanetState) {
@@ -70,10 +78,13 @@ fn prepare_feature_inspection(planet: &mut state::PlanetState) {
             feature.contains_tile(*pos, planet.grid.width, planet.grid.height)
                 && planet.grid.get(*pos).is_some_and(|tile| {
                     tile.building.is_none()
-                        && ((!matches!(
-                            feature.id.as_str(),
-                            "iron_belt" | "acid_sea" | "ring_shadow" | "ice_rift"
-                        )) || tile.terrain.is_buildable(planet.data()))
+                        && match feature.id.as_str() {
+                            "landing_crater" => tile.terrain.is_harvestable(planet.data()),
+                            "iron_belt" | "acid_sea" | "ring_shadow" | "ice_rift" => {
+                                tile.terrain.is_buildable(planet.data())
+                            }
+                            _ => true,
+                        }
                 })
         })
         .or_else(|| {

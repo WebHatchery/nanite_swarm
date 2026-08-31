@@ -400,6 +400,30 @@ fn research_makes_the_same_mountain_worth_more() {
 }
 
 #[test]
+fn landing_crater_makes_a_revealed_mountain_worth_more() {
+    let harvest = |in_crater| {
+        let mut state = state();
+        let core = state.grid.find_core().unwrap();
+        let pos = GridPos::new(core.x + 5, core.y);
+        state.grid.get_mut(pos).unwrap().terrain = TerrainType::Mountain;
+        state.grid.get_mut(pos).unwrap().revealed = true;
+        state.features[0].bounds = if in_crater {
+            (0.65, 0.40, 0.30, 0.30)
+        } else {
+            (0.0, 0.0, 0.05, 0.05)
+        };
+        let before = state.resources.minerals;
+        assert!(state.try_harvest_terrain(pos));
+        state.resources.minerals - before
+    };
+
+    let ordinary = harvest(false);
+    let crater = harvest(true);
+    assert_eq!(ordinary, 50.0);
+    assert_eq!(crater, 62.5);
+}
+
+#[test]
 fn try_harvest_terrain_fails_on_unrevealed_tile() {
     let mut state = state();
     let far_pos = GridPos::new(0, 0);

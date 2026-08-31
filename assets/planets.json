@@ -51,7 +51,7 @@
       "banned_buildings": [],
       "arrival": "Iron oxide, thin wind, and nothing that objects. A reasonable place to start.",
       "pending_pod_cap": 6,
-      "features": [{"id":"landing_crater","name":"Landing Crater","description":"The first impact and the first foothold.","width":0.20,"height":0.20,"seed_offset":29}]
+      "features": [{"id":"landing_crater","name":"Landing Crater","description":"The first impact and the first foothold.","width":0.20,"height":0.20,"seed_offset":29,"harvest_multiplier":1.25}]
     },
     {
       "id": "jupiter",

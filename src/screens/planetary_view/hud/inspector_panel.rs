@@ -113,6 +113,8 @@ pub(super) fn draw(
         display_pos.and_then(|pos| state.feature_freeze_multiplier_at(pos));
     let feature_cooling_multiplier =
         display_pos.and_then(|pos| state.feature_cooling_multiplier_at(pos));
+    let feature_harvest_multiplier =
+        display_pos.and_then(|pos| state.feature_harvest_multiplier_at(pos));
 
     let inspected_building = tile_building.or(state.selected_building);
     if let Some(building_type) = inspected_building {
@@ -390,6 +392,7 @@ pub(super) fn draw(
                     feature_acid_multiplier,
                     feature_freeze_multiplier,
                     feature_cooling_multiplier,
+                    feature_harvest_multiplier,
                 );
                 draw_ui_text(
                     &fit_text_to_width(&feature_name, right_w - 32.0, 10.0),

@@ -100,6 +100,20 @@ impl PlanetState {
             .and_then(|definition| definition.cooling_multiplier)
             .filter(|multiplier| multiplier.is_finite() && *multiplier > 1.0)
     }
+
+    /// The authored harvest multiplier for a revealed feature tile, if it has
+    /// one.
+    pub fn feature_harvest_multiplier_at(&self, pos: GridPos) -> Option<f32> {
+        self.feature_at(pos)?;
+        let multiplier = feature_harvest_multiplier(
+            &self.features,
+            &self.data().planet(self.planet_index).features,
+            pos,
+            self.grid.width,
+            self.grid.height,
+        );
+        (multiplier > 1.0).then_some(multiplier)
+    }
 }
 
 pub(super) fn generated_features(def: &PlanetDef, seed: u64) -> Vec<PlanetFeature> {
@@ -123,36 +137,47 @@ pub(super) fn generated_features(def: &PlanetDef, seed: u64) -> Vec<PlanetFeatur
         .collect()
 }
 
-/// Keep a mechanical ore landmark over at least one usable ground tile.
+/// Keep a mechanical feature over at least one tile where its effect works.
 ///
-/// Procedural terrain is allowed to make most of a feature mountainous or
-/// void, but a small authored bonus should never be generated into a region
-/// where a drill can never be placed. The feature remains deterministic: only
-/// its position moves to the nearest buildable tile when the original region
-/// has no usable ground.
+/// Procedural terrain is allowed to make most of a feature unusable, but a
+/// small authored bonus should never be generated into a region where its
+/// target action cannot be performed. The feature remains deterministic: only
+/// its position moves to the nearest compatible tile when needed.
 pub(super) fn anchor_effect_features(features: &mut [PlanetFeature], def: &PlanetDef, grid: &Grid) {
     for feature in features {
-        let has_effect = def
+        let Some(definition) = def
             .features
             .iter()
             .find(|definition| definition.id == feature.id)
-            .is_some_and(|definition| {
-                [definition.ore_multiplier, definition.acid_multiplier]
-                    .into_iter()
-                    .flatten()
-                    .chain(definition.freeze_multiplier)
-                    .chain(definition.cooling_multiplier)
-                    .any(|multiplier| multiplier > 1.0)
-            });
+        else {
+            continue;
+        };
+        let has_effect = [
+            definition.ore_multiplier,
+            definition.acid_multiplier,
+            definition.freeze_multiplier,
+            definition.cooling_multiplier,
+            definition.harvest_multiplier,
+        ]
+        .into_iter()
+        .flatten()
+        .any(|multiplier| multiplier > 1.0);
         if !has_effect {
             continue;
         }
-        let has_buildable_tile = grid.iter_tiles().any(|(pos, tile)| {
+        let harvest_effect = definition
+            .harvest_multiplier
+            .is_some_and(|multiplier| multiplier > 1.0);
+        let has_target_tile = grid.iter_tiles().any(|(pos, tile)| {
             tile.building.is_none()
                 && feature.contains_tile(pos, grid.width, grid.height)
-                && tile.terrain.is_buildable(grid.data())
+                && if harvest_effect {
+                    tile.terrain.is_harvestable(grid.data())
+                } else {
+                    tile.terrain.is_buildable(grid.data())
+                }
         });
-        if has_buildable_tile {
+        if has_target_tile {
             continue;
         }
 
@@ -165,7 +190,14 @@ pub(super) fn anchor_effect_features(features: &mut [PlanetFeature], def: &Plane
         let center = (x + width * 0.5, y + height * 0.5);
         let nearest = grid
             .iter_tiles()
-            .filter(|(_, tile)| tile.building.is_none() && tile.terrain.is_buildable(grid.data()))
+            .filter(|(_, tile)| {
+                tile.building.is_none()
+                    && if harvest_effect {
+                        tile.terrain.is_harvestable(grid.data())
+                    } else {
+                        tile.terrain.is_buildable(grid.data())
+                    }
+            })
             .min_by(|(left, _), (right, _)| {
                 let left_distance = normalized_tile_distance(*left, center, grid);
                 let right_distance = normalized_tile_distance(*right, center, grid);
@@ -243,6 +275,33 @@ pub(crate) fn feature_cooling_multiplier(
         .iter()
         .find(|definition| definition.id == feature.id)
         .and_then(|definition| definition.cooling_multiplier)
+        .unwrap_or(1.0);
+    if multiplier.is_finite() {
+        multiplier.max(1.0)
+    } else {
+        1.0
+    }
+}
+
+/// Resolve a local harvest multiplier without requiring a mutable world borrow
+/// while an action is preparing its reward.
+pub(crate) fn feature_harvest_multiplier(
+    features: &[PlanetFeature],
+    definitions: &[crate::data::PlanetFeatureDef],
+    pos: GridPos,
+    grid_width: u32,
+    grid_height: u32,
+) -> f32 {
+    let Some(feature) = features
+        .iter()
+        .find(|feature| feature.contains_tile(pos, grid_width, grid_height))
+    else {
+        return 1.0;
+    };
+    let multiplier = definitions
+        .iter()
+        .find(|definition| definition.id == feature.id)
+        .and_then(|definition| definition.harvest_multiplier)
         .unwrap_or(1.0);
     if multiplier.is_finite() {
         multiplier.max(1.0)

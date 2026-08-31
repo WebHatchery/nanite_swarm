@@ -272,7 +272,8 @@ impl PlanetState {
             let (minerals, biomass) = terrain.harvest_rewards(data);
             // What the ground is worth is terrain data; what the swarm gets out
             // of it is a stat, so a tech can pay off on ground already surveyed.
-            let yield_multiplier = self.stats.apply(crate::engine::StatId::HarvestYield, 1.0);
+            let yield_multiplier = self.stats.apply(crate::engine::StatId::HarvestYield, 1.0)
+                * self.feature_harvest_multiplier_at(pos).unwrap_or(1.0);
             let (minerals, biomass) = (minerals * yield_multiplier, biomass * yield_multiplier);
 
             // Apply harvest
