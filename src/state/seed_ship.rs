@@ -100,6 +100,51 @@ impl SeedShip {
         self.launches
     }
 
+    /// Reject impossible persisted yard state before it can feed a malformed
+    /// progress value into the next intake tick.
+    pub(crate) fn validate_loaded_state(&self) -> Result<(), String> {
+        let stages = self.stages();
+        if self.stage > stages.len() {
+            return Err("has a Seed Ship stage past the end of its plan".to_string());
+        }
+        if self.stage == stages.len() && self.committed {
+            return Err("has a committed completed Seed Ship".to_string());
+        }
+
+        let values = [
+            ("minerals", self.progress.minerals),
+            ("data", self.progress.data),
+            ("biomass", self.progress.biomass),
+            ("alloy", self.progress.alloy),
+            ("components", self.progress.components),
+        ];
+        if values
+            .into_iter()
+            .any(|(_, value)| !value.is_finite() || value < 0.0)
+        {
+            return Err("has invalid Seed Ship progress".to_string());
+        }
+        if let Some(stage) = stages.get(self.stage) {
+            let costs = [
+                ("minerals", self.progress.minerals, stage.cost.minerals),
+                ("data", self.progress.data, stage.cost.data),
+                ("biomass", self.progress.biomass, stage.cost.biomass),
+                ("alloy", self.progress.alloy, stage.cost.alloy),
+                (
+                    "components",
+                    self.progress.components,
+                    stage.cost.components,
+                ),
+            ];
+            if costs.into_iter().any(|(_, progress, cost)| progress > cost) {
+                return Err("has Seed Ship progress beyond the current stage cost".to_string());
+            }
+        } else if values.into_iter().any(|(_, value)| value != 0.0) {
+            return Err("has progress on a completed Seed Ship".to_string());
+        }
+        Ok(())
+    }
+
     /// Spend the ship. The yard is left empty: leaving again means building
     /// another from the keel up, which is also why this cannot double-launch.
     pub(super) fn mark_launched(&mut self) {

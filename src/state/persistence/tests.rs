@@ -3,6 +3,8 @@ use crate::data::GameConfig;
 use crate::engine::{BuildingType, GridPos, ResourceType};
 use crate::state::Shipment;
 
+mod validation;
+
 fn campaign() -> Campaign {
     Campaign::new(GameConfig::default(), 7)
 }
