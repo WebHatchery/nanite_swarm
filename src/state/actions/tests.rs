@@ -152,6 +152,11 @@ fn try_sell_building_refunds_half_cost_and_cannot_sell_core() {
     let mut state = state();
     let core = state.grid.find_core().unwrap();
     assert!(!state.try_sell_building(core));
+    assert!(state
+        .notifications
+        .get_notifications()
+        .iter()
+        .any(|notification| notification.message.contains("Core cannot be demolished")));
 
     let pos = GridPos::new(core.x + 1, core.y);
     state.grid.reveal_around(pos, 1);

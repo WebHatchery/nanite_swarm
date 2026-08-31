@@ -213,6 +213,7 @@ impl PlanetState {
             return false;
         };
         if building.building_type == BuildingType::Core {
+            self.notifications.warning("The Core cannot be demolished");
             return false;
         }
 

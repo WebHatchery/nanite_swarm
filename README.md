@@ -88,6 +88,8 @@ each pod under a `full route` heading, so simultaneous routes remain
 distinguishable.
 Tap CANCEL to abandon a build, relocation, box-selection, or pending purge
 confirmation before the next map tap.
+The Core is protected from demolition; tapping it while DEMOLISH is armed
+explains that protection instead of silently doing nothing.
 Tap the Core to inspect its current evolution stage, the next stage, and the
 remaining milestone requirements holding that evolution back.
 Select a revealed tile inside a named planetary feature to read its feature
