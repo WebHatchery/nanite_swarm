@@ -61,6 +61,9 @@ Audit date: 2026-08-20
 - Split Solar System telemetry and remote-world alert coverage into
   `state/campaign/tests/telemetry.rs`, keeping the campaign test coordinator
   below the source-size restructure signal as map snapshots grow.
+- Split Solar System snapshot assembly and freight-map action handling into
+  `src/main/update/interplanetary.rs`, leaving the frame coordinator focused on
+  phase dispatch, local screens, and shared simulation timing.
 
 ## Remaining debt
 
