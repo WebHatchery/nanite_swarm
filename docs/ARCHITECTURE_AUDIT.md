@@ -91,6 +91,9 @@ Audit date: 2026-08-20
 - Split animated factory depth markers and focus-target overlays from
   `factory_deck.rs` into `factory_deck/art.rs`, leaving the control-room
   coordinator focused on layout, progress, and touch actions.
+- Split animated building effects from `terrain_render/tiles.rs` into
+  `terrain_render/tiles/motion.rs`, leaving visible tile traversal and
+  placement-preview rendering in the tile coordinator.
 - Split planet-state invariants and shipment invariants from
   `state/campaign/validation.rs` into `validation/planet.rs` and
   `validation/shipment.rs`, leaving load orchestration and directive checks in
