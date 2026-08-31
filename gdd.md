@@ -104,10 +104,11 @@ output rather than permanently better output.
 Each authored world may carry a deterministic landmark over its terrain. A
 landmark stays hidden until its tiles are surveyed, then becomes both a local
 dossier and a strategic placement cue. The Mercury Iron Belt raises drill
-output by 50% on its surveyed tiles, while Venus's Acid Sea raises corrosion on
-local power-transmitting machinery by 80%. These effects are local to their
-features: the Iron Belt does not change ordinary deposit depletion, and the
-Acid Sea stacks with Venus's ordinary atmosphere and field exposure.
+output by 50% on its surveyed tiles, Venus's Acid Sea raises corrosion on local
+power-transmitting machinery by 80%, and Saturn's Ring Shadow makes cold bite
+40% harder along local drone routes. These effects are local to their features:
+the Iron Belt does not change ordinary deposit depletion, while the hazard
+features stack with their world's ordinary atmosphere or cold-field exposure.
 
 ### The Synapse (Research)
 

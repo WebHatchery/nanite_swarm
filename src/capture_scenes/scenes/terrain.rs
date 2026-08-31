@@ -29,6 +29,16 @@ impl Game {
         self.campaign.travel_to(1);
         prepare_feature_inspection(self.campaign.current_mut());
     }
+
+    pub(super) fn stage_ring_shadow_inspection_scene(&mut self) {
+        self.phase = GamePhase::Playing;
+        // Keep the capture on Saturn so the feature's local cold effect can
+        // be read beside the authored Ring Cold field.
+        self.seed_logistics_scene();
+        self.campaign.colonize(4);
+        self.campaign.travel_to(4);
+        prepare_feature_inspection(self.campaign.current_mut());
+    }
 }
 
 fn prepare_feature_inspection(planet: &mut state::PlanetState) {
@@ -50,8 +60,10 @@ fn prepare_feature_inspection(planet: &mut state::PlanetState) {
             feature.contains_tile(*pos, planet.grid.width, planet.grid.height)
                 && planet.grid.get(*pos).is_some_and(|tile| {
                     tile.building.is_none()
-                        && ((!matches!(feature.id.as_str(), "iron_belt" | "acid_sea"))
-                            || tile.terrain.is_buildable(planet.data()))
+                        && ((!matches!(
+                            feature.id.as_str(),
+                            "iron_belt" | "acid_sea" | "ring_shadow"
+                        )) || tile.terrain.is_buildable(planet.data()))
                 })
         })
         .or_else(|| {

@@ -231,6 +231,8 @@ impl PlanetState {
         let grid = &self.grid;
         let traffic = &self.traffic;
         let hazard_fields = self.data().planet(self.planet_index).hazard_fields.clone();
+        let feature_definitions = self.data().planet(self.planet_index).features.clone();
+        let features = &self.features;
         let grid_width = self.grid.width;
         let grid_height = self.grid.height;
 
@@ -250,6 +252,13 @@ impl PlanetState {
                         &hazard_fields,
                         grid_width,
                         grid_height,
+                    ) * super::game_state::feature_hazard_multiplier(
+                        features,
+                        &feature_definitions,
+                        *tile,
+                        grid_width,
+                        grid_height,
+                        "cold",
                     );
                     let warmed = heaters
                         .iter()

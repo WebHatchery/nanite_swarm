@@ -86,7 +86,7 @@
       "banned_buildings": ["wind_turbine", "biomass_harvester"],
       "arrival": "Cold enough that the machinery complains. The complaints are logged and ignored.",
       "pending_pod_cap": 4,
-      "features": [{"id":"ring_shadow","name":"Ring Shadow","description":"A long shadow under the orbital debris.","width":0.40,"height":0.08,"seed_offset":43}],
+      "features": [{"id":"ring_shadow","name":"Ring Shadow","description":"A long shadow under the orbital debris.","width":0.40,"height":0.08,"seed_offset":43,"freeze_multiplier":1.4}],
       "hazard_fields": [{"id":"ring_cold","name":"Ring Cold","hazard":"cold","center":[0.62,0.62],"radius":0.35,"strength":0.9}],
       "constraints": {"required_buildings": ["heater_node"], "minimum_power_generation": 10.0}
     }

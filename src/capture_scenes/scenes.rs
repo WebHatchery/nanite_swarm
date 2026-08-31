@@ -214,6 +214,7 @@ impl Game {
             }
             "iron_belt_inspection" => self.stage_iron_belt_inspection_scene(),
             "acid_sea_inspection" => self.stage_acid_sea_inspection_scene(),
+            "ring_shadow_inspection" => self.stage_ring_shadow_inspection_scene(),
             // A Core that has grown past its landing pod.
             "core_stage" => {
                 self.phase = GamePhase::Playing;

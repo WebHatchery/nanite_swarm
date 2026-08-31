@@ -364,6 +364,67 @@ fn drills_dispatch_along_the_conduit_run() {
     assert_eq!(drone.home, drill);
 }
 
+fn drone_speed_on_ring_shadow(on_shadow: bool) -> f32 {
+    let mut state = PlanetState::new(4, 42, GameConfig::default());
+    let core = state.grid.find_core().unwrap();
+    state.grid.reveal_around(core, 12);
+    state.resources.minerals = 10_000.0;
+    state.resources.energy = 10_000.0;
+    state.config.resources.max_energy = 10_000.0;
+    state.unlock_building(BuildingType::Conduit);
+    state.features[0].bounds = if on_shadow {
+        (0.40, 0.40, 0.30, 0.30)
+    } else {
+        (0.0, 0.0, 0.05, 0.05)
+    };
+
+    for step in 1..=4 {
+        let pos = GridPos::new(core.x + step, core.y);
+        state.grid.get_mut(pos).unwrap().terrain = crate::engine::TerrainType::Empty;
+        state.select_building(BuildingType::Conduit);
+        assert!(state.try_place_building(pos));
+    }
+    let drill = GridPos::new(core.x + 5, core.y);
+    let drill_tile = state.grid.get_mut(drill).unwrap();
+    drill_tile.terrain = crate::engine::TerrainType::Empty;
+    drill_tile.ore_richness = 1.0;
+    state.select_building(BuildingType::Drill);
+    assert!(state.try_place_building(drill));
+    state.grid.update_power_grid();
+
+    state.update_logistics(FILL_SECONDS, false);
+    let drone = &state.drones.drones()[0];
+    assert_eq!(drone.state, DroneState::MovingToCore);
+    assert!(!drone.path.is_empty());
+    let local_multiplier = crate::state::game_state::feature_hazard_multiplier(
+        &state.features,
+        &state.data().planet(4).features,
+        drone.path[drone.path_index],
+        state.grid.width,
+        state.grid.height,
+        "cold",
+    );
+    assert_eq!(local_multiplier, if on_shadow { 1.4 } else { 1.0 });
+    drone.speed
+}
+
+#[test]
+fn ring_shadow_deepens_cold_on_its_route_without_affecting_ordinary_route_speed() {
+    let ordinary = drone_speed_on_ring_shadow(false);
+    let shadow = drone_speed_on_ring_shadow(true);
+    let freeze = PlanetState::new(4, 42, GameConfig::default()).freeze_strength();
+    let expected_ratio = (1.0 - freeze * 1.4) / (1.0 - freeze);
+
+    assert!(
+        shadow < ordinary,
+        "Ring Shadow speed was {shadow}, ordinary route speed was {ordinary}"
+    );
+    assert!(
+        (shadow - ordinary * expected_ratio).abs() < 0.001,
+        "Ring Shadow speed was {shadow}, expected {expected_ratio}x ordinary speed {ordinary}"
+    );
+}
+
 #[test]
 fn a_drill_with_no_pipe_to_the_core_never_dispatches() {
     let (mut state, _core, drill) = state_with_run(3);

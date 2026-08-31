@@ -109,6 +109,8 @@ pub(super) fn draw(
     let tile_feature = display_pos.and_then(|pos| state.feature_at(pos)).cloned();
     let feature_ore_multiplier = display_pos.and_then(|pos| state.feature_ore_multiplier_at(pos));
     let feature_acid_multiplier = display_pos.and_then(|pos| state.feature_acid_multiplier_at(pos));
+    let feature_freeze_multiplier =
+        display_pos.and_then(|pos| state.feature_freeze_multiplier_at(pos));
 
     let inspected_building = tile_building.or(state.selected_building);
     if let Some(building_type) = inspected_building {
@@ -384,6 +386,7 @@ pub(super) fn draw(
                     &feature.name,
                     feature_ore_multiplier,
                     feature_acid_multiplier,
+                    feature_freeze_multiplier,
                 );
                 draw_ui_text(
                     &fit_text_to_width(&feature_name, right_w - 32.0, 10.0),

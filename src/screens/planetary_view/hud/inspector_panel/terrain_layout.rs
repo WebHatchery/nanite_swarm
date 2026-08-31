@@ -4,6 +4,7 @@ pub(super) fn feature_label(
     name: &str,
     ore_multiplier: Option<f32>,
     acid_multiplier: Option<f32>,
+    freeze_multiplier: Option<f32>,
 ) -> String {
     let mut effects = Vec::new();
     if let Some(multiplier) = ore_multiplier {
@@ -13,6 +14,10 @@ pub(super) fn feature_label(
     if let Some(multiplier) = acid_multiplier {
         let bonus = ((multiplier - 1.0) * 100.0).round() as i32;
         effects.push(format!("+{bonus}% ACID"));
+    }
+    if let Some(multiplier) = freeze_multiplier {
+        let bonus = ((multiplier - 1.0) * 100.0).round() as i32;
+        effects.push(format!("+{bonus}% COLD"));
     }
     if effects.is_empty() {
         format!("Feature: {name}")

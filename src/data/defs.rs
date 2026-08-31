@@ -291,6 +291,9 @@ pub struct PlanetFeatureDef {
     /// Multiplies local acid exposure for machinery on this feature.
     #[serde(default)]
     pub acid_multiplier: Option<f32>,
+    /// Multiplies local cold exposure for drones crossing this feature.
+    #[serde(default)]
+    pub freeze_multiplier: Option<f32>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

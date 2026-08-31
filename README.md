@@ -31,8 +31,8 @@ The swarm is powerful, but every expansion changes the terrain, stresses the gri
   green buffer radius on the map.
 - Surveyed planetary features such as landing craters, metal belts, and ice
   rifts can be selected on their revealed tiles to read their local dossier;
-  the Iron Belt grants +50% drill output and the Acid Sea raises local
-  machinery corrosion by 80% on its tiles.
+  the Iron Belt grants +50% drill output, the Acid Sea raises local machinery
+  corrosion by 80%, and the Ring Shadow deepens local cold by 40% on its tiles.
 - Research upgrades and prepare for interplanetary expansion.
 - Manage dust, power failures, and resource bottlenecks.
 - Dust-response research changes the live production, drone, routing, and

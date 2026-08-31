@@ -75,6 +75,18 @@ impl PlanetState {
             .and_then(|definition| definition.acid_multiplier)
             .filter(|multiplier| multiplier.is_finite() && *multiplier > 1.0)
     }
+
+    /// The authored cold exposure for a revealed feature tile, if it has one.
+    pub fn feature_freeze_multiplier_at(&self, pos: GridPos) -> Option<f32> {
+        let feature = self.feature_at(pos)?;
+        self.data()
+            .planet(self.planet_index)
+            .features
+            .iter()
+            .find(|definition| definition.id == feature.id)
+            .and_then(|definition| definition.freeze_multiplier)
+            .filter(|multiplier| multiplier.is_finite() && *multiplier > 1.0)
+    }
 }
 
 pub(super) fn generated_features(def: &PlanetDef, seed: u64) -> Vec<PlanetFeature> {
@@ -115,6 +127,7 @@ pub(super) fn anchor_effect_features(features: &mut [PlanetFeature], def: &Plane
                 [definition.ore_multiplier, definition.acid_multiplier]
                     .into_iter()
                     .flatten()
+                    .chain(definition.freeze_multiplier)
                     .any(|multiplier| multiplier > 1.0)
             });
         if !has_effect {
@@ -186,6 +199,7 @@ pub(crate) fn feature_hazard_multiplier(
         .find(|definition| definition.id == feature.id)
         .and_then(|definition| match hazard {
             "acid" => definition.acid_multiplier,
+            "cold" => definition.freeze_multiplier,
             _ => None,
         })
         .unwrap_or(1.0);
