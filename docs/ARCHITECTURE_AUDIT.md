@@ -70,6 +70,9 @@ Audit date: 2026-08-31
 - Split deterministic launch starfield, world, ship, exhaust, trail, and base
   primitives from `launch_view.rs` into `launch_view/art.rs`, leaving beat
   timing, captions, and skip input in the launch coordinator.
+- Split screen-phase action handling from `main/update.rs` into
+  `main/update/phases.rs`, leaving the frame coordinator focused on shared
+  timing, audio mix, notifications, and persistence helpers.
 - Split save rotation, corruption recovery, and slot-isolation coverage from
   `state/persistence/tests.rs` into `persistence/tests/recovery.rs`, leaving
   the parent suite focused on migration and round-trip contracts.
