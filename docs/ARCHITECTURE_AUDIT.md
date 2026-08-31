@@ -82,6 +82,9 @@ Audit date: 2026-08-20
 - Split the terrain harvest and forest-filter action tests into
   `state/actions/tests/terrain.rs`, keeping the parent action suite below the
   hard source-size limit as terrain tradeoffs continue to grow.
+- Split relocation, cargo-preservation, and undo coverage from
+  `state/actions/tests.rs` into `actions/tests/relocation.rs`, keeping action
+  mutation cases separate from the movement contract they verify.
 - Split standing-order cycling and reserve-policy coverage into
   `state/shipping/tests/orders.rs`, keeping the freight test coordinator below
   the hard source-size limit as remote-route behavior continues to grow.
