@@ -4,12 +4,12 @@ mod core_marker;
 mod mobile;
 mod planet_panel;
 mod shipping_panel;
+mod solar_map;
 mod status;
 mod world_dossier;
 
 use crate::state::{ExportOrder, InterplanetaryMobilePanel, Shipment, WorldTelemetry};
-use crate::ui::{color_from_rgba, draw_button_sized, draw_panel, Colors, Dimensions};
-use core_marker::draw_core_stage_marker;
+use crate::ui::{draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::{draw_ui_text, Pointer, ScrollArea};
 use status::{mass_driver_status_label, seed_ship_status_label};
@@ -280,109 +280,18 @@ pub fn render_interplanetary_view(
 
     // Where each world ended up this frame, so a pod can be drawn between two
     // of them rather than between two orbits.
-    let mut positions = Vec::with_capacity(planets.len());
-    // There is not enough horizontal room to make an orbit diagram legible in
-    // compressed mode; the planet list and dossier remain fully functional.
-    if !map_compressed {
-        for (i, planet) in planets.iter().enumerate() {
-            // Draw orbit
-            let orbit_color = if i == current_planet {
-                Color::new(0.0, 0.85, 1.0, 0.3)
-            } else {
-                Colors::SECONDARY
-            };
-            draw_circle_lines(
-                center_x,
-                center_y,
-                planet.orbit_radius * orbit_scale,
-                1.0,
-                orbit_color,
-            );
-
-            // Calculate planet position
-            let angle = (i as f32) * 1.2 + animation_time as f32 * 0.02 * (1.0 / (i as f32 + 1.0));
-            let px = center_x + planet.orbit_radius * orbit_scale * angle.cos();
-            let py = center_y + planet.orbit_radius * orbit_scale * angle.sin();
-            positions.push((px, py));
-
-            let rendered_size = (planet.size * orbit_scale).max(4.0);
-            let target_radius = (rendered_size + 5.0).max(22.0);
-            let target = Rect::new(
-                px - target_radius,
-                py - target_radius,
-                target_radius * 2.0,
-                target_radius * 2.0,
-            );
-            let is_hovered = pointer.hovering_over(target);
-            let focused = is_hovered || pointer.pressing(target) || pointer.released_on(target);
-            if focused {
-                hovered_planet = Some(i);
-            }
-
-            let planet_size = if i == current_planet {
-                rendered_size * 1.3
-            } else {
-                rendered_size
-            };
-            let is_colonized = view.colonized.get(i).copied().unwrap_or(false);
-
-            // Draw colonization glow
-            if is_colonized {
-                draw_circle(
-                    px,
-                    py,
-                    planet_size + (6.0 * orbit_scale).max(3.0),
-                    Color::new(0.0, 1.0, 0.5, 0.2),
-                );
-            }
-
-            // Draw planet
-            draw_circle(px, py, planet_size, color_from_rgba(&planet.color));
-            draw_core_stage_marker(
-                view.telemetry.get(i).copied().flatten(),
-                vec2(px, py),
-                planet_size,
-                orbit_scale,
-                animation_time,
-            );
-
-            // Hover highlight
-            if is_hovered {
-                draw_circle_lines(
-                    px,
-                    py,
-                    planet_size + (4.0 * orbit_scale).max(3.0),
-                    2.0,
-                    Colors::PRIMARY,
-                );
-            }
-
-            // Current planet indicator
-            if i == current_planet {
-                draw_circle_lines(
-                    px,
-                    py,
-                    planet_size + (8.0 * orbit_scale).max(4.0),
-                    2.0,
-                    Colors::SUCCESS,
-                );
-            }
-
-            // Draw name
-            let name_color = if is_colonized {
-                Colors::SUCCESS
-            } else {
-                Colors::TEXT_DIM
-            };
-            draw_ui_text(
-                &planet.name,
-                px - 20.0,
-                py + planet_size + (15.0 * orbit_scale.max(0.75)),
-                12.0,
-                name_color,
-            );
-        }
-    }
+    let solar_map = solar_map::draw(solar_map::SolarMapInput {
+        view,
+        center_x,
+        center_y,
+        orbit_scale,
+        map_compressed,
+        animation_time,
+        pointer,
+        hovered_planet,
+    });
+    let positions = solar_map.positions;
+    hovered_planet = solar_map.hovered_planet;
 
     let route_focus = if map_compressed {
         None

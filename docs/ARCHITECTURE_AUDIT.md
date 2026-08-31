@@ -171,6 +171,9 @@ Audit date: 2026-08-20
 - Split box selection, blueprint stamping, and selected-processor policy from
   `state/actions.rs` into `state/actions/batch.rs`, leaving the parent focused
   on single-building placement, routing, and demolition.
+- Split orbit positions, planet marks, hover targets, and telemetry markers
+  from `interplanetary_view.rs` into `interplanetary_view/solar_map.rs`,
+  leaving the screen coordinator focused on panels, routes, and dossiers.
 
 ## Remaining debt
 
