@@ -97,6 +97,9 @@ Audit date: 2026-08-20
 - Split the no-structure terrain inspector branch from `inspector_panel.rs`
   into `inspector_panel/terrain.rs`, keeping terrain rewards, feature copy,
   and harvest/filter actions together behind a typed inspection context.
+- Split alert priority, recovery-button policy, flow detection, and pending
+  interaction checks from `bottom_bar.rs` into `bottom_bar/alerts.rs`, keeping
+  desktop and mobile alert behavior on one shared policy surface.
 - Split planet-state invariants and shipment invariants from
   `state/campaign/validation.rs` into `validation/planet.rs` and
   `validation/shipment.rs`, leaving load orchestration and directive checks in

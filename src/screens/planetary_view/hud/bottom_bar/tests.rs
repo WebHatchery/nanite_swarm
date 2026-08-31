@@ -1,6 +1,6 @@
 use super::{
-    alert_button, alert_text, has_flow_alert, has_pending_interaction, upkeep_alert_text,
-    zoom_button_rects, ClockAction,
+    alert_button, alert_text, has_flow_alert, has_pending_interaction, zoom_button_rects,
+    ClockAction,
 };
 use crate::data::GameConfig;
 use crate::state::{GraphMode, PlanetState};
@@ -63,7 +63,7 @@ fn upkeep_alert_names_the_wear_requiring_recovery() {
             .expect("core building");
         building.acid_wear = 75.0;
     }
-    assert_eq!(upkeep_alert_text(&state), "UPKEEP ACID");
+    assert_eq!(super::alerts::upkeep_alert_text(&state), "UPKEEP ACID");
 
     {
         let building = state
@@ -86,7 +86,7 @@ fn upkeep_alert_names_the_wear_requiring_recovery() {
             .expect("core building");
         building.dust = threshold;
     }
-    assert_eq!(upkeep_alert_text(&state), "UPKEEP DUST");
+    assert_eq!(super::alerts::upkeep_alert_text(&state), "UPKEEP DUST");
 
     {
         let building = state
@@ -98,7 +98,7 @@ fn upkeep_alert_names_the_wear_requiring_recovery() {
             .expect("core building");
         building.acid_wear = 75.0;
     }
-    assert_eq!(upkeep_alert_text(&state), "UPKEEP MIXED");
+    assert_eq!(super::alerts::upkeep_alert_text(&state), "UPKEEP MIXED");
 }
 
 #[test]
