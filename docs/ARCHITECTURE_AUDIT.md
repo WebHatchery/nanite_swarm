@@ -165,6 +165,9 @@ Audit date: 2026-08-20
 - Split Neural Network connections, node visuals, progress rings, and pointer
   selection from `research_view.rs` into `research_view/nodes.rs`, leaving the
   research coordinator focused on layout, info panels, and screen actions.
+- Split deterministic terrain, ore, and landing-site generation from
+  `engine/grid_engine/grid.rs` into `grid/generation.rs`, leaving the grid
+  core focused on tile access, building occupancy, and pathfinding.
 
 ## Remaining debt
 

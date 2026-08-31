@@ -1,3 +1,5 @@
+use crate::data::{OreConfig, TerrainWeights};
+
 use super::*;
 
 #[test]
