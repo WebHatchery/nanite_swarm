@@ -186,6 +186,9 @@ Audit date: 2026-08-20
 - Split placement, conduit-route, and demolition coverage from
   `state/actions/tests.rs` into `actions/tests/construction.rs`, leaving the
   parent focused on processor action checks and shared fixture setup.
+- Split factory focus status, Core progression, and resource-chip readouts from
+  `factory_deck.rs` into `factory_deck/readouts.rs`, leaving the deck renderer
+  focused on control-room geometry and interaction.
 
 ## Remaining debt
 

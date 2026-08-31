@@ -1,4 +1,5 @@
 use super::*;
+use crate::state::FactoryFocusReadout;
 
 fn metrics(screen_w: f32, screen_h: f32) -> HudMetrics {
     HudMetrics::for_screen(

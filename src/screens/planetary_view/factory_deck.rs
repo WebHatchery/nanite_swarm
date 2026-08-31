@@ -2,7 +2,7 @@
 
 use crate::data::UiTheme;
 use crate::engine::GridPos;
-use crate::state::{FactoryFocus, FactoryFocusReadout, Milestone, PlanetState};
+use crate::state::{FactoryFocus, PlanetState};
 use crate::ui::{color_from_rgba, draw_hud_button, draw_hud_panel, draw_resource_icon};
 use macroquad::prelude::*;
 use macroquad_toolkit::colors::with_alpha;
@@ -11,6 +11,11 @@ use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text, truncate_text_to_widt
 use super::metrics::HudMetrics;
 
 mod art;
+mod readouts;
+
+use readouts::{
+    core_progress_text, focus_status_line, narrow_focus_description, resource_chip_color,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct FactoryDeckLayout {
@@ -299,62 +304,6 @@ pub(super) fn draw_factory_depth_overlay(
     trace_position
 }
 
-fn focus_status_line(focus: FactoryFocus, readout: FactoryFocusReadout) -> (String, bool) {
-    if focus == FactoryFocus::Balanced {
-        return ("FOCUS BALANCED // no modifier applied".to_string(), false);
-    }
-    if readout.targets == 0 {
-        return ("FOCUS IDLE // no target machines".to_string(), true);
-    }
-    if readout.producing == readout.targets {
-        return (
-            format!(
-                "FOCUS LIVE // {} {}/{} producing",
-                focus.short_label(),
-                readout.producing,
-                readout.targets
-            ),
-            false,
-        );
-    }
-    if readout.producing > 0 {
-        return (
-            format!(
-                "FOCUS LIMITED // {} {}/{} producing",
-                focus.short_label(),
-                readout.producing,
-                readout.targets
-            ),
-            true,
-        );
-    }
-    if readout.online > 0 {
-        return (
-            format!(
-                "FOCUS WAIT // {} online, feed or pad is blocked",
-                focus.short_label()
-            ),
-            true,
-        );
-    }
-    if readout.powered > 0 {
-        return (
-            format!(
-                "FOCUS PAUSED // {} standby or dust stalled",
-                focus.short_label()
-            ),
-            true,
-        );
-    }
-    (
-        format!(
-            "FOCUS OFFLINE // {} target machines unpowered",
-            focus.short_label()
-        ),
-        true,
-    )
-}
-
 fn factory_deck_layout(screen_w: f32, screen_h: f32, metrics: HudMetrics) -> FactoryDeckLayout {
     let narrow = screen_w < 600.0;
     let compact = screen_w < 900.0 || screen_h < 650.0;
@@ -384,112 +333,6 @@ fn factory_deck_layout(screen_w: f32, screen_h: f32, metrics: HudMetrics) -> Fac
         panel: Rect::new(panel_x, panel_y, panel_w, panel_h),
         compact,
         narrow,
-    }
-}
-
-fn narrow_focus_description(focus: FactoryFocus) -> &'static str {
-    match focus {
-        FactoryFocus::Balanced => "All decks share output.",
-        FactoryFocus::Extraction => "Drills +25%; draw +15%.",
-        FactoryFocus::Refining => "Smelters +25%; draw +15%.",
-        FactoryFocus::Assembly => "Servers +25%; draw +15%.",
-    }
-}
-
-fn core_progress_text(state: &PlanetState, narrow: bool) -> String {
-    let stages = state.core_stages();
-    if stages.is_empty() {
-        return "CORE // NO STAGE DATA".to_string();
-    }
-
-    let current_index = state.core_stage_index();
-    let current = &stages[current_index];
-    let stage_count = stages.len();
-    let Some(next) = stages.get(current_index + 1) else {
-        return if narrow {
-            format!("CORE {stage_count}/{stage_count} // FULLY EVOLVED")
-        } else {
-            format!(
-                "CORE {stage_count:02}/{stage_count:02}  {} // FULLY EVOLVED",
-                current.name.to_uppercase()
-            )
-        };
-    };
-
-    let requirements = next
-        .requires
-        .iter()
-        .filter_map(|requirement| {
-            let milestone = Milestone::from_id(&requirement.kind)?;
-            Some(format!(
-                "{} {}/{}",
-                core_requirement_label(milestone, narrow),
-                compact_requirement_amount(state.measure(milestone)),
-                compact_requirement_amount(requirement.target)
-            ))
-        })
-        .collect::<Vec<_>>()
-        .join(" + ");
-    let requirements = if requirements.is_empty() {
-        "AWAITING SIGNAL".to_string()
-    } else {
-        requirements
-    };
-
-    if narrow {
-        format!(
-            "CORE {}/{} -> {} | {}",
-            current_index + 1,
-            stage_count,
-            next.name.to_uppercase(),
-            requirements
-        )
-    } else {
-        format!(
-            "CORE {:02}/{:02}  {} // NEXT {}: {}",
-            current_index + 1,
-            stage_count,
-            current.name.to_uppercase(),
-            next.name.to_uppercase(),
-            requirements
-        )
-    }
-}
-
-fn core_requirement_label(milestone: Milestone, narrow: bool) -> &'static str {
-    if narrow {
-        match milestone {
-            Milestone::Structures => "STR",
-            Milestone::NetworkTiles => "NET",
-            Milestone::Technologies => "TECH",
-            Milestone::SeedShipStages => "SHIP",
-            _ => milestone.id(),
-        }
-    } else {
-        match milestone {
-            Milestone::Structures => "STRUCTURES",
-            Milestone::NetworkTiles => "NETWORK",
-            Milestone::Technologies => "TECHNOLOGIES",
-            Milestone::SeedShipStages => "SHIP STAGES",
-            _ => milestone.id(),
-        }
-    }
-}
-
-fn compact_requirement_amount(amount: f32) -> String {
-    if amount.fract().abs() > 0.05 {
-        format!("{amount:.1}")
-    } else {
-        format!("{amount:.0}")
-    }
-}
-
-fn resource_chip_color(resource: crate::engine::ResourceType, theme: &UiTheme) -> Color {
-    match resource {
-        crate::engine::ResourceType::Minerals => color_from_rgba(&theme.colors.minerals),
-        crate::engine::ResourceType::Alloy => color_from_rgba(&theme.colors.alloy),
-        crate::engine::ResourceType::Components => color_from_rgba(&theme.colors.components),
-        _ => color_from_rgba(&theme.colors.text),
     }
 }
 
