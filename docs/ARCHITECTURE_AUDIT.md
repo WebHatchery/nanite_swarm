@@ -236,6 +236,9 @@ Audit date: 2026-08-20
   `state/campaign.rs` into `campaign/persistence.rs` and
   `campaign/simulation.rs`, leaving the root focused on world ownership,
   travel, and campaign aggregates.
+- Split the build palette's quick-action rows from `hud/build_palette.rs` into
+  `build_palette/quick_actions.rs`, leaving the parent focused on card
+  discovery, scrolling, and palette geometry.
 
 ## Remaining debt
 
