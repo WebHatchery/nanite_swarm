@@ -52,6 +52,7 @@ impl PlanetState {
         self.resources.energy = (self.resources.energy + power)
             .clamp(0.0, self.resource_capacity(ResourceType::Energy));
         self.refresh_biomass_power_bonus();
+        self.power_balance = self.net_power();
         self.time_played += simulated as f64;
         self.battery_seconds = (self.battery_seconds - capped).max(0.0);
         self.last_offline_report = OfflineReport {

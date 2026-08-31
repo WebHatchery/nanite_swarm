@@ -98,4 +98,5 @@ fn offline_biomass_harvester_consumes_only_available_forest_and_reports_yield() 
     assert_eq!(tile.terrain, TerrainType::Empty);
     assert!(approx_eq(tile.biomass_amount, 0.0, 0.001));
     assert!(approx_eq(state.biomass_harvest_rate(), 0.0, 0.001));
+    assert!(approx_eq(state.power_balance, state.net_power(), 0.001));
 }
