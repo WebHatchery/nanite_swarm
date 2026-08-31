@@ -36,6 +36,9 @@ Audit date: 2026-08-20
 - Split relocation and undo behavior from `src/state/actions.rs` into
   `src/state/actions/relocation.rs`, leaving the action coordinator at 567
   lines before the next construction feature.
+- Split PlanetState map interaction mutation from `src/state/progress.rs` into
+  `progress/interaction.rs`, and moved world construction constraints,
+  hazard-field math, and resource ceilings into `progress/constraints.rs`.
 - Split the touch-sized top-bar renderer from `top_bar.rs` into
   `top_bar/mobile.rs`, leaving desktop metrics and notice layout independent
   from future mobile navigation changes.
