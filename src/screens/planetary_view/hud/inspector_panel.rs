@@ -2,22 +2,21 @@
 
 use crate::assets::GameTextures;
 use crate::data::UiTheme;
-use crate::engine::{BuildingType, GridPos, ResourceType, TerrainType};
+use crate::engine::{BuildingType, GridPos, TerrainType};
 use crate::state::{Milestone, PlanetState};
-use crate::ui::{
-    color_from_rgba, draw_hud_button, draw_hud_panel, draw_resource_icon, draw_status_row,
-    resource_color,
-};
+use crate::ui::{color_from_rgba, draw_hud_button, draw_hud_panel, draw_status_row};
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::draw_ui_text;
 
 use super::super::format::{dust_status, fit_text_to_width, format_power_delta};
 use super::{PanelColors, RightStackLayout};
 
+mod recipe_flow;
 mod terrain_layout;
+use recipe_flow::{draw_recipe_flow_row, recipe_flow_data, recipe_status};
 use terrain_layout::{
-    draw_local_effect_labels, feature_label_for, terrain_detail_offsets, terrain_effect_label,
-    terrain_feature_lines,
+    draw_local_effect_labels, feature_label_for, feature_survey_label, terrain_detail_offsets,
+    terrain_effect_label, terrain_feature_lines,
 };
 
 fn processor_action_label(
@@ -112,8 +111,10 @@ pub(super) fn draw(
         }
     }
     let tile_feature = display_pos.and_then(|pos| state.feature_at(pos)).cloned();
+    let feature_survey_progress = display_pos.and_then(|pos| state.feature_survey_progress_at(pos));
     let feature_effects = display_pos.and_then(|pos| state.feature_effects_at(pos));
-    let local_feature_label = feature_label_for(tile_feature.as_ref(), feature_effects);
+    let local_feature_label = feature_label_for(tile_feature.as_ref(), feature_effects)
+        .map(|label| feature_survey_label(&label, feature_survey_progress));
 
     let inspected_building = tile_building.or(state.selected_building);
     if let Some(building_type) = inspected_building {
@@ -503,192 +504,6 @@ pub(super) fn draw(
                 dim,
             );
         }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-struct RecipeFlowData {
-    inputs: Vec<(ResourceType, f32)>,
-    output: (ResourceType, f32),
-    output_capacity: f32,
-    input_priority: bool,
-    standby: bool,
-}
-
-fn recipe_flow_data(
-    state: &PlanetState,
-    pos: GridPos,
-    building_type: BuildingType,
-) -> Option<RecipeFlowData> {
-    let recipe = &state.data().building(building_type.id()).recipe;
-    if recipe.is_empty() {
-        return None;
-    }
-
-    let hoppers = state.input_hoppers.get(&(pos.x, pos.y));
-    let inputs = recipe
-        .carried_ids()
-        .into_iter()
-        .filter_map(|id| {
-            let resource = crate::engine::ResourceType::from_id(id)?;
-            let amount = hoppers
-                .and_then(|values| values.get(&resource))
-                .copied()
-                .unwrap_or(0.0);
-            Some((resource, amount))
-        })
-        .collect::<Vec<_>>();
-    let output = ResourceType::ALL.into_iter().find(|resource| {
-        recipe
-            .outputs
-            .get(resource.id())
-            .is_some_and(|rate| *rate > 0.0)
-    })?;
-    let waiting = state
-        .output_buffers
-        .get(&(pos.x, pos.y))
-        .copied()
-        .unwrap_or(0.0);
-    Some(RecipeFlowData {
-        inputs,
-        output: (output, waiting),
-        output_capacity: state.processor_pad_capacity(),
-        input_priority: state
-            .grid
-            .get(pos)
-            .and_then(|tile| tile.building.as_ref())
-            .is_some_and(|building| building.input_priority),
-        standby: state
-            .grid
-            .get(pos)
-            .and_then(|tile| tile.building.as_ref())
-            .is_some_and(|building| building.standby),
-    })
-}
-
-fn recipe_status(flow: &RecipeFlowData, powered: bool) -> String {
-    if flow.standby {
-        return "Standby - buffers held".to_string();
-    }
-    if !powered {
-        return "No power".to_string();
-    }
-    if flow.output.1 >= flow.output_capacity - 0.001 {
-        return "Output pad full".to_string();
-    }
-    let missing: Vec<&str> = flow
-        .inputs
-        .iter()
-        .filter(|(_, amount)| *amount <= 0.001)
-        .map(|(resource, _)| flow_resource_name(*resource))
-        .collect();
-    if !missing.is_empty() {
-        return format!("Needs {}", missing.join(" + "));
-    }
-    if flow.output.1 >= 1.0 {
-        "Output waiting".to_string()
-    } else {
-        "Running".to_string()
-    }
-}
-
-#[allow(clippy::too_many_arguments)]
-fn draw_recipe_flow_row(
-    flow: &RecipeFlowData,
-    theme: &UiTheme,
-    x: f32,
-    y: f32,
-    width: f32,
-    label_color: Color,
-    warning: Color,
-) -> (bool, bool) {
-    let priority_toggled = draw_hud_button(
-        theme,
-        Rect::new(x, y - 15.0, 70.0, 20.0),
-        if flow.input_priority {
-            "PRIORITY"
-        } else {
-            "STANDARD"
-        },
-    );
-    let standby_toggled = draw_hud_button(
-        theme,
-        Rect::new(x + 74.0, y - 15.0, 54.0, 20.0),
-        if flow.standby { "RESUME" } else { "STANDBY" },
-    );
-    let token_w = 46.0;
-    let mut cursor = (x + width * 0.49).max(x + 132.0);
-    for (index, (resource, amount)) in flow.inputs.iter().enumerate() {
-        if index > 0 {
-            draw_ui_text("+", cursor - 7.0, y, 9.0, label_color);
-        }
-        draw_resource_icon(
-            *resource,
-            Rect::new(cursor, y - 9.0, 10.0, 10.0),
-            resource_color(theme, *resource),
-        );
-        draw_ui_text(
-            &format!(
-                "{} {}",
-                flow_resource_abbrev(*resource),
-                compact_amount(*amount)
-            ),
-            cursor + 13.0,
-            y,
-            9.0,
-            if *amount <= 0.001 {
-                warning
-            } else {
-                resource_color(theme, *resource)
-            },
-        );
-        cursor += token_w;
-    }
-    draw_ui_text(">", cursor - 7.0, y, 9.0, label_color);
-    let (resource, amount) = flow.output;
-    draw_resource_icon(
-        resource,
-        Rect::new(cursor + 2.0, y - 9.0, 10.0, 10.0),
-        resource_color(theme, resource),
-    );
-    draw_ui_text(
-        &format!(
-            "{} {}",
-            flow_resource_abbrev(resource),
-            compact_amount(amount)
-        ),
-        cursor + 15.0,
-        y,
-        9.0,
-        resource_color(theme, resource),
-    );
-    (priority_toggled, standby_toggled)
-}
-
-fn compact_amount(amount: f32) -> String {
-    if amount < 10.0 && amount.fract().abs() > 0.05 {
-        format!("{:.1}", amount)
-    } else {
-        format!("{:.0}", amount)
-    }
-}
-
-fn flow_resource_abbrev(resource: ResourceType) -> &'static str {
-    match resource {
-        ResourceType::Minerals => "O",
-        ResourceType::Energy => "P",
-        ResourceType::Data => "D",
-        ResourceType::Biomass => "B",
-        ResourceType::Alloy => "A",
-        ResourceType::Components => "C",
-    }
-}
-
-fn flow_resource_name(resource: crate::engine::ResourceType) -> &'static str {
-    match resource {
-        crate::engine::ResourceType::Minerals => "Ore",
-        crate::engine::ResourceType::Components => "Parts",
-        _ => crate::state::cargo_name(resource),
     }
 }
 

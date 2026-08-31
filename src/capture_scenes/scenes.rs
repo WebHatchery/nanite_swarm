@@ -212,6 +212,7 @@ impl Game {
             "feature_inspection" | "mobile_feature_inspection" => {
                 self.stage_feature_inspection_scene()
             }
+            "partial_feature_inspection" => self.stage_partial_feature_inspection_scene(),
             "iron_belt_inspection" => self.stage_iron_belt_inspection_scene(),
             "iron_belt_drill_inspection" => self.stage_iron_belt_drill_inspection_scene(),
             "mountain_wind_inspection" | "mobile_mountain_wind_inspection" => {

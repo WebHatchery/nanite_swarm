@@ -64,6 +64,15 @@ pub(super) fn feature_label_for(
     })
 }
 
+pub(super) fn feature_survey_label(label: &str, progress: Option<(usize, usize)>) -> String {
+    match progress {
+        Some((revealed, total)) if revealed < total => {
+            format!("{label}  // SURVEY {revealed}/{total}")
+        }
+        _ => label.to_string(),
+    }
+}
+
 pub(super) fn feature_label(
     name: &str,
     ore_multiplier: Option<f32>,

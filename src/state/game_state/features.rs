@@ -61,6 +61,25 @@ impl PlanetState {
             })
     }
 
+    /// Return the revealed and total tile counts for a feature touched by a
+    /// revealed tile. The count gives the inspector a progress cue without
+    /// exposing the feature's hidden boundary on the map.
+    pub fn feature_survey_progress_at(&self, pos: GridPos) -> Option<(usize, usize)> {
+        let feature = self.feature_at(pos)?;
+        let mut revealed = 0;
+        let mut total = 0;
+        for (tile_pos, tile) in self.grid.iter_tiles() {
+            if !feature.contains_tile(tile_pos, self.grid.width, self.grid.height) {
+                continue;
+            }
+            total += 1;
+            if tile.revealed {
+                revealed += 1;
+            }
+        }
+        Some((revealed, total))
+    }
+
     pub(crate) fn feature_effects_at(&self, pos: GridPos) -> Option<FeatureEffects> {
         let feature = self.feature_at(pos)?;
         let definition = self

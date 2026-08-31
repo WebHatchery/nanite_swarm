@@ -9,6 +9,43 @@ impl Game {
         prepare_feature_inspection(self.campaign.current_mut());
     }
 
+    pub(super) fn stage_partial_feature_inspection_scene(&mut self) {
+        self.phase = GamePhase::Playing;
+        self.seed_logistics_scene();
+        let planet = self.campaign.current_mut();
+        planet.tutorial_hidden = true;
+        planet.tutorial_done = true;
+        planet.core_stage = 1;
+        planet.refresh_stats();
+        planet.notifications.clear();
+
+        let Some(feature) = planet.features.first().cloned() else {
+            return;
+        };
+        let grid_width = planet.grid.width;
+        let grid_height = planet.grid.height;
+        let Some(selected) = planet
+            .grid
+            .iter_tiles()
+            .find(|(pos, tile)| {
+                tile.building.is_none() && feature.contains_tile(*pos, grid_width, grid_height)
+            })
+            .map(|(pos, _)| pos)
+        else {
+            return;
+        };
+        for (pos, tile) in planet.grid.iter_tiles_mut() {
+            if feature.contains_tile(pos, grid_width, grid_height) {
+                tile.revealed = false;
+            }
+        }
+        planet.grid.get_mut(selected).unwrap().revealed = true;
+        planet.selected_building = None;
+        planet.selected_tile = Some(selected);
+        planet.mobile_panel = state::MobilePanel::Info;
+        planet.camera.zoom = 1.2;
+    }
+
     pub(super) fn stage_iron_belt_inspection_scene(&mut self) {
         self.phase = GamePhase::Playing;
         // Keep this a real campaign transition: the Iron Belt belongs to

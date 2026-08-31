@@ -39,6 +39,45 @@ fn feature_at_requires_a_revealed_tile() {
 }
 
 #[test]
+fn feature_survey_progress_counts_revealed_tiles_without_exposing_hidden_bounds() {
+    let mut state = PlanetState::new(0, 42, GameConfig::default());
+    let feature = state.features.first().cloned().expect("Mercury feature");
+    let positions: Vec<_> = state
+        .grid
+        .iter_tiles()
+        .filter_map(|(pos, _)| {
+            feature
+                .contains_tile(pos, state.grid.width, state.grid.height)
+                .then_some(pos)
+        })
+        .collect();
+    assert!(
+        positions.len() > 1,
+        "feature overlaps enough of the Mercury grid"
+    );
+    for pos in &positions {
+        state.grid.get_mut(*pos).unwrap().revealed = false;
+    }
+
+    let first = positions[0];
+    let hidden = positions[1];
+    state.grid.get_mut(first).unwrap().revealed = true;
+    assert_eq!(state.feature_survey_progress_at(hidden), None);
+    assert_eq!(
+        state.feature_survey_progress_at(first),
+        Some((1, positions.len()))
+    );
+
+    for pos in &positions {
+        state.grid.get_mut(*pos).unwrap().revealed = true;
+    }
+    assert_eq!(
+        state.feature_survey_progress_at(first),
+        Some((positions.len(), positions.len()))
+    );
+}
+
+#[test]
 fn iron_belt_exposes_its_ore_bonus_only_after_survey() {
     let mut state = PlanetState::new(0, 42, GameConfig::default());
     let feature = state.features.first().cloned().expect("Mercury feature");

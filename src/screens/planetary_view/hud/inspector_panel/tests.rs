@@ -1,6 +1,7 @@
-use super::terrain_layout::{feature_label, terrain_effect_label};
+use super::terrain_layout::{feature_label, feature_survey_label, terrain_effect_label};
 use super::*;
 use crate::data::GameConfig;
+use crate::engine::ResourceType;
 
 #[test]
 fn compact_inspector_rows_end_inside_the_panel_without_needing_the_icon_column() {
@@ -72,6 +73,22 @@ fn feature_label_surfaces_local_feature_effects() {
     assert_eq!(
         feature_label("Landing Crater", None, None, None, None, None),
         "Feature: Landing Crater"
+    );
+}
+
+#[test]
+fn partial_feature_survey_is_named_without_repeating_a_completed_count() {
+    assert_eq!(
+        feature_survey_label("Feature: Iron Belt  +50% ORE", Some((1, 4))),
+        "Feature: Iron Belt  +50% ORE  // SURVEY 1/4"
+    );
+    assert_eq!(
+        feature_survey_label("Feature: Iron Belt  +50% ORE", Some((4, 4))),
+        "Feature: Iron Belt  +50% ORE"
+    );
+    assert_eq!(
+        feature_survey_label("Feature: Iron Belt  +50% ORE", None),
+        "Feature: Iron Belt  +50% ORE"
     );
 }
 
