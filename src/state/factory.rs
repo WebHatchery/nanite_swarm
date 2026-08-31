@@ -4,7 +4,7 @@
 //! player had to infer its depth from individual building cards. This module
 //! gives that growth a compact vocabulary and a deliberate operating profile.
 
-use crate::engine::BuildingType;
+use crate::engine::{BuildingType, GridPos};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
@@ -166,6 +166,73 @@ impl PlanetState {
         self.factory_focus.work_multiplier(building_type)
     }
 
+    /// Every machine touched by the current focus, in stable map order.
+    pub fn factory_focus_target_positions(&self) -> Vec<GridPos> {
+        if self.factory_focus == FactoryFocus::Balanced {
+            return Vec::new();
+        }
+        let mut positions: Vec<_> = self
+            .grid
+            .iter_tiles()
+            .filter_map(|(position, tile)| {
+                tile.building
+                    .as_ref()
+                    .filter(|building| self.factory_focus.affects(building.building_type))
+                    .map(|_| position)
+            })
+            .collect();
+        positions.sort_by_key(|position| (position.y, position.x));
+        positions
+    }
+
+    /// Focus targets that need an explanation before the player changes the
+    /// operating profile again. This is the destination list for TRACE.
+    pub fn factory_focus_problem_positions(&self) -> Vec<GridPos> {
+        let targets = self.factory_focus_target_positions();
+        if targets.is_empty() {
+            return targets;
+        }
+
+        let dust_response = self.resolved_dust_response();
+        let starved: HashSet<_> = self.starved_factories().into_iter().collect();
+        let blocked: HashSet<_> = self.blocked_factories().into_iter().collect();
+        targets
+            .into_iter()
+            .filter(|position| {
+                let Some(building) = self
+                    .grid
+                    .get(*position)
+                    .and_then(|tile| tile.building.as_ref())
+                else {
+                    return false;
+                };
+                !building.powered
+                    || building.standby
+                    || building.is_dust_stalled_with(&dust_response)
+                    || starved.contains(position)
+                    || blocked.contains(position)
+            })
+            .collect()
+    }
+
+    /// Select the next affected machine that explains a limited focus and
+    /// return it so the caller can recenter the map around the selection.
+    pub fn focus_next_factory_problem(&mut self) -> Option<GridPos> {
+        let positions = self.factory_focus_problem_positions();
+        let next = match self.selected_tile {
+            Some(selected) => positions
+                .iter()
+                .position(|position| *position == selected)
+                .map(|index| positions[(index + 1) % positions.len()])
+                .or_else(|| positions.first().copied()),
+            None => positions.first().copied(),
+        }?;
+
+        self.cancel_interaction_modes();
+        self.selected_tile = Some(next);
+        Some(next)
+    }
+
     /// Count the machines affected by the current focus and how many can
     /// currently turn that modifier into output.
     pub fn factory_focus_readout(&self) -> FactoryFocusReadout {
@@ -177,13 +244,14 @@ impl PlanetState {
         let starved: HashSet<_> = self.starved_factories().into_iter().collect();
         let blocked: HashSet<_> = self.blocked_factories().into_iter().collect();
         let mut readout = FactoryFocusReadout::default();
-        for (position, tile) in self.grid.iter_tiles() {
-            let Some(building) = tile.building.as_ref() else {
+        for position in self.factory_focus_target_positions() {
+            let Some(building) = self
+                .grid
+                .get(position)
+                .and_then(|tile| tile.building.as_ref())
+            else {
                 continue;
             };
-            if !self.factory_focus.affects(building.building_type) {
-                continue;
-            }
 
             readout.targets += 1;
             if building.powered {

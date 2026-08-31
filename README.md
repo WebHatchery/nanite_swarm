@@ -111,7 +111,8 @@ scope of the production trade is visible even when the control-room panel is
 covering the center of the world; the frame dims offline machines and changes
 to warning or error colours when feed, standby, dust, or dispatch pressure is
 the local blocker. The deck footer carries the same LIVE, WAIT, FULL, and
-OFFLINE legend in-game.
+OFFLINE legend in-game. A limited focus also exposes TRACE to cycle through
+the affected machine and recenter the map on it.
 When the bottom alert card reports a logistics problem, tap its JUMP button to
 cycle through the affected structures or network tiles; power-only problems
 keep the FLOW button for the network diagnosis overlay.

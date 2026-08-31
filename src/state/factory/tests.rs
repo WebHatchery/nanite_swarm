@@ -117,6 +117,32 @@ fn focus_readout_reports_a_standby_machine_as_offline() {
 }
 
 #[test]
+fn trace_cycles_to_a_focus_machine_that_is_waiting_for_feed() {
+    let mut state = state();
+    place_unlocked(&mut state, BuildingType::Assembler, 1);
+    state.factory_focus = FactoryFocus::Assembly;
+    let core = state.grid.find_core().unwrap();
+    let position = GridPos::new(core.x + 1, core.y);
+
+    assert_eq!(state.factory_focus_problem_positions(), vec![position]);
+    assert_eq!(state.focus_next_factory_problem(), Some(position));
+    assert_eq!(state.selected_tile, Some(position));
+}
+
+#[test]
+fn trace_has_no_destination_when_the_selected_focus_is_working() {
+    let mut state = state();
+    place_unlocked(&mut state, BuildingType::Drill, 1);
+    state.factory_focus = FactoryFocus::Extraction;
+
+    assert_eq!(
+        state.factory_focus_problem_positions(),
+        Vec::<GridPos>::new()
+    );
+    assert_eq!(state.focus_next_factory_problem(), None);
+}
+
+#[test]
 fn depth_opens_from_foundry_to_assembly_to_orbital() {
     let mut state = state();
     assert_eq!(state.factory_depth(), 0);

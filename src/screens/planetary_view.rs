@@ -172,7 +172,9 @@ pub fn render_planetary_view(
         metrics,
     );
 
-    factory_deck::draw_factory_depth_overlay(state, metrics, theme);
+    if let Some(position) = factory_deck::draw_factory_depth_overlay(state, metrics, theme) {
+        hud::center_camera_on_position(state, position, metrics, screen_w, screen_h);
+    }
 
     upkeep_render::draw_notifications(state, metrics, screen_w);
 

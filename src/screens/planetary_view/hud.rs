@@ -230,7 +230,7 @@ pub(super) fn draw_ui_panels(
     ui_action
 }
 
-fn center_camera_on_position(
+pub(super) fn center_camera_on_position(
     state: &mut PlanetState,
     position: GridPos,
     metrics: HudMetrics,

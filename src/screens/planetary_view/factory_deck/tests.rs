@@ -98,7 +98,7 @@ fn compact_deck_legend_keeps_the_frame_states_and_close_action_visible() {
 #[test]
 fn balanced_focus_does_not_claim_any_map_targets() {
     let state = PlanetState::new(2, 42, crate::data::GameConfig::default());
-    assert!(focus_target_positions(&state).is_empty());
+    assert!(state.factory_focus_target_positions().is_empty());
 }
 
 #[test]
@@ -117,7 +117,7 @@ fn assembly_focus_marks_both_machine_types_in_its_deck() {
     ));
     state.factory_focus = FactoryFocus::Assembly;
 
-    let targets = focus_target_positions(&state);
+    let targets = state.factory_focus_target_positions();
     assert_eq!(targets, vec![server, assembler]);
 }
 

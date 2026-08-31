@@ -44,9 +44,9 @@ pub(super) fn draw_factory_depth_overlay(
     state: &mut PlanetState,
     metrics: HudMetrics,
     theme: &UiTheme,
-) {
+) -> Option<GridPos> {
     if !state.factory_deck_open {
-        return;
+        return None;
     }
 
     let layout = factory_deck_layout(screen_width(), screen_height(), metrics);
@@ -227,7 +227,11 @@ pub(super) fn draw_factory_depth_overlay(
     let (focus_status, focus_status_color) = focus_status_line(state.factory_focus, focus_readout);
     let focus_status = truncate_text_to_width(
         &focus_status,
-        panel.w - 44.0,
+        if focus_readout.producing < focus_readout.targets {
+            panel.w - 116.0
+        } else {
+            panel.w - 44.0
+        },
         if narrow { 8.0 } else { 9.0 },
     );
     draw_ui_text(
@@ -237,6 +241,16 @@ pub(super) fn draw_factory_depth_overlay(
         if narrow { 8.0 } else { 9.0 },
         if focus_status_color { warning } else { success },
     );
+    let mut trace_position = None;
+    if focus_readout.producing < focus_readout.targets
+        && draw_hud_button(
+            theme,
+            Rect::new(panel.x + panel.w - 80.0, panel.y + 230.0, 60.0, 22.0),
+            "TRACE",
+        )
+    {
+        trace_position = state.focus_next_factory_problem();
+    }
     if compact {
         draw_ui_text(
             "FRAME: LIVE / WAIT / FULL / OFFLINE  //  TAP DECK CLOSE",
@@ -280,6 +294,8 @@ pub(super) fn draw_factory_depth_overlay(
             draw_ui_text(&format!("{:.0}", amount), x, panel.y + 62.0, 8.0, text);
         }
     }
+
+    trace_position
 }
 
 fn focus_status_line(focus: FactoryFocus, readout: FactoryFocusReadout) -> (String, bool) {
@@ -507,7 +523,7 @@ fn draw_focus_targets(state: &PlanetState, metrics: HudMetrics, theme: &UiTheme,
     let starved: HashSet<_> = state.starved_factories().into_iter().collect();
     let blocked: HashSet<_> = state.blocked_factories().into_iter().collect();
     let pulse = 0.35 + (time * 2.6).sin().abs() * 0.18;
-    for position in focus_target_positions(state) {
+    for position in state.factory_focus_target_positions() {
         let Some(building) = state
             .grid
             .get(position)
@@ -551,22 +567,6 @@ fn focus_target_color(
     } else {
         color_from_rgba(&theme.colors.primary)
     }
-}
-
-fn focus_target_positions(state: &PlanetState) -> Vec<GridPos> {
-    if state.factory_focus == FactoryFocus::Balanced {
-        return Vec::new();
-    }
-    state
-        .grid
-        .iter_tiles()
-        .filter_map(|(position, tile)| {
-            tile.building
-                .as_ref()
-                .filter(|building| state.factory_focus.affects(building.building_type))
-                .map(|_| position)
-        })
-        .collect()
 }
 
 fn resource_chip_color(resource: crate::engine::ResourceType, theme: &UiTheme) -> Color {
