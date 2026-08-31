@@ -66,6 +66,9 @@ Audit date: 2026-08-20
   orders from `state/shipping.rs` into `shipping/planet.rs` and
   `shipping/campaign.rs`, leaving cargo records and shared helpers in the
   coordinator.
+- Split the loaded data records from `data/defs.rs` into building/terrain,
+  research, Seed Ship, planet, and campaign-contract modules, leaving
+  `GameData` focused on loading, indexing, and engine-tree conversion.
 - Split the touch-sized top-bar renderer from `top_bar.rs` into
   `top_bar/mobile.rs`, leaving desktop metrics and notice layout independent
   from future mobile navigation changes.
