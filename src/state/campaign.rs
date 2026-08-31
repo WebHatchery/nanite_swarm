@@ -10,13 +10,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::data::{GameConfig, GameDataContext};
 use crate::directives::{pick_directive, Directive};
-use crate::engine::ResourceType;
 
 use super::consumption::ConsumptionTotals;
 use super::game_state::{PlanetState, ResearchProgress};
 
 mod construction;
+mod persistence;
 mod research;
+mod simulation;
 mod telemetry;
 mod validation;
 
@@ -26,6 +27,11 @@ pub const PLANET_COUNT: usize = 5;
 /// Mars, per the GDD's Zone 1.
 pub const STARTING_PLANET: usize = 2;
 
+/// How long a world's arrival line stays on screen.
+const ARRIVAL_NOTICE_SECONDS: f32 = 10.0;
+/// How long the saved marker stays on screen.
+const SAVE_NOTICE_SECONDS: f32 = 3.0;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DirectiveRecord {
     pub description: String,
@@ -33,17 +39,6 @@ pub struct DirectiveRecord {
     pub reward_data: f32,
     pub tier: i32,
 }
-
-/// Step length for worlds the player is not looking at. Coarse on purpose: a
-/// left-behind world only has to keep producing, not animate.
-const BACKGROUND_TICK_SECONDS: f32 = 1.0;
-/// Ceiling on background steps per call, so a long stall cannot turn into a
-/// stutter across four planets at once.
-const MAX_BACKGROUND_TICKS: u32 = 4;
-/// How long a world's arrival line stays on screen.
-const ARRIVAL_NOTICE_SECONDS: f32 = 10.0;
-/// How long the saved marker stays on screen.
-const SAVE_NOTICE_SECONDS: f32 = 3.0;
 
 /// Every planet the swarm holds, plus which one it is currently standing on.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -95,109 +90,6 @@ fn default_slot_name() -> String {
 }
 
 impl Campaign {
-    /// Merge each world's event stream into the campaign log. The cursors are
-    /// transient because a loaded campaign starts by replaying only entries
-    /// raised after load; the durable copy is `toast_history`.
-    pub fn sync_notification_history(&mut self) {
-        for (index, slot) in self.planets.iter().enumerate() {
-            let Some(planet) = slot.as_ref() else {
-                continue;
-            };
-            let history = planet.notifications.history();
-            let cursor = self.notification_cursors[index].min(history.len());
-            self.toast_history.extend(history[cursor..].iter().cloned());
-            self.notification_cursors[index] = history.len();
-        }
-        if self.toast_history.len() > 400 {
-            let trim = self.toast_history.len() - 400;
-            self.toast_history.drain(0..trim);
-        }
-    }
-
-    /// Run every world the player is *not* standing on.
-    ///
-    /// The GDD's meta-layer promise is that Planet 1 does not disappear, and a
-    /// world that is preserved but frozen only half keeps it: come back and
-    /// nothing has happened. These run the same simulation the foreground
-    /// world does, in coarse one-second steps and without visuals, which is
-    /// cheap enough for four planets and avoids a second economy that could
-    /// disagree with the real one.
-    pub fn update_background(&mut self, delta_time: f32) {
-        if delta_time <= 0.0 || !delta_time.is_finite() {
-            return;
-        }
-        self.background_accumulator += delta_time;
-
-        let mut ticks = 0;
-        while self.background_accumulator >= BACKGROUND_TICK_SECONDS && ticks < MAX_BACKGROUND_TICKS
-        {
-            self.background_accumulator -= BACKGROUND_TICK_SECONDS;
-            ticks += 1;
-        }
-        if ticks == MAX_BACKGROUND_TICKS {
-            self.background_accumulator = 0.0;
-        }
-        if ticks == 0 {
-            return;
-        }
-
-        let current = self.current;
-        for (index, slot) in self.planets.iter_mut().enumerate() {
-            if index == current {
-                continue;
-            }
-            let Some(planet) = slot.as_mut() else {
-                continue;
-            };
-            for _ in 0..ticks {
-                planet.step(BACKGROUND_TICK_SECONDS, false);
-            }
-        }
-    }
-
-    /// Enough has happened that the campaign is worth writing down.
-    ///
-    /// The interval comes from the player's settings rather than a constant,
-    /// because how much work someone is willing to risk is their call. Time is
-    /// counted in world seconds, so a paused game does not keep writing to
-    /// disk and a fast-forwarded one saves as often as the progress warrants.
-    pub fn due_for_autosave(&self, interval_seconds: f32) -> bool {
-        self.since_save >= interval_seconds.max(1.0)
-    }
-
-    /// Called after a successful write, whatever prompted it.
-    pub fn mark_saved(&mut self) {
-        self.since_save = 0.0;
-        let planet = self.current_mut();
-        planet.save_notice_timer = SAVE_NOTICE_SECONDS;
-        // A successful write promotes a backup recovery into a healthy
-        // primary save. Keep the warning visible until that point, then let
-        // the normal saved marker replace it.
-        planet.restored_from_backup = false;
-    }
-
-    /// Give every persisted world the same save boundary. Background worlds
-    /// are simulated before the campaign is written, so leaving their older
-    /// timestamps in place would replay that same offline interval on reload.
-    pub(crate) fn stamp_saved_at(&mut self, unix_seconds: i64) {
-        for planet in self.planets.iter_mut().flatten() {
-            planet.last_saved_unix = unix_seconds;
-        }
-    }
-
-    /// Repair the tutorial scope on campaigns written before later worlds
-    /// stopped replaying the opening lesson. Only the starting world owns that
-    /// lesson; this is safe to run on every load and needs no schema bump.
-    pub(crate) fn normalize_tutorial_scope(&mut self) {
-        for (index, planet) in self.planets.iter_mut().enumerate() {
-            if index != STARTING_PLANET {
-                if let Some(planet) = planet {
-                    planet.tutorial_done = true;
-                }
-            }
-        }
-    }
-
     pub fn current_index(&self) -> usize {
         self.current
     }
@@ -356,66 +248,6 @@ impl Campaign {
         self.current = index;
         self.current_mut().arrival_notice_timer = ARRIVAL_NOTICE_SECONDS;
         true
-    }
-
-    /// Tick the active directive against the current planet, rotating to the
-    /// next one when it is done or its window has run out.
-    pub fn update_directive(&mut self, delta_time: f32) {
-        self.since_save += delta_time;
-        self.directive_timer += delta_time;
-        let expired = self.directive_timer >= crate::directives::rotation_seconds(self.data.data())
-            || self.directive.duration <= 0.0
-            || self.directive.completed;
-
-        if expired {
-            let reward = if self.directive.completed {
-                self.directive.reward_data
-            } else {
-                0.0
-            };
-            // A directive used to pay out and rotate without a word, so the
-            // only evidence was the panel quietly saying something else.
-            let announcement = if self.directive.completed {
-                Some(format!(
-                    "Directive met: {} (+{:.0} Data)",
-                    self.directive.description, reward
-                ))
-            } else if self.directive.duration > 0.0 {
-                Some(format!("Directive lapsed: {}", self.directive.description))
-            } else {
-                None
-            };
-            let completed = self.directive.completed;
-            self.directive_history.push(DirectiveRecord {
-                description: self.directive.description.clone(),
-                completed,
-                reward_data: reward,
-                tier: self.directive_tier,
-            });
-            if self.directive_history.len() > 100 {
-                self.directive_history.remove(0);
-            }
-            if let Some(message) = announcement {
-                let planet = self.current_mut();
-                planet.emit_audio(super::audio::AudioEvent::Directive);
-                if completed {
-                    planet.notifications.success(message);
-                } else {
-                    planet.notifications.warning(message);
-                }
-            }
-            if reward > 0.0 {
-                self.current_mut().resources.data += reward;
-            }
-            self.directive_timer = 0.0;
-            self.directive_tier += 1;
-            self.directive = pick_directive(self.data.data(), self.directive_tier);
-        }
-
-        let Some(planet) = self.planets[self.current].as_ref() else {
-            return;
-        };
-        self.directive.update(planet, delta_time);
     }
 }
 

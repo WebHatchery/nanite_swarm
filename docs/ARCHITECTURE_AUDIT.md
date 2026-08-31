@@ -232,6 +232,10 @@ Audit date: 2026-08-20
 - Split compact research-node detail rendering from `research_view/compact.rs`
   into `compact/node_info.rs`, leaving viewport navigation, focus, legends, and
   clipping in the compact controller.
+- Split campaign save timing/history and cross-world simulation from
+  `state/campaign.rs` into `campaign/persistence.rs` and
+  `campaign/simulation.rs`, leaving the root focused on world ownership,
+  travel, and campaign aggregates.
 
 ## Remaining debt
 
@@ -242,7 +246,8 @@ Audit date: 2026-08-20
 - The domain validators still depend on their gameplay vocabularies, by design:
   engine, directive, and state rules are checked by the modules that execute
   them. Cross-file definition integrity now stays in the data domain.
-- Several rendering and test files remain near the 600-line restructure signal
-  (`flow_render.rs`, `terrain_render.rs`, and the larger test suites), but all
-  remain below the 800-line hard limit. They should be split by rendering model
-  or responsibility before the next major feature.
+- A few renderers and state coordinators remain in the 400-line range
+  (`inspector_panel.rs`, `build_palette.rs`, `research_view.rs`, and
+  `game_state.rs`), but each currently has a coherent boundary and remains
+  below the 800-line hard limit. Revisit them when the next feature adds a
+  second responsibility rather than splitting stable seams pre-emptively.
