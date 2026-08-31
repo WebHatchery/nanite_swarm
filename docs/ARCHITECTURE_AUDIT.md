@@ -49,6 +49,10 @@ Audit date: 2026-08-20
 - Split save rotation, corruption recovery, and slot-isolation coverage from
   `state/persistence/tests.rs` into `persistence/tests/recovery.rs`, leaving
   the parent suite focused on migration and round-trip contracts.
+- Split arrival guidance and map-interaction coverage from
+  `state/progress/tests.rs` into `progress/tests/guidance.rs` and
+  `progress/tests/interaction.rs`, leaving rate, capacity, and timer coverage
+  together in the parent suite.
 - Split procedural terrain and building tile generation from
   `graphics_gen/tiles.rs` into `tiles/terrain.rs` and `tiles/buildings.rs`,
   leaving the generator coordinator focused on output helpers and dispatch.
