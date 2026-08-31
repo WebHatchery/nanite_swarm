@@ -432,6 +432,10 @@ impl Campaign {
     ) -> Result<(), String> {
         let width = planet.grid.width;
         let height = planet.grid.height;
+        planet
+            .drones
+            .validate_loaded_ids()
+            .map_err(|error| format!("save world slot {source} {error}"))?;
         let mut ids = HashSet::new();
         for (index, drone) in planet.drones.drones().iter().enumerate() {
             if !ids.insert(drone.id) {

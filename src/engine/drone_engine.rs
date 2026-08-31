@@ -294,6 +294,22 @@ impl DroneManager {
     pub fn total_count(&self) -> usize {
         self.drones.len()
     }
+
+    /// Reject an allocator cursor that would reuse a persisted drone id on
+    /// the next spawn.
+    pub(crate) fn validate_loaded_ids(&self) -> Result<(), String> {
+        if self.next_id == 0
+            || self
+                .drones
+                .iter()
+                .map(|drone| drone.id)
+                .max()
+                .is_some_and(|id| id >= self.next_id)
+        {
+            return Err("has a drone allocator below its roster".to_string());
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]

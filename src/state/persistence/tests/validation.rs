@@ -108,3 +108,15 @@ fn a_save_with_duplicate_drone_ids_is_rejected() {
 
     assert!(load_from_json(&json).is_err());
 }
+
+#[test]
+fn a_save_with_a_stale_drone_allocator_is_rejected() {
+    let mut campaign = campaign();
+    let core = campaign.current().grid.find_core().unwrap();
+    campaign.current_mut().drones.spawn_drone(core);
+    let json = save_to_json(&mut campaign).unwrap();
+    let mut malformed: serde_json::Value = serde_json::from_str(&json).unwrap();
+    malformed["campaign"]["planets"][2]["drones"]["next_id"] = serde_json::Value::from(1);
+
+    assert!(load_from_json(&serde_json::to_string(&malformed).unwrap()).is_err());
+}
