@@ -60,6 +60,8 @@ fn required_capture_scenes_are_registered() {
             "iron_belt_drill_inspection",
             "mountain_wind_inspection",
             "forest_harvester_inspection",
+            "mobile_mountain_wind_inspection",
+            "mobile_forest_harvester_inspection",
             "acid_sea_inspection",
             "ring_shadow_inspection",
             "ice_rift_inspection",

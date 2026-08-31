@@ -54,6 +54,7 @@ impl Game {
         planet.core_stage = 1;
         planet.refresh_stats();
         planet.notifications.clear();
+        planet.mobile_panel = state::MobilePanel::Info;
         let pos = engine::GridPos::new(core.x - 1, core.y);
         if let Some(tile) = planet.grid.get_mut(pos) {
             tile.terrain = engine::TerrainType::Mountain;
@@ -82,6 +83,7 @@ impl Game {
         planet.core_stage = 1;
         planet.refresh_stats();
         planet.notifications.clear();
+        planet.mobile_panel = state::MobilePanel::Info;
         let pos = engine::GridPos::new(core.x - 1, core.y);
         if let Some(tile) = planet.grid.get_mut(pos) {
             tile.terrain = engine::TerrainType::Forest;

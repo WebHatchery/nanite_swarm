@@ -214,8 +214,12 @@ impl Game {
             }
             "iron_belt_inspection" => self.stage_iron_belt_inspection_scene(),
             "iron_belt_drill_inspection" => self.stage_iron_belt_drill_inspection_scene(),
-            "mountain_wind_inspection" => self.stage_mountain_wind_inspection_scene(),
-            "forest_harvester_inspection" => self.stage_forest_harvester_inspection_scene(),
+            "mountain_wind_inspection" | "mobile_mountain_wind_inspection" => {
+                self.stage_mountain_wind_inspection_scene()
+            }
+            "forest_harvester_inspection" | "mobile_forest_harvester_inspection" => {
+                self.stage_forest_harvester_inspection_scene()
+            }
             "acid_sea_inspection" => self.stage_acid_sea_inspection_scene(),
             "ring_shadow_inspection" => self.stage_ring_shadow_inspection_scene(),
             "ice_rift_inspection" => self.stage_ice_rift_inspection_scene(),
