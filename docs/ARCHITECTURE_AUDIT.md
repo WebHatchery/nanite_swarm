@@ -100,6 +100,9 @@ Audit date: 2026-08-20
 - Split alert priority, recovery-button policy, flow detection, and pending
   interaction checks from `bottom_bar.rs` into `bottom_bar/alerts.rs`, keeping
   desktop and mobile alert behavior on one shared policy surface.
+- Split campaign-wide research synchronization, offline research spending,
+  and legacy research adoption from `campaign.rs` into `campaign/research.rs`,
+  leaving travel, autosave, and directive orchestration in the campaign shell.
 - Split planet-state invariants and shipment invariants from
   `state/campaign/validation.rs` into `validation/planet.rs` and
   `validation/shipment.rs`, leaving load orchestration and directive checks in
