@@ -30,8 +30,18 @@ pub(super) fn terrain_effect_label(
     building_type: BuildingType,
     terrain_bonus: Option<&str>,
 ) -> Option<String> {
-    if terrain == Some(TerrainType::Mountain) && building_type == BuildingType::WindTurbine {
-        Some(format!("Terrain: Mountain  {}", terrain_bonus?))
+    let supported = matches!(
+        (terrain, building_type),
+        (Some(TerrainType::Mountain), BuildingType::WindTurbine)
+            | (Some(TerrainType::Forest), BuildingType::BiomassHarvester)
+    );
+    if supported {
+        let terrain_name = match terrain {
+            Some(TerrainType::Mountain) => "Mountain",
+            Some(TerrainType::Forest) => "Forest",
+            _ => return None,
+        };
+        Some(format!("Terrain: {terrain_name}  {}", terrain_bonus?))
     } else {
         None
     }

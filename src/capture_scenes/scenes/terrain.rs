@@ -70,6 +70,35 @@ impl Game {
         planet.grid.update_power_grid();
     }
 
+    pub(super) fn stage_forest_harvester_inspection_scene(&mut self) {
+        self.phase = GamePhase::Playing;
+        self.seed_logistics_scene();
+        let planet = self.campaign.current_mut();
+        let Some(core) = planet.grid.find_core() else {
+            return;
+        };
+        planet.tutorial_hidden = true;
+        planet.tutorial_done = true;
+        planet.core_stage = 1;
+        planet.refresh_stats();
+        planet.notifications.clear();
+        let pos = engine::GridPos::new(core.x - 1, core.y);
+        if let Some(tile) = planet.grid.get_mut(pos) {
+            tile.terrain = engine::TerrainType::Forest;
+            tile.building = None;
+            tile.revealed = true;
+            tile.biomass_amount = 100.0;
+        }
+        planet.grid.reveal_around(pos, 1);
+        planet.unlock_building(engine::BuildingType::BiomassHarvester);
+        planet.select_building(engine::BuildingType::BiomassHarvester);
+        assert!(planet.try_place_building(pos));
+        planet.selected_building = None;
+        planet.selected_tile = Some(pos);
+        planet.notifications.clear();
+        planet.grid.update_power_grid();
+    }
+
     pub(super) fn stage_acid_sea_inspection_scene(&mut self) {
         self.phase = GamePhase::Playing;
         // Keep the capture on Venus so the feature's local corrosion effect

@@ -93,6 +93,14 @@ fn mountain_turbine_keeps_its_terrain_payoff_in_the_inspector() {
         ),
         None
     );
+    assert_eq!(
+        terrain_effect_label(
+            Some(TerrainType::Forest),
+            BuildingType::BiomassHarvester,
+            Some("Pollution buffer (-25% dust nearby)"),
+        ),
+        Some("Terrain: Forest  Pollution buffer (-25% dust nearby)".to_string())
+    );
 }
 
 #[test]

@@ -85,11 +85,13 @@ pub(super) fn draw(
         .any(|tech| tech == "adaptive_clocking");
     let mut tile_harvest = None;
     let mut tile_bonus = None;
+    let mut tile_biomass = 0.0;
     if let Some(tile_pos) = display_pos {
         if let Some(tile) = state.grid.get(tile_pos) {
             tile_terrain = Some(tile.terrain);
             tile_harvest = state.harvest_rewards_at(tile_pos);
             tile_bonus = tile.terrain.preservation_bonus(data);
+            tile_biomass = tile.biomass_amount;
             if let Some(building) = &tile.building {
                 tile_building = Some(building.building_type);
                 tile_pos_with_building = Some(tile_pos);
@@ -239,6 +241,23 @@ pub(super) fn draw(
                     "Next",
                     &core_next_stage_label(state),
                     colors.primary,
+                );
+            } else if building_type == BuildingType::BiomassHarvester
+                && tile_terrain == Some(TerrainType::Forest)
+            {
+                let fuel = if tile_biomass > 0.0 {
+                    format!("{:.0} biomass", tile_biomass)
+                } else {
+                    "DEPLETED".to_string()
+                };
+                draw_status_row(
+                    theme,
+                    right_x + 16.0,
+                    row_base + row_gap * 3.0,
+                    right_w - 32.0,
+                    "Fuel",
+                    &fuel,
+                    if tile_biomass > 0.0 { warning } else { error },
                 );
             } else if let Some(tile) = display_pos.and_then(|pos| state.grid.get(pos)) {
                 let (ore_label, ore_color) = ore_status(tile.ore_richness, colors);
