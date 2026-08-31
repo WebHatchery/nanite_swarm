@@ -237,7 +237,7 @@ impl PlanetState {
         }
     }
 
-    pub(super) fn update_biomass_harvesters(&mut self, delta_time: f32) {
+    pub(crate) fn update_biomass_harvesters(&mut self, delta_time: f32) {
         let output = self.config.resources.biomass_power_output;
         let rate = self.config.resources.biomass_consumption_rate;
         let dust_response = self.resolved_dust_response();
@@ -279,5 +279,23 @@ impl PlanetState {
         }
 
         self.biomass_power_bonus = power_bonus;
+    }
+
+    pub(crate) fn refresh_biomass_power_bonus(&mut self) {
+        let output = self.config.resources.biomass_power_output;
+        let dust_response = self.resolved_dust_response();
+        self.biomass_power_bonus = self
+            .grid
+            .iter_tiles()
+            .filter_map(|(_, tile)| {
+                let building = tile.building.as_ref()?;
+                (building.building_type == BuildingType::BiomassHarvester
+                    && tile.terrain == TerrainType::Forest
+                    && tile.biomass_amount > 0.0
+                    && building.powered
+                    && !building.is_dust_stalled_with(&dust_response))
+                .then_some(output * building.dust_power_generation_multiplier_with(&dust_response))
+            })
+            .sum();
     }
 }

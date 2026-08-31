@@ -71,8 +71,9 @@ pub(crate) fn mobile_offline_report_lines(
     [
         format!("Away {off_h}h {off_m}m | Sim {sim_h}h {sim_m}m{capped_note}{clock_note}"),
         format!(
-            "Gains +{:.0} ore +{:.0} alloy +{:.0} parts +{:.0} data P {:+.0}",
+            "Gains +{:.0} ore +{:.0} bio +{:.0} alloy +{:.0} parts +{:.0} data P {:+.0}",
             report.minerals_gained,
+            report.biomass_gained,
             report.alloy_gained,
             report.components_gained,
             report.data_gained,
@@ -168,8 +169,9 @@ pub(super) fn draw(
         );
         draw_ui_text(
             &format!(
-                "Gains: +{:.0} ore  +{:.0} alloy  +{:.0} parts  +{:.0} data  power {:+.0}",
+                "Gains: +{:.0} ore  +{:.0} biomass  +{:.0} alloy  +{:.0} parts  +{:.0} data  power {:+.0}",
                 state.last_offline_report.minerals_gained,
+                state.last_offline_report.biomass_gained,
                 state.last_offline_report.alloy_gained,
                 state.last_offline_report.components_gained,
                 state.last_offline_report.data_gained,

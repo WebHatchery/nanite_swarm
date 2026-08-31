@@ -22,6 +22,10 @@ impl PlanetState {
         let active_seconds = capped.min(self.battery_seconds.max(0.0));
         let hibernation_seconds = (capped - active_seconds).max(0.0) * 0.1;
         let simulated = active_seconds + hibernation_seconds;
+        self.refresh_biomass_power_bonus();
+        let biomass_before = self.resources.biomass;
+        self.update_biomass_harvesters(simulated);
+        let biomass = (self.resources.biomass - biomass_before).max(0.0);
         let mineral_rate = self.mineral_output_rate();
         let alloy_rate = self.alloy_rate();
         let components_rate = self.components_rate();
@@ -47,6 +51,7 @@ impl PlanetState {
             (self.resources.data + data).min(self.resource_capacity(ResourceType::Data));
         self.resources.energy = (self.resources.energy + power)
             .clamp(0.0, self.resource_capacity(ResourceType::Energy));
+        self.refresh_biomass_power_bonus();
         self.time_played += simulated as f64;
         self.battery_seconds = (self.battery_seconds - capped).max(0.0);
         self.last_offline_report = OfflineReport {
@@ -54,6 +59,7 @@ impl PlanetState {
             capped_seconds: capped,
             tamper_guarded: false,
             minerals_gained: minerals,
+            biomass_gained: biomass,
             alloy_gained: alloy,
             components_gained: components,
             data_gained: data,

@@ -293,6 +293,7 @@ impl Game {
                     elapsed_seconds: planet.last_offline_seconds,
                     capped_seconds: planet.last_offline_seconds,
                     minerals_gained: 740.0,
+                    biomass_gained: 80.0,
                     alloy_gained: 120.0,
                     components_gained: 64.0,
                     data_gained: 360.0,

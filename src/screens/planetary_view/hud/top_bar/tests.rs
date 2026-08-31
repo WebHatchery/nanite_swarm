@@ -73,6 +73,7 @@ fn offline_report_keeps_data_spent_and_ship_stages_visible() {
         elapsed_seconds: 21_600.0,
         capped_seconds: 14_400.0,
         minerals_gained: 740.0,
+        biomass_gained: 42.0,
         alloy_gained: 120.0,
         components_gained: 64.0,
         data_gained: 360.0,
@@ -88,6 +89,7 @@ fn offline_report_keeps_data_spent_and_ship_stages_visible() {
     );
     let lines = mobile_offline_report_lines(report, 21_600.0, 14_400.0);
     assert_eq!(lines[0], "Away 6h 0m | Sim 4h 0m | CAPPED");
+    assert!(lines[1].contains("+42 bio"));
     assert!(lines[1].contains("+360 data"));
     assert!(lines[2].contains("-110 data"));
     assert!(lines[2].contains("Seed Ship +1 stage"));

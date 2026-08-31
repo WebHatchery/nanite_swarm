@@ -176,9 +176,10 @@ progress, and staged cargo are checked before simulation too; derived building
 unlocks are rebuilt from the campaign research mirror when the save loads.
 When it reports LOW BATTERY, tap FLOW to inspect the power network before the
 swarm continues in hibernation.
-While away, the foreground world continues its selected research job and a
-committed Seed Ship yard at the same capped rates as live play; the return
-banner reports the Data spent and any completed ship stages.
+While away, the foreground world continues its selected research job, finite
+biomass harvest, and a committed Seed Ship yard at the same capped rates as
+live play; the return banner reports the biomass and Data changes plus any
+completed ship stages.
 Tap the event-coded NEXT button to jump to the next recovery, research-unlock,
 or mass-driver timer while keeping the whole campaign clock in sync.
 The Solar System map recentres and scales its orbit rings on narrow windows;

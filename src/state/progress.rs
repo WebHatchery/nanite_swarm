@@ -17,6 +17,9 @@ pub struct OfflineReport {
     pub capped_seconds: f32,
     pub tamper_guarded: bool,
     pub minerals_gained: f32,
+    /// Biomass harvested from finite forest tiles while the player was away.
+    #[serde(default)]
+    pub biomass_gained: f32,
     pub alloy_gained: f32,
     pub components_gained: f32,
     pub data_gained: f32,

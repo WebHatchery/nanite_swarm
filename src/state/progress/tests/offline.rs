@@ -71,3 +71,31 @@ fn offline_progress_respects_live_storage_caps() {
     assert_eq!(state.resources.alloy, 1_000.0);
     assert_eq!(state.resources.components, 1_000.0);
 }
+
+#[test]
+fn offline_biomass_harvester_consumes_only_available_forest_and_reports_yield() {
+    let mut state = state();
+    let core = state.grid.find_core().unwrap();
+    let forest = GridPos::new(core.x - 1, core.y);
+    state.grid.reveal_around(forest, 1);
+    let biomass_start = state.config.resources.forest_biomass;
+    let tile = state.grid.get_mut(forest).unwrap();
+    tile.terrain = TerrainType::Forest;
+    tile.biomass_amount = biomass_start;
+    state.unlock_building(BuildingType::BiomassHarvester);
+    state.select_building(BuildingType::BiomassHarvester);
+    assert!(state.try_place_building(forest));
+
+    state.apply_offline_progress(biomass_start + 30.0);
+
+    assert!(approx_eq(
+        state.last_offline_report.biomass_gained,
+        biomass_start,
+        0.001
+    ));
+    assert!(approx_eq(state.resources.biomass, biomass_start, 0.001));
+    let tile = state.grid.get(forest).unwrap();
+    assert_eq!(tile.terrain, TerrainType::Empty);
+    assert!(approx_eq(tile.biomass_amount, 0.0, 0.001));
+    assert!(approx_eq(state.biomass_harvest_rate(), 0.0, 0.001));
+}
