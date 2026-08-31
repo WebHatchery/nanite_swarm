@@ -291,6 +291,9 @@ Audit date: 2026-08-31
 - Split Records achievement cards and the durable event log into
   `records_view/cards.rs` and `records_view/log.rs`, leaving the parent focused
   on responsive layout, scrolling orchestration, and screen actions.
+- Split upkeep coverage, forest-buffer, uncovered-hazard, and hazard-field
+  overlays from `upkeep_render.rs` into `upkeep_render/coverage.rs`, leaving
+  the parent focused on wear, severed-network, and notification overlays.
 
 ## Remaining debt
 
