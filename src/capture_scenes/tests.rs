@@ -56,7 +56,8 @@ fn required_capture_scenes_are_registered() {
             "mobile_shipping_reserve",
             "feature_inspection",
             "mobile_feature_inspection",
-            "iron_belt_inspection"
+            "iron_belt_inspection",
+            "acid_sea_inspection"
         ]
     );
 }

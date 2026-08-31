@@ -234,6 +234,15 @@ fn validate_planets(
                     planet.id, feature.id
                 ));
             }
+            if feature
+                .acid_multiplier
+                .is_some_and(|multiplier| !multiplier.is_finite() || multiplier < 1.0)
+            {
+                return Err(format!(
+                    "assets/planets.json planet \"{}\" feature \"{}\" has invalid acid multiplier",
+                    planet.id, feature.id
+                ));
+            }
         }
         if let Some(error) = duplicate_id(
             &format!("assets/planets.json planet \"{}\" features", planet.id),

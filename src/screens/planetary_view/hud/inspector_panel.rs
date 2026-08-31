@@ -14,6 +14,9 @@ use macroquad_toolkit::ui::draw_ui_text;
 use super::super::format::{dust_status, fit_text_to_width, format_power_delta};
 use super::{PanelColors, RightStackLayout};
 
+mod terrain_layout;
+use terrain_layout::{feature_label, terrain_detail_offsets, terrain_feature_lines};
+
 fn processor_action_label(
     output_full: bool,
     purge_armed: bool,
@@ -105,6 +108,7 @@ pub(super) fn draw(
     }
     let tile_feature = display_pos.and_then(|pos| state.feature_at(pos)).cloned();
     let feature_ore_multiplier = display_pos.and_then(|pos| state.feature_ore_multiplier_at(pos));
+    let feature_acid_multiplier = display_pos.and_then(|pos| state.feature_acid_multiplier_at(pos));
 
     let inspected_building = tile_building.or(state.selected_building);
     if let Some(building_type) = inspected_building {
@@ -376,7 +380,11 @@ pub(super) fn draw(
         );
         if let Some(feature) = tile_feature.as_ref() {
             if feature_lines > 0 {
-                let feature_name = feature_label(&feature.name, feature_ore_multiplier);
+                let feature_name = feature_label(
+                    &feature.name,
+                    feature_ore_multiplier,
+                    feature_acid_multiplier,
+                );
                 draw_ui_text(
                     &fit_text_to_width(&feature_name, right_w - 32.0, 10.0),
                     right_x + 16.0,
@@ -464,38 +472,6 @@ pub(super) fn draw(
                 dim,
             );
         }
-    }
-}
-
-fn feature_label(name: &str, ore_multiplier: Option<f32>) -> String {
-    match ore_multiplier {
-        Some(multiplier) => {
-            let bonus = ((multiplier - 1.0) * 100.0).round() as i32;
-            format!("Feature: {name}  +{bonus}% ORE")
-        }
-        None => format!("Feature: {name}"),
-    }
-}
-
-fn terrain_feature_lines(inspector_h: f32, has_feature: bool) -> usize {
-    if !has_feature || inspector_h < 164.0 {
-        0
-    } else if inspector_h >= 206.0 {
-        2
-    } else {
-        1
-    }
-}
-
-fn terrain_detail_offsets(inspector_h: f32) -> (f32, f32, f32) {
-    if inspector_h < 130.0 {
-        (60.0, 76.0, 0.0)
-    } else if inspector_h < 180.0 {
-        // Forests have two buttons, so their preservation line must clear the
-        // compact action row rather than hiding behind it.
-        (70.0, 86.0, 100.0)
-    } else {
-        (82.0, 106.0, 126.0)
     }
 }
 

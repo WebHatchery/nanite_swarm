@@ -47,13 +47,17 @@ fn feature_detail_uses_only_the_space_the_inspector_can_hold() {
 }
 
 #[test]
-fn feature_label_surfaces_a_local_ore_multiplier() {
+fn feature_label_surfaces_local_feature_effects() {
     assert_eq!(
-        feature_label("Iron Belt", Some(1.5)),
+        feature_label("Iron Belt", Some(1.5), None),
         "Feature: Iron Belt  +50% ORE"
     );
     assert_eq!(
-        feature_label("Landing Crater", None),
+        feature_label("Acid Sea", None, Some(1.8)),
+        "Feature: Acid Sea  +80% ACID"
+    );
+    assert_eq!(
+        feature_label("Landing Crater", None, None),
         "Feature: Landing Crater"
     );
 }

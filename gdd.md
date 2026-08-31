@@ -103,10 +103,11 @@ output rather than permanently better output.
 
 Each authored world may carry a deterministic landmark over its terrain. A
 landmark stays hidden until its tiles are surveyed, then becomes both a local
-dossier and a strategic placement cue. The Mercury Iron Belt is the first
-mechanical landmark: a drill placed on its surveyed tiles cuts 50% more ore.
-The bonus is local to the feature and does not change the ordinary deposit
-depletion rule.
+dossier and a strategic placement cue. The Mercury Iron Belt raises drill
+output by 50% on its surveyed tiles, while Venus's Acid Sea raises corrosion on
+local power-transmitting machinery by 80%. These effects are local to their
+features: the Iron Belt does not change ordinary deposit depletion, and the
+Acid Sea stacks with Venus's ordinary atmosphere and field exposure.
 
 ### The Synapse (Research)
 

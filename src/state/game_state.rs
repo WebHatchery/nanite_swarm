@@ -7,6 +7,7 @@ use super::seed_ship::SeedShip;
 mod features;
 use crate::data::{GameConfig, GameData, GameDataContext, PlanetHazards};
 use crate::engine::{BuildingType, DroneManager, Grid, GridPos, ResourceType, Stats};
+pub(crate) use features::feature_hazard_multiplier;
 pub use features::PlanetFeature;
 use macroquad::miniquad;
 use macroquad_toolkit::achievements::{Achievement, Achievements};
@@ -444,7 +445,7 @@ impl PlanetState {
         grid.attach_data(data.clone());
         grid.initialize_forest_biomass(config.resources.forest_biomass);
         let mut features = features::generated_features(def, seed);
-        features::anchor_ore_features(&mut features, def, &grid);
+        features::anchor_effect_features(&mut features, def, &grid);
 
         // Place Core at center
         let center = GridPos::new(width as i32 / 2, height as i32 / 2);

@@ -288,6 +288,9 @@ pub struct PlanetFeatureDef {
     /// Multiplies ore cut by a drill placed on this feature's revealed tiles.
     #[serde(default)]
     pub ore_multiplier: Option<f32>,
+    /// Multiplies local acid exposure for machinery on this feature.
+    #[serde(default)]
+    pub acid_multiplier: Option<f32>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

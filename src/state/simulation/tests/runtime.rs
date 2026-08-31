@@ -55,6 +55,48 @@ fn dust_accumulates_on_powered_buildings_over_time() {
     assert!(dust > 0.0);
 }
 
+fn conduit_wear_on_feature(on_feature: bool) -> (f32, f32) {
+    let mut state = PlanetState::new(1, 42, GameConfig::default());
+    let core = state.grid.find_core().unwrap();
+    let pos = GridPos::new(core.x + 1, core.y);
+    if let Some(tile) = state.grid.get_mut(pos) {
+        tile.terrain = TerrainType::Empty;
+        tile.revealed = true;
+    }
+    state.features[0].bounds = if on_feature {
+        (0.45, 0.45, 0.20, 0.20)
+    } else {
+        (0.0, 0.0, 0.05, 0.05)
+    };
+    state.unlock_building(BuildingType::Conduit);
+    state.select_building(BuildingType::Conduit);
+    assert!(state.try_place_building(pos));
+    state.grid.update_power_grid();
+
+    state.update_dust(10.0);
+    state
+        .grid
+        .get(pos)
+        .and_then(|tile| tile.building.as_ref())
+        .map(|building| (building.dust, building.acid_wear))
+        .unwrap_or((0.0, 0.0))
+}
+
+#[test]
+fn acid_sea_increases_local_corrosion_without_changing_dust() {
+    let ordinary = conduit_wear_on_feature(false);
+    let basin = conduit_wear_on_feature(true);
+
+    assert!(ordinary.0 > 0.0);
+    assert!((basin.0 - ordinary.0).abs() < 0.001);
+    assert!(
+        (basin.1 - ordinary.1 * 1.8).abs() < 0.001,
+        "Acid Sea corrosion was {}, expected 1.8x ordinary exposure {}",
+        basin.1,
+        ordinary.1
+    );
+}
+
 /// Dust on a drill with an optional intact forest placed at a known distance.
 fn drill_dust_with_forest_at(distance: Option<i32>) -> f32 {
     let mut state = state();

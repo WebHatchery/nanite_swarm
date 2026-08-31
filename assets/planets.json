@@ -33,7 +33,7 @@
       "banned_buildings": ["wind_turbine", "biomass_harvester"],
       "arrival": "The sky is opaque and the ground is broken. Neither is a problem worth solving, only routing around.",
       "pending_pod_cap": 3,
-      "features": [{"id":"acid_sea","name":"Acid Sea","description":"A corrosive basin traced by the field seed.","width":0.32,"height":0.20,"seed_offset":19}],
+      "features": [{"id":"acid_sea","name":"Acid Sea","description":"A corrosive basin traced by the field seed.","width":0.32,"height":0.20,"seed_offset":19,"acid_multiplier":1.8}],
       "hazard_fields": [{"id":"storm_front","name":"Storm Front","hazard":"acid","center":[0.68,0.30],"radius":0.25,"strength":1.0}]
     },
     {

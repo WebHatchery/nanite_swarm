@@ -63,6 +63,18 @@ impl PlanetState {
             .and_then(|definition| definition.ore_multiplier)
             .filter(|multiplier| multiplier.is_finite() && *multiplier > 1.0)
     }
+
+    /// The authored acid exposure for a revealed feature tile, if it has one.
+    pub fn feature_acid_multiplier_at(&self, pos: GridPos) -> Option<f32> {
+        let feature = self.feature_at(pos)?;
+        self.data()
+            .planet(self.planet_index)
+            .features
+            .iter()
+            .find(|definition| definition.id == feature.id)
+            .and_then(|definition| definition.acid_multiplier)
+            .filter(|multiplier| multiplier.is_finite() && *multiplier > 1.0)
+    }
 }
 
 pub(super) fn generated_features(def: &PlanetDef, seed: u64) -> Vec<PlanetFeature> {
@@ -93,15 +105,19 @@ pub(super) fn generated_features(def: &PlanetDef, seed: u64) -> Vec<PlanetFeatur
 /// where a drill can never be placed. The feature remains deterministic: only
 /// its position moves to the nearest buildable tile when the original region
 /// has no usable ground.
-pub(super) fn anchor_ore_features(features: &mut [PlanetFeature], def: &PlanetDef, grid: &Grid) {
+pub(super) fn anchor_effect_features(features: &mut [PlanetFeature], def: &PlanetDef, grid: &Grid) {
     for feature in features {
-        let has_ore_bonus = def
+        let has_effect = def
             .features
             .iter()
             .find(|definition| definition.id == feature.id)
-            .and_then(|definition| definition.ore_multiplier)
-            .is_some_and(|multiplier| multiplier > 1.0);
-        if !has_ore_bonus {
+            .is_some_and(|definition| {
+                [definition.ore_multiplier, definition.acid_multiplier]
+                    .into_iter()
+                    .flatten()
+                    .any(|multiplier| multiplier > 1.0)
+            });
+        if !has_effect {
             continue;
         }
         let has_buildable_tile = grid.iter_tiles().any(|(pos, tile)| {
@@ -146,4 +162,36 @@ fn normalized_tile_distance(pos: GridPos, center: (f32, f32), grid: &Grid) -> f3
     let dx = tile_x - center.0;
     let dy = tile_y - center.1;
     dx * dx + dy * dy
+}
+
+/// Resolve a local hazard multiplier without requiring a mutable world borrow.
+/// Simulation loops use this while they are already iterating over the grid or
+/// drone list, so the feature and definition snapshots stay explicit.
+pub(crate) fn feature_hazard_multiplier(
+    features: &[PlanetFeature],
+    definitions: &[crate::data::PlanetFeatureDef],
+    pos: GridPos,
+    grid_width: u32,
+    grid_height: u32,
+    hazard: &str,
+) -> f32 {
+    let Some(feature) = features
+        .iter()
+        .find(|feature| feature.contains_tile(pos, grid_width, grid_height))
+    else {
+        return 1.0;
+    };
+    let multiplier = definitions
+        .iter()
+        .find(|definition| definition.id == feature.id)
+        .and_then(|definition| match hazard {
+            "acid" => definition.acid_multiplier,
+            _ => None,
+        })
+        .unwrap_or(1.0);
+    if multiplier.is_finite() {
+        multiplier.max(1.0)
+    } else {
+        1.0
+    }
 }
