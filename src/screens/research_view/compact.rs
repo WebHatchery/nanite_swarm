@@ -3,6 +3,8 @@
 use super::*;
 
 const SHORT_PHONE_TREE_HEIGHT: f32 = 120.0;
+const MOBILE_DESCRIPTION_LINE_HEIGHT: f32 = 13.0;
+const MOBILE_DESCRIPTION_MAX_LINES: usize = 2;
 
 fn compact_legend_labels(screen_w: f32) -> [&'static str; 4] {
     if screen_w < 300.0 {
@@ -355,15 +357,19 @@ fn draw_mobile_node_info(
         14.0,
         Colors::TEXT,
     );
-    draw_ui_text(
-        &truncate_text_to_width(&node.description, text_w, 11.0),
-        panel_x + 12.0,
-        y + 38.0,
-        11.0,
-        Colors::TEXT_DIM,
-    );
+    let description_lines = mobile_description_lines(&node.description, text_w, 11.0);
+    for (line_index, line) in description_lines.iter().enumerate() {
+        draw_ui_text(
+            line,
+            panel_x + 12.0,
+            y + 38.0 + line_index as f32 * MOBILE_DESCRIPTION_LINE_HEIGHT,
+            11.0,
+            Colors::TEXT_DIM,
+        );
+    }
 
-    let mut detail_y = y + 58.0;
+    let mut detail_y =
+        y + 38.0 + description_lines.len() as f32 * MOBILE_DESCRIPTION_LINE_HEIGHT + 7.0;
     for (text, color) in node_effects(data, node_id) {
         draw_ui_text(
             &truncate_text_to_width(&text, text_w, 11.0),
@@ -437,6 +443,18 @@ fn draw_mobile_node_info(
         11.0,
         color,
     );
+}
+
+fn mobile_description_lines(text: &str, text_w: f32, font_size: f32) -> Vec<String> {
+    let mut lines = wrap_text(text, text_w, font_size);
+    let truncated = lines.len() > MOBILE_DESCRIPTION_MAX_LINES;
+    lines.truncate(MOBILE_DESCRIPTION_MAX_LINES);
+    if truncated {
+        if let Some(last) = lines.last_mut() {
+            *last = truncate_text_to_width(&format!("{last}..."), text_w, font_size);
+        }
+    }
+    lines
 }
 
 #[cfg(test)]

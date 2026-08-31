@@ -5,7 +5,9 @@ use crate::state::StatReading;
 use crate::ui::{draw_button_sized, draw_panel, Colors, Dimensions};
 use macroquad::prelude::*;
 use macroquad_toolkit::math::pulse01;
-use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text, truncate_text_to_width, Pointer};
+use macroquad_toolkit::ui::{
+    draw_ui_text, measure_ui_text, truncate_text_to_width, wrap_text, Pointer,
+};
 
 mod compact;
 mod effects;
