@@ -127,7 +127,8 @@ or `JUMP MIXED` when upkeep is the active recovery.
 When a remote freight order is selected, switching to WORLDS keeps that
 source's dossier selected. If its route needs a receiving pad, the dossier
 names the destination row to tap; if the driver is the blocker, it names the
-source row instead.
+source row instead. On desktop, the edited source row also carries an accent
+outline so the order remains anchored while the orbit map is in view.
 When it reports SAVE FAILED, tap RETRY to attempt the campaign save again.
 On the title screen, SAVE appears only after New Game or Continue/Load, so an
 existing slot cannot be overwritten before a campaign is selected.

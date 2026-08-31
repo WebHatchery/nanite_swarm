@@ -77,6 +77,18 @@ fn solar_map_layout(
     )
 }
 
+fn initial_dossier_focus(
+    launch_confirmation_target: Option<usize>,
+    editing_world: usize,
+    current_planet: usize,
+    planet_count: usize,
+) -> Option<usize> {
+    launch_confirmation_target
+        .filter(|index| *index < planet_count)
+        .or_else(|| (editing_world < planet_count).then_some(editing_world))
+        .or_else(|| (current_planet < planet_count).then_some(current_planet))
+}
+
 /// Everything the map reads out of the campaign. One struct rather than a
 /// growing row of positional booleans, which is how a caller ends up passing
 /// "ready" where "colonized" was wanted.
@@ -192,7 +204,12 @@ pub fn render_interplanetary_view(
     // Keep a dossier visible when the map opens. This gives touch players a
     // useful first target and means the planet list can be used for travel
     // without making the orbit nodes the only way to learn about a world.
-    let mut hovered_planet = view.launch_confirmation_target.or(Some(current_planet));
+    let mut hovered_planet = initial_dossier_focus(
+        view.launch_confirmation_target,
+        view.editing_world,
+        current_planet,
+        planets.len(),
+    );
     let mut action = InterplanetaryAction::None;
 
     let list_x = 16.0;

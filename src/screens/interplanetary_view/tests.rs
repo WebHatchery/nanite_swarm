@@ -1,4 +1,3 @@
-use super::compact_interplanetary_layout;
 use super::shipping_panel::{
     remote_section_shift, reserve_status_text, route_hit_test, route_segment, route_status_label,
     shipment_route_label, target_pad_available,
@@ -11,6 +10,7 @@ use super::world_dossier::{
     compact_shipping_status, shipping_status_line, shipping_summary, world_alert_code,
     world_rule_lines, world_telemetry_height,
 };
+use super::{compact_interplanetary_layout, initial_dossier_focus};
 
 #[test]
 fn shipping_status_distinguishes_absent_and_offline_drivers() {
@@ -120,6 +120,14 @@ fn short_or_tablet_worlds_use_the_full_width_compact_layout() {
     assert!(compact_interplanetary_layout(1280.0, 400.0));
     assert!(compact_interplanetary_layout(800.0, 720.0));
     assert!(!compact_interplanetary_layout(1280.0, 720.0));
+}
+
+#[test]
+fn desktop_dossier_follows_the_remote_order_source_until_a_launch_is_confirmed() {
+    assert_eq!(initial_dossier_focus(None, 4, 2, 5), Some(4));
+    assert_eq!(initial_dossier_focus(Some(1), 4, 2, 5), Some(1));
+    assert_eq!(initial_dossier_focus(Some(9), 4, 2, 5), Some(4));
+    assert_eq!(initial_dossier_focus(None, 9, 2, 5), Some(2));
 }
 
 fn telemetry(alerts: usize, alert_kind: crate::state::WorldAlert) -> crate::state::WorldTelemetry {

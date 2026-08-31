@@ -42,6 +42,8 @@ pub(super) fn draw_planet_list(
     for (index, planet) in view.data.planets.iter().enumerate() {
         let is_current = index == view.current_planet;
         let is_colonized = view.colonized.get(index).copied().unwrap_or(false);
+        let is_editing = index == view.editing_world
+            && view.orders.get(index).is_some_and(|order| order.is_some());
         let row = Rect::new(x + 8.0, row_y - row_top_offset, w - 16.0, row_height);
         note_neighbour(row);
         let hit_row = touch_area(row);
@@ -59,9 +61,14 @@ pub(super) fn draw_planet_list(
         } else if view.launch_confirmation_target == Some(index) {
             draw_rectangle(row.x, row.y, row.w, row.h, Color::new(1.0, 0.45, 0.1, 0.14));
         }
+        if is_editing {
+            draw_rectangle_lines(row.x, row.y, row.w, row.h, 1.0, Colors::ACCENT);
+        }
         let confirming = view.launch_confirmation_target == Some(index);
         let label_color = if is_current {
             Colors::PRIMARY
+        } else if is_editing {
+            Colors::ACCENT
         } else if is_colonized {
             Colors::SUCCESS
         } else if confirming {
