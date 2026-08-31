@@ -256,7 +256,7 @@ Audit date: 2026-08-20
   engine, directive, and state rules are checked by the modules that execute
   them. Cross-file definition integrity now stays in the data domain.
 - A few renderers and state coordinators remain in the 400-line range
-  (`inspector_panel.rs`, `build_palette.rs`, `research_view.rs`, and
-  `game_state.rs`), but each currently has a coherent boundary and remains
+  (`research_view.rs`, `game_state.rs`, `main/update.rs`, and the larger
+  validation suites), but each currently has a coherent boundary and remains
   below the 800-line hard limit. Revisit them when the next feature adds a
   second responsibility rather than splitting stable seams pre-emptively.

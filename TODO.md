@@ -1,6 +1,6 @@
 # Outstanding work — Nanite Swarm
 
-Last verified: 2026-08-30.
+Last verified: 2026-08-31.
 
 The implementation items from the 2026-07-14 GDD audit are complete. There
 are no known gameplay, save-system, UI, audio, release, or source-size gate
