@@ -56,3 +56,42 @@ fn a_nonfinite_collapse_loss_is_rejected_before_a_failure() {
         "collapse.max_data_loss must be finite and between 0 and 1"
     );
 }
+
+#[test]
+fn a_filter_multiplier_above_one_is_rejected_before_upkeep() {
+    let mut config = GameConfig::default();
+    config.upkeep.filter_multiplier = 1.1;
+
+    let error = config.validate().unwrap_err();
+
+    assert_eq!(
+        error,
+        "upkeep.filter_multiplier must be finite and between 0 and 1"
+    );
+}
+
+#[test]
+fn a_forest_buffer_multiplier_above_one_is_rejected_before_upkeep() {
+    let mut config = GameConfig::default();
+    config.upkeep.forest_buffer_multiplier = 1.1;
+
+    let error = config.validate().unwrap_err();
+
+    assert_eq!(
+        error,
+        "upkeep.forest_buffer_multiplier must be finite and between 0 and 1"
+    );
+}
+
+#[test]
+fn a_hazard_counter_strength_above_one_is_rejected_before_hazard_simulation() {
+    let mut config = GameConfig::default();
+    config.upkeep.hazard_counter_strength = 1.1;
+
+    let error = config.validate().unwrap_err();
+
+    assert_eq!(
+        error,
+        "upkeep.hazard_counter_strength must be finite and between 0 and 1"
+    );
+}

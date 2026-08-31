@@ -193,22 +193,26 @@ impl GameConfig {
         for (field, value) in [
             ("upkeep.dust_rate", self.upkeep.dust_rate),
             ("upkeep.sweeper_rate", self.upkeep.sweeper_rate),
+            (
+                "upkeep.pollution_multiplier",
+                self.upkeep.pollution_multiplier,
+            ),
+            ("upkeep.acid_multiplier", self.upkeep.acid_multiplier),
+        ] {
+            require_nonnegative(value, field)?;
+        }
+        for (field, value) in [
             ("upkeep.filter_multiplier", self.upkeep.filter_multiplier),
             (
                 "upkeep.forest_buffer_multiplier",
                 self.upkeep.forest_buffer_multiplier,
             ),
             (
-                "upkeep.pollution_multiplier",
-                self.upkeep.pollution_multiplier,
-            ),
-            ("upkeep.acid_multiplier", self.upkeep.acid_multiplier),
-            (
                 "upkeep.hazard_counter_strength",
                 self.upkeep.hazard_counter_strength,
             ),
         ] {
-            require_nonnegative(value, field)?;
+            require_unit(value, field)?;
         }
         for (field, radius) in [
             ("upkeep.sweeper_radius", self.upkeep.sweeper_radius),
