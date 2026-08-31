@@ -39,6 +39,10 @@ Audit date: 2026-08-20
 - Split PlanetState map interaction mutation from `src/state/progress.rs` into
   `progress/interaction.rs`, and moved world construction constraints,
   hazard-field math, and resource ceilings into `progress/constraints.rs`.
+- Split PlanetState records, graph telemetry modes, blueprints, undo entries,
+  and research progress from `src/state/game_state.rs` into
+  `game_state/records.rs` and `game_state/research.rs`, leaving the state
+  aggregate focused on world fields and lifecycle construction.
 - Split the touch-sized top-bar renderer from `top_bar.rs` into
   `top_bar/mobile.rs`, leaving desktop metrics and notice layout independent
   from future mobile navigation changes.

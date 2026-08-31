@@ -5,6 +5,8 @@ pub use super::consumption::{ConsumptionTotals, Resources};
 use super::factory::FactoryFocus;
 use super::seed_ship::SeedShip;
 mod features;
+mod records;
+mod research;
 use crate::data::{GameConfig, GameData, GameDataContext, PlanetHazards};
 use crate::engine::{BuildingType, DroneManager, Grid, GridPos, ResourceType, Stats};
 pub(crate) use features::feature_cooling_multiplier;
@@ -17,8 +19,9 @@ use macroquad_toolkit::fx::ParticleSystem;
 use macroquad_toolkit::input::TouchGesture;
 use macroquad_toolkit::notifications::NotificationManager;
 use macroquad_toolkit::ui::ScrollArea;
+pub use records::{BlueprintEntry, CollapseRecord, GraphMode, GraphSample, UndoEntry};
+pub use research::ResearchProgress;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 /// Real time and world time run at the same rate until the player says
 /// otherwise.
@@ -47,110 +50,6 @@ fn unix_seconds_now() -> i64 {
 pub struct PlacementAnim {
     pub position: GridPos,
     pub timer: f32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CollapseRecord {
-    pub source: String,
-    pub building: Option<BuildingType>,
-    pub position: Option<GridPos>,
-    pub world_time: f64,
-}
-
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
-pub struct GraphSample {
-    pub power_produced: f32,
-    pub power_consumed: f32,
-    #[serde(default)]
-    pub minerals_consumed: f32,
-    pub alloy_produced: f32,
-    pub alloy_consumed: f32,
-    #[serde(default)]
-    pub components_produced: f32,
-    #[serde(default)]
-    pub components_consumed: f32,
-    pub data_produced: f32,
-    pub data_consumed: f32,
-}
-
-/// Which telemetry family the compact bottom graph is showing.
-///
-/// This is session UI state rather than campaign state: a save reopens on the
-/// familiar factory-flow view, while the player can tap through power and
-/// Data whenever those signals matter more.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub enum GraphMode {
-    #[default]
-    Flow,
-    Power,
-    Data,
-}
-
-impl GraphMode {
-    pub fn next(self) -> Self {
-        match self {
-            Self::Flow => Self::Power,
-            Self::Power => Self::Data,
-            Self::Data => Self::Flow,
-        }
-    }
-
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Flow => "FLOW",
-            Self::Power => "POWER",
-            Self::Data => "DATA",
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct BlueprintEntry {
-    pub offset: (i32, i32),
-    pub building_type: BuildingType,
-    #[serde(default)]
-    pub overclocked: bool,
-    #[serde(default)]
-    pub input_priority: bool,
-    #[serde(default)]
-    pub standby: bool,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum UndoEntry {
-    Placed(GridPos),
-    Removed(BuildingType, GridPos, bool, bool, bool),
-    Relocated(GridPos, GridPos),
-}
-/// Research node status
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResearchProgress {
-    pub unlocked_techs: Vec<String>,
-    pub current_research: Option<String>,
-    pub research_progress: f32,
-    /// Partial work on nodes not currently selected for research.
-    #[serde(default)]
-    pub parked_progress: HashMap<String, f32>,
-}
-
-impl Default for ResearchProgress {
-    fn default() -> Self {
-        Self {
-            unlocked_techs: Vec::new(),
-            current_research: None,
-            research_progress: 0.0,
-            parked_progress: HashMap::new(),
-        }
-    }
-}
-
-impl ResearchProgress {
-    pub fn from_data(data: &GameData) -> Self {
-        Self {
-            unlocked_techs: data.research.starting_unlocked.clone(),
-            ..Self::default()
-        }
-    }
 }
 
 /// Current game state for a planet
