@@ -52,6 +52,9 @@ Audit date: 2026-08-20
 - Split standing-order cycling and reserve-policy coverage into
   `state/shipping/tests/orders.rs`, keeping the freight test coordinator below
   the hard source-size limit as remote-route behavior continues to grow.
+- Split network routing, drone recovery, and congestion accounting into
+  `state/logistics/routes.rs`, leaving the logistics coordinator focused on
+  producer dispatch before the next network feature expands it.
 
 ## Remaining debt
 
