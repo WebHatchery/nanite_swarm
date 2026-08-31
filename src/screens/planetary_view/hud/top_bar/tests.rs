@@ -1,7 +1,8 @@
 use super::notices::{mobile_offline_report_lines, offline_work_label};
 use super::{
-    compact_resource_amount, compact_resource_readout, mobile_offline_work_label,
-    mobile_research_status, mobile_status_text, resource_rate_label, top_bar_layout,
+    compact_hidden_resource_readout, compact_resource_amount, compact_resource_readout,
+    mobile_offline_work_label, mobile_research_status, mobile_status_text, resource_rate_label,
+    top_bar_layout,
 };
 use crate::engine::ResourceType;
 use crate::state::OfflineReport;
@@ -142,4 +143,13 @@ fn compact_resource_amount_keeps_small_pools_visible() {
     assert_eq!(compact_resource_amount(14.0), "14");
     assert_eq!(compact_resource_amount(999.0), "999");
     assert_eq!(compact_resource_amount(1_000.0), "1k");
+}
+
+#[test]
+fn compact_desktop_header_keeps_alloy_and_biomass_visible() {
+    let mut state = PlanetState::default();
+    state.resources.alloy = 12.0;
+    state.resources.biomass = 34.0;
+
+    assert_eq!(compact_hidden_resource_readout(&state), "A12/1k B34/1k");
 }

@@ -167,6 +167,21 @@ fn compact_resource_readout_for_screen(state: &PlanetState, screen_w: f32) -> (S
     )
 }
 
+fn compact_hidden_resource_readout(state: &PlanetState) -> String {
+    let compact = |resource: ResourceType| {
+        format!(
+            "{}/{}",
+            compact_resource_amount(state.resources.get(resource)),
+            compact_resource_amount(state.resource_capacity(resource))
+        )
+    };
+    format!(
+        "A{} B{}",
+        compact(ResourceType::Alloy),
+        compact(ResourceType::Biomass)
+    )
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(super) fn draw(
     state: &PlanetState,
@@ -214,6 +229,15 @@ pub(super) fn draw(
         },
         if hazard.is_empty() { dim } else { warning },
     );
+    if layout.compact {
+        draw_ui_text(
+            &compact_hidden_resource_readout(state),
+            66.0,
+            70.0,
+            8.0,
+            dim,
+        );
+    }
     draw_line(24.0, 24.0, 36.0, 14.0, 1.5, primary);
     draw_line(24.0, 24.0, 36.0, 34.0, 1.5, primary);
     draw_line(48.0, 24.0, 36.0, 14.0, 1.5, primary_soft);

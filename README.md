@@ -203,6 +203,8 @@ Tap an untouched world once to prepare a launch, then tap its highlighted
 Travel to an already-colonized world remains one tap.
 At compact browser sizes, the resource cards abbreviate and the build/right
 panels use short summaries so touch controls remain separated and visible.
+Compact desktop headers keep Alloy and Biomass current/capacity readouts under
+the world subtitle when the 720p layout reduces the main cards to four.
 At short desktop heights or tablet widths, Solar System uses full-width Worlds
 and Shipping panels so the dossier, route controls, and footer do not collide.
 After a world change, the mobile header briefly names the arrival as
