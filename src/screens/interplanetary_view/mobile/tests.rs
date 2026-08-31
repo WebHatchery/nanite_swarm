@@ -1,8 +1,34 @@
 use super::{
-    mobile_footer_hint_text, mobile_info_height, mobile_route_action, mobile_status_text,
-    mobile_world_focus, mobile_worlds_layout,
+    compact_stockpile_summary, mobile_footer_hint_text, mobile_info_height, mobile_route_action,
+    mobile_status_text, mobile_world_focus, mobile_worlds_layout,
 };
-use crate::state::InterplanetaryMobilePanel;
+use crate::state::{InterplanetaryMobilePanel, WorldAlert, WorldTelemetry};
+
+fn telemetry() -> WorldTelemetry {
+    WorldTelemetry {
+        minerals: 123.0,
+        mineral_capacity: 200.0,
+        data: 4.0,
+        biomass: 5.0,
+        alloy: 6.0,
+        components: 7.0,
+        ore_rate: 0.0,
+        data_rate: 0.0,
+        biomass_rate: 0.0,
+        alloy_rate: 0.0,
+        components_rate: 0.0,
+        power_balance: 0.0,
+        structures: 0,
+        drones: 0,
+        core_stage: 1,
+        core_stage_count: 5,
+        core_next_requirement: None,
+        alerts: 0,
+        alert_kind: WorldAlert::Nominal,
+        storage_full_resource: None,
+        maintenance_cause: None,
+    }
+}
 
 #[test]
 fn mobile_dossier_status_keeps_the_remote_alert_reason_visible() {
@@ -17,6 +43,14 @@ fn mobile_dossier_status_keeps_the_remote_alert_reason_visible() {
     assert_eq!(
         mobile_status_text(false, None),
         "Status: UNEXPLORED".to_string()
+    );
+}
+
+#[test]
+fn short_dossier_stock_summary_keeps_every_remote_pool_scannable() {
+    assert_eq!(
+        compact_stockpile_summary(&telemetry()),
+        "Stock M123/200 D4 B5 A6 C7"
     );
 }
 

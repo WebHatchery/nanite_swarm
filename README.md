@@ -209,6 +209,8 @@ After a world change, the mobile header briefly names the arrival as
 `ARRIVED <WORLD>` while the desktop banner keeps the full arrival line.
 Portrait world dossiers repeat the selected world's alert code in the status
 line, so a remote maintenance cause stays visible after tapping its row.
+On very short phones, a routed world keeps its compact stockpile summary beside
+the route status, so freight context does not hide remote resource levels.
 On portrait screens, BUILD and INFO open one full-width drawer at a time;
 MAP returns to the live grid between actions.
 The mobile gameplay header also keeps the active research job's DATA progress

@@ -1,5 +1,6 @@
 //! Touch-sized dossier details for one world in the Solar System list.
 
+use crate::state::WorldTelemetry;
 use crate::ui::{color_from_rgba, draw_panel, Colors};
 use macroquad::prelude::*;
 use macroquad_toolkit::ui::{draw_ui_text, truncate_text_to_width};
@@ -70,17 +71,18 @@ pub(super) fn draw_mobile_planet_info(
             7.0,
             hazard_color(planet),
         );
-        let compact_detail = if let (Some(order), Some(status)) = (order, route_status) {
+        let compact_detail = if let Some(telemetry) = telemetry {
+            let stock = compact_stockpile_summary(&telemetry);
+            if let (Some(order), Some(status)) = (order, route_status) {
+                format!(
+                    "{stock} | {}",
+                    compact_shipping_status(&view.data.planet(order.target).name, status)
+                )
+            } else {
+                format!("{} | {stock}", core_stage_summary(view.data, &telemetry))
+            }
+        } else if let (Some(order), Some(status)) = (order, route_status) {
             compact_shipping_status(&view.data.planet(order.target).name, status)
-        } else if let Some(telemetry) = telemetry {
-            format!(
-                "{} | M {:.0}/{:.0} D {:.0} B {:.0}",
-                core_stage_summary(view.data, &telemetry),
-                telemetry.minerals,
-                telemetry.mineral_capacity,
-                telemetry.data,
-                telemetry.biomass
-            )
         } else {
             world_rule_lines(view.data, index)
                 .first()
@@ -404,6 +406,18 @@ pub(super) fn draw_mobile_planet_info(
             Colors::ERROR
         },
     );
+}
+
+pub(crate) fn compact_stockpile_summary(telemetry: &WorldTelemetry) -> String {
+    format!(
+        "Stock M{:.0}/{:.0} D{:.0} B{:.0} A{:.0} C{:.0}",
+        telemetry.minerals,
+        telemetry.mineral_capacity,
+        telemetry.data,
+        telemetry.biomass,
+        telemetry.alloy,
+        telemetry.components
+    )
 }
 
 pub(crate) fn mobile_route_action(

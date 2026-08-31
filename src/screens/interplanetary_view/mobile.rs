@@ -7,7 +7,7 @@ use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text, truncate_text_to_widt
 mod world_info;
 
 #[cfg(test)]
-pub(super) use world_info::{mobile_info_height, mobile_route_action};
+pub(super) use world_info::{compact_stockpile_summary, mobile_info_height, mobile_route_action};
 
 const MOBILE_EDGE: f32 = 12.0;
 const MOBILE_TAB_Y: f32 = 112.0;
