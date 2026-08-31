@@ -145,11 +145,22 @@ fn compact_resource_readout(state: &PlanetState) -> String {
         )
     };
     format!(
-        "E{} M{} D{} C{}",
+        "E{} M{} D{} A{} C{} B{}",
         compact(ResourceType::Energy),
         compact(ResourceType::Minerals),
         compact(ResourceType::Data),
-        compact(ResourceType::Components)
+        compact(ResourceType::Alloy),
+        compact(ResourceType::Components),
+        compact(ResourceType::Biomass)
+    )
+}
+
+fn compact_resource_readout_for_screen(state: &PlanetState, screen_w: f32) -> (String, f32) {
+    let font_size = if screen_w < 320.0 { 7.0 } else { 7.5 };
+    let available_width = (screen_w - 166.0).max(40.0);
+    (
+        truncate_text_to_width(&compact_resource_readout(state), available_width, font_size),
+        font_size,
     )
 }
 

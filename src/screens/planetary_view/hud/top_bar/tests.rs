@@ -127,11 +127,13 @@ fn mobile_resource_readout_includes_storage_caps() {
     state.resources.energy = 50.0;
     state.resources.minerals = 25.0;
     state.resources.data = 1000.0;
+    state.resources.alloy = 75.0;
     state.resources.components = 40.0;
+    state.resources.biomass = 12.0;
 
     assert_eq!(
         compact_resource_readout(&state),
-        "E50/50 M25/100 D1k/1k C40/1k"
+        "E50/50 M25/100 D1k/1k A75/1k C40/1k B12/1k"
     );
 }
 

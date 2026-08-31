@@ -214,6 +214,8 @@ MAP returns to the live grid between actions.
 The mobile gameplay header also keeps the active research job's DATA progress
 visible beneath the status line, including a warning colour while collapse
 recovery has research locked.
+Its compact resource line also keeps current/capacity readouts for all six
+resource pools visible, including Alloy and Biomass on 360px-class phones.
 Research uses a separate control row and full-width detail drawer on phones;
 drag the neural tree with a mouse or touch to pan it, then tap `-` / `+` to
 zoom;

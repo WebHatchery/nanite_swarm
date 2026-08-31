@@ -10,7 +10,7 @@ use super::super::super::metrics::HudMetrics;
 use super::super::super::PlanetaryAction;
 use super::super::PanelColors;
 use super::{
-    compact_resource_readout, mobile_arrival_guidance_label, mobile_offline_work_label,
+    compact_resource_readout_for_screen, mobile_arrival_guidance_label, mobile_offline_work_label,
     mobile_research_status, mobile_status_text,
 };
 
@@ -32,13 +32,8 @@ pub(super) fn draw(
     draw_line(48.0, 24.0, 36.0, 34.0, 1.5, colors.primary_soft);
     draw_circle(36.0, 24.0, 4.0, colors.primary);
     draw_ui_text("NANITE SWARM", 58.0, 18.0, 11.0, colors.primary);
-    draw_ui_text(
-        &compact_resource_readout(state),
-        58.0,
-        31.0,
-        8.0,
-        colors.dim,
-    );
+    let (resource_readout, resource_size) = compact_resource_readout_for_screen(state, screen_w);
+    draw_ui_text(&resource_readout, 58.0, 31.0, resource_size, colors.dim);
     let (status, arrival_status) = mobile_status_text(
         state.save_failed,
         state.power_collapse_shutdown > 0.0,
