@@ -180,6 +180,9 @@ Audit date: 2026-08-20
 - Split desktop research-node details from `research_view.rs` into
   `research_view/desktop.rs`, leaving the coordinator focused on shared layout,
   viewport interaction, and screen actions.
+- Split JSON round-trip persistence coverage from `state/persistence/tests.rs`
+  into `tests/roundtrip.rs`, leaving the parent focused on migrations, offline
+  progress, and malformed-save behavior.
 
 ## Remaining debt
 
