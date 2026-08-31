@@ -62,6 +62,10 @@ Audit date: 2026-08-20
 - Split procedural terrain and building tile generation from
   `graphics_gen/tiles.rs` into `tiles/terrain.rs` and `tiles/buildings.rs`,
   leaving the generator coordinator focused on output helpers and dispatch.
+- Split planetary Mass Driver and Landing Pad behavior plus campaign freight
+  orders from `state/shipping.rs` into `shipping/planet.rs` and
+  `shipping/campaign.rs`, leaving cargo records and shared helpers in the
+  coordinator.
 - Split the touch-sized top-bar renderer from `top_bar.rs` into
   `top_bar/mobile.rs`, leaving desktop metrics and notice layout independent
   from future mobile navigation changes.
