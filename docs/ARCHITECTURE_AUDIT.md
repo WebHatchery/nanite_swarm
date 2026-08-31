@@ -106,6 +106,9 @@ Audit date: 2026-08-20
 - Split the Seed Ship's drill-to-Smelter production-chain tests from
   `state/seed_ship/tests.rs` into `seed_ship/tests/production.rs`, leaving
   stage payment, research gates, launch, and achievement contracts together.
+- Split standing-route, reserve, shipment-label, and freight hit-test coverage
+  from `interplanetary_view/tests.rs` into `tests/shipping.rs`, leaving map,
+  dossier, and remote-alert contracts in the parent suite.
 - Split planet-state invariants and shipment invariants from
   `state/campaign/validation.rs` into `validation/planet.rs` and
   `validation/shipment.rs`, leaving load orchestration and directive checks in
