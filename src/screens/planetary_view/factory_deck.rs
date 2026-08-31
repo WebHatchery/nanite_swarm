@@ -1,7 +1,7 @@
 //! The compact control-room overlay for the factory's deeper decks.
 
 use crate::data::UiTheme;
-use crate::state::{FactoryFocus, Milestone, PlanetState};
+use crate::state::{FactoryFocus, FactoryFocusReadout, Milestone, PlanetState};
 use crate::ui::{color_from_rgba, draw_hud_button, draw_hud_panel, draw_resource_icon};
 use macroquad::prelude::*;
 use macroquad_toolkit::colors::with_alpha;
@@ -218,11 +218,25 @@ pub(super) fn draw_factory_depth_overlay(
         )
     };
     draw_ui_text(&live_readout, panel.x + 22.0, panel.y + 223.0, 9.0, text);
+    let focus_readout = state.factory_focus_readout();
+    let (focus_status, focus_status_color) = focus_status_line(state.factory_focus, focus_readout);
+    let focus_status = truncate_text_to_width(
+        &focus_status,
+        panel.w - 44.0,
+        if narrow { 8.0 } else { 9.0 },
+    );
+    draw_ui_text(
+        &focus_status,
+        panel.x + 22.0,
+        panel.y + 240.0,
+        if narrow { 8.0 } else { 9.0 },
+        if focus_status_color { warning } else { success },
+    );
     if compact {
         draw_ui_text(
             "Tap DECK to close",
             panel.x + 22.0,
-            panel.y + 248.0,
+            panel.y + 260.0,
             9.0,
             dim,
         );
@@ -230,7 +244,7 @@ pub(super) fn draw_factory_depth_overlay(
         draw_ui_text(
             "Focus changes production rates and power draw; it never rewires the map.",
             panel.x + 22.0,
-            panel.y + 248.0,
+            panel.y + 260.0,
             9.0,
             dim,
         );
@@ -261,6 +275,62 @@ pub(super) fn draw_factory_depth_overlay(
             draw_ui_text(&format!("{:.0}", amount), x, panel.y + 62.0, 8.0, text);
         }
     }
+}
+
+fn focus_status_line(focus: FactoryFocus, readout: FactoryFocusReadout) -> (String, bool) {
+    if focus == FactoryFocus::Balanced {
+        return ("FOCUS BALANCED // no modifier applied".to_string(), false);
+    }
+    if readout.targets == 0 {
+        return ("FOCUS IDLE // no target machines".to_string(), true);
+    }
+    if readout.producing == readout.targets {
+        return (
+            format!(
+                "FOCUS LIVE // {} {}/{} producing",
+                focus.short_label(),
+                readout.producing,
+                readout.targets
+            ),
+            false,
+        );
+    }
+    if readout.producing > 0 {
+        return (
+            format!(
+                "FOCUS LIMITED // {} {}/{} producing",
+                focus.short_label(),
+                readout.producing,
+                readout.targets
+            ),
+            true,
+        );
+    }
+    if readout.online > 0 {
+        return (
+            format!(
+                "FOCUS WAIT // {} online, feed or pad is blocked",
+                focus.short_label()
+            ),
+            true,
+        );
+    }
+    if readout.powered > 0 {
+        return (
+            format!(
+                "FOCUS PAUSED // {} standby or dust stalled",
+                focus.short_label()
+            ),
+            true,
+        );
+    }
+    (
+        format!(
+            "FOCUS OFFLINE // {} target machines unpowered",
+            focus.short_label()
+        ),
+        true,
+    )
 }
 
 fn factory_deck_layout(screen_w: f32, screen_h: f32, metrics: HudMetrics) -> FactoryDeckLayout {

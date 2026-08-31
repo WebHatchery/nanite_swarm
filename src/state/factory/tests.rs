@@ -57,6 +57,66 @@ fn a_focused_powered_deck_pays_the_declared_energy_tax() {
 }
 
 #[test]
+fn focus_readout_distinguishes_online_and_producing_targets() {
+    let mut state = state();
+    place_unlocked(&mut state, BuildingType::Drill, 1);
+    state.factory_focus = FactoryFocus::Extraction;
+
+    let readout = state.factory_focus_readout();
+    assert_eq!(readout.targets, 1);
+    assert_eq!(readout.powered, 1);
+    assert_eq!(readout.online, 1);
+    assert_eq!(readout.producing, 1);
+}
+
+#[test]
+fn focus_readout_marks_a_starved_processor_as_online_but_not_producing() {
+    let mut state = state();
+    place_unlocked(&mut state, BuildingType::Assembler, 1);
+    state.factory_focus = FactoryFocus::Assembly;
+
+    let readout = state.factory_focus_readout();
+    assert_eq!(readout.targets, 1);
+    assert_eq!(readout.online, 1);
+    assert_eq!(readout.producing, 0);
+}
+
+#[test]
+fn focus_readout_reports_a_standby_machine_as_offline() {
+    let mut state = state();
+    place_unlocked(&mut state, BuildingType::Drill, 1);
+    state.factory_focus = FactoryFocus::Extraction;
+    let position = state
+        .grid
+        .iter_tiles()
+        .find_map(|(position, tile)| {
+            (tile
+                .building
+                .as_ref()
+                .is_some_and(|building| building.building_type == BuildingType::Drill))
+            .then_some(position)
+        })
+        .unwrap();
+    state
+        .grid
+        .get_mut(position)
+        .and_then(|tile| tile.building.as_mut())
+        .unwrap()
+        .standby = true;
+
+    let readout = state.factory_focus_readout();
+    assert_eq!(
+        readout,
+        FactoryFocusReadout {
+            targets: 1,
+            powered: 1,
+            online: 0,
+            producing: 0
+        }
+    );
+}
+
+#[test]
 fn depth_opens_from_foundry_to_assembly_to_orbital() {
     let mut state = state();
     assert_eq!(state.factory_depth(), 0);

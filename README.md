@@ -103,6 +103,9 @@ stay in that durable log so they do not cover controls or scrollable panels.
 The selected-structure Power row follows the standing building's live draw or
 generation, including dust, overclock, standby, focus, and research effects;
 build previews continue to show nominal power.
+The Factory Deck control room reports whether the selected focus is live,
+limited, waiting on feed or dispatch space, paused by standby or dust, offline,
+or aimed at a deck with no machines yet.
 When the bottom alert card reports a logistics problem, tap its JUMP button to
 cycle through the affected structures or network tiles; power-only problems
 keep the FLOW button for the network diagnosis overlay.

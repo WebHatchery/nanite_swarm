@@ -6,8 +6,23 @@
 
 use crate::engine::BuildingType;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 use super::game_state::PlanetState;
+
+/// Live reach of the selected factory focus.
+///
+/// A focus can be selected before its deck exists, or while every affected
+/// machine is waiting on power, feed, or dispatch space. Keeping those cases
+/// distinct lets the control room explain whether the trade is doing useful
+/// work instead of making the player infer it from a rate that may be zero.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct FactoryFocusReadout {
+    pub targets: usize,
+    pub powered: usize,
+    pub online: usize,
+    pub producing: usize,
+}
 
 /// Which production deck receives the swarm's spare scheduling attention.
 ///
@@ -149,6 +164,42 @@ impl PlanetState {
 
     pub fn factory_focus_multiplier(&self, building_type: BuildingType) -> f32 {
         self.factory_focus.work_multiplier(building_type)
+    }
+
+    /// Count the machines affected by the current focus and how many can
+    /// currently turn that modifier into output.
+    pub fn factory_focus_readout(&self) -> FactoryFocusReadout {
+        if self.factory_focus == FactoryFocus::Balanced {
+            return FactoryFocusReadout::default();
+        }
+
+        let dust_response = self.resolved_dust_response();
+        let starved: HashSet<_> = self.starved_factories().into_iter().collect();
+        let blocked: HashSet<_> = self.blocked_factories().into_iter().collect();
+        let mut readout = FactoryFocusReadout::default();
+        for (position, tile) in self.grid.iter_tiles() {
+            let Some(building) = tile.building.as_ref() else {
+                continue;
+            };
+            if !self.factory_focus.affects(building.building_type) {
+                continue;
+            }
+
+            readout.targets += 1;
+            if building.powered {
+                readout.powered += 1;
+            }
+            if building.powered
+                && !building.standby
+                && !building.is_dust_stalled_with(&dust_response)
+            {
+                readout.online += 1;
+                if !starved.contains(&position) && !blocked.contains(&position) {
+                    readout.producing += 1;
+                }
+            }
+        }
+        readout
     }
 
     /// Extra draw from a focused production deck. This is kept separate from

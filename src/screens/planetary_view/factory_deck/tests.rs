@@ -59,3 +59,28 @@ fn factory_deck_marks_a_fully_evolved_core() {
         "CORE 5/5 // FULLY EVOLVED"
     );
 }
+
+#[test]
+fn focus_status_explains_when_the_selected_deck_is_not_contributing() {
+    let (status, warning) = focus_status_line(
+        FactoryFocus::Assembly,
+        FactoryFocusReadout {
+            targets: 2,
+            powered: 2,
+            online: 2,
+            producing: 1,
+        },
+    );
+
+    assert_eq!(status, "FOCUS LIMITED // PARTS 1/2 producing");
+    assert!(warning);
+}
+
+#[test]
+fn focus_status_marks_an_unbuilt_deck_as_idle() {
+    let (status, warning) =
+        focus_status_line(FactoryFocus::Refining, FactoryFocusReadout::default());
+
+    assert_eq!(status, "FOCUS IDLE // no target machines");
+    assert!(warning);
+}
