@@ -73,6 +73,9 @@ Audit date: 2026-08-31
 - Split screen-phase action handling from `main/update.rs` into
   `main/update/phases.rs`, leaving the frame coordinator focused on shared
   timing, audio mix, notifications, and persistence helpers.
+- Split PlanetState research adoption, building unlock refresh, and stat-sheet
+  rebuilding from `state/game_state.rs` into `game_state/research.rs`, keeping
+  research-owned synchronization beside the persisted research record.
 - Split save rotation, corruption recovery, and slot-isolation coverage from
   `state/persistence/tests.rs` into `persistence/tests/recovery.rs`, leaving
   the parent suite focused on migration and round-trip contracts.
