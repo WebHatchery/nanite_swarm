@@ -1,7 +1,7 @@
+use super::notices::{mobile_offline_report_lines, offline_work_label};
 use super::{
-    compact_resource_amount, compact_resource_readout, mobile_offline_report_lines,
-    mobile_offline_work_label, mobile_research_status, mobile_status_text, offline_work_label,
-    resource_rate_label, top_bar_layout,
+    compact_resource_amount, compact_resource_readout, mobile_offline_work_label,
+    mobile_research_status, mobile_status_text, resource_rate_label, top_bar_layout,
 };
 use crate::engine::ResourceType;
 use crate::state::OfflineReport;
