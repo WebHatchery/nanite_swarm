@@ -168,6 +168,9 @@ Audit date: 2026-08-20
 - Split deterministic terrain, ore, and landing-site generation from
   `engine/grid_engine/grid.rs` into `grid/generation.rs`, leaving the grid
   core focused on tile access, building occupancy, and pathfinding.
+- Split box selection, blueprint stamping, and selected-processor policy from
+  `state/actions.rs` into `state/actions/batch.rs`, leaving the parent focused
+  on single-building placement, routing, and demolition.
 
 ## Remaining debt
 
