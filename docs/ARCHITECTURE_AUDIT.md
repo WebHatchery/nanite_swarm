@@ -284,6 +284,10 @@ Audit date: 2026-08-31
 - Split planet geometry, hazards, features, and restrictions from
   `data/validation.rs` into `data/validation/planets.rs`, leaving the data
   validator focused on package orchestration and the remaining definitions.
+- Split Solar System dossier freight summaries, live telemetry/alerts, and
+  planetary construction rules into `world_dossier/shipping.rs`,
+  `world_dossier/telemetry.rs`, and `world_dossier/rules.rs`, leaving the
+  dossier parent as the stable shared read-model surface.
 
 ## Remaining debt
 
