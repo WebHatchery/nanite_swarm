@@ -340,6 +340,11 @@ impl PlanetState {
             tile.forest_cleared = true;
             tile.biomass_amount = 0.0;
             self.forest_harvested_count += 1;
+            let reduction = (1.0 - self.config.upkeep.filter_multiplier.clamp(0.0, 1.0)) * 100.0;
+            self.emit_audio(super::audio::AudioEvent::UiConfirm);
+            self.notifications.info(format!(
+                "Forest converted: dust filter -{reduction:.0}% nearby"
+            ));
             return true;
         }
 

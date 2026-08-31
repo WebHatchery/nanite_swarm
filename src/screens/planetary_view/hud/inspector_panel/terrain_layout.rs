@@ -47,6 +47,13 @@ pub(super) fn terrain_effect_label(
     }
 }
 
+pub(super) fn forest_filter_label(filter: bool, multiplier: f32) -> Option<String> {
+    filter.then(|| {
+        let reduction = (1.0 - multiplier.clamp(0.0, 1.0)) * 100.0;
+        format!("Dust filter: -{reduction:.0}% dust nearby")
+    })
+}
+
 pub(super) fn feature_label_for(
     feature: Option<&PlanetFeature>,
     effects: Option<FeatureEffects>,

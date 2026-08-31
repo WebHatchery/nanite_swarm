@@ -1,4 +1,6 @@
-use super::terrain_layout::{feature_label, feature_survey_label, terrain_effect_label};
+use super::terrain_layout::{
+    feature_label, feature_survey_label, forest_filter_label, terrain_effect_label,
+};
 use super::*;
 use crate::data::GameConfig;
 use crate::engine::ResourceType;
@@ -118,6 +120,15 @@ fn mountain_turbine_keeps_its_terrain_payoff_in_the_inspector() {
         ),
         Some("Terrain: Forest  Pollution buffer (-25% dust nearby)".to_string())
     );
+}
+
+#[test]
+fn converted_forest_names_its_live_dust_reduction() {
+    assert_eq!(
+        forest_filter_label(true, 0.6),
+        Some("Dust filter: -40% dust nearby".to_string())
+    );
+    assert_eq!(forest_filter_label(false, 0.6), None);
 }
 
 #[test]

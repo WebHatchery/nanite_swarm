@@ -232,6 +232,9 @@ impl Game {
             "forest_harvester_inspection" | "mobile_forest_harvester_inspection" => {
                 self.stage_forest_harvester_inspection_scene()
             }
+            "filter_forest_inspection" | "mobile_filter_forest_inspection" => {
+                self.stage_filter_forest_inspection_scene()
+            }
             "acid_sea_inspection" => self.stage_acid_sea_inspection_scene(),
             "ring_shadow_inspection" => self.stage_ring_shadow_inspection_scene(),
             "ice_rift_inspection" => self.stage_ice_rift_inspection_scene(),

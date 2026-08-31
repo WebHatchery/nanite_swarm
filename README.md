@@ -105,6 +105,9 @@ Placed structures keep their local feature effect in the inspector header.
 Mountain Wind Turbines keep their `+100%` efficiency payoff there as well.
 Forest Biomass Harvesters keep the living forest buffer and remaining fuel
 amount visible until the stand is depleted.
+Converted forests report their live `DUST FILTER` reduction in the inspector,
+so the stronger pollution protection is still clear after the biomass choice
+has been spent.
 If a dragged conduit route spends its last resources, the route pauses and
 reports the exact mineral and energy cost of the next segment once per gesture.
 The bottom graph records observed ore, alloy, and parts flow; tap its visible

@@ -445,6 +445,11 @@ fn try_convert_forest_to_filter_requires_forest_terrain() {
     assert!(tile.filter);
     assert!(tile.forest_cleared);
     assert_eq!(tile.terrain, TerrainType::Rough);
+    assert!(state
+        .notifications
+        .get_notifications()
+        .iter()
+        .any(|notification| notification.message.contains("dust filter -40% nearby")));
 
     // Already converted: no longer forest, so a second attempt fails.
     assert!(!state.try_convert_forest_to_filter(pos));

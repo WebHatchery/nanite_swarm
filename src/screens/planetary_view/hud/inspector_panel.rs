@@ -15,8 +15,8 @@ mod recipe_flow;
 mod terrain_layout;
 use recipe_flow::{draw_recipe_flow_row, recipe_flow_data, recipe_status};
 use terrain_layout::{
-    draw_local_effect_labels, feature_label_for, feature_survey_label, terrain_detail_offsets,
-    terrain_effect_label, terrain_feature_lines,
+    draw_local_effect_labels, feature_label_for, feature_survey_label, forest_filter_label,
+    terrain_detail_offsets, terrain_effect_label, terrain_feature_lines,
 };
 
 fn processor_action_label(
@@ -85,12 +85,14 @@ pub(super) fn draw(
     let mut tile_harvest = None;
     let mut tile_bonus = None;
     let mut tile_biomass = 0.0;
+    let mut tile_filter = false;
     if let Some(tile_pos) = display_pos {
         if let Some(tile) = state.grid.get(tile_pos) {
             tile_terrain = Some(tile.terrain);
             tile_harvest = state.harvest_rewards_at(tile_pos);
             tile_bonus = tile.terrain.preservation_bonus(data);
             tile_biomass = tile.biomass_amount;
+            tile_filter = tile.filter;
             if let Some(building) = &tile.building {
                 tile_building = Some(building.building_type);
                 tile_pos_with_building = Some(tile_pos);
@@ -436,6 +438,8 @@ pub(super) fn draw(
             }
         }
         if let Some(terrain) = tile_terrain {
+            let filter_label =
+                forest_filter_label(tile_filter, state.config.upkeep.filter_multiplier);
             draw_ui_text(
                 &format!("Terrain: {}", terrain.name(data)),
                 right_x + 16.0,
@@ -443,6 +447,15 @@ pub(super) fn draw(
                 11.0,
                 dim,
             );
+            if let Some(filter_label) = filter_label {
+                draw_ui_text(
+                    &filter_label,
+                    right_x + 16.0,
+                    inspector_y + terrain_y + 16.0 + feature_shift,
+                    10.0,
+                    success,
+                );
+            }
             if terrain.is_harvestable(data) {
                 let (minerals, biomass) = tile_harvest.unwrap_or((0.0, 0.0));
                 let reward_text = if minerals > 0.0 {
