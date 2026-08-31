@@ -229,6 +229,9 @@ Audit date: 2026-08-20
 - Split the desktop command-bar renderer from `hud/bottom_bar.rs` into
   `bottom_bar/desktop.rs`, leaving the parent focused on action vocabulary and
   responsive path dispatch while the desktop module owns its layout.
+- Split compact research-node detail rendering from `research_view/compact.rs`
+  into `compact/node_info.rs`, leaving viewport navigation, focus, legends, and
+  clipping in the compact controller.
 
 ## Remaining debt
 

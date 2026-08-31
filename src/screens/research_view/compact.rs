@@ -1,14 +1,29 @@
-//! Compact research-tree viewport controls and detail panel.
+//! Compact research-tree viewport controls and detail-panel dispatch.
 
-use super::effects::node_effects;
 use super::*;
-use macroquad_toolkit::ui::{
-    draw_ui_text, measure_ui_text, truncate_text_to_width, wrap_text, Pointer,
-};
+use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text, Pointer};
+
+mod node_info;
+
+/// Data and layout for the compact node detail drawer.
+pub(super) struct CompactNodeInfoInput<'a> {
+    pub(super) data: &'a crate::data::GameData,
+    pub(super) research_state: &'a ResearchState,
+    pub(super) research_tree: &'a ResearchTree,
+    pub(super) node_id: &'a str,
+    pub(super) heading: &'a str,
+    pub(super) panel_x: f32,
+    pub(super) y: f32,
+    pub(super) panel_w: f32,
+    pub(super) data_available: f32,
+    pub(super) active_condition: Option<&'a str>,
+}
+
+pub(super) fn draw_compact_node_info(input: CompactNodeInfoInput<'_>) {
+    node_info::draw(input);
+}
 
 const SHORT_PHONE_TREE_HEIGHT: f32 = 120.0;
-const MOBILE_DESCRIPTION_LINE_HEIGHT: f32 = 13.0;
-const MOBILE_DESCRIPTION_MAX_LINES: usize = 2;
 
 fn compact_legend_labels(screen_w: f32) -> [&'static str; 4] {
     if screen_w < 300.0 {
@@ -222,243 +237,6 @@ pub(super) fn clip_line(rect: Rect, from: Vec2, to: Vec2) -> Option<(Vec2, Vec2)
         }
     }
     (start <= end).then_some((from + delta * start, from + delta * end))
-}
-
-#[allow(clippy::too_many_arguments)]
-pub(super) fn draw_compact_node_info(
-    data: &crate::data::GameData,
-    research_state: &ResearchState,
-    research_tree: &ResearchTree,
-    node_id: &str,
-    heading: &str,
-    panel_x: f32,
-    y: f32,
-    panel_w: f32,
-    data_available: f32,
-    active_condition: Option<&str>,
-) {
-    let Some(node) = research_tree.get_node(node_id) else {
-        return;
-    };
-    if panel_w < 360.0 {
-        draw_mobile_node_info(
-            data,
-            research_state,
-            research_tree,
-            node_id,
-            heading,
-            panel_x,
-            y,
-            panel_w,
-            data_available,
-            active_condition,
-        );
-        return;
-    }
-    let split_x = panel_x + panel_w * 0.52;
-    draw_ui_text(heading, panel_x + 12.0, y, 12.0, Colors::TEXT_DIM);
-    draw_ui_text(&node.name, panel_x + 12.0, y + 18.0, 14.0, Colors::TEXT);
-    let description = truncate_text_to_width(&node.description, panel_w * 0.46, 11.0);
-    draw_ui_text(
-        &description,
-        panel_x + 12.0,
-        y + 38.0,
-        11.0,
-        Colors::TEXT_DIM,
-    );
-    let mut detail_y = y;
-    for (text, color) in node_effects(data, node_id) {
-        draw_ui_text(&text, split_x, detail_y, 11.0, color);
-        detail_y += 16.0;
-    }
-    if research_state.is_unlocked(node_id) {
-        draw_ui_text("UNLOCKED", split_x, detail_y + 2.0, 11.0, Colors::SUCCESS);
-        return;
-    }
-    if let Some(status) = active_research_status(research_state, node_id, node) {
-        draw_ui_text(&status, split_x, detail_y + 2.0, 11.0, Colors::WARNING);
-        return;
-    }
-    if let Some(status) = parked_research_status(research_state, node_id, node) {
-        draw_ui_text(
-            &truncate_text_to_width(&status, panel_w * 0.46, 11.0),
-            split_x,
-            detail_y + 2.0,
-            11.0,
-            Colors::WARNING,
-        );
-        return;
-    }
-    draw_ui_text(
-        &format!("Cost {:.0} Data", node.data_cost),
-        split_x,
-        detail_y + 2.0,
-        11.0,
-        Colors::ACCENT,
-    );
-    let status = if node
-        .planet_condition
-        .as_deref()
-        .is_some_and(|required| active_condition != Some(required))
-    {
-        (
-            format!(
-                "Requires {} world",
-                node.planet_condition.as_deref().unwrap_or("matching")
-            ),
-            Colors::ERROR,
-        )
-    } else if !node
-        .prerequisites
-        .iter()
-        .all(|id| research_state.is_unlocked(id))
-    {
-        ("Prerequisites not met".to_string(), Colors::ERROR)
-    } else if research_tree.can_research_on(
-        node_id,
-        &research_state.unlocked,
-        data_available,
-        active_condition,
-    ) {
-        ("Tap node to research".to_string(), Colors::SUCCESS)
-    } else {
-        (
-            "Tap node to select (insufficient Data)".to_string(),
-            Colors::WARNING,
-        )
-    };
-    draw_ui_text(
-        &truncate_text_to_width(&status.0, panel_w * 0.46, 11.0),
-        split_x,
-        detail_y + 18.0,
-        11.0,
-        status.1,
-    );
-}
-
-#[allow(clippy::too_many_arguments)]
-fn draw_mobile_node_info(
-    data: &crate::data::GameData,
-    research_state: &ResearchState,
-    research_tree: &ResearchTree,
-    node_id: &str,
-    heading: &str,
-    panel_x: f32,
-    y: f32,
-    panel_w: f32,
-    data_available: f32,
-    active_condition: Option<&str>,
-) {
-    let Some(node) = research_tree.get_node(node_id) else {
-        return;
-    };
-    let text_w = (panel_w - 24.0).max(40.0);
-    draw_ui_text(heading, panel_x + 12.0, y, 12.0, Colors::TEXT_DIM);
-    draw_ui_text(
-        &truncate_text_to_width(&node.name, text_w, 14.0),
-        panel_x + 12.0,
-        y + 18.0,
-        14.0,
-        Colors::TEXT,
-    );
-    let description_lines = mobile_description_lines(&node.description, text_w, 11.0);
-    for (line_index, line) in description_lines.iter().enumerate() {
-        draw_ui_text(
-            line,
-            panel_x + 12.0,
-            y + 38.0 + line_index as f32 * MOBILE_DESCRIPTION_LINE_HEIGHT,
-            11.0,
-            Colors::TEXT_DIM,
-        );
-    }
-
-    let mut detail_y =
-        y + 38.0 + description_lines.len() as f32 * MOBILE_DESCRIPTION_LINE_HEIGHT + 7.0;
-    for (text, color) in node_effects(data, node_id) {
-        draw_ui_text(
-            &truncate_text_to_width(&text, text_w, 11.0),
-            panel_x + 12.0,
-            detail_y,
-            11.0,
-            color,
-        );
-        detail_y += 15.0;
-    }
-    let (status, color) = if research_state.is_unlocked(node_id) {
-        ("UNLOCKED".to_string(), Colors::SUCCESS)
-    } else if let Some(status) = active_research_status(research_state, node_id, node) {
-        (status, Colors::WARNING)
-    } else if let Some(status) = parked_research_status(research_state, node_id, node) {
-        (
-            format!("Cost {:.0} Data - {}", node.data_cost, status),
-            Colors::WARNING,
-        )
-    } else {
-        let status = if node
-            .planet_condition
-            .as_deref()
-            .is_some_and(|required| active_condition != Some(required))
-        {
-            format!(
-                "Requires {} world",
-                node.planet_condition.as_deref().unwrap_or("matching")
-            )
-        } else if !node
-            .prerequisites
-            .iter()
-            .all(|id| research_state.is_unlocked(id))
-        {
-            "Prerequisites not met".to_string()
-        } else if research_tree.can_research_on(
-            node_id,
-            &research_state.unlocked,
-            data_available,
-            active_condition,
-        ) {
-            "Tap node to research".to_string()
-        } else {
-            "Tap node to select (insufficient Data)".to_string()
-        };
-        let color = if status.starts_with("Tap node") {
-            if research_tree.can_research_on(
-                node_id,
-                &research_state.unlocked,
-                data_available,
-                active_condition,
-            ) {
-                Colors::SUCCESS
-            } else {
-                Colors::WARNING
-            }
-        } else if status.starts_with("Requires") || status.starts_with("Prerequisites") {
-            Colors::ERROR
-        } else {
-            Colors::WARNING
-        };
-        (
-            format!("Cost {:.0} Data - {}", node.data_cost, status),
-            color,
-        )
-    };
-    draw_ui_text(
-        &truncate_text_to_width(&status, text_w, 11.0),
-        panel_x + 12.0,
-        detail_y + 2.0,
-        11.0,
-        color,
-    );
-}
-
-fn mobile_description_lines(text: &str, text_w: f32, font_size: f32) -> Vec<String> {
-    let mut lines = wrap_text(text, text_w, font_size);
-    let truncated = lines.len() > MOBILE_DESCRIPTION_MAX_LINES;
-    lines.truncate(MOBILE_DESCRIPTION_MAX_LINES);
-    if truncated {
-        if let Some(last) = lines.last_mut() {
-            *last = truncate_text_to_width(&format!("{last}..."), text_w, font_size);
-        }
-    }
-    lines
 }
 
 #[cfg(test)]

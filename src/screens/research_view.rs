@@ -299,18 +299,18 @@ pub fn render_research_view(context: ResearchViewContext<'_>) -> ResearchAction 
                 "Researching"
             };
             if view.compact {
-                draw_compact_node_info(
+                draw_compact_node_info(CompactNodeInfoInput {
                     data,
                     research_state,
                     research_tree,
                     node_id,
                     heading,
-                    left_panel_x,
-                    left_text_y,
-                    left_panel_w,
+                    panel_x: left_panel_x,
+                    y: left_text_y,
+                    panel_w: left_panel_w,
                     data_available,
                     active_condition,
-                );
+                });
             } else {
                 desktop::draw(desktop::DesktopNodeInfoInput {
                     data,
