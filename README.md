@@ -180,6 +180,9 @@ While away, the foreground world continues its selected research job, finite
 biomass harvest, and a committed Seed Ship yard at the same capped rates as
 live play; the return banner reports the biomass and Data changes plus any
 completed ship stages.
+Dust, acid wear, and server heat also advance during the simulated interval,
+so a long absence can leave the return world needing the same maintenance as
+an unattended live shift.
 Tap the event-coded NEXT button to jump to the next recovery, research-unlock,
 or mass-driver timer while keeping the whole campaign clock in sync.
 The Solar System map recentres and scales its orbit rings on narrow windows;

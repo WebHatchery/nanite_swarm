@@ -37,7 +37,7 @@ impl PlanetState {
         }
     }
 
-    pub(super) fn update_heat(&mut self, delta_time: f32) {
+    pub(crate) fn update_heat(&mut self, delta_time: f32) {
         let dust_response = self.resolved_dust_response();
         let cooling = self.config.buildings.water_cooling_rate.max(0.0);
         let capacity = self.config.buildings.server_bank_heat_capacity.max(1.0);
@@ -127,7 +127,7 @@ impl PlanetState {
             .collect()
     }
 
-    pub(super) fn update_dust(&mut self, delta_time: f32) {
+    pub(crate) fn update_dust(&mut self, delta_time: f32) {
         let upkeep = self.config.upkeep.clone();
         let dust_response = self.resolved_dust_response();
         let dust_rate = self.stats.apply(StatId::DustAccumulation, upkeep.dust_rate);

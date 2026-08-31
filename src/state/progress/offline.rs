@@ -22,6 +22,10 @@ impl PlanetState {
         let active_seconds = capped.min(self.battery_seconds.max(0.0));
         let hibernation_seconds = (capped - active_seconds).max(0.0) * 0.1;
         let simulated = active_seconds + hibernation_seconds;
+        self.refresh_power_grid();
+        self.update_dust(simulated);
+        self.update_heat(simulated);
+        self.refresh_power_grid();
         self.refresh_biomass_power_bonus();
         let biomass_before = self.resources.biomass;
         self.update_biomass_harvesters(simulated);

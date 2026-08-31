@@ -35,6 +35,7 @@ fn offline_progress_respects_live_storage_caps() {
     state.config.offline.max_resource_gain = 10_000.0;
     state.config.resources.max_energy = 10_000.0;
     state.config.resources.base_mineral_cap = 100_000.0;
+    state.config.upkeep.dust_rate = 0.0;
     state.resources.minerals = 10_000.0;
     state.resources.energy = 10_000.0;
     let core = state.grid.find_core().unwrap();
@@ -134,4 +135,24 @@ fn offline_drills_apply_feature_bonus_and_deplete_richness_bonus() {
         1.0,
         0.001
     ));
+}
+
+#[test]
+fn offline_catch_up_advances_dust_and_server_heat() {
+    let mut state = state();
+    let core = state.grid.find_core().unwrap();
+    let server = GridPos::new(core.x + 1, core.y);
+    state.grid.reveal_around(server, 1);
+    state.grid.get_mut(server).unwrap().terrain = TerrainType::Empty;
+    state.config.upkeep.dust_rate = 1.0;
+    state.config.buildings.server_bank_heat_per_second = 1.0;
+    state.unlock_building(BuildingType::ServerBank);
+    state.select_building(BuildingType::ServerBank);
+    assert!(state.try_place_building(server));
+
+    state.apply_offline_progress(10.0);
+
+    let building = state.grid.get(server).unwrap().building.as_ref().unwrap();
+    assert!(approx_eq(building.dust, 10.0, 0.001));
+    assert!(approx_eq(building.heat, 10.0, 0.001));
 }
