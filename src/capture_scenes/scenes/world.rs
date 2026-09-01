@@ -137,7 +137,6 @@ impl Game {
                 if let Some(core) = planet.grid.find_core() {
                     planet.grid.reveal_around(core, 24);
                 }
-                planet.tutorial_hidden = true;
                 planet.tutorial_done = true;
                 planet.notifications.clear();
                 planet.selected_building = None;

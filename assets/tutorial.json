@@ -2,57 +2,69 @@
   "steps": [
     {
       "id": "first_drill",
-      "title": "Break ground",
-      "instruction": "Tap DRILL in the BUILD PALETTE, then tap revealed ground beside the Core.",
+      "title": "KERNEL 01 // MINERAL FEED",
+      "instruction": "The Core's replication lattice has arrived without a mineral feed. Tap BUILD, select DRILL, then tap surveyed ground beside the Core to start the first extraction loop.",
       "goal": { "kind": "build", "target": "drill" }
     },
     {
       "id": "power_grid",
-      "title": "Lay pipe",
-      "instruction": "Tap RESEARCH, then tap POWER GRID. Ore only moves along conduits.",
+      "title": "KERNEL 02 // POWER BUS",
+      "instruction": "The Core can think, but its signal cannot cross open ground. Tap RESEARCH, then tap POWER GRID to authorize a conductive mesh.",
       "goal": { "kind": "research", "target": "power_grid" }
     },
     {
       "id": "connect",
-      "title": "Connect the drill",
-      "instruction": "Tap CONDUIT, then drag from the Core to the Drill (or tap each grid tile).",
+      "title": "KERNEL 03 // SIGNAL MESH",
+      "instruction": "The drill is alive and isolated. Tap BUILD, select CONDUIT, then drag from the Core to the Drill (or tap each grid tile) to close the signal path.",
       "goal": { "kind": "connect", "target": "drill" }
     },
     {
+      "id": "data_processing_research",
+      "title": "KERNEL 04 // COGNITIVE ARRAY",
+      "instruction": "Replication without adaptation is only repetition. Tap RESEARCH, then tap DATA PROCESSING to give the swarm a machine-readable research channel.",
+      "goal": { "kind": "research", "target": "data_processing" }
+    },
+    {
       "id": "server_bank",
-      "title": "Think faster",
-      "instruction": "Tap SERVER BANK, then tap revealed ground to build it.",
+      "title": "KERNEL 05 // MACHINE THOUGHT",
+      "instruction": "The new protocol needs somewhere to execute. Tap BUILD, select SERVER BANK, then tap surveyed ground within the Core's powered reach.",
       "goal": { "kind": "build", "target": "server_bank" }
     },
     {
+      "id": "wind_power_research",
+      "title": "KERNEL 06 // ATMOSPHERIC CELL",
+      "instruction": "The Core's reserve is finite. Tap RESEARCH, then tap WIND POWER to let the swarm convert atmospheric motion into grid power.",
+      "goal": { "kind": "research", "target": "wind_power" }
+    },
+    {
       "id": "wind_turbine",
-      "title": "Stop borrowing power",
-      "instruction": "Tap WIND TURBINE, then tap revealed ground. Mountains give it a bonus.",
+      "title": "KERNEL 07 // AUXILIARY POWER",
+      "instruction": "The bootstrap lattice is ready for autonomous power. Tap BUILD, select WIND TURBINE, then tap open ground or a mountain to bring the auxiliary generator online.",
       "goal": { "kind": "build", "target": "wind_turbine" }
     },
     {
       "id": "efficient_drills_research",
-      "title": "Cut faster",
-      "instruction": "Tap RESEARCH, then tap EFFICIENT DRILLS. More ore makes the rail arrive sooner.",
+      "title": "KERNEL 08 // EXTRACTION OPTIMIZER",
+      "instruction": "The swarm has a power source; now sharpen its appetite. Tap RESEARCH, then tap EFFICIENT DRILLS to increase mineral throughput.",
       "goal": { "kind": "research", "target": "efficient_drills" }
     },
     {
       "id": "power_efficiency_research",
-      "title": "Make room on the grid",
-      "instruction": "Tap RESEARCH, then tap POWER EFFICIENCY. The rail needs room on the grid.",
+      "title": "KERNEL 09 // THERMAL CONTROL",
+      "instruction": "Every wasted watt becomes heat in the lattice. Tap RESEARCH, then tap POWER EFFICIENCY to make room for the systems that follow.",
       "goal": { "kind": "research", "target": "power_efficiency" }
     },
     {
       "id": "mass_driver_research",
-      "title": "Prepare the launch rail",
-      "instruction": "Tap RESEARCH, then tap MASS DRIVER. The next world needs a live rail.",
+      "title": "KERNEL 10 // TRANSIT VECTOR",
+      "instruction": "A self-replicating pattern is useful only if it can travel. Tap RESEARCH, then tap MASS DRIVER to authorize interplanetary transfer.",
       "goal": { "kind": "research", "target": "mass_driver" }
     },
     {
       "id": "mass_driver",
-      "title": "Build the launch rail",
-      "instruction": "Tap MASS DRIVER, then tap revealed ground beside the Core.",
-      "completion_message": "Next: tap SHIP, then MAP.",
+      "title": "KERNEL 11 // ORBITAL LAUNCH RAIL",
+      "instruction": "The transfer protocol is awake. Tap BUILD, select MASS DRIVER, then tap surveyed ground beside the Core to complete the first world-facing lattice.",
+      "completion_message": "BOOTSTRAP COMPLETE // The swarm can now throw its pattern between worlds. Tap SHIP, then MAP.",
       "goal": { "kind": "build", "target": "mass_driver" }
     }
   ]

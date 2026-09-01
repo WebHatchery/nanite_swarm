@@ -47,8 +47,14 @@ pub(super) fn draw(
         format!("{} / {}", state.name.to_uppercase(), state.hazard_label())
     };
     draw_ui_text(&subtitle, 52.0, top_y + 30.0, 8.0, colors.dim);
-    if state.tutorial_current().is_some() && !state.tutorial_hidden {
-        draw_ui_text("NEXT: TAP BUILD", 52.0, top_y + 41.0, 8.0, colors.warning);
+    if state.tutorial_current().is_some() {
+        draw_ui_text(
+            "CORE BOOTSTRAP ACTIVE",
+            52.0,
+            top_y + 41.0,
+            8.0,
+            colors.warning,
+        );
     }
 
     if resource_w >= 180.0 {

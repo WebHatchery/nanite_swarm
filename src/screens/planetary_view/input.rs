@@ -150,10 +150,6 @@ pub(super) fn handle_input(
     if is_key_pressed(KeyCode::F1) {
         state.show_help = !state.show_help;
     }
-    if is_key_pressed(KeyCode::T) {
-        state.tutorial_hidden = !state.tutorial_hidden;
-    }
-
     // Harvest terrain with H key
     if is_key_pressed(KeyCode::H) {
         if let Some(pos) = hovered_pos {

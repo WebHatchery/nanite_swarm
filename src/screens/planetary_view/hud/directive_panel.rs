@@ -7,8 +7,7 @@
 use crate::data::UiTheme;
 use crate::directives::Directive;
 use crate::state::PlanetState;
-use crate::ui::{draw_hud_button, draw_hud_panel, draw_status_row};
-use macroquad::prelude::Rect;
+use crate::ui::{draw_hud_panel, draw_status_row};
 use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text};
 
 use super::super::format::fit_text_to_width;
@@ -21,30 +20,12 @@ pub(super) fn draw(
     colors: &PanelColors,
     right: &RightStackLayout,
 ) {
-    let teaching = state
-        .tutorial_current()
-        .filter(|_| !state.tutorial_hidden)
-        .is_some();
+    let teaching = state.tutorial_current().is_some();
 
     if teaching {
         draw_tutorial(state, theme, colors, right);
     } else {
         draw_directive(directive, theme, colors, right);
-        if !state.tutorial_done
-            && state.tutorial_hidden
-            && draw_hud_button(
-                theme,
-                Rect::new(
-                    right.right_x + right.right_w - 78.0,
-                    right.directive.y + 8.0,
-                    66.0,
-                    26.0,
-                ),
-                "SHOW HELP",
-            )
-        {
-            state.tutorial_hidden = false;
-        }
     }
 }
 
@@ -85,25 +66,17 @@ fn draw_tutorial(
         11.0,
         colors.primary_soft,
     );
-    let instruction = fit_text_to_width(&step.instruction, right_w - 28.0, 11.0);
-    draw_ui_text(
-        &instruction,
-        right_x + 12.0,
-        body_y + 22.0,
-        11.0,
-        colors.text,
-    );
-    if draw_hud_button(
-        theme,
-        Rect::new(
-            right_x + right_w - 62.0,
-            right.directive.y + 8.0,
-            50.0,
-            26.0,
-        ),
-        "HIDE",
-    ) {
-        state.tutorial_hidden = true;
+    for (index, line) in wrap_text_to_width(&step.instruction, right_w - 28.0, 11.0)
+        .into_iter()
+        .enumerate()
+    {
+        draw_ui_text(
+            &line,
+            right_x + 12.0,
+            body_y + 22.0 + index as f32 * 14.0,
+            11.0,
+            colors.text,
+        );
     }
 }
 
@@ -169,19 +142,6 @@ fn draw_compact_tutorial(
         theme.typography.section,
         colors.primary,
     );
-    if draw_hud_button(
-        theme,
-        Rect::new(
-            right.right_x + right.right_w - 58.0,
-            right.directive.y + 5.0,
-            50.0,
-            22.0,
-        ),
-        "HIDE",
-    ) {
-        state.tutorial_hidden = true;
-    }
-
     let step_label = format!(
         "{}/{}  {}",
         state.tutorial_step.saturating_add(1),
@@ -202,7 +162,7 @@ fn draw_compact_tutorial(
             colors.text,
         );
     } else {
-        let title = fit_text_to_width(&step_label, right.right_w - 86.0, 10.0);
+        let title = fit_text_to_width(&step_label, right.right_w - 24.0, 10.0);
         draw_ui_text(
             &title,
             right.right_x + 12.0,

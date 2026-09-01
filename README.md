@@ -7,10 +7,10 @@ The swarm is powerful, but every expansion changes the terrain, stresses the gri
 ## Gameplay
 
 - Place buildings on a tile grid to harvest and process resources.
-- The opening tutorial now carries the player from the first drill through the
-  Efficient Drills and Power Efficiency prerequisites to the researched and
-  built Mass Driver that opens the campaign's next world; research lessons
-  pulse and center the next neural node on touch-sized views.
+- The mandatory opening bootstrap carries the player from a first mineral feed
+  through the power bus, signal mesh, cognitive array, auxiliary power, and the
+  researched and built Mass Driver that opens the campaign's next world;
+  research lessons pulse and center the next neural node on touch-sized views.
 - The opening lesson belongs to the starting world; newly colonized worlds
   keep the arrival notice and visible controls without replaying steps that
   may be forbidden by their own terrain and power rules.

@@ -169,8 +169,6 @@ pub struct PlanetState {
     /// worse than none.
     #[serde(default)]
     pub tutorial_step: u8,
-    #[serde(skip, default)]
-    pub tutorial_hidden: bool,
     #[serde(default)]
     pub tutorial_done: bool,
     #[serde(skip, default)]

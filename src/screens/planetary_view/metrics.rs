@@ -263,7 +263,12 @@ pub(super) fn is_cursor_over_ui_with_help(
         if mobile_panel != MobilePanel::Map {
             return panel_rect.contains(vec2(screen_x, screen_y));
         }
-        let tutorial_rect = Rect::new(panel_rect.x, panel_rect.y, panel_rect.w, 82.0);
+        let tutorial_rect = Rect::new(
+            panel_rect.x,
+            panel_rect.y,
+            panel_rect.w,
+            super::hud::MOBILE_TUTORIAL_HEIGHT,
+        );
         if tutorial_rect.contains(vec2(screen_x, screen_y)) {
             return true;
         }

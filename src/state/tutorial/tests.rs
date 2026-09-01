@@ -89,8 +89,23 @@ fn a_research_step_waits_for_the_research() {
 }
 
 #[test]
-fn the_opening_lesson_reaches_the_first_campaign_launch_rail() {
+fn the_opening_lesson_teaches_the_initial_base_before_expansion() {
     let steps = crate::data::test_data().data().tutorial.clone();
+    let expected_base = [
+        ("first_drill", "build", "drill"),
+        ("power_grid", "research", "power_grid"),
+        ("connect", "connect", "drill"),
+        ("data_processing_research", "research", "data_processing"),
+        ("server_bank", "build", "server_bank"),
+        ("wind_power_research", "research", "wind_power"),
+        ("wind_turbine", "build", "wind_turbine"),
+    ];
+    for (step, (id, kind, target)) in steps.iter().zip(expected_base) {
+        assert_eq!(step.id, id);
+        assert_eq!(step.goal.kind, kind);
+        assert_eq!(step.goal.target, target);
+    }
+
     let efficient_drills = steps
         .iter()
         .position(|step| step.id == "efficient_drills_research")
@@ -129,7 +144,8 @@ fn the_opening_lesson_reaches_the_first_campaign_launch_rail() {
     assert!(research.instruction.contains("Tap RESEARCH"));
     assert_eq!(build.goal.kind, "build");
     assert_eq!(build.goal.target, "mass_driver");
-    assert!(build.instruction.contains("Tap MASS DRIVER"));
+    assert!(build.instruction.contains("Tap BUILD"));
+    assert!(build.instruction.contains("MASS DRIVER"));
 }
 
 #[test]
@@ -174,6 +190,6 @@ fn finishing_the_last_step_ends_the_tutorial() {
             .last()
             .unwrap()
             .message,
-        "Next: tap SHIP, then MAP."
+        "BOOTSTRAP COMPLETE // The swarm can now throw its pattern between worlds. Tap SHIP, then MAP."
     );
 }

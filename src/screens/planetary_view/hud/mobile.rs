@@ -33,7 +33,6 @@ pub(super) fn draw(
                 && top_bar::draw_mobile_offline_report(state, screen_w, metrics, theme, colors);
             if !offline_report
                 && state.tutorial_current().is_some()
-                && !state.tutorial_hidden
                 && !state.flow_overlay
                 && !state.factory_deck_open
                 && !state.show_help

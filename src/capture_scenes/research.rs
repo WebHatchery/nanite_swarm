@@ -30,9 +30,8 @@ impl Game {
         // Put the capture on the launch-rail research lesson so the target
         // ring and compact auto-focus are visible in both research layouts.
         let planet = self.campaign.current_mut();
-        planet.tutorial_step = 7;
+        planet.tutorial_step = 9;
         planet.tutorial_done = false;
-        planet.tutorial_hidden = false;
         // Meet the standing directive for real, so the toast on this screen
         // is one the game actually raised.
         self.campaign.directive.completed = true;

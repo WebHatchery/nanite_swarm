@@ -19,6 +19,8 @@ use macroquad::prelude::*;
 use super::metrics::HudMetrics;
 use super::PlanetaryAction;
 
+pub(super) const MOBILE_TUTORIAL_HEIGHT: f32 = 132.0;
+
 pub(super) struct PanelColors {
     pub(super) text: Color,
     pub(super) dim: Color,
@@ -104,7 +106,12 @@ impl RightStackLayout {
     pub(super) fn mobile_tutorial(screen_w: f32, metrics: HudMetrics) -> Self {
         let right_x = 10.0;
         let right_w = (screen_w - 20.0).max(0.0);
-        let directive = Rect::new(right_x, metrics.top_bar_height + 8.0, right_w, 82.0);
+        let directive = Rect::new(
+            right_x,
+            metrics.top_bar_height + 8.0,
+            right_w,
+            MOBILE_TUTORIAL_HEIGHT,
+        );
         Self {
             right_x,
             right_w,

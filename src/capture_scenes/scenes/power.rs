@@ -91,7 +91,6 @@ impl Game {
         planet.grid.update_power_grid();
         planet.selected_tile = Some(source_pos);
         planet.build_palette_scroll.set_offset(10_000.0);
-        planet.tutorial_hidden = true;
         planet.notifications.clear();
     }
 }

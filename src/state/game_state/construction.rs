@@ -99,7 +99,6 @@ impl PlanetState {
             restored_from_backup_generation: 0,
             forest_harvested_count: 0,
             tutorial_step: 0,
-            tutorial_hidden: false,
             tutorial_done: false,
             unlocked_buildings,
             banned_buildings: def

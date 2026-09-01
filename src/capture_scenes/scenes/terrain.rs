@@ -13,7 +13,6 @@ impl Game {
         self.phase = GamePhase::Playing;
         self.seed_logistics_scene();
         let planet = self.campaign.current_mut();
-        planet.tutorial_hidden = true;
         planet.tutorial_done = true;
         planet.core_stage = 1;
         planet.refresh_stats();
@@ -86,7 +85,6 @@ impl Game {
         let Some(core) = planet.grid.find_core() else {
             return;
         };
-        planet.tutorial_hidden = true;
         planet.tutorial_done = true;
         planet.core_stage = 1;
         planet.refresh_stats();
@@ -115,7 +113,6 @@ impl Game {
         let Some(core) = planet.grid.find_core() else {
             return;
         };
-        planet.tutorial_hidden = true;
         planet.tutorial_done = true;
         planet.core_stage = 1;
         planet.refresh_stats();
@@ -145,7 +142,6 @@ impl Game {
         let Some(core) = planet.grid.find_core() else {
             return;
         };
-        planet.tutorial_hidden = true;
         planet.tutorial_done = true;
         planet.core_stage = 1;
         planet.refresh_stats();
@@ -206,7 +202,6 @@ impl Game {
 }
 
 fn prepare_feature_inspection(planet: &mut state::PlanetState) {
-    planet.tutorial_hidden = true;
     planet.tutorial_done = true;
     // The seeded network is large enough to awaken the first Core stage
     // on the next frame. Settle that authored milestone here so the
