@@ -15,6 +15,43 @@ fn focus_mode_returns_both_sidebar_widths_to_the_map() {
 }
 
 #[test]
+fn desktop_world_view_only_reserves_a_drawer_when_requested() {
+    let theme = UiTheme::default();
+    let world = HudMetrics::for_screen_with_panel(
+        &theme,
+        1280.0,
+        720.0,
+        Camera::default(),
+        true,
+        DesktopPanel::None,
+    );
+    let build = HudMetrics::for_screen_with_panel(
+        &theme,
+        1280.0,
+        720.0,
+        Camera::default(),
+        false,
+        DesktopPanel::Build,
+    );
+    let info = HudMetrics::for_screen_with_panel(
+        &theme,
+        1280.0,
+        720.0,
+        Camera::default(),
+        false,
+        DesktopPanel::Info,
+    );
+
+    assert_eq!(world.left_panel_width, 0.0);
+    assert_eq!(world.right_panel_width, 0.0);
+    assert_eq!(build.right_panel_width, 0.0);
+    assert!(build.left_panel_width > 250.0);
+    assert_eq!(info.left_panel_width, 0.0);
+    assert!(info.right_panel_width > 280.0);
+    assert!(world.viewport(1280.0, 720.0).0 > build.viewport(1280.0, 720.0).0);
+}
+
+#[test]
 fn portrait_metrics_keep_the_map_open_and_drawers_full_width() {
     let theme = UiTheme::default();
     let metrics = HudMetrics::for_screen(&theme, 360.0, 640.0, Camera::default(), false);
@@ -59,5 +96,37 @@ fn portrait_drawers_claim_their_overlay_but_leave_the_map_touchable() {
         640.0,
         metrics,
         MobilePanel::Build,
+    ));
+}
+
+#[test]
+fn desktop_help_claims_only_its_open_overlay() {
+    let theme = UiTheme::default();
+    let metrics = HudMetrics::for_screen_with_panel(
+        &theme,
+        1280.0,
+        720.0,
+        Camera::default(),
+        true,
+        DesktopPanel::None,
+    );
+
+    assert!(is_cursor_over_ui_with_help(
+        1000.0,
+        120.0,
+        1280.0,
+        720.0,
+        metrics,
+        MobilePanel::Map,
+        true,
+    ));
+    assert!(!is_cursor_over_ui_with_help(
+        700.0,
+        240.0,
+        1280.0,
+        720.0,
+        metrics,
+        MobilePanel::Map,
+        true,
     ));
 }

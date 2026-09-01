@@ -23,6 +23,8 @@ fn required_capture_scenes_are_registered() {
             "mobile_core_ring",
             "assembly",
             "focus",
+            "desktop_build",
+            "desktop_info",
             "freight",
             "flow",
             "factory_deck",

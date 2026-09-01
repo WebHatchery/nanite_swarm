@@ -218,6 +218,8 @@ pub(super) fn draw(
         state.select_building(building_type);
         if close_on_select {
             state.mobile_panel = MobilePanel::Map;
+            state.desktop_panel = crate::state::DesktopPanel::None;
+            state.focus_mode = true;
         }
     }
 

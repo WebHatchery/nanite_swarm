@@ -1,4 +1,4 @@
-//! Right sidebar: "SELECTED STRUCTURE" inspector panel
+//! On-demand right drawer: "SELECTED STRUCTURE" inspector panel
 
 use crate::assets::GameTextures;
 use crate::data::{GameData, UiTheme};

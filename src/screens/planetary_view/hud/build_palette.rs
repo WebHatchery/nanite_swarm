@@ -1,4 +1,4 @@
-//! Left sidebar: the build palette list and quick actions
+//! On-demand left drawer: the build palette list and quick actions
 
 use crate::assets::GameTextures;
 use crate::data::UiTheme;

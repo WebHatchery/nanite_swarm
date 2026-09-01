@@ -222,6 +222,9 @@ pub struct PlanetState {
     /// state, so loading a save returns to the map.
     #[serde(skip, default)]
     pub mobile_panel: super::mobile::MobilePanel,
+    /// Desktop gameplay opens construction and inspection as edge drawers.
+    #[serde(skip, default)]
+    pub desktop_panel: super::mobile::DesktopPanel,
     /// Hide both side stacks while planning dense routes. Persisted per world
     /// because a returning touch player should keep the viewport they chose.
     #[serde(default)]

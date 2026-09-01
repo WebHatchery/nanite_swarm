@@ -1,4 +1,4 @@
-//! Right sidebar: "POWER GRID" and "OPERATIONS" panels
+//! Right drawer: "POWER GRID" and "OPERATIONS" panels
 
 use crate::data::UiTheme;
 use crate::state::PlanetState;

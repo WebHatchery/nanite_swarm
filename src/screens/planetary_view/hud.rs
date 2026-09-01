@@ -12,7 +12,7 @@ use crate::assets::GameTextures;
 use crate::data::UiTheme;
 use crate::directives::Directive;
 use crate::engine::GridPos;
-use crate::state::{MobilePanel, PlanetState};
+use crate::state::{DesktopPanel, MobilePanel, PlanetState};
 use crate::ui::color_from_rgba;
 use macroquad::prelude::*;
 
@@ -147,16 +147,26 @@ pub(super) fn draw_ui_panels(
         if ui_action == PlanetaryAction::None {
             ui_action = mobile_action;
         }
-    } else if !state.focus_mode {
-        build_palette::draw(state, theme, textures, metrics, &colors, screen_h, false);
-
-        let right = RightStackLayout::compute(screen_w, screen_h, metrics);
-        inspector_panel::draw(state, hovered_pos, textures, theme, &colors, &right);
-        let ops_action = power_ops_panel::draw(state, theme, &colors, &right);
-        if ui_action == PlanetaryAction::None {
-            ui_action = ops_action;
+    } else {
+        match if state.focus_mode {
+            DesktopPanel::None
+        } else {
+            state.desktop_panel
+        } {
+            DesktopPanel::Build => {
+                build_palette::draw(state, theme, textures, metrics, &colors, screen_h, true);
+            }
+            DesktopPanel::Info => {
+                let right = RightStackLayout::compute(screen_w, screen_h, metrics);
+                inspector_panel::draw(state, hovered_pos, textures, theme, &colors, &right);
+                let ops_action = power_ops_panel::draw(state, theme, &colors, &right);
+                if ui_action == PlanetaryAction::None {
+                    ui_action = ops_action;
+                }
+                directive_panel::draw(state, directive, theme, &colors, &right);
+            }
+            DesktopPanel::None => {}
         }
-        directive_panel::draw(state, directive, theme, &colors, &right);
     }
 
     match bottom_bar::draw(state, screen_w, screen_h, theme, metrics, &colors) {
@@ -168,7 +178,32 @@ pub(super) fn draw_ui_panels(
                 ui_action = PlanetaryAction::FastForwardToNextEvent;
             }
         }
-        bottom_bar::ClockAction::ToggleFocus => state.focus_mode = !state.focus_mode,
+        bottom_bar::ClockAction::ToggleFocus => {
+            state.focus_mode = true;
+            state.desktop_panel = DesktopPanel::None;
+        }
+        bottom_bar::ClockAction::OpenBuildPanel => {
+            state.focus_mode = false;
+            state.desktop_panel = if state.desktop_panel == DesktopPanel::Build {
+                DesktopPanel::None
+            } else {
+                DesktopPanel::Build
+            };
+            if state.desktop_panel == DesktopPanel::None {
+                state.focus_mode = true;
+            }
+        }
+        bottom_bar::ClockAction::OpenInfoPanel => {
+            state.focus_mode = false;
+            state.desktop_panel = if state.desktop_panel == DesktopPanel::Info {
+                DesktopPanel::None
+            } else {
+                DesktopPanel::Info
+            };
+            if state.desktop_panel == DesktopPanel::None {
+                state.focus_mode = true;
+            }
+        }
         bottom_bar::ClockAction::ToggleMobileBuild => {
             state.mobile_panel = if state.mobile_panel == MobilePanel::Build {
                 MobilePanel::Map

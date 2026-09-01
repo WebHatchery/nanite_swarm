@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::data::GameData;
 use crate::engine::ResourceType;
 use crate::state::PlanetState;

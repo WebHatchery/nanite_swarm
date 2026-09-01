@@ -2,6 +2,7 @@
 
 mod alerts;
 mod desktop;
+mod focus;
 mod graph;
 mod help;
 mod mobile;
@@ -15,6 +16,7 @@ use super::PanelColors;
 
 /// What the player asked the clock to do. The bar reads state and returns
 /// intent; the caller applies it.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) enum ClockAction {
     None,
@@ -31,6 +33,8 @@ pub(super) enum ClockAction {
     ToggleMobileBuild,
     ToggleMobileInfo,
     CloseMobilePanel,
+    OpenBuildPanel,
+    OpenInfoPanel,
     ToggleHelp,
     CenterCore,
     ZoomOut,

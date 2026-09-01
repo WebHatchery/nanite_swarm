@@ -22,7 +22,7 @@ use crate::ui::color_from_rgba;
 use macroquad::prelude::*;
 use macroquad_toolkit::math::{lerp, pulse01_at};
 
-use metrics::{is_cursor_over_ui, screen_to_grid, HudMetrics};
+use metrics::{is_cursor_over_ui_with_help, screen_to_grid, HudMetrics};
 
 /// Actions from the planetary view
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -60,25 +60,34 @@ pub fn render_planetary_view(
     // Move the camera first, then lay out the frame around where it ended up,
     // so drawing and hit-testing agree about which tile is under the cursor.
     let (mouse_x, mouse_y) = mouse_position();
-    let layout = HudMetrics::for_screen(theme, screen_w, screen_h, state.camera, state.focus_mode);
-    let cursor_over_ui = is_cursor_over_ui(
+    let layout = HudMetrics::for_screen_with_panel(
+        theme,
+        screen_w,
+        screen_h,
+        state.camera,
+        state.focus_mode,
+        state.desktop_panel,
+    );
+    let cursor_over_ui = is_cursor_over_ui_with_help(
         mouse_x,
         mouse_y,
         screen_w,
         screen_h,
         layout,
         state.mobile_panel,
+        state.show_help,
     );
     let touch = state.touch_gesture.update();
     if touch.active && !state.touch_gesture_routed {
         state.touch_gesture_routed = true;
-        state.touch_camera_active = !is_cursor_over_ui(
+        state.touch_camera_active = !is_cursor_over_ui_with_help(
             touch.center.x,
             touch.center.y,
             screen_w,
             screen_h,
             layout,
             state.mobile_panel,
+            state.show_help,
         );
         let starts_on_building = state.touch_camera_active
             && touches().len() == 1
@@ -110,7 +119,14 @@ pub fn render_planetary_view(
         touch_camera_active,
     );
 
-    let metrics = HudMetrics::for_screen(theme, screen_w, screen_h, state.camera, state.focus_mode);
+    let metrics = HudMetrics::for_screen_with_panel(
+        theme,
+        screen_w,
+        screen_h,
+        state.camera,
+        state.focus_mode,
+        state.desktop_panel,
+    );
     let hovered_pos = if cursor_over_ui || state.factory_deck_open {
         None
     } else {

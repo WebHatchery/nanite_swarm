@@ -1,5 +1,7 @@
 //! Historical throughput, power, and Data graph rendering for the command bar.
 
+#![allow(dead_code)]
+
 use crate::data::UiTheme;
 use crate::state::{GraphMode, PlanetState};
 use crate::ui::{color_from_rgba, draw_hud_button};

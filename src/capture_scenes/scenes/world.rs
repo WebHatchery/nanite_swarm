@@ -46,6 +46,26 @@ impl Game {
                 planet.focus_mode = true;
                 planet.camera.zoom = 1.35;
             }
+            "desktop_build" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                let planet = self.campaign.current_mut();
+                planet.focus_mode = false;
+                planet.desktop_panel = state::DesktopPanel::Build;
+                planet.select_building(engine::BuildingType::Drill);
+            }
+            "desktop_info" => {
+                self.phase = GamePhase::Playing;
+                self.seed_logistics_scene();
+                let planet = self.campaign.current_mut();
+                planet.focus_mode = false;
+                planet.desktop_panel = state::DesktopPanel::Info;
+                planet.selected_building = None;
+                planet.selected_tile = planet
+                    .grid
+                    .find_buildings(engine::BuildingType::Drill)
+                    .pop();
+            }
             // The same world with a Drill in hand, which brings the ground up.
             "prospect" => {
                 self.phase = GamePhase::Playing;

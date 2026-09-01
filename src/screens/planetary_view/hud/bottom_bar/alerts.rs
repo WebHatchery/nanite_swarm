@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::state::{PlanetState, UpkeepAlertCause};
 
 use super::ClockAction;

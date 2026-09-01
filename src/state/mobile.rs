@@ -1,4 +1,4 @@
-//! Session-only navigation for the portrait planetary HUD.
+//! Session-only navigation for planetary gameplay drawers.
 
 /// Which full-width mobile drawer is currently covering the planetary map.
 /// This is intentionally not save data: a loaded world should reopen on the
@@ -7,6 +7,18 @@
 pub enum MobilePanel {
     #[default]
     Map,
+    Build,
+    Info,
+}
+
+/// Which desktop drawer is currently covering one edge of the world view.
+///
+/// Desktop gameplay starts with no drawer open. The map remains the primary
+/// surface until the player explicitly asks for construction or inspection.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum DesktopPanel {
+    #[default]
+    None,
     Build,
     Info,
 }

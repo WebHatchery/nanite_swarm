@@ -114,6 +114,7 @@ pub fn resource_color(theme: &UiTheme, resource: ResourceType) -> Color {
 }
 
 #[allow(clippy::too_many_arguments)]
+#[allow(dead_code)]
 pub fn draw_metric_card(
     theme: &UiTheme,
     rect: Rect,

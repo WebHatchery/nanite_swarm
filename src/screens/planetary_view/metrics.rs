@@ -2,7 +2,7 @@
 
 use crate::data::UiTheme;
 use crate::engine::GridPos;
-use crate::state::{Camera, MobilePanel};
+use crate::state::{Camera, DesktopPanel, MobilePanel};
 use macroquad::prelude::{vec2, Rect};
 
 #[derive(Debug, Clone, Copy)]
@@ -22,6 +22,7 @@ pub(super) struct HudMetrics {
 }
 
 impl HudMetrics {
+    #[allow(dead_code)]
     pub(super) fn for_screen(
         theme: &UiTheme,
         screen_w: f32,
@@ -59,6 +60,75 @@ impl HudMetrics {
                 64.0
             } else {
                 theme.layout.bottom_bar_height
+            },
+            panel_gap: theme.layout.panel_gap,
+            panel_padding: theme.layout.panel_padding,
+            build_row_height: if compact_height {
+                68.0
+            } else {
+                theme.layout.build_row_height
+            },
+            mobile,
+        }
+    }
+
+    /// Compute the world-facing layout. Desktop drawers consume only the edge
+    /// they are opened on; with no drawer open the map owns the full width.
+    pub(super) fn for_screen_with_panel(
+        theme: &UiTheme,
+        screen_w: f32,
+        screen_h: f32,
+        camera: Camera,
+        focus_mode: bool,
+        desktop_panel: DesktopPanel,
+    ) -> Self {
+        let compact_height = screen_h < 760.0;
+        let compact_width = screen_w < 1260.0;
+        let mobile = screen_w < 600.0;
+        let active_panel = if focus_mode {
+            DesktopPanel::None
+        } else {
+            desktop_panel
+        };
+        Self {
+            tile_size: theme.layout.tile_size * camera.zoom,
+            pan_x: camera.pan_x,
+            pan_y: camera.pan_y,
+            top_bar_height: if mobile {
+                if compact_height {
+                    76.0
+                } else {
+                    theme.layout.top_bar_height
+                }
+            } else if compact_height {
+                58.0
+            } else {
+                60.0
+            },
+            left_panel_width: if mobile || active_panel != DesktopPanel::Build {
+                0.0
+            } else if compact_width {
+                260.0
+            } else {
+                theme.layout.left_panel_width
+            },
+            right_panel_width: if mobile || active_panel != DesktopPanel::Info {
+                0.0
+            } else if compact_width {
+                292.0
+            } else {
+                theme.layout.right_panel_width
+            },
+            bottom_bar_height: if mobile {
+                if compact_height {
+                    64.0
+                } else {
+                    theme.layout.bottom_bar_height
+                }
+            } else if compact_height {
+                54.0
+            } else {
+                58.0
             },
             panel_gap: theme.layout.panel_gap,
             panel_padding: theme.layout.panel_padding,
@@ -139,6 +209,7 @@ pub(super) fn grid_to_screen(pos: GridPos, metrics: HudMetrics) -> (f32, f32) {
     )
 }
 
+#[allow(dead_code)]
 pub(super) fn is_cursor_over_ui(
     screen_x: f32,
     screen_y: f32,
@@ -146,6 +217,26 @@ pub(super) fn is_cursor_over_ui(
     screen_h: f32,
     metrics: HudMetrics,
     mobile_panel: MobilePanel,
+) -> bool {
+    is_cursor_over_ui_with_help(
+        screen_x,
+        screen_y,
+        screen_w,
+        screen_h,
+        metrics,
+        mobile_panel,
+        false,
+    )
+}
+
+pub(super) fn is_cursor_over_ui_with_help(
+    screen_x: f32,
+    screen_y: f32,
+    screen_w: f32,
+    screen_h: f32,
+    metrics: HudMetrics,
+    mobile_panel: MobilePanel,
+    show_help: bool,
 ) -> bool {
     if screen_y <= metrics.top_bar_height || screen_y >= screen_h - metrics.bottom_bar_height {
         return true;
@@ -155,6 +246,12 @@ pub(super) fn is_cursor_over_ui(
     }
     if screen_x >= screen_w - metrics.right_panel_width {
         return true;
+    }
+    if show_help && !metrics.mobile {
+        let help_rect = Rect::new(screen_w - 380.0, 90.0, 360.0, 200.0);
+        if help_rect.contains(vec2(screen_x, screen_y)) {
+            return true;
+        }
     }
     if metrics.mobile {
         let panel_rect = Rect::new(

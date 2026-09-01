@@ -18,7 +18,8 @@ impl Game {
         self.research_return_phase = GamePhase::Playing;
         self.capture_still = true;
         // Scene-specific view state starts from the same quiet map as well.
-        self.campaign.current_mut().focus_mode = false;
+        self.campaign.current_mut().focus_mode = true;
+        self.campaign.current_mut().desktop_panel = state::DesktopPanel::None;
         self.campaign.current_mut().mobile_panel = state::MobilePanel::Map;
         self.campaign.current_mut().flow_overlay = false;
         self.campaign.current_mut().factory_deck_open = false;
