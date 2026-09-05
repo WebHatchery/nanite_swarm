@@ -20,9 +20,14 @@ struct MapStore {
     fail_writes_to: Option<String>,
 }
 
-impl SaveStore for MapStore {
+impl MapStore {
     fn read(&self, key: &str) -> Option<String> {
         self.entries.get(key).cloned()
+    }
+}
+impl RawSaveStore for MapStore {
+    fn read(&self, key: &str) -> Result<Option<String>, String> {
+        Ok(self.entries.get(key).cloned())
     }
 
     fn write(&mut self, key: &str, content: &str) -> Result<(), String> {

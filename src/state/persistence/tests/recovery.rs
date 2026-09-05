@@ -1,6 +1,51 @@
 use super::*;
 
 #[test]
+fn future_primary_and_backup_bytes_survive_rejected_load_and_save() {
+    let mut store = MapStore::default();
+    let mut game = campaign();
+    let backup = save_to_json(&mut game).unwrap();
+    let future = r#"{"version":999,"campaign":{}}"#;
+    store.write("save", future).unwrap();
+    store.write("save_backup", &backup).unwrap();
+    assert!(load_campaign(&store, "save").is_err());
+    assert!(save_campaign(&mut store, "save", &mut game).is_err());
+    assert_eq!(store.read("save").unwrap(), future);
+    assert_eq!(store.read("save_backup").unwrap(), backup);
+}
+
+#[test]
+fn recovered_campaign_can_save_without_rotating_corruption() {
+    let mut store = MapStore::default();
+    let mut game = campaign();
+    let backup = save_to_json(&mut game).unwrap();
+    store.write("save", "broken").unwrap();
+    store.write("save_backup", &backup).unwrap();
+    let (mut recovered, _) = load_campaign(&store, "save").unwrap();
+    save_campaign(&mut store, "save", &mut recovered).unwrap();
+    assert_eq!(store.read("save_backup").unwrap(), backup);
+    assert!(load_campaign(&store, "save").is_ok());
+}
+
+#[test]
+fn all_three_generations_retain_exact_previous_bytes() {
+    let mut store = MapStore::default();
+    let mut game = campaign();
+    let mut originals = Vec::new();
+    for count in 0..4 {
+        game.current_mut().resources.biomass = count as f32;
+        save_campaign(&mut store, "save", &mut game).unwrap();
+        originals.push(store.read("save").unwrap());
+    }
+    for generation in 1..=3 {
+        assert_eq!(
+            store.read(&backup_key("save", generation)).unwrap(),
+            originals[3 - generation]
+        );
+    }
+}
+
+#[test]
 fn the_first_save_writes_no_backup_because_there_is_nothing_to_keep() {
     let mut store = MapStore::default();
     let mut campaign = campaign();

@@ -5,6 +5,13 @@ use crate::{engine, state, Game, GamePhase};
 impl Game {
     pub(super) fn stage_world_capture_scene(&mut self, scene: &str) -> bool {
         match scene {
+            "toolkit_tutorial" => {
+                self.phase = GamePhase::Playing;
+                let planet = self.campaign.current_mut();
+                planet.tutorial_step = 3;
+                planet.focus_mode = false;
+                planet.desktop_panel = state::DesktopPanel::Info;
+            }
             "mobile_build" => {
                 self.phase = GamePhase::Playing;
                 self.seed_logistics_scene();

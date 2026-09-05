@@ -5,7 +5,7 @@ use crate::state::{LaunchBeat, LaunchSequence, PlanetState};
 use crate::ui::{color_from_rgba, draw_panel, Colors};
 use macroquad::prelude::*;
 use macroquad_toolkit::math::lerp;
-use macroquad_toolkit::ui::{draw_ui_text, Pointer};
+use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text as measure_text, wrap_text_ex, Pointer};
 
 mod art;
 
@@ -177,7 +177,7 @@ fn draw_caption(
 }
 
 fn draw_caption_lines(text: &str, screen_w: f32, geometry: CaptionGeometry, color: Color) {
-    for (index, line) in wrap_caption(text, geometry.max_width, geometry.text_size)
+    for (index, line) in wrap_text_ex(text, geometry.max_width, None, geometry.text_size)
         .into_iter()
         .enumerate()
     {
@@ -189,33 +189,6 @@ fn draw_caption_lines(text: &str, screen_w: f32, geometry: CaptionGeometry, colo
             color,
         );
     }
-}
-
-fn wrap_caption(text: &str, max_width: f32, font_size: f32) -> Vec<String> {
-    let mut lines = Vec::new();
-    let mut current = String::new();
-    for word in text.split_whitespace() {
-        let candidate = if current.is_empty() {
-            word.to_string()
-        } else {
-            format!("{} {}", current, word)
-        };
-        if current.is_empty()
-            || measure_text(&candidate, None, font_size as u16, 1.0).width <= max_width
-        {
-            current = candidate;
-        } else {
-            lines.push(current);
-            current = word.to_string();
-        }
-    }
-    if !current.is_empty() {
-        lines.push(current);
-    }
-    if lines.is_empty() {
-        lines.push(String::new());
-    }
-    lines
 }
 
 fn caption_geometry(screen_w: f32, screen_h: f32, arrival: bool) -> CaptionGeometry {

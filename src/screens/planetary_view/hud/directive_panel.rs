@@ -8,7 +8,7 @@ use crate::data::UiTheme;
 use crate::directives::Directive;
 use crate::state::PlanetState;
 use crate::ui::{draw_hud_panel, draw_status_row};
-use macroquad_toolkit::ui::{draw_ui_text, measure_ui_text};
+use macroquad_toolkit::ui::{draw_ui_text, wrap_text_ex};
 
 use super::super::format::fit_text_to_width;
 use super::{PanelColors, RightStackLayout};
@@ -66,7 +66,7 @@ fn draw_tutorial(
         11.0,
         colors.primary_soft,
     );
-    for (index, line) in wrap_text_to_width(&step.instruction, right_w - 28.0, 11.0)
+    for (index, line) in wrap_text_ex(&step.instruction, right_w - 28.0, None, 11.0)
         .into_iter()
         .enumerate()
     {
@@ -170,7 +170,7 @@ fn draw_compact_tutorial(
             10.0,
             colors.primary_soft,
         );
-        let lines = wrap_text_to_width(step_instruction, right.right_w - 24.0, 10.0);
+        let lines = wrap_text_ex(step_instruction, right.right_w - 24.0, None, 10.0);
         let first_y = right.directive.y + right.directive.h
             - 16.0
             - (lines.len().saturating_sub(1) as f32 * 12.0);
@@ -245,27 +245,4 @@ fn draw_compact_directive(
             },
         );
     }
-}
-
-fn wrap_text_to_width(text: &str, width: f32, font_size: f32) -> Vec<String> {
-    let mut lines = Vec::new();
-    let mut current = String::new();
-    for word in text.split_whitespace() {
-        let candidate = if current.is_empty() {
-            word.to_string()
-        } else {
-            format!("{current} {word}")
-        };
-        let measured = measure_ui_text(&candidate, None, font_size as u16, 1.0).width;
-        if measured <= width || current.is_empty() {
-            current = candidate;
-        } else {
-            lines.push(current);
-            current = word.to_string();
-        }
-    }
-    if !current.is_empty() {
-        lines.push(current);
-    }
-    lines
 }

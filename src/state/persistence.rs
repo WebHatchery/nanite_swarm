@@ -4,7 +4,7 @@ use super::campaign::Campaign;
 use super::PlanetState;
 use macroquad::miniquad;
 use macroquad_toolkit::persistence::{
-    delete_json_key, json_key_exists, load_string_key, save_string_key,
+    delete_json_key, json_key_exists, BackupChain, KeySaveStore, RawSaveStore, SaveSource,
 };
 use serde::{Deserialize, Serialize};
 use std::io;
@@ -137,26 +137,6 @@ pub(super) fn planet_seed_fallback() -> u64 {
     0x5EED_0000_0000_0001
 }
 
-/// Where saves are kept. The game uses the toolkit's key store; tests use a
-/// map, so the rotation and recovery rules can be exercised without touching a
-/// player's actual save.
-pub trait SaveStore {
-    fn read(&self, key: &str) -> Option<String>;
-    fn write(&mut self, key: &str, content: &str) -> Result<(), String>;
-}
-
-struct KeyStore;
-
-impl SaveStore for KeyStore {
-    fn read(&self, key: &str) -> Option<String> {
-        load_string_key(GAME_NAME, key).ok()
-    }
-
-    fn write(&mut self, key: &str, content: &str) -> Result<(), String> {
-        save_string_key(GAME_NAME, key, content)
-    }
-}
-
 /// Which copy a campaign came back from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LoadSource {
@@ -172,60 +152,91 @@ fn backup_key(key: &str, generation: usize) -> String {
     }
 }
 
-/// Write the campaign, keeping the previous save as a backup first.
-///
-/// Autosave overwrites the same slot every minute, so without this one bad
-/// write - a bug, a half-full disk, a shape the loader cannot read - would take
-/// the whole campaign with it. The backup is always the last save that was
-/// good enough to have been written.
+/// Validate without advancing offline progress or rewriting historical bytes.
+fn validate_save(raw: &str) -> Result<(), String> {
+    let save = crate::state::migrations::migrate(raw).map_err(|error| error.to_string())?;
+    save.campaign.validate_loaded_state()
+}
+
+fn reject_future_primary(store: &impl RawSaveStore, key: &str) -> Result<(), String> {
+    if let Some(raw) = store.read(key)? {
+        if let Ok(value) = serde_json::from_str::<serde_json::Value>(&raw) {
+            if let Some(version) = value.get("version").and_then(|v| v.as_u64()) {
+                if version > u64::from(SAVE_VERSION) {
+                    return Err(format!(
+                        "unsupported save version {version}; primary preserved"
+                    ));
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 fn save_campaign(
-    store: &mut dyn SaveStore,
+    store: &mut impl RawSaveStore,
     key: &str,
     campaign: &mut Campaign,
 ) -> Result<(), String> {
+    reject_future_primary(store, key)?;
+    let chain = BackupChain::with_generations(key, 3);
     let json = save_to_json(campaign).map_err(|error| error.to_string())?;
-    if let Some(previous) = store.read(key) {
-        // A failed rotation is not worth losing the new save over, but it does
-        // mean the backup is stale, so it is not silently ignored either.
-        for generation in (2..=3).rev() {
-            if let Some(older) = store.read(&backup_key(key, generation - 1)) {
-                store.write(&backup_key(key, generation), &older)?;
-            }
-        }
-        store.write(&backup_key(key, 1), &previous)?;
+    validate_save(&json)?;
+    // A campaign explicitly recovered from backup must be able to save again.
+    // Restore a validated raw copy first; never rotate corruption into backups.
+    if campaign.current().restored_from_backup_generation > 0
+        && store
+            .read(key)?
+            .is_some_and(|raw| validate_save(&raw).is_err())
+    {
+        let recovered = chain
+            .recover(store, |raw| {
+                validate_save(raw)?;
+                Ok(raw.to_owned())
+            })
+            .map_err(|issues| format!("No recoverable save: {issues:?}"))?;
+        store.write(key, &recovered.value)?;
     }
-    store.write(key, &json)
+    chain.save(store, &json, validate_save)?;
+    Ok(())
 }
 
-/// Read the campaign, falling back to the backup if the main save will not
-/// parse. Says which one it came from so the player can be told.
-fn load_campaign(store: &dyn SaveStore, key: &str) -> Result<(Campaign, LoadSource), String> {
-    let primary_error = match store.read(key) {
-        Some(json) => match load_from_json(&json) {
-            Ok(campaign) => return Ok((campaign, LoadSource::Primary)),
-            Err(error) => error.to_string(),
-        },
-        None => "no save found".to_string(),
-    };
-
-    for generation in 1..=3 {
-        let Some(json) = store.read(&backup_key(key, generation)) else {
-            continue;
-        };
-        if let Ok(mut campaign) = load_from_json(&json) {
+fn load_campaign(store: &impl RawSaveStore, key: &str) -> Result<(Campaign, LoadSource), String> {
+    reject_future_primary(store, key)?;
+    let recovered = BackupChain::with_generations(key, 3)
+        .recover(store, |raw| {
+            load_from_json(raw).map_err(|error| error.to_string())
+        })
+        .map_err(|issues| format!("No recoverable save: {issues:?}"))?;
+    let mut campaign = recovered.value;
+    let source = match recovered.source {
+        SaveSource::Primary => LoadSource::Primary,
+        SaveSource::Backup(generation) => {
             campaign.current_mut().restored_from_backup_generation = generation as u8;
-            return Ok((campaign, LoadSource::Backup));
+            LoadSource::Backup
         }
-    }
-    Err(primary_error)
+    };
+    Ok((campaign, source))
 }
-
 pub fn save_to_file(campaign: &mut Campaign, path: &str) -> Result<(), io::Error> {
-    save_campaign(&mut KeyStore, path, campaign).map_err(io::Error::other)
+    save_campaign(
+        &mut KeySaveStore {
+            game_name: GAME_NAME,
+        },
+        path,
+        campaign,
+    )
+    .map_err(io::Error::other)
 }
 
 pub fn load_from_file(path: &str) -> Result<(Campaign, LoadSource), io::Error> {
-    load_campaign(&KeyStore, path).map_err(io::Error::other)
+    load_campaign(
+        &KeySaveStore {
+            game_name: GAME_NAME,
+        },
+        path,
+    )
+    .map_err(io::Error::other)
 }
 
 /// Whether either recoverable copy of a save exists.

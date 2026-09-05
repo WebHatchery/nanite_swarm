@@ -2,7 +2,7 @@
 
 use crate::ui::Colors;
 use macroquad::prelude::*;
-use macroquad_toolkit::ui::measure_ui_text;
+pub(super) use macroquad_toolkit::ui::truncate_text_to_width as fit_text_to_width;
 
 pub(super) fn hash01(seed: u32) -> f32 {
     let noise = (seed as f32 * 12.9898).sin() * 43_758.547;
@@ -53,23 +53,4 @@ pub(super) fn dust_status(dust: f32) -> (&'static str, Color) {
     } else {
         ("Clean", Colors::SUCCESS)
     }
-}
-
-pub(super) fn fit_text_to_width(text: &str, max_width: f32, font_size: f32) -> String {
-    let metrics = measure_ui_text(text, None, font_size as u16, 1.0);
-    if metrics.width <= max_width {
-        return text.to_string();
-    }
-
-    let mut trimmed = text.to_string();
-    while !trimmed.is_empty() {
-        trimmed.pop();
-        let candidate = format!("{}...", trimmed);
-        let metrics = measure_ui_text(&candidate, None, font_size as u16, 1.0);
-        if metrics.width <= max_width {
-            return candidate;
-        }
-    }
-
-    "...".to_string()
 }

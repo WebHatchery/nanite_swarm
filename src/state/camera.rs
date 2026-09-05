@@ -5,6 +5,8 @@
 //! two numbers, so the view and the mouse can never disagree about which tile
 //! is under the cursor.
 
+use macroquad::prelude::{vec2, Rect};
+use macroquad_toolkit::camera::{CameraBounds, CameraBoundsPolicy, CameraTransform};
 use serde::{Deserialize, Serialize};
 
 use crate::engine::GridPos;
@@ -35,9 +37,30 @@ impl Default for Camera {
 }
 
 impl Camera {
+    // The saved pan/zoom schema stays unchanged. The shared pure transform owns
+    // screen-space operations; the game chooses its map visibility policy.
+    fn transform(&self, viewport: Rect) -> Option<CameraTransform> {
+        CameraTransform::new(
+            (viewport.center() - vec2(self.pan_x, self.pan_y)) / self.zoom,
+            self.zoom,
+        )
+        .ok()
+    }
+
+    fn apply_transform(&mut self, viewport: Rect, transform: CameraTransform) {
+        let pan = viewport.center() - transform.target() * transform.zoom();
+        self.pan_x = pan.x;
+        self.pan_y = pan.y;
+        self.zoom = transform.zoom();
+    }
+
     pub fn pan_by(&mut self, dx: f32, dy: f32) {
-        self.pan_x += dx;
-        self.pan_y += dy;
+        let viewport = Rect::new(-0.5, -0.5, 1.0, 1.0);
+        if let Some(mut transform) = self.transform(viewport) {
+            if transform.pan_screen(vec2(dx, dy)) {
+                self.apply_transform(viewport, transform);
+            }
+        }
     }
 
     /// Center a grid tile in the available map viewport, then apply the same
@@ -77,17 +100,20 @@ impl Camera {
         if !scale.is_finite() || scale <= 0.0 || scale == 1.0 {
             return;
         }
-        let target = (self.zoom * scale).clamp(MIN_ZOOM, MAX_ZOOM);
-        if target == self.zoom {
+        if (self.zoom * scale).clamp(MIN_ZOOM, MAX_ZOOM) == self.zoom {
             return;
         }
-
-        // The tile under the cursor sits at (cursor - pan) / (base * zoom) in
-        // grid units; solving for the pan that keeps it there gives:
-        let ratio = target / self.zoom;
-        self.pan_x = cursor.0 - (cursor.0 - self.pan_x) * ratio;
-        self.pan_y = cursor.1 - (cursor.1 - self.pan_y) * ratio;
-        self.zoom = target;
+        let viewport = Rect::new(-0.5, -0.5, 1.0, 1.0);
+        if let Some(mut transform) = self.transform(viewport) {
+            if transform.zoom_at(
+                viewport,
+                vec2(cursor.0, cursor.1),
+                scale,
+                (MIN_ZOOM, MAX_ZOOM),
+            ) {
+                self.apply_transform(viewport, transform);
+            }
+        }
     }
 
     /// Keep at least a corner of the map inside the viewport.
@@ -100,8 +126,16 @@ impl Camera {
         let max_x = (viewport.0 - KEEP_VISIBLE).max(0.0);
         let min_y = -(grid_size.1 - KEEP_VISIBLE).max(0.0);
         let max_y = (viewport.1 - KEEP_VISIBLE).max(0.0);
-        self.pan_x = self.pan_x.clamp(min_x, max_x);
-        self.pan_y = self.pan_y.clamp(min_y, max_y);
+        let viewport = Rect::new(0.0, 0.0, viewport.0, viewport.1);
+        if let Some(mut transform) = self.transform(viewport) {
+            let bounds = CameraBounds {
+                min: (viewport.center() - vec2(max_x, max_y)) / self.zoom,
+                max: (viewport.center() - vec2(min_x, min_y)) / self.zoom,
+            };
+            if transform.constrain(viewport, bounds, CameraBoundsPolicy::TargetInside) {
+                self.apply_transform(viewport, transform);
+            }
+        }
     }
 }
 
