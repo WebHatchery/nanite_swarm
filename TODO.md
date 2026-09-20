@@ -72,7 +72,25 @@ without parameters; replace equivalent captures directly in `docs/verification/`
 and record sizes, interactions, results and limitations. Preserve essential
 costs, warnings, undo/cancel, save retry and launch/delete confirmation paths.
 
-### Verified findings — composition first, then dependent interactions
+Follow-up review of the existing audit (2026-09-20): retained U1–U10 and all
+architecture tasks without marking any implementation complete. Rechecked the
+current phase dispatcher, camera/metrics, HUD orchestration, research detail,
+Solar System composition, menu, toast, yard, ending, Records and settings code.
+Reinspected historical `ui_gameplay`, `ui_desktop_info`, `ui_research`,
+`ui_interplanetary`, `ui_mobile_narrow`, `ui_mobile_research_narrow`, and
+`ui_mobile_seedship`. Additional visual evidence: `ui_seedship` (360x640,
+despite its unsuffixed name), `ui_desktop_ending` (1280x720),
+`ui_mobile_ending_very_short` (360x400), `ui_mobile_settings_narrow` (240x400),
+`ui_mobile_records_narrow` and `ui_mobile_factory_deck` (360x640).
+These PNG dimensions are evidence sizes, not a support declaration. U11–U13
+extend the existing audit; task IDs remain stable while placement follows
+implementation dependencies. No fresh runtime or touch verification was added.
+
+### Verified findings — code and historical visuals, not current play verification
+
+Start with U1's composition/support decisions, then U2–U5's shared HUD and
+interaction work. Apply those decisions to research, yard, travel and secondary
+screens below. U10 is the remaining evidence gate, not a duplicate redesign.
 
 - [ ] **U1 — Frame the colony around the current decision and document screen briefs.**
   **Scope/files:** New campaign, world arrival, normal map and drawer transitions;
@@ -234,6 +252,39 @@ costs, warnings, undo/cancel, save retry and launch/delete confirmation paths.
   Clocking description, late tree, parked progress and collapse lock. Touch pan,
   zoom, select/start research, and Back to both gameplay and Seed Ship.
 
+- [ ] **U11 — Keep the active Seed Ship decision visible and hand off completed ships to travel.**
+  **Depends on:** U1 screen brief, U4 readable controls, and U6 research return path;
+  coordinate the completed-ship destination with U7.
+  **Scope/files:** Seed Ship yard, blocked/producing/completed stages;
+  `src/screens/seed_ship_view.rs::render_seed_ship_view`, `draw_stage`,
+  `seed_ship_view/mobile.rs::draw_compact`, `compact_yard_geometry`,
+  `seed_ship_view/mobile/stage.rs`, and `src/main/update/phases.rs`.
+  **Evidence/problem:** Historical 360x640 and 320x480 yard captures give
+  sealed stages substantial card space alongside the active stage. Current phone
+  layout puts RESEARCH and DIVERT/HALT after the entire scrolling stage list;
+  only short desktop uses a fixed action footer. Reading the active stage and
+  controlling production can therefore require different scroll positions.
+  In current code, completed yards replace these actions with prose saying
+  the world is spent, while the remaining Back action returns to the colony.
+  There is no direct Solar System action or explicit MAP handoff there. The
+  completed state was inspected in code only, not in a running game or PNG.
+  **Change:** Make the active stage, paid/required resources, boon, research
+  blocker and diversion consequence the primary yard region. Collapse built
+  stages and defer future-stage descriptions behind a visible stage overview;
+  retain discoverable prerequisites and planning costs. Keep current production
+  controls outside the phone scroll area. On completion, replace diversion
+  controls with a clearly labeled Solar System handoff, showing that destination
+  selection and launch confirmation happen there; preserve driver-readiness
+  warnings and ordinary Back navigation. Do not auto-launch or change costs.
+  **Acceptance:** Players can understand and halt/divert the current stage
+  without scrolling past future technology. A finished ship has an obvious next
+  gameplay action, while the colony remains available for continued production.
+  **Verify:** 1280x720, 960x540, 360x640, 320x480 and 599/600px height/width
+  transitions; default and 1.5x text. Touch through each stage, research/Back,
+  scroll without toggling diversion, halt/resume, complete with online/offline
+  driver, open Solar System, cancel a launch and return. Capture blocked,
+  producing and complete states; confirm stage progress survives navigation.
+
 - [ ] **U7 — Separate Solar System travel/launch decisions from freight editing.**
   **Depends on:** U1 brief; preserve the existing compact Worlds/Shipping split.
   **Scope/files:** Desktop Solar System and compact dossiers;
@@ -313,11 +364,66 @@ costs, warnings, undo/cancel, save retry and launch/delete confirmation paths.
   change slot, retry, cancel/confirm delete and Settings/Back. Distinguish native
   Quit from the browser menu when checking available actions.
 
+- [ ] **U12 — Make the completion report readable and separate continued play from menu navigation.**
+  **Depends on:** U1 completion brief and U4 typography/target rules.
+  **Scope/files:** Desktop/phone campaign completion;
+  `src/screens/campaign_complete_view.rs::render_campaign_complete_view`,
+  `campaign_complete_view/mobile.rs::draw`, `report.rs`, and
+  `src/main/update/phases.rs::update_campaign_complete`.
+  **Evidence/problem:** The desktop and 360x400 ending captures put KEEP
+  OPTIMISING and MAIN MENU side by side with identical treatment inside the
+  report. Gameplay continuation and navigation share a single action group.
+  The short-phone lifetime totals become a very small abbreviated line; current
+  code uses 7px text and truncation there, and compresses the world ledger into
+  another line. The detailed report loses readability to fit fixed geometry.
+  This is not a claim that the two buttons are clipped in the inspected PNGs.
+  **Change:** Keep the completion result and concise consumption summary central,
+  with an emphasized continue-building action. Relocate Main Menu into a separate
+  quiet navigation area. Put full resource names, totals and world Core/structure
+  details in a readable scrollable report or visible disclosure; remove the tiny
+  concatenated summaries instead of shrinking them further. Preserve all report
+  data, the no-loss ending, and the existing save-on-menu behavior.
+  **Acceptance:** Players immediately understand that the campaign is complete
+  and building can continue. Full results are readable on the supported minimum,
+  and the gameplay choice is visually distinct from leaving for the menu.
+  **Verify:** 1280x720, 960x540, 360x640, 320x480 and the historical 360x400 stress
+  case; 1.0x/1.5x text, long durations and large totals. Touch to expand/scroll
+  results, continue building, and separately return to menu/load; confirm the
+  finished campaign and world ledger are retained. Check both 599/600px layouts.
+
+- [ ] **U13 — Reflow settings before text collides and make speed steppers directional.**
+  **Depends on:** U1 supported minimum and U4 target/typography rules; coordinate
+  action dispatch with the existing architecture task above.
+  **Scope/files:** Display/Audio settings and return path;
+  `src/screens/settings_menu.rs::settings_layout`, `settings_menu/display.rs`,
+  `settings_menu/audio.rs`, `src/display.rs`, `src/main/update/phases.rs`.
+  **Evidence/problem:** In the historical 240x400 Display capture the subtitle
+  runs beneath Back and return guidance sits among the bottom controls.
+  This establishes a stress-size limitation, not failure at a declared minimum.
+  Current geometry keeps a minimum 240px panel plus margins and fixed rows as
+  text scale increases. Independently, Display's Initial game speed treats
+  either nonzero `stepper_row` result as increment: minus advances the speed
+  exactly like plus. That direction defect is code-confirmed, not touch-tested.
+  **Change:** Reserve Back/navigation and the tab row, then scroll/reflow settings
+  within remaining space at the declared minimum and enlarged text. Remove the
+  redundant selected-tab heading and permanent Back instruction; put essential
+  setting explanations beside the appropriate control without truncating their
+  meaning. Apply the stepper's signed direction to initial speed, with deliberate
+  documented endpoint behavior; keep initial speed distinct from a world's live
+  pause/speed. Preserve Audio Test signal, persistence and scale recovery.
+  **Acceptance:** Players can read, change and reverse each setting, reach Back,
+  and restore a usable text scale with touch alone. Minus means lower speed;
+  plus means higher speed except at the explicitly chosen endpoint behavior.
+  **Verify:** 1280x720, 960x540, 360x640, 320x480 and 240x400 stress case; both
+  tabs at 0.75x, 1.0x and 1.5x text. Touch adjacent stepper controls, reverse a
+  speed change, exercise endpoints, test audio, reopen settings after saving,
+  and return to a campaign without changing its pause state unexpectedly.
+
 ### Further inspection required — not visually or interactively verified defects
 
 - [ ] **U10 — Close the current-build/browser evidence gap before accepting the redesign.**
   **Depends on:** U1's declared viewport contract; execute relevant checks during
-  each preceding task, then close gaps here rather than duplicating its fixes.
+  U2–U9 and U11–U13, then close gaps here rather than duplicating their fixes.
   **Scope/files:** `src/capture_scenes.rs` and scene fixtures, `src/main.rs`
   capture entry, `game_page.json`, `src/display.rs`,
   `src/screens/settings_menu/`, `seed_ship_view/`, `campaign_complete_view/`,
@@ -325,17 +431,20 @@ costs, warnings, undo/cancel, save retry and launch/delete confirmation paths.
   **Observed limitation:** Existing captures have differing tutorial versions;
   native PNGs do not prove CSS-sized browser readability, gesture routing or
   current scene parity. Only the selected captures listed above were inspected.
-  A Seed Ship phone capture shows context-sensitive RESEARCH/HALT and scrolling;
-  this audit does not establish a defect there. Settings, ending, full FLOW/DECK,
-  dense Records and browser embedding need direct review rather than invented
-  follow-up fixes.
+  The follow-up inspected yard, ending, Display settings, one mobile DECK and
+  one mobile Records capture; U11–U13 record the specific new findings. This
+  still does not verify live scroll/gesture behavior, completed-yard handoff,
+  Audio layouts, full FLOW/DECK, dense Records or browser embedding. Settings
+  reduced-motion behavior also needs a direct check: a stopped planetary pulse
+  does not alone establish that research, yard and ending animation honors it.
   **Change:** Refresh supported representative scenes using the existing capture
   harness, replacing equivalent files. Run a fresh campaign and dense saved
   campaign in native and embedded browser views. Record actual canvas/CSS size,
   text scale, input mode and revision with results. Inspect title → bootstrap →
   factory → research → yard → launch → hostile arrival → recovery → ending,
   plus save/settings/Records return paths. Turn only reproduced residual issues
-  into concrete tasks under this section, merging with U1–U9 where appropriate.
+  into concrete tasks under this section, merging with existing tasks where
+  appropriate.
   **Acceptance:** Every changed screen has current normal/minimum, dense,
   selected and failure evidence as applicable. No completion claim rests only
   on compilation, layout arithmetic or historical captures; limitations and
