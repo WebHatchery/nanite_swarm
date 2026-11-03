@@ -457,4 +457,4 @@ screens below. U10 is the remaining evidence gate, not a duplicate redesign.
 
 ## Settings and display
 
-- [ ] Add a Fullscreen toggle to the Display tab and persist/apply the player's choice.
+- [x] Add a Fullscreen toggle to the Display tab and persist/apply the player's choice.

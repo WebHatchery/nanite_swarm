@@ -121,7 +121,11 @@ impl Game {
         let data = GameDataContext::new(game_data);
         let mut settings = GameSettings::load(GAME_NAME);
         settings.sanitize();
-        display::apply_display_settings(&settings, None);
+        if capture::capture_requested("NANITE_SWARM") {
+            settings.fullscreen = false;
+        } else {
+            display::apply_display_settings(&settings, None);
+        }
 
         let session = GameSession::new(config.clone(), data, 42);
         let textures = GameTextures::load(session.data.data()).await;

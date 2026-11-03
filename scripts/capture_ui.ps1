@@ -21,14 +21,15 @@ param(
     [int]$WindowHeight = 0,
     [string]$OutputDir = "docs\verification",
     [switch]$UpdateCatalogThumbnail,
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    [int]$MinBytes = 40000
 )
 
 $ErrorActionPreference = "Stop"
 $gameDir = Split-Path -Parent $PSScriptRoot
 $shared = Join-Path (Split-Path -Parent $gameDir) "macroquad-toolkit\scripts\capture_ui.ps1"
 
-& $shared -GameDir $gameDir -Scenes $Scenes -Frames $Frames -WindowWidth $WindowWidth -WindowHeight $WindowHeight -OutputDir $OutputDir -SkipBuild:$SkipBuild
+& $shared -GameDir $gameDir -Scenes $Scenes -Frames $Frames -MinBytes $MinBytes -WindowWidth $WindowWidth -WindowHeight $WindowHeight -OutputDir $OutputDir -SkipBuild:$SkipBuild
 
 if ($UpdateCatalogThumbnail) {
     $mainMenuCapture = Join-Path $gameDir (Join-Path $OutputDir "ui_mainmenu.png")

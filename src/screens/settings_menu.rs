@@ -94,15 +94,7 @@ pub fn render_settings_menu(
     );
 
     match *selected_tab {
-        SettingsTab::Display => display::draw(
-            settings,
-            display_x,
-            layout.panel_y,
-            row_w,
-            layout.row_h,
-            layout.row_gap,
-            layout.section_gap,
-        ),
+        SettingsTab::Display => display::draw(settings, screen_w, display_x, row_w, layout),
         SettingsTab::Audio => {
             if audio::draw(
                 settings,
