@@ -454,3 +454,7 @@ screens below. U10 is the remaining evidence gate, not a duplicate redesign.
   build, research, ship diversion, launch confirmation, pause, recovery and
   continue-building ending choice. Check reduced motion and enlarged text;
   inspect whether any warning/action is lost when drawers or overlays coexist.
+
+## Settings and display
+
+- [ ] Add a Fullscreen toggle to the Display tab and persist/apply the player's choice.
